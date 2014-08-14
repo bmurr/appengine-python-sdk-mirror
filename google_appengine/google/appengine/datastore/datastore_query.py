@@ -55,12 +55,14 @@ __all__ = ['Batch',
           ]
 
 import base64
-import pickle
 import collections
+import pickle
 
 from google.appengine.datastore import entity_pb
+
 from google.appengine.api import datastore_errors
 from google.appengine.api import datastore_types
+from google.appengine.api.search import geo_util
 from google.appengine.datastore import datastore_index
 from google.appengine.datastore import datastore_pb
 from google.appengine.datastore import datastore_rpc
@@ -887,6 +889,48 @@ class _DedupingFilter(_IgnoreFilter):
     return False
 
 
+class _BoundingCircleFilter(_SinglePropertyFilter):
+  """An immutable bounding circle filter for geo locations.
+
+  An immutable filter predicate that constrains a geo location property to a
+  bounding circle region. The filter is inclusive at the border. The property
+  has to be of type V3 PointValue. V4 GeoPoints converts to this type.
+  """
+
+
+
+
+
+
+  def __init__(self, property_name, latitude, longitude, radius_meters):
+    self._property_name = property_name
+    self._lat_lng = geo_util.LatLng(latitude, longitude)
+    self._radius_meters = radius_meters
+
+  @classmethod
+  def _from_v4_pb(cls, bounding_circle_v4_pb):
+    return _BoundingCircleFilter(bounding_circle_v4_pb.property().name(),
+                                 bounding_circle_v4_pb.center().latitude(),
+                                 bounding_circle_v4_pb.center().longitude(),
+                                 bounding_circle_v4_pb.radius_meters())
+
+  def _get_prop_name(self):
+    return self._property_name
+
+  def _apply_to_value(self, value):
+
+
+    if value[0] != entity_pb.PropertyValue.kPointValueGroup:
+      return False
+
+    _, latitude, longitude = value
+
+    lat_lng = geo_util.LatLng(latitude, longitude)
+
+
+    return self._lat_lng - lat_lng <= self._radius_meters
+
+
 class Order(_PropertyComponent):
   """A base class that represents a sort order on a query.
 
@@ -1445,7 +1489,7 @@ class Cursor(_BaseComponent):
   """
 
   @datastore_rpc._positional(1)
-  def __init__(self, _cursor_pb=None, urlsafe=None):
+  def __init__(self, _cursor_pb=None, urlsafe=None, _cursor_bytes=None):
     """Constructor.
 
     A Cursor constructed with no arguments points the first result of any
@@ -1455,19 +1499,27 @@ class Cursor(_BaseComponent):
 
 
     super(Cursor, self).__init__()
+    if ((urlsafe is not None) + (_cursor_pb is not None)
+        + (_cursor_bytes is not None) > 1):
+      raise datastore_errors.BadArgumentError(
+          'Can only specify one of _cursor_pb, urlsafe, and _cursor_bytes')
     if urlsafe is not None:
-      if _cursor_pb is not None:
-        raise datastore_errors.BadArgumentError(
-            'Do not use _cursor_pb and urlsafe together')
-      _cursor_pb = self._bytes_to_cursor_pb(self._urlsafe_to_bytes(urlsafe))
+      _cursor_bytes = self._urlsafe_to_bytes(urlsafe)
     if _cursor_pb is not None:
       if not isinstance(_cursor_pb, datastore_pb.CompiledCursor):
         raise datastore_errors.BadArgumentError(
             '_cursor_pb argument should be datastore_pb.CompiledCursor (%r)' %
             (_cursor_pb,))
-      self.__compiled_cursor = _cursor_pb
+      _cursor_bytes = _cursor_pb.Encode()
+    if _cursor_bytes is not None:
+      if _cursor_pb is None and urlsafe is None:
+
+
+
+        Cursor._bytes_to_cursor_pb(_cursor_bytes)
+      self.__cursor_bytes = _cursor_bytes
     else:
-      self.__compiled_cursor = datastore_pb.CompiledCursor()
+      self.__cursor_bytes = ''
 
   def __repr__(self):
     arg = self.to_websafe_string()
@@ -1475,23 +1527,20 @@ class Cursor(_BaseComponent):
       arg = '<%s>' % arg
     return '%s(%s)' % (self.__class__.__name__, arg)
 
+
   def reversed(self):
     """Creates a cursor for use in a query with a reversed sort order."""
-    if self.__compiled_cursor.has_position():
-      pos = self.__compiled_cursor.position()
+    compiled_cursor = self._to_pb()
+    if compiled_cursor.has_position():
+      pos = compiled_cursor.position()
       if pos.has_start_key():
         raise datastore_errors.BadRequestError('Cursor cannot be reversed.')
-
-    rev_pb = datastore_pb.CompiledCursor()
-    rev_pb.CopyFrom(self.__compiled_cursor)
-    if rev_pb.has_position():
-      pos = rev_pb.position()
       pos.set_start_inclusive(not pos.start_inclusive())
-    return Cursor(_cursor_pb=rev_pb)
+    return Cursor(_cursor_pb=compiled_cursor)
 
   def to_bytes(self):
     """Serialize cursor as a byte string."""
-    return self.__compiled_cursor.Encode()
+    return self.__cursor_bytes
 
   @staticmethod
   def from_bytes(cursor):
@@ -1510,8 +1559,8 @@ class Cursor(_BaseComponent):
       datastore_errors.BadValueError if the cursor argument does not represent a
       serialized cursor.
     """
-    cursor_pb = Cursor._bytes_to_cursor_pb(cursor)
-    return Cursor(_cursor_pb=cursor_pb)
+    return Cursor(_cursor_bytes=cursor)
+
 
   @staticmethod
   def _bytes_to_cursor_pb(cursor):
@@ -1609,9 +1658,17 @@ class Cursor(_BaseComponent):
     return query.run(conn, query_options).next_batch(
         Batcher.AT_LEAST_OFFSET).cursor(0)
 
+
   def _to_pb(self):
     """Returns the internal only pb representation."""
-    return self.__compiled_cursor
+    return Cursor._bytes_to_cursor_pb(self.__cursor_bytes)
+
+  def __setstate__(self, state):
+    if '_Cursor__compiled_cursor' in state:
+
+      self.__cursor_bytes = state['_Cursor__compiled_cursor'].Encode()
+    else:
+      self.__dict__ = state
 
 
 class _QueryKeyFilter(_BaseComponent):

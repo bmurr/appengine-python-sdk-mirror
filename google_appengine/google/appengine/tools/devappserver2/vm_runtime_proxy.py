@@ -29,6 +29,7 @@ from google.appengine.tools.docker import containers
 
 
 _DOCKER_IMAGE_NAME_FORMAT = '{display}.{module}.{version}'
+_DOCKER_CONTAINER_NAME_FORMAT = 'google.appengine.{image_name}.{minor_version}'
 
 
 class Error(Exception):
@@ -37,6 +38,10 @@ class Error(Exception):
 
 class InvalidEnvVariableError(Error):
   """Raised if an environment variable name or value cannot be supported."""
+
+
+class VersionError(Error):
+  """Raised if no version is specified in application configuration file."""
 
 
 def _GetPortToPublish(port):
@@ -130,8 +135,16 @@ class VMRuntimeProxy(instance.RuntimeProxy):
     # TODO: Check if container is still up and running
     return False
 
+  def _escape_domain(self, application_external_name):
+    return application_external_name.replace(':', '.')
+
   def start(self, dockerfile_dir=None):
     runtime_config = self._runtime_config_getter()
+
+    if not self._module_configuration.major_version:
+      logging.error('Version needs to be specified in your application '
+                    'configuration file.')
+      raise VersionError()
 
     if not dockerfile_dir:
       dockerfile_dir = self._module_configuration.application_root
@@ -146,8 +159,8 @@ class VMRuntimeProxy(instance.RuntimeProxy):
 
     image_name = _DOCKER_IMAGE_NAME_FORMAT.format(
         # Escape domain if it is present.
-        display=self._module_configuration.application_external_name.replace(
-            ':', '.'),
+        display=self._escape_domain(
+            self._module_configuration.application_external_name),
         module=self._module_configuration.module_name,
         version=self._module_configuration.major_version)
 
@@ -189,6 +202,16 @@ class VMRuntimeProxy(instance.RuntimeProxy):
         environment['DBG_PORT'] = debug_port
         port_bindings[debug_port] = _GetPortToPublish(debug_port)
 
+    external_logs_path = os.path.join(
+        '/var/log/app_engine',
+        self._escape_domain(
+            self._module_configuration.application_external_name),
+        self._module_configuration.module_name,
+        self._module_configuration.major_version,
+        runtime_config.instance_id)
+    container_name = _DOCKER_CONTAINER_NAME_FORMAT.format(
+        image_name=image_name,
+        minor_version=self._module_configuration.minor_version)
     self._container = containers.Container(
         self._docker_client,
         containers.ContainerOptions(
@@ -200,8 +223,9 @@ class VMRuntimeProxy(instance.RuntimeProxy):
             port_bindings=port_bindings,
             environment=environment,
             volumes={
-                '/var/log/app_engine': {'bind': '/var/log/app_engine'}
-            }
+                external_logs_path: {'bind': '/var/log/app_engine'}
+            },
+            name=container_name
         ))
 
     self._container.Start()

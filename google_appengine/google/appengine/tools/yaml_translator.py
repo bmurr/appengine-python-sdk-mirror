@@ -114,7 +114,7 @@ class AppYamlTranslator(object):
     self.api_version = api_version
 
   def GetRuntime(self):
-    return 'custom' if self.app_engine_web_xml.vm else 'java7'
+    return 'java7'
 
   def GetYaml(self):
     """Returns full yaml text."""
@@ -250,16 +250,31 @@ class AppYamlTranslator(object):
 
   def TranslateVmSettings(self):
     """Translates VM settings in appengine-web.xml to yaml."""
-    if (not self.app_engine_web_xml.vm or
-        not self.app_engine_web_xml.vm_settings):
+    if not self.app_engine_web_xml.vm:
       return []
 
-    settings = self.app_engine_web_xml.vm_settings
+    settings = self.app_engine_web_xml.vm_settings or {}
+    settings['has_docker_image'] = 'True'
     statements = ['vm_settings:']
     for name in sorted(settings):
       statements.append(
           '  %s: %s' % (
               self.SanitizeForYaml(name), self.SanitizeForYaml(settings[name])))
+    return statements
+
+  def TranslateVmHealthCheck(self):
+    """Translates <vm-health-check> in appengine-web.xml to yaml."""
+    vm_health_check = self.app_engine_web_xml.vm_health_check
+    if not vm_health_check:
+      return []
+
+    statements = ['vm_health_check:']
+    for attr in ('enable_health_check', 'check_interval_sec', 'timeout_sec',
+                 'unhealthy_threshold', 'healthy_threshold',
+                 'restart_threshold', 'host'):
+      value = getattr(vm_health_check, attr, None)
+      if value is not None:
+        statements.append('  %s: %s' % (attr, value))
     return statements
 
   def TranslateInboundServices(self):

@@ -1015,6 +1015,8 @@ class BaseCursor(object):
       self.__cursor_properties = set(order.property() for order in orders)
       self.__cursor_properties.add('__key__')
       self.__cursor_properties = frozenset(self.__cursor_properties)
+
+    self.__first_sort_order = orders[0].direction()
     self.__index_list = index_list
 
   def _PopulateResultMetadata(self, query_result, compile,
@@ -1099,6 +1101,8 @@ class BaseCursor(object):
           'Cursor does not match query: missing values for %r' %
           remaining_properties)
 
+
+
     return (cursor_entity, position.start_inclusive())
 
   def _EncodeCompiledCursor(self, last_result, compiled_cursor):
@@ -1122,6 +1126,7 @@ class BaseCursor(object):
           indexvalue.set_property(prop.name())
           indexvalue.mutable_value().CopyFrom(prop.value())
       position.set_start_inclusive(False)
+      _SetBeforeAscending(position, self.__first_sort_order)
 
 
 class ListCursor(BaseCursor):
@@ -1440,7 +1445,8 @@ class LiveTxn(object):
     return LoadEntity(entity)
 
   @_SynchronizeTxn
-  def GetQueryCursor(self, query, filters, orders, index_list):
+  def GetQueryCursor(self, query, filters, orders, index_list,
+                     filter_predicate=None):
     """Runs the given datastore_pb.Query and returns a QueryCursor for it.
 
     Does not see any modifications in the current txn.
@@ -1450,6 +1456,9 @@ class LiveTxn(object):
       filters: A list of filters that override the ones found on query.
       orders: A list of orders that override the ones found on query.
       index_list: A list of indexes used by the query.
+      filter_predicate: an additional filter of type
+          datastore_query.FilterPredicate. This is passed along to implement V4
+          specific filters without changing the entire stub.
 
     Returns:
       A BaseCursor that can be used to fetch query results.
@@ -1457,7 +1466,8 @@ class LiveTxn(object):
     Check(query.has_ancestor(),
           'Query must have an ancestor when performed in a transaction.')
     snapshot = self._GrabSnapshot(query.ancestor())
-    return _ExecuteQuery(snapshot.values(), query, filters, orders, index_list)
+    return _ExecuteQuery(snapshot.values(), query, filters, orders, index_list,
+                         filter_predicate)
 
   @_SynchronizeTxn
   def Put(self, entity, insert, indexes):
@@ -2295,7 +2305,8 @@ class BaseDatastore(BaseTransactionManager, BaseIndexManager):
 
 
 
-  def GetQueryCursor(self, raw_query, trusted=False, calling_app=None):
+  def GetQueryCursor(self, raw_query, trusted=False, calling_app=None,
+                     filter_predicate=None):
     """Execute a query.
 
     Args:
@@ -2303,6 +2314,9 @@ class BaseDatastore(BaseTransactionManager, BaseIndexManager):
       trusted: If the calling app is trusted.
       calling_app: The app requesting the results or None to pull the app from
         the environment.
+      filter_predicate: an additional filter of type
+          datastore_query.FilterPredicate. This is passed along to implement V4
+          specific filters without changing the entire stub.
 
     Returns:
       A BaseCursor that can be used to retrieve results.
@@ -2320,11 +2334,15 @@ class BaseDatastore(BaseTransactionManager, BaseIndexManager):
     CheckQuery(raw_query, filters, orders, self._MAX_QUERY_COMPONENTS)
     FillUsersInQuery(filters)
 
+    index_list = []
 
-    self._CheckHasIndex(raw_query, trusted, calling_app)
 
 
-    index_list = self.__IndexListForQuery(raw_query)
+    if filter_predicate is None:
+      self._CheckHasIndex(raw_query, trusted, calling_app)
+
+
+      index_list = self.__IndexListForQuery(raw_query)
 
 
     if raw_query.has_transaction():
@@ -2337,11 +2355,13 @@ class BaseDatastore(BaseTransactionManager, BaseIndexManager):
     if raw_query.has_ancestor() and raw_query.kind() not in self._pseudo_kinds:
 
       txn = self._BeginTransaction(raw_query.app(), False)
-      return txn.GetQueryCursor(raw_query, filters, orders, index_list)
+      return txn.GetQueryCursor(raw_query, filters, orders, index_list,
+                                filter_predicate)
 
 
     self.Groom()
-    return self._GetQueryCursor(raw_query, filters, orders, index_list)
+    return self._GetQueryCursor(raw_query, filters, orders, index_list,
+                                filter_predicate)
 
   def __IndexListForQuery(self, query):
     """Get the single composite index pb used by the query, if any, as a list.
@@ -2659,7 +2679,8 @@ class BaseDatastore(BaseTransactionManager, BaseIndexManager):
     """Writes the datastore to disk."""
     self.Flush()
 
-  def _GetQueryCursor(self, query, filters, orders, index_list):
+  def _GetQueryCursor(self, query, filters, orders, index_list,
+                      filter_predicate):
     """Runs the given datastore_pb.Query and returns a QueryCursor for it.
 
     This must be implemented by a sub-class. The sub-class does not need to
@@ -2670,6 +2691,9 @@ class BaseDatastore(BaseTransactionManager, BaseIndexManager):
       filters: A list of filters that override the ones found on query.
       orders: A list of orders that override the ones found on query.
       index_list: A list of indexes used by the query.
+      filter_predicate: an additional filter of type
+          datastore_query.FilterPredicate. This is passed along to implement V4
+          specific filters without changing the entire stub.
 
     Returns:
       A BaseCursor that can be used to fetch query results.
@@ -2944,8 +2968,10 @@ class DatastoreStub(object):
     self._datastore.Touch(req.key_list(), self._trusted, self._app_id)
 
   @_NeedsIndexes
-  def _Dynamic_RunQuery(self, query, query_result):
-    cursor = self._datastore.GetQueryCursor(query, self._trusted, self._app_id)
+  def _Dynamic_RunQuery(self, query, query_result, filter_predicate=None):
+    self.__UpgradeCursors(query)
+    cursor = self._datastore.GetQueryCursor(query, self._trusted, self._app_id,
+                                            filter_predicate)
 
     if query.has_count():
       count = query.count()
@@ -2968,6 +2994,53 @@ class DatastoreStub(object):
       compiled_query.mutable_primaryscan().set_index_name(query.Encode())
     self.__UpdateQueryHistory(query)
 
+  def __UpgradeCursors(self, query):
+    """Upgrades compiled cursors in place.
+
+    If the cursor position does not specify before_ascending, populate it.
+    If before_ascending is already populated, use it and the sort direction
+    from the query to set an appropriate value for start_inclusive.
+
+    Args:
+      query: datastore_pb.Query
+    """
+    first_sort_direction = None
+    if query.order_list():
+      first_sort_direction = query.order(0).direction()
+
+    for compiled_cursor in [query.compiled_cursor(),
+                            query.end_compiled_cursor()]:
+      self.__UpgradeCursor(compiled_cursor, first_sort_direction)
+
+  def __UpgradeCursor(self, compiled_cursor, first_sort_direction):
+    """Upgrades a compiled cursor in place.
+
+    If the cursor position does not specify before_ascending, populate it.
+    If before_ascending is already populated, use it and the provided direction
+    to set an appropriate value for start_inclusive.
+
+    Args:
+      compiled_cursor: datastore_pb.CompiledCursor
+      first_sort_direction: first sort direction from the query or None
+    """
+
+
+    if not self.__IsPlannable(compiled_cursor):
+      return
+    elif compiled_cursor.position().has_before_ascending():
+      _SetStartInclusive(compiled_cursor.position(), first_sort_direction)
+    elif compiled_cursor.position().has_start_inclusive():
+      _SetBeforeAscending(compiled_cursor.position(), first_sort_direction)
+
+  def __IsPlannable(self, compiled_cursor):
+    """Returns True if compiled_cursor is plannable.
+
+    Args:
+      compiled_cursor: datastore_pb.CompiledCursor
+    """
+    position = compiled_cursor.position()
+    return position.has_key() or position.indexvalue_list()
+
   def __UpdateQueryHistory(self, query):
 
     clone = datastore_pb.Query()
@@ -2983,7 +3056,6 @@ class DatastoreStub(object):
       if clone.app() == self._app_id:
         self.__query_ci_history.add(
             datastore_index.CompositeIndexForQuery(clone))
-
 
   def _Dynamic_Next(self, next_request, query_result):
     app = next_request.cursor().app()
@@ -3349,6 +3421,12 @@ class StubQueryConverter(object):
       v4_filter: a datastore_v4_pb.Filter
       v3_query: a datastore_pb.Query to populate with filters
     """
+
+    datastore_pbs.check_conversion(not v4_filter.has_bounding_circle_filter(),
+                                   'bounding circle filter not supported')
+    datastore_pbs.check_conversion(not v4_filter.has_bounding_box_filter(),
+                                   'bounding box filter not supported')
+
     if v4_filter.has_property_filter():
       v4_property_filter = v4_filter.property_filter()
       if (v4_property_filter.operator()
@@ -3966,17 +4044,56 @@ def _GuessOrders(filters, orders):
   return orders
 
 
-def _MakeQuery(query, filters, orders):
+def _MakeQuery(query_pb, filters, orders, filter_predicate):
   """Make a datastore_query.Query for the given datastore_pb.Query.
 
-  Overrides filters and orders in query with the specified arguments."""
-  clone = datastore_pb.Query()
-  clone.CopyFrom(query)
-  clone.clear_filter()
-  clone.clear_order()
-  clone.filter_list().extend(filters)
-  clone.order_list().extend(orders)
-  return datastore_query.Query._from_pb(clone)
+  Overrides filters and orders in query with the specified arguments.
+
+  Args:
+    query_pb: a datastore_pb.Query.
+    filters: the filters from query.
+    orders: the orders from query.
+    filter_predicate: an additional filter of type
+          datastore_query.FilterPredicate. This is passed along to implement V4
+          specific filters without changing the entire stub.
+
+  Returns:
+    A datastore_query.Query for the datastore_pb.Query."""
+
+
+
+
+
+  clone_pb = datastore_pb.Query()
+  clone_pb.CopyFrom(query_pb)
+  clone_pb.clear_filter()
+  clone_pb.clear_order()
+  clone_pb.filter_list().extend(filters)
+  clone_pb.order_list().extend(orders)
+
+  query = datastore_query.Query._from_pb(clone_pb)
+
+  assert datastore_v4_pb.CompositeFilter._Operator_NAMES.values() == ['AND']
+
+
+
+
+  if filter_predicate is not None:
+    if query.filter_predicate is not None:
+
+
+      filter_predicate = datastore_query.CompositeFilter(
+          datastore_query.CompositeFilter.AND,
+          [filter_predicate, query.filter_predicate])
+
+    return datastore_query.Query(app=query.app,
+                                 namespace=query.namespace,
+                                 ancestor=query.ancestor,
+                                 filter_predicate=filter_predicate,
+                                 group_by=query.group_by,
+                                 order=query.order)
+  else:
+    return query
 
 def _CreateIndexEntities(entity, postfix_props):
   """Creates entities for index values that would appear in prodcution.
@@ -4060,7 +4177,8 @@ def _CreateIndexOnlyQueryResults(results, postfix_props):
   return new_results
 
 
-def _ExecuteQuery(results, query, filters, orders, index_list):
+def _ExecuteQuery(results, query, filters, orders, index_list,
+                  filter_predicate=None):
   """Executes the query on a superset of its results.
 
   Args:
@@ -4069,12 +4187,15 @@ def _ExecuteQuery(results, query, filters, orders, index_list):
     filters: the filters from query.
     orders: the orders from query.
     index_list: the list of indexes used by the query.
+    filter_predicate: an additional filter of type
+          datastore_query.FilterPredicate. This is passed along to implement V4
+          specific filters without changing the entire stub.
 
   Returns:
     A ListCursor over the results of applying query to results.
   """
   orders = _GuessOrders(filters, orders)
-  dsquery = _MakeQuery(query, filters, orders)
+  dsquery = _MakeQuery(query, filters, orders, filter_predicate)
 
   if query.property_name_size():
     results = _CreateIndexOnlyQueryResults(
@@ -4279,3 +4400,29 @@ def _CopyAndSetMultipleToFalse(prop):
   prop_copy.MergeFrom(prop)
   prop_copy.set_multiple(False)
   return prop_copy
+
+
+def _SetStartInclusive(position, first_direction):
+  """Sets the start_inclusive field in position.
+
+  Args:
+    position: datastore_pb.Position
+    first_direction: the first sort order from the query
+      (a datastore_pb.Query_Order) or None
+  """
+  position.set_start_inclusive(
+      position.before_ascending()
+      != (first_direction == datastore_pb.Query_Order.DESCENDING))
+
+
+def _SetBeforeAscending(position, first_direction):
+  """Sets the before_ascending field in position.
+
+  Args:
+    position: datastore_pb.Position
+    first_direction: the first sort order from the query
+      (a datastore_pb.Query_Order) or None
+  """
+  position.set_before_ascending(
+      position.start_inclusive()
+      != (first_direction == datastore_pb.Query_Order.DESCENDING))
