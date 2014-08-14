@@ -38,6 +38,7 @@ _IGNORED_FILE_SUFFIXES = (
 
 def ignore_file(filename):
   """Report whether a file should not be watched."""
+  filename = os.path.basename(filename)
   return (
       filename.startswith(_IGNORED_PREFIX) or
       any(filename.endswith(suffix) for suffix in _IGNORED_FILE_SUFFIXES))

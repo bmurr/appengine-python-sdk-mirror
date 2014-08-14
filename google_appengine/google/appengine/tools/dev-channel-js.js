@@ -388,7 +388,7 @@ goog.defineClass = function(superClass, def) {
   constructor && constructor != Object.prototype.constructor || (constructor = function() {
     throw Error("cannot instantiate an interface (no constructor defined).");
   });
-  var cls = goog.defineClass.createSealingConstructor_(constructor);
+  var cls = goog.defineClass.createSealingConstructor_(constructor, superClass);
   superClass && goog.inherits(cls, superClass);
   delete def.constructor;
   delete def.statics;
@@ -397,8 +397,11 @@ goog.defineClass = function(superClass, def) {
   return cls;
 };
 goog.defineClass.SEAL_CLASS_INSTANCES = goog.DEBUG;
-goog.defineClass.createSealingConstructor_ = function(ctr) {
+goog.defineClass.createSealingConstructor_ = function(ctr, superClass) {
   if (goog.defineClass.SEAL_CLASS_INSTANCES && Object.seal instanceof Function) {
+    if (superClass && superClass.prototype && superClass.prototype[goog.UNSEALABLE_CONSTRUCTOR_PROPERTY_]) {
+      return ctr;
+    }
     var wrappedCtr = function() {
       var instance = ctr.apply(this, arguments) || this;
       this.constructor === wrappedCtr && Object.seal(instance);
@@ -417,6 +420,9 @@ goog.defineClass.applyProperties_ = function(target, source) {
     key = goog.defineClass.OBJECT_PROTOTYPE_FIELDS_[i], Object.prototype.hasOwnProperty.call(source, key) && (target[key] = source[key]);
   }
 };
+goog.tagUnsealableClass = function() {
+};
+goog.UNSEALABLE_CONSTRUCTOR_PROPERTY_ = "goog_defineClass_legacy_unsealable";
 goog.debug = {};
 goog.debug.Error = function(opt_msg) {
   if (Error.captureStackTrace) {
@@ -1712,6 +1718,17 @@ goog.object.set = function(obj, key, value) {
 goog.object.setIfUndefined = function(obj, key, value) {
   return key in obj ? obj[key] : obj[key] = value;
 };
+goog.object.equals = function(a, b) {
+  if (!goog.array.equals(goog.object.getKeys(a), goog.object.getKeys(b))) {
+    return!1;
+  }
+  for (var k in a) {
+    if (a[k] !== b[k]) {
+      return!1;
+    }
+  }
+  return!0;
+};
 goog.object.clone = function(obj) {
   var res = {}, key;
   for (key in obj) {
@@ -2137,7 +2154,7 @@ goog.dom.getDocumentHeight_ = function(win) {
   var doc = win.document, height = 0;
   if (doc) {
     var body = doc.body, docEl = doc.documentElement;
-    if (!body && !docEl) {
+    if (!docEl || !body) {
       return 0;
     }
     var vh = goog.dom.getViewportSize_(win).height;
@@ -3128,7 +3145,6 @@ goog.events.ListenerMap.findListenerIndex_ = function(listenerArray, listener, o
   }
   return-1;
 };
-goog.events.listeners_ = {};
 goog.events.LISTENER_MAP_PROP_ = "closure_lm_" + (1E6 * Math.random() | 0);
 goog.events.onString_ = "on";
 goog.events.onStringMap_ = {};
@@ -3464,7 +3480,7 @@ goog.events.EventTarget.prototype.fireListeners = function(type, capture, eventO
       rv = !1 !== listenerFn.call(listenerHandler, eventObject) && rv;
     }
   }
-  return rv && !1 != eventObject.returnValue_;
+  return rv && 0 != eventObject.returnValue_;
 };
 goog.events.EventTarget.prototype.getListeners = function(type, capture) {
   return this.eventTargetListeners_.getListeners(String(type), capture);
@@ -5536,18 +5552,18 @@ goog.Uri.prototype.isReadOnly_ = !1;
 goog.Uri.prototype.ignoreCase_ = !1;
 goog.Uri.prototype.toString = function() {
   var out = [], scheme = this.getScheme();
-  scheme && out.push(goog.Uri.encodeSpecialChars_(scheme, goog.Uri.reDisallowedInSchemeOrUserInfo_), ":");
+  scheme && out.push(goog.Uri.encodeSpecialChars_(scheme, goog.Uri.reDisallowedInSchemeOrUserInfo_, !0), ":");
   var domain = this.getDomain();
   if (domain) {
     out.push("//");
     var userInfo = this.getUserInfo();
-    userInfo && out.push(goog.Uri.encodeSpecialChars_(userInfo, goog.Uri.reDisallowedInSchemeOrUserInfo_), "@");
-    out.push(goog.string.urlEncode(domain));
+    userInfo && out.push(goog.Uri.encodeSpecialChars_(userInfo, goog.Uri.reDisallowedInSchemeOrUserInfo_, !0), "@");
+    out.push(goog.Uri.removeDoubleEncoding_(goog.string.urlEncode(domain)));
     var port = this.getPort();
     null != port && out.push(":", String(port));
   }
   var path = this.getPath();
-  path && (this.hasDomain() && "/" != path.charAt(0) && out.push("/"), out.push(goog.Uri.encodeSpecialChars_(path, "/" == path.charAt(0) ? goog.Uri.reDisallowedInAbsolutePath_ : goog.Uri.reDisallowedInRelativePath_)));
+  path && (this.hasDomain() && "/" != path.charAt(0) && out.push("/"), out.push(goog.Uri.encodeSpecialChars_(path, "/" == path.charAt(0) ? goog.Uri.reDisallowedInAbsolutePath_ : goog.Uri.reDisallowedInRelativePath_, !0)));
   var query = this.getEncodedQuery();
   query && out.push("?", query);
   var fragment = this.getFragment();
@@ -5588,7 +5604,7 @@ goog.Uri.prototype.getScheme = function() {
 };
 goog.Uri.prototype.setScheme = function(newScheme, opt_decode) {
   this.enforceReadOnly();
-  if (this.scheme_ = opt_decode ? goog.Uri.decodeOrEmpty_(newScheme) : newScheme) {
+  if (this.scheme_ = opt_decode ? goog.Uri.decodeOrEmpty_(newScheme, !0) : newScheme) {
     this.scheme_ = this.scheme_.replace(/:$/, "");
   }
   return this;
@@ -5612,7 +5628,7 @@ goog.Uri.prototype.getDomain = function() {
 };
 goog.Uri.prototype.setDomain = function(newDomain, opt_decode) {
   this.enforceReadOnly();
-  this.domain_ = opt_decode ? goog.Uri.decodeOrEmpty_(newDomain) : newDomain;
+  this.domain_ = opt_decode ? goog.Uri.decodeOrEmpty_(newDomain, !0) : newDomain;
   return this;
 };
 goog.Uri.prototype.hasDomain = function() {
@@ -5642,7 +5658,7 @@ goog.Uri.prototype.getPath = function() {
 };
 goog.Uri.prototype.setPath = function(newPath, opt_decode) {
   this.enforceReadOnly();
-  this.path_ = opt_decode ? goog.Uri.decodeOrEmpty_(newPath) : newPath;
+  this.path_ = opt_decode ? goog.Uri.decodeOrEmpty_(newPath, !0) : newPath;
   return this;
 };
 goog.Uri.prototype.hasPath = function() {
@@ -5731,15 +5747,23 @@ goog.Uri.removeDotSegments = function(path) {
   }
   return path;
 };
-goog.Uri.decodeOrEmpty_ = function(val) {
-  return val ? decodeURIComponent(val) : "";
+goog.Uri.decodeOrEmpty_ = function(val, opt_preserveReserved) {
+  return val ? opt_preserveReserved ? decodeURI(val) : decodeURIComponent(val) : "";
 };
-goog.Uri.encodeSpecialChars_ = function(unescapedPart, extra) {
-  return goog.isString(unescapedPart) ? encodeURI(unescapedPart).replace(extra, goog.Uri.encodeChar_) : null;
+goog.Uri.encodeSpecialChars_ = function(unescapedPart, extra, opt_removeDoubleEncoding) {
+  if (goog.isString(unescapedPart)) {
+    var encoded = encodeURI(unescapedPart).replace(extra, goog.Uri.encodeChar_);
+    opt_removeDoubleEncoding && (encoded = goog.Uri.removeDoubleEncoding_(encoded));
+    return encoded;
+  }
+  return null;
 };
 goog.Uri.encodeChar_ = function(ch) {
   var n = ch.charCodeAt(0);
   return "%" + (n >> 4 & 15).toString(16) + (n & 15).toString(16);
+};
+goog.Uri.removeDoubleEncoding_ = function(doubleEncodedString) {
+  return doubleEncodedString.replace(/%25([0-9a-fA-F]{2})/g, "%$1");
 };
 goog.Uri.reDisallowedInSchemeOrUserInfo_ = /[#\/\?@]/g;
 goog.Uri.reDisallowedInRelativePath_ = /[\#\?:]/g;
