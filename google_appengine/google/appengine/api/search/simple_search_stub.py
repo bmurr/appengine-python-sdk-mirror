@@ -658,7 +658,9 @@ class SearchServiceStub(apiproxy_stub.APIProxyStub):
 
   def _UnknownIndex(self, status, index_spec):
     status.set_code(search_service_pb.SearchServiceError.OK)
-    status.set_error_detail('no index for %r' % index_spec)
+    status.set_error_detail(
+        "Index '%s' in namespace '%s' does not exist" %
+        (index_spec.name(), index_spec.namespace()))
 
   def _GetNamespace(self, namespace):
     """Get namespace name.
