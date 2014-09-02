@@ -2369,12 +2369,17 @@ class AppVersionUpload(object):
                        else EndpointsState.PENDING)
     return updated_state != EndpointsState.PENDING, updated_state
 
-  def Rollback(self):
+  def Rollback(self, force_rollback=False):
     """Rolls back the transaction if one is in progress."""
     if not self.in_transaction:
       return
-    StatusUpdate('Rolling back the update.', self.error_fh)
-    self.logging_context.Send('/api/appversion/rollback')
+    msg = 'Rolling back the update.'
+    if self.config.vm and not force_rollback:
+      msg += ('  This can sometimes take a while since a VM version is being '
+              'rolled back.')
+    StatusUpdate(msg, self.error_fh)
+    self.logging_context.Send('/api/appversion/rollback',
+                              force_rollback='1' if force_rollback else '0')
     self.in_transaction = False
     self.files = {}
 
@@ -3141,6 +3146,9 @@ class AppCfgApp(object):
                       dest='auth_local_webserver', default=True,
                       help='Do not run a local web server to handle redirects '
                       'during OAuth authorization.')
+    parser.add_option('--called_by_gcloud',
+                      action='store_true', default=False,
+                      help=optparse.SUPPRESS_HELP)
     return parser
 
   def _MakeSpecificParser(self, action):
@@ -3616,14 +3624,31 @@ class AppCfgApp(object):
       paths to absolute paths, its stderr is raised.
     """
 
-    if (not self.options.precompilation and
-        appyaml.GetEffectiveRuntime() == 'go'):
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    runtime = appyaml.GetEffectiveRuntime()
+    if appyaml.vm and (self.options.called_by_gcloud or runtime != 'go'):
+      self.options.precompilation = False
+    elif runtime == 'dart':
+      self.options.precompilation = False
+    elif runtime == 'go' and not self.options.precompilation:
       logging.warning('Precompilation is required for Go apps; '
                       'ignoring --no_precompilation')
       self.options.precompilation = True
-
-    if (appyaml.runtime.startswith('java') or
-        appyaml.GetEffectiveRuntime() == 'dart'):
+    elif (runtime.startswith('java') and
+          appinfo.JAVA_PRECOMPILED not in (appyaml.derived_file_type or [])):
       self.options.precompilation = False
 
     if self.options.precompilation:
@@ -4380,9 +4405,17 @@ class AppCfgApp(object):
 
   def Rollback(self):
     """Does a rollback of an existing transaction for this app version."""
-    if self.args:
-      self.parser.error('Expected a single <directory> or <file> argument.')
     self._Rollback()
+
+  def _RollbackOptions(self, parser):
+    """Adds rollback-specific options to parser.
+
+    Args:
+      parser: An instance of OptionsParser.
+    """
+    parser.add_option('--force_rollback', action='store_true',
+                      dest='force_rollback', default=False,
+                      help='Force rollback.')
 
   def _Rollback(self, backend=None):
     """Does a rollback of an existing transaction.
@@ -4409,7 +4442,15 @@ class AppCfgApp(object):
                                   backend=backend)
 
     appversion.in_transaction = True
-    appversion.Rollback()
+
+
+
+
+    force_rollback = False
+    if hasattr(self.options, 'force_rollback'):
+      force_rollback = self.options.force_rollback
+
+    appversion.Rollback(force_rollback)
 
   def SetDefaultVersion(self):
     """Sets the default version."""
@@ -5164,6 +5205,7 @@ option to delete them."""),
       'rollback': Action(
           function='Rollback',
           usage='%prog [options] rollback <directory> | <file>',
+          options=_RollbackOptions,
           short_desc='Rollback an in-progress update.',
           long_desc="""
 The 'update' command requires a server-side transaction.

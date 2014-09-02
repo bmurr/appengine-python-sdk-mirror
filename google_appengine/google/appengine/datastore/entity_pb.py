@@ -1154,19 +1154,6 @@ class Property(ProtocolBuffer.ProtocolMessage):
   def Meaning_Name(cls, x): return cls._Meaning_NAMES.get(x, "")
   Meaning_Name = classmethod(Meaning_Name)
 
-
-
-  HTML         =    1
-  ATOM         =    2
-
-  _FtsTokenizationOption_NAMES = {
-    1: "HTML",
-    2: "ATOM",
-  }
-
-  def FtsTokenizationOption_Name(cls, x): return cls._FtsTokenizationOption_NAMES.get(x, "")
-  FtsTokenizationOption_Name = classmethod(FtsTokenizationOption_Name)
-
   has_meaning_ = 0
   meaning_ = 0
   has_meaning_uri_ = 0
@@ -1176,12 +1163,6 @@ class Property(ProtocolBuffer.ProtocolMessage):
   has_value_ = 0
   has_multiple_ = 0
   multiple_ = 0
-  has_searchable_ = 0
-  searchable_ = 0
-  has_fts_tokenization_option_ = 0
-  fts_tokenization_option_ = 0
-  has_locale_ = 0
-  locale_ = "en"
 
   def __init__(self, contents=None):
     self.value_ = PropertyValue()
@@ -1247,45 +1228,6 @@ class Property(ProtocolBuffer.ProtocolMessage):
 
   def has_multiple(self): return self.has_multiple_
 
-  def searchable(self): return self.searchable_
-
-  def set_searchable(self, x):
-    self.has_searchable_ = 1
-    self.searchable_ = x
-
-  def clear_searchable(self):
-    if self.has_searchable_:
-      self.has_searchable_ = 0
-      self.searchable_ = 0
-
-  def has_searchable(self): return self.has_searchable_
-
-  def fts_tokenization_option(self): return self.fts_tokenization_option_
-
-  def set_fts_tokenization_option(self, x):
-    self.has_fts_tokenization_option_ = 1
-    self.fts_tokenization_option_ = x
-
-  def clear_fts_tokenization_option(self):
-    if self.has_fts_tokenization_option_:
-      self.has_fts_tokenization_option_ = 0
-      self.fts_tokenization_option_ = 0
-
-  def has_fts_tokenization_option(self): return self.has_fts_tokenization_option_
-
-  def locale(self): return self.locale_
-
-  def set_locale(self, x):
-    self.has_locale_ = 1
-    self.locale_ = x
-
-  def clear_locale(self):
-    if self.has_locale_:
-      self.has_locale_ = 0
-      self.locale_ = "en"
-
-  def has_locale(self): return self.has_locale_
-
 
   def MergeFrom(self, x):
     assert x is not self
@@ -1294,9 +1236,6 @@ class Property(ProtocolBuffer.ProtocolMessage):
     if (x.has_name()): self.set_name(x.name())
     if (x.has_value()): self.mutable_value().MergeFrom(x.value())
     if (x.has_multiple()): self.set_multiple(x.multiple())
-    if (x.has_searchable()): self.set_searchable(x.searchable())
-    if (x.has_fts_tokenization_option()): self.set_fts_tokenization_option(x.fts_tokenization_option())
-    if (x.has_locale()): self.set_locale(x.locale())
 
   def Equals(self, x):
     if x is self: return 1
@@ -1310,12 +1249,6 @@ class Property(ProtocolBuffer.ProtocolMessage):
     if self.has_value_ and self.value_ != x.value_: return 0
     if self.has_multiple_ != x.has_multiple_: return 0
     if self.has_multiple_ and self.multiple_ != x.multiple_: return 0
-    if self.has_searchable_ != x.has_searchable_: return 0
-    if self.has_searchable_ and self.searchable_ != x.searchable_: return 0
-    if self.has_fts_tokenization_option_ != x.has_fts_tokenization_option_: return 0
-    if self.has_fts_tokenization_option_ and self.fts_tokenization_option_ != x.fts_tokenization_option_: return 0
-    if self.has_locale_ != x.has_locale_: return 0
-    if self.has_locale_ and self.locale_ != x.locale_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -1341,9 +1274,6 @@ class Property(ProtocolBuffer.ProtocolMessage):
     if (self.has_meaning_uri_): n += 1 + self.lengthString(len(self.meaning_uri_))
     n += self.lengthString(len(self.name_))
     n += self.lengthString(self.value_.ByteSize())
-    if (self.has_searchable_): n += 2
-    if (self.has_fts_tokenization_option_): n += 1 + self.lengthVarInt64(self.fts_tokenization_option_)
-    if (self.has_locale_): n += 1 + self.lengthString(len(self.locale_))
     return n + 4
 
   def ByteSizePartial(self):
@@ -1358,9 +1288,6 @@ class Property(ProtocolBuffer.ProtocolMessage):
       n += self.lengthString(self.value_.ByteSizePartial())
     if (self.has_multiple_):
       n += 2
-    if (self.has_searchable_): n += 2
-    if (self.has_fts_tokenization_option_): n += 1 + self.lengthVarInt64(self.fts_tokenization_option_)
-    if (self.has_locale_): n += 1 + self.lengthString(len(self.locale_))
     return n
 
   def Clear(self):
@@ -1369,9 +1296,6 @@ class Property(ProtocolBuffer.ProtocolMessage):
     self.clear_name()
     self.clear_value()
     self.clear_multiple()
-    self.clear_searchable()
-    self.clear_fts_tokenization_option()
-    self.clear_locale()
 
   def OutputUnchecked(self, out):
     if (self.has_meaning_):
@@ -1387,15 +1311,6 @@ class Property(ProtocolBuffer.ProtocolMessage):
     out.putVarInt32(42)
     out.putVarInt32(self.value_.ByteSize())
     self.value_.OutputUnchecked(out)
-    if (self.has_searchable_):
-      out.putVarInt32(48)
-      out.putBoolean(self.searchable_)
-    if (self.has_fts_tokenization_option_):
-      out.putVarInt32(64)
-      out.putVarInt32(self.fts_tokenization_option_)
-    if (self.has_locale_):
-      out.putVarInt32(74)
-      out.putPrefixedString(self.locale_)
 
   def OutputPartial(self, out):
     if (self.has_meaning_):
@@ -1414,15 +1329,6 @@ class Property(ProtocolBuffer.ProtocolMessage):
       out.putVarInt32(42)
       out.putVarInt32(self.value_.ByteSizePartial())
       self.value_.OutputPartial(out)
-    if (self.has_searchable_):
-      out.putVarInt32(48)
-      out.putBoolean(self.searchable_)
-    if (self.has_fts_tokenization_option_):
-      out.putVarInt32(64)
-      out.putVarInt32(self.fts_tokenization_option_)
-    if (self.has_locale_):
-      out.putVarInt32(74)
-      out.putPrefixedString(self.locale_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -1445,15 +1351,6 @@ class Property(ProtocolBuffer.ProtocolMessage):
         d.skip(length)
         self.mutable_value().TryMerge(tmp)
         continue
-      if tt == 48:
-        self.set_searchable(d.getBoolean())
-        continue
-      if tt == 64:
-        self.set_fts_tokenization_option(d.getVarInt32())
-        continue
-      if tt == 74:
-        self.set_locale(d.getPrefixedString())
-        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
@@ -1470,9 +1367,6 @@ class Property(ProtocolBuffer.ProtocolMessage):
       res+=self.value_.__str__(prefix + "  ", printElemNumber)
       res+=prefix+">\n"
     if self.has_multiple_: res+=prefix+("multiple: %s\n" % self.DebugFormatBool(self.multiple_))
-    if self.has_searchable_: res+=prefix+("searchable: %s\n" % self.DebugFormatBool(self.searchable_))
-    if self.has_fts_tokenization_option_: res+=prefix+("fts_tokenization_option: %s\n" % self.DebugFormatInt32(self.fts_tokenization_option_))
-    if self.has_locale_: res+=prefix+("locale: %s\n" % self.DebugFormatString(self.locale_))
     return res
 
 
@@ -1484,9 +1378,6 @@ class Property(ProtocolBuffer.ProtocolMessage):
   kname = 3
   kvalue = 5
   kmultiple = 4
-  ksearchable = 6
-  kfts_tokenization_option = 8
-  klocale = 9
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",
@@ -1495,10 +1386,7 @@ class Property(ProtocolBuffer.ProtocolMessage):
     3: "name",
     4: "multiple",
     5: "value",
-    6: "searchable",
-    8: "fts_tokenization_option",
-    9: "locale",
-  }, 9)
+  }, 5)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -1507,10 +1395,7 @@ class Property(ProtocolBuffer.ProtocolMessage):
     3: ProtocolBuffer.Encoder.STRING,
     4: ProtocolBuffer.Encoder.NUMERIC,
     5: ProtocolBuffer.Encoder.STRING,
-    6: ProtocolBuffer.Encoder.NUMERIC,
-    8: ProtocolBuffer.Encoder.NUMERIC,
-    9: ProtocolBuffer.Encoder.STRING,
-  }, 9, ProtocolBuffer.Encoder.MAX_TYPE)
+  }, 5, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
@@ -2294,8 +2179,6 @@ class EntityProto(ProtocolBuffer.ProtocolMessage):
   kind_ = 0
   has_kind_uri_ = 0
   kind_uri_ = ""
-  has_rank_ = 0
-  rank_ = 0
 
   def __init__(self, contents=None):
     self.key_ = Reference()
@@ -2398,19 +2281,6 @@ class EntityProto(ProtocolBuffer.ProtocolMessage):
 
   def clear_raw_property(self):
     self.raw_property_ = []
-  def rank(self): return self.rank_
-
-  def set_rank(self, x):
-    self.has_rank_ = 1
-    self.rank_ = x
-
-  def clear_rank(self):
-    if self.has_rank_:
-      self.has_rank_ = 0
-      self.rank_ = 0
-
-  def has_rank(self): return self.has_rank_
-
 
   def MergeFrom(self, x):
     assert x is not self
@@ -2421,7 +2291,6 @@ class EntityProto(ProtocolBuffer.ProtocolMessage):
     if (x.has_kind_uri()): self.set_kind_uri(x.kind_uri())
     for i in xrange(x.property_size()): self.add_property().CopyFrom(x.property(i))
     for i in xrange(x.raw_property_size()): self.add_raw_property().CopyFrom(x.raw_property(i))
-    if (x.has_rank()): self.set_rank(x.rank())
 
   def Equals(self, x):
     if x is self: return 1
@@ -2441,8 +2310,6 @@ class EntityProto(ProtocolBuffer.ProtocolMessage):
     if len(self.raw_property_) != len(x.raw_property_): return 0
     for e1, e2 in zip(self.raw_property_, x.raw_property_):
       if e1 != e2: return 0
-    if self.has_rank_ != x.has_rank_: return 0
-    if self.has_rank_ and self.rank_ != x.rank_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -2475,7 +2342,6 @@ class EntityProto(ProtocolBuffer.ProtocolMessage):
     for i in xrange(len(self.property_)): n += self.lengthString(self.property_[i].ByteSize())
     n += 1 * len(self.raw_property_)
     for i in xrange(len(self.raw_property_)): n += self.lengthString(self.raw_property_[i].ByteSize())
-    if (self.has_rank_): n += 2 + self.lengthVarInt64(self.rank_)
     return n + 3
 
   def ByteSizePartial(self):
@@ -2493,7 +2359,6 @@ class EntityProto(ProtocolBuffer.ProtocolMessage):
     for i in xrange(len(self.property_)): n += self.lengthString(self.property_[i].ByteSizePartial())
     n += 1 * len(self.raw_property_)
     for i in xrange(len(self.raw_property_)): n += self.lengthString(self.raw_property_[i].ByteSizePartial())
-    if (self.has_rank_): n += 2 + self.lengthVarInt64(self.rank_)
     return n
 
   def Clear(self):
@@ -2504,7 +2369,6 @@ class EntityProto(ProtocolBuffer.ProtocolMessage):
     self.clear_kind_uri()
     self.clear_property()
     self.clear_raw_property()
-    self.clear_rank()
 
   def OutputUnchecked(self, out):
     if (self.has_kind_):
@@ -2531,9 +2395,6 @@ class EntityProto(ProtocolBuffer.ProtocolMessage):
       out.putVarInt32(138)
       out.putVarInt32(self.owner_.ByteSize())
       self.owner_.OutputUnchecked(out)
-    if (self.has_rank_):
-      out.putVarInt32(144)
-      out.putVarInt32(self.rank_)
 
   def OutputPartial(self, out):
     if (self.has_kind_):
@@ -2562,9 +2423,6 @@ class EntityProto(ProtocolBuffer.ProtocolMessage):
       out.putVarInt32(138)
       out.putVarInt32(self.owner_.ByteSizePartial())
       self.owner_.OutputPartial(out)
-    if (self.has_rank_):
-      out.putVarInt32(144)
-      out.putVarInt32(self.rank_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -2605,9 +2463,6 @@ class EntityProto(ProtocolBuffer.ProtocolMessage):
         d.skip(length)
         self.mutable_owner().TryMerge(tmp)
         continue
-      if tt == 144:
-        self.set_rank(d.getVarInt32())
-        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
@@ -2646,7 +2501,6 @@ class EntityProto(ProtocolBuffer.ProtocolMessage):
       res+=e.__str__(prefix + "  ", printElemNumber)
       res+=prefix+">\n"
       cnt+=1
-    if self.has_rank_: res+=prefix+("rank: %s\n" % self.DebugFormatInt32(self.rank_))
     return res
 
 
@@ -2660,7 +2514,6 @@ class EntityProto(ProtocolBuffer.ProtocolMessage):
   kkind_uri = 5
   kproperty = 14
   kraw_property = 15
-  krank = 18
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",
@@ -2671,8 +2524,7 @@ class EntityProto(ProtocolBuffer.ProtocolMessage):
     15: "raw_property",
     16: "entity_group",
     17: "owner",
-    18: "rank",
-  }, 18)
+  }, 17)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -2683,8 +2535,7 @@ class EntityProto(ProtocolBuffer.ProtocolMessage):
     15: ProtocolBuffer.Encoder.STRING,
     16: ProtocolBuffer.Encoder.STRING,
     17: ProtocolBuffer.Encoder.STRING,
-    18: ProtocolBuffer.Encoder.NUMERIC,
-  }, 18, ProtocolBuffer.Encoder.MAX_TYPE)
+  }, 17, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
@@ -3227,6 +3078,8 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
   state_ = 0
   has_only_use_if_required_ = 0
   only_use_if_required_ = 0
+  has_disabled_index_ = 0
+  disabled_index_ = 0
   has_write_division_family_ = 0
   write_division_family_ = ""
 
@@ -3295,6 +3148,19 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
 
   def has_only_use_if_required(self): return self.has_only_use_if_required_
 
+  def disabled_index(self): return self.disabled_index_
+
+  def set_disabled_index(self, x):
+    self.has_disabled_index_ = 1
+    self.disabled_index_ = x
+
+  def clear_disabled_index(self):
+    if self.has_disabled_index_:
+      self.has_disabled_index_ = 0
+      self.disabled_index_ = 0
+
+  def has_disabled_index(self): return self.has_disabled_index_
+
   def read_division_family_size(self): return len(self.read_division_family_)
   def read_division_family_list(self): return self.read_division_family_
 
@@ -3331,6 +3197,7 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     if (x.has_definition()): self.mutable_definition().MergeFrom(x.definition())
     if (x.has_state()): self.set_state(x.state())
     if (x.has_only_use_if_required()): self.set_only_use_if_required(x.only_use_if_required())
+    if (x.has_disabled_index()): self.set_disabled_index(x.disabled_index())
     for i in xrange(x.read_division_family_size()): self.add_read_division_family(x.read_division_family(i))
     if (x.has_write_division_family()): self.set_write_division_family(x.write_division_family())
 
@@ -3346,6 +3213,8 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     if self.has_state_ and self.state_ != x.state_: return 0
     if self.has_only_use_if_required_ != x.has_only_use_if_required_: return 0
     if self.has_only_use_if_required_ and self.only_use_if_required_ != x.only_use_if_required_: return 0
+    if self.has_disabled_index_ != x.has_disabled_index_: return 0
+    if self.has_disabled_index_ and self.disabled_index_ != x.disabled_index_: return 0
     if len(self.read_division_family_) != len(x.read_division_family_): return 0
     for e1, e2 in zip(self.read_division_family_, x.read_division_family_):
       if e1 != e2: return 0
@@ -3381,6 +3250,7 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     n += self.lengthString(self.definition_.ByteSize())
     n += self.lengthVarInt64(self.state_)
     if (self.has_only_use_if_required_): n += 2
+    if (self.has_disabled_index_): n += 2
     n += 1 * len(self.read_division_family_)
     for i in xrange(len(self.read_division_family_)): n += self.lengthString(len(self.read_division_family_[i]))
     if (self.has_write_division_family_): n += 1 + self.lengthString(len(self.write_division_family_))
@@ -3401,6 +3271,7 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
       n += 1
       n += self.lengthVarInt64(self.state_)
     if (self.has_only_use_if_required_): n += 2
+    if (self.has_disabled_index_): n += 2
     n += 1 * len(self.read_division_family_)
     for i in xrange(len(self.read_division_family_)): n += self.lengthString(len(self.read_division_family_[i]))
     if (self.has_write_division_family_): n += 1 + self.lengthString(len(self.write_division_family_))
@@ -3412,6 +3283,7 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     self.clear_definition()
     self.clear_state()
     self.clear_only_use_if_required()
+    self.clear_disabled_index()
     self.clear_read_division_family()
     self.clear_write_division_family()
 
@@ -3434,6 +3306,9 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     if (self.has_write_division_family_):
       out.putVarInt32(66)
       out.putPrefixedString(self.write_division_family_)
+    if (self.has_disabled_index_):
+      out.putVarInt32(72)
+      out.putBoolean(self.disabled_index_)
 
   def OutputPartial(self, out):
     if (self.has_app_id_):
@@ -3458,6 +3333,9 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     if (self.has_write_division_family_):
       out.putVarInt32(66)
       out.putPrefixedString(self.write_division_family_)
+    if (self.has_disabled_index_):
+      out.putVarInt32(72)
+      out.putBoolean(self.disabled_index_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -3486,6 +3364,9 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
       if tt == 66:
         self.set_write_division_family(d.getPrefixedString())
         continue
+      if tt == 72:
+        self.set_disabled_index(d.getBoolean())
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
@@ -3502,6 +3383,7 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
       res+=prefix+">\n"
     if self.has_state_: res+=prefix+("state: %s\n" % self.DebugFormatInt32(self.state_))
     if self.has_only_use_if_required_: res+=prefix+("only_use_if_required: %s\n" % self.DebugFormatBool(self.only_use_if_required_))
+    if self.has_disabled_index_: res+=prefix+("disabled_index: %s\n" % self.DebugFormatBool(self.disabled_index_))
     cnt=0
     for e in self.read_division_family_:
       elm=""
@@ -3520,6 +3402,7 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
   kdefinition = 3
   kstate = 4
   konly_use_if_required = 6
+  kdisabled_index = 9
   kread_division_family = 7
   kwrite_division_family = 8
 
@@ -3532,7 +3415,8 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     6: "only_use_if_required",
     7: "read_division_family",
     8: "write_division_family",
-  }, 8)
+    9: "disabled_index",
+  }, 9)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -3543,7 +3427,8 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     6: ProtocolBuffer.Encoder.NUMERIC,
     7: ProtocolBuffer.Encoder.STRING,
     8: ProtocolBuffer.Encoder.STRING,
-  }, 8, ProtocolBuffer.Encoder.MAX_TYPE)
+    9: ProtocolBuffer.Encoder.NUMERIC,
+  }, 9, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
@@ -4283,6 +4168,8 @@ class IndexPosition(ProtocolBuffer.ProtocolMessage):
   key_ = ""
   has_before_ = 0
   before_ = 1
+  has_before_ascending_ = 0
+  before_ascending_ = 0
 
   def __init__(self, contents=None):
     if contents is not None: self.MergeFromString(contents)
@@ -4313,11 +4200,25 @@ class IndexPosition(ProtocolBuffer.ProtocolMessage):
 
   def has_before(self): return self.has_before_
 
+  def before_ascending(self): return self.before_ascending_
+
+  def set_before_ascending(self, x):
+    self.has_before_ascending_ = 1
+    self.before_ascending_ = x
+
+  def clear_before_ascending(self):
+    if self.has_before_ascending_:
+      self.has_before_ascending_ = 0
+      self.before_ascending_ = 0
+
+  def has_before_ascending(self): return self.has_before_ascending_
+
 
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_key()): self.set_key(x.key())
     if (x.has_before()): self.set_before(x.before())
+    if (x.has_before_ascending()): self.set_before_ascending(x.before_ascending())
 
   def Equals(self, x):
     if x is self: return 1
@@ -4325,6 +4226,8 @@ class IndexPosition(ProtocolBuffer.ProtocolMessage):
     if self.has_key_ and self.key_ != x.key_: return 0
     if self.has_before_ != x.has_before_: return 0
     if self.has_before_ and self.before_ != x.before_: return 0
+    if self.has_before_ascending_ != x.has_before_ascending_: return 0
+    if self.has_before_ascending_ and self.before_ascending_ != x.before_ascending_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -4335,17 +4238,20 @@ class IndexPosition(ProtocolBuffer.ProtocolMessage):
     n = 0
     if (self.has_key_): n += 1 + self.lengthString(len(self.key_))
     if (self.has_before_): n += 2
+    if (self.has_before_ascending_): n += 2
     return n
 
   def ByteSizePartial(self):
     n = 0
     if (self.has_key_): n += 1 + self.lengthString(len(self.key_))
     if (self.has_before_): n += 2
+    if (self.has_before_ascending_): n += 2
     return n
 
   def Clear(self):
     self.clear_key()
     self.clear_before()
+    self.clear_before_ascending()
 
   def OutputUnchecked(self, out):
     if (self.has_key_):
@@ -4354,6 +4260,9 @@ class IndexPosition(ProtocolBuffer.ProtocolMessage):
     if (self.has_before_):
       out.putVarInt32(16)
       out.putBoolean(self.before_)
+    if (self.has_before_ascending_):
+      out.putVarInt32(24)
+      out.putBoolean(self.before_ascending_)
 
   def OutputPartial(self, out):
     if (self.has_key_):
@@ -4362,6 +4271,9 @@ class IndexPosition(ProtocolBuffer.ProtocolMessage):
     if (self.has_before_):
       out.putVarInt32(16)
       out.putBoolean(self.before_)
+    if (self.has_before_ascending_):
+      out.putVarInt32(24)
+      out.putBoolean(self.before_ascending_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -4371,6 +4283,9 @@ class IndexPosition(ProtocolBuffer.ProtocolMessage):
         continue
       if tt == 16:
         self.set_before(d.getBoolean())
+        continue
+      if tt == 24:
+        self.set_before_ascending(d.getBoolean())
         continue
 
 
@@ -4382,6 +4297,7 @@ class IndexPosition(ProtocolBuffer.ProtocolMessage):
     res=""
     if self.has_key_: res+=prefix+("key: %s\n" % self.DebugFormatString(self.key_))
     if self.has_before_: res+=prefix+("before: %s\n" % self.DebugFormatBool(self.before_))
+    if self.has_before_ascending_: res+=prefix+("before_ascending: %s\n" % self.DebugFormatBool(self.before_ascending_))
     return res
 
 
@@ -4390,18 +4306,21 @@ class IndexPosition(ProtocolBuffer.ProtocolMessage):
 
   kkey = 1
   kbefore = 2
+  kbefore_ascending = 3
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",
     1: "key",
     2: "before",
-  }, 2)
+    3: "before_ascending",
+  }, 3)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
     1: ProtocolBuffer.Encoder.STRING,
     2: ProtocolBuffer.Encoder.NUMERIC,
-  }, 2, ProtocolBuffer.Encoder.MAX_TYPE)
+    3: ProtocolBuffer.Encoder.NUMERIC,
+  }, 3, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""

@@ -1444,7 +1444,7 @@ class AppInclude(validation.Validated):
   ATTRIBUTES = {
       BUILTINS: validation.Optional(validation.Repeated(BuiltinHandler)),
       INCLUDES: validation.Optional(validation.Type(list)),
-      HANDLERS: validation.Optional(validation.Repeated(URLMap)),
+      HANDLERS: validation.Optional(validation.Repeated(URLMap), default=[]),
       ADMIN_CONSOLE: validation.Optional(AdminConsole),
       MANUAL_SCALING: validation.Optional(ManualScaling),
       VM: validation.Optional(bool),
@@ -1643,7 +1643,7 @@ class AppInfoExternal(validation.Validated):
       VM_HEALTH_CHECK: validation.Optional(VmHealthCheck),
       BUILTINS: validation.Optional(validation.Repeated(BuiltinHandler)),
       INCLUDES: validation.Optional(validation.Type(list)),
-      HANDLERS: validation.Optional(validation.Repeated(URLMap)),
+      HANDLERS: validation.Optional(validation.Repeated(URLMap), default=[]),
       LIBRARIES: validation.Optional(validation.Repeated(Library)),
 
       SERVICES: validation.Optional(validation.Repeated(
@@ -1700,7 +1700,8 @@ class AppInfoExternal(validation.Validated):
           that does not support it (e.g. python25).
     """
     super(AppInfoExternal, self).CheckInitialized()
-    if not self.handlers and not self.builtins and not self.includes:
+    if (not self.handlers and not self.builtins and not self.includes
+        and not self.vm):
       raise appinfo_errors.MissingURLMapping(
           'No URLMap entries found in application configuration')
     if self.handlers and len(self.handlers) > MAX_URL_MAPS:
@@ -1868,7 +1869,8 @@ class AppInfoExternal(validation.Validated):
       The effective runtime: the value of vm_settings.vm_runtime if runtime is
       "vm", or runtime otherwise.
     """
-    if self.runtime == 'vm' and hasattr(self, 'vm_settings'):
+    if (self.runtime == 'vm' and hasattr(self, 'vm_settings')
+        and self.vm_settings is not None):
       return self.vm_settings.get('vm_runtime')
     return self.runtime
 

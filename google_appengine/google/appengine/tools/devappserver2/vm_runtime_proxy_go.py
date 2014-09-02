@@ -30,14 +30,23 @@ from google.appengine.tools.devappserver2 import vm_runtime_proxy
 
 DEBUG_PORT = 5858
 VM_SERVICE_PORT = 8181
-DEFAULT_DOCKER_FILE = """FROM google/golang:1.2.2
+# TODO: Remove this when classic Go SDK is gone.
+DEFAULT_DOCKER_FILE = """FROM google/appengine-go
+
+RUN apt-get install --no-install-recommends -y -q \
+    curl build-essential git mercurial bzr
+RUN mkdir /goroot && curl https://storage.googleapis.com/golang/go1.2.2.linux-amd64.tar.gz | tar xvzf - -C /goroot --strip-components=1
+RUN mkdir /gopath
+
+ENV GOROOT /goroot
+ENV GOPATH /gopath
+ENV PATH $PATH:$GOROOT/bin:$GOPATH/bin
+
+# TODO: Remove next line once google/appengine-go image updates.
+WORKDIR /app
+
 ADD . /app
 RUN /bin/bash /app/_ah/build.sh
-
-EXPOSE 8080
-CMD []
-WORKDIR /app
-ENTRYPOINT ["/app/_ah/exe"]
 """
 
 # Where to look for go-app-builder, which is needed for copying
@@ -114,8 +123,9 @@ class GoVMRuntimeProxy(instance.RuntimeProxy):
 
       with TempDir('go_deployment_dir') as dst_deployment_dir:
         build_go_docker_image_source(
-            application_dir, dst_deployment_dir,
-            _GO_APP_BUILDER, self._module_configuration)
+            application_dir, dst_deployment_dir, _GO_APP_BUILDER,
+            self._module_configuration.nobuild_files,
+            self._module_configuration.skip_files)
 
         self._vm_runtime_proxy.start(dockerfile_dir=dst_deployment_dir)
 
@@ -186,7 +196,8 @@ def _copytree(src, dst, skip_files, symlinks=False):
 
 
 def build_go_docker_image_source(
-    application_dir, dst_deployment_dir, go_app_builder, module_configuration):
+    application_dir, dst_deployment_dir, go_app_builder,
+    nobuild_files, skip_files):
   """Builds the Docker image source in preparation for building.
 
   Steps:
@@ -198,13 +209,11 @@ def build_go_docker_image_source(
     application_dir: string pathname of application directory.
     dst_deployment_dir: string pathname of temporary deployment directory.
     go_app_builder: string pathname of docker-gab executable.
-    module_configuration: An application_configuration.ModuleConfiguration
-        instance respresenting the configuration of the module that owns the
-        runtime.
+    nobuild_files: regexp identifying which files to not build.
+    skip_files: regexp identifying which files to omit from app.
   """
   try:
-    _copytree(application_dir, dst_deployment_dir,
-              module_configuration.skip_files)
+    _copytree(application_dir, dst_deployment_dir, skip_files)
   except shutil.Error as e:
     logging.error('Error copying tree: %s', e)
     for src, unused_dst, unused_error in e.args[0]:
@@ -218,7 +227,8 @@ def build_go_docker_image_source(
     logging.error('Failed to copy dir: %s', e.strerror)
     raise
 
-  extras = go_application.get_app_extras_for_vm(module_configuration)
+  extras = go_application.get_app_extras_for_vm(
+      application_dir, nobuild_files, skip_files)
   for dest, src in extras:
     try:
       dest = os.path.join(dst_deployment_dir, dest)
@@ -247,20 +257,20 @@ def build_go_docker_image_source(
     raise
 
   # Write build script.
-  nobuild_files = '^' + str(module_configuration.nobuild_files)
   gab_args = [
       '/app/_ah/gab',
       '-app_base', '/app',
       '-arch', '6',
       '-dynamic',
       '-goroot', '/goroot',
-      '-nobuild_files', nobuild_files,
+      '-nobuild_files', '^' + str(nobuild_files),
       '-unsafe',
       '-binary_name', '_ah_exe',
       '-work_dir', '/tmp/work',
       '-vm',
   ]
-  gab_args.extend(go_application.list_go_files(module_configuration))
+  gab_args.extend(go_application.list_go_files(
+      application_dir, nobuild_files, skip_files))
   gab_args.extend([x[0] for x in extras])
   dst_build = os.path.join(ah_dir, 'build.sh')
   lines = [

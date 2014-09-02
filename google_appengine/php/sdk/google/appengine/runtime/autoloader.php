@@ -80,7 +80,6 @@ final class ClassLoader {
         'storage_onestore_v3\propertyvalue\referencevalue' => 'google/appengine/datastore/entity_pb.php',
         'storage_onestore_v3\propertyvalue' => 'google/appengine/datastore/entity_pb.php',
         'storage_onestore_v3\property\meaning' => 'google/appengine/datastore/entity_pb.php',
-        'storage_onestore_v3\property\ftstokenizationoption' => 'google/appengine/datastore/entity_pb.php',
         'storage_onestore_v3\property' => 'google/appengine/datastore/entity_pb.php',
         'storage_onestore_v3\path\element' => 'google/appengine/datastore/entity_pb.php',
         'storage_onestore_v3\path' => 'google/appengine/datastore/entity_pb.php',
