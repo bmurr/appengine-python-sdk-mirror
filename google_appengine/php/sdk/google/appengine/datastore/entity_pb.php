@@ -1225,12 +1225,30 @@ namespace storage_onestore_v3 {
     public function hasValue() {
       return isset($this->value);
     }
+    public function getEmbedded() {
+      if (!isset($this->embedded)) {
+        return false;
+      }
+      return $this->embedded;
+    }
+    public function setEmbedded($val) {
+      $this->embedded = $val;
+      return $this;
+    }
+    public function clearEmbedded() {
+      unset($this->embedded);
+      return $this;
+    }
+    public function hasEmbedded() {
+      return isset($this->embedded);
+    }
     public function clear() {
       $this->clearMeaning();
       $this->clearMeaningUri();
       $this->clearName();
       $this->clearMultiple();
       $this->clearValue();
+      $this->clearEmbedded();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -1252,6 +1270,9 @@ namespace storage_onestore_v3 {
       if (isset($this->value)) {
         $res += 1;
         $res += $this->lengthString($this->value->byteSizePartial());
+      }
+      if (isset($this->embedded)) {
+        $res += 2;
       }
       return $res;
     }
@@ -1276,6 +1297,10 @@ namespace storage_onestore_v3 {
         $out->putVarInt32(42);
         $out->putVarInt32($this->value->byteSizePartial());
         $this->value->outputPartial($out);
+      }
+      if (isset($this->embedded)) {
+        $out->putVarInt32(48);
+        $out->putBoolean($this->embedded);
       }
     }
     public function tryMerge($d) {
@@ -1303,6 +1328,9 @@ namespace storage_onestore_v3 {
             $tmp = new \google\net\Decoder($d->buffer(), $d->pos(), $d->pos() + $length);
             $d->skip($length);
             $this->mutableValue()->tryMerge($tmp);
+            break;
+          case 48:
+            $this->setEmbedded($d->getBoolean());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -1335,6 +1363,9 @@ namespace storage_onestore_v3 {
       if ($x->hasValue()) {
         $this->mutableValue()->mergeFrom($x->getValue());
       }
+      if ($x->hasEmbedded()) {
+        $this->setEmbedded($x->getEmbedded());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -1348,6 +1379,8 @@ namespace storage_onestore_v3 {
       if (isset($this->multiple) && $this->multiple !== $x->multiple) return false;
       if (isset($this->value) !== isset($x->value)) return false;
       if (isset($this->value) && !$this->value->equals($x->value)) return false;
+      if (isset($this->embedded) !== isset($x->embedded)) return false;
+      if (isset($this->embedded) && $this->embedded !== $x->embedded) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -1366,6 +1399,9 @@ namespace storage_onestore_v3 {
       }
       if (isset($this->value)) {
         $res .= $prefix . "value <\n" . $this->value->shortDebugString($prefix . "  ") . $prefix . ">\n";
+      }
+      if (isset($this->embedded)) {
+        $res .= $prefix . "embedded: " . $this->debugFormatBool($this->embedded) . "\n";
       }
       return $res;
     }
@@ -2657,7 +2693,7 @@ namespace storage_onestore_v3\Index {
     }
     public function getDirection() {
       if (!isset($this->direction)) {
-        return 1;
+        return 0;
       }
       return $this->direction;
     }
@@ -2972,6 +3008,13 @@ namespace storage_onestore_v3\CompositeIndex {
     const ERROR = 4;
   }
 }
+namespace storage_onestore_v3\CompositeIndex {
+  class WorkflowState {
+    const PENDING = 1;
+    const ACTIVE = 2;
+    const COMPLETED = 3;
+  }
+}
 namespace storage_onestore_v3 {
   class CompositeIndex extends \google\net\ProtocolMessage {
     private $read_division_family = array();
@@ -3123,6 +3166,40 @@ namespace storage_onestore_v3 {
     public function hasDisabledIndex() {
       return isset($this->disabled_index);
     }
+    public function getWorkflowState() {
+      if (!isset($this->workflow_state)) {
+        return 1;
+      }
+      return $this->workflow_state;
+    }
+    public function setWorkflowState($val) {
+      $this->workflow_state = $val;
+      return $this;
+    }
+    public function clearWorkflowState() {
+      unset($this->workflow_state);
+      return $this;
+    }
+    public function hasWorkflowState() {
+      return isset($this->workflow_state);
+    }
+    public function getErrorMessage() {
+      if (!isset($this->error_message)) {
+        return '';
+      }
+      return $this->error_message;
+    }
+    public function setErrorMessage($val) {
+      $this->error_message = $val;
+      return $this;
+    }
+    public function clearErrorMessage() {
+      unset($this->error_message);
+      return $this;
+    }
+    public function hasErrorMessage() {
+      return isset($this->error_message);
+    }
     public function clear() {
       $this->clearAppId();
       $this->clearId();
@@ -3132,6 +3209,8 @@ namespace storage_onestore_v3 {
       $this->clearReadDivisionFamily();
       $this->clearWriteDivisionFamily();
       $this->clearDisabledIndex();
+      $this->clearWorkflowState();
+      $this->clearErrorMessage();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -3165,6 +3244,14 @@ namespace storage_onestore_v3 {
       }
       if (isset($this->disabled_index)) {
         $res += 2;
+      }
+      if (isset($this->workflow_state)) {
+        $res += 1;
+        $res += $this->lengthVarInt64($this->workflow_state);
+      }
+      if (isset($this->error_message)) {
+        $res += 1;
+        $res += $this->lengthString(strlen($this->error_message));
       }
       return $res;
     }
@@ -3203,6 +3290,14 @@ namespace storage_onestore_v3 {
         $out->putVarInt32(72);
         $out->putBoolean($this->disabled_index);
       }
+      if (isset($this->workflow_state)) {
+        $out->putVarInt32(80);
+        $out->putVarInt32($this->workflow_state);
+      }
+      if (isset($this->error_message)) {
+        $out->putVarInt32(90);
+        $out->putPrefixedString($this->error_message);
+      }
     }
     public function tryMerge($d) {
       while($d->avail() > 0) {
@@ -3240,6 +3335,14 @@ namespace storage_onestore_v3 {
             break;
           case 72:
             $this->setDisabledIndex($d->getBoolean());
+            break;
+          case 80:
+            $this->setWorkflowState($d->getVarInt32());
+            break;
+          case 90:
+            $length = $d->getVarInt32();
+            $this->setErrorMessage(substr($d->buffer(), $d->pos(), $length));
+            $d->skip($length);
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -3282,6 +3385,12 @@ namespace storage_onestore_v3 {
       if ($x->hasDisabledIndex()) {
         $this->setDisabledIndex($x->getDisabledIndex());
       }
+      if ($x->hasWorkflowState()) {
+        $this->setWorkflowState($x->getWorkflowState());
+      }
+      if ($x->hasErrorMessage()) {
+        $this->setErrorMessage($x->getErrorMessage());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -3303,6 +3412,10 @@ namespace storage_onestore_v3 {
       if (isset($this->write_division_family) && $this->write_division_family !== $x->write_division_family) return false;
       if (isset($this->disabled_index) !== isset($x->disabled_index)) return false;
       if (isset($this->disabled_index) && $this->disabled_index !== $x->disabled_index) return false;
+      if (isset($this->workflow_state) !== isset($x->workflow_state)) return false;
+      if (isset($this->workflow_state) && $this->workflow_state !== $x->workflow_state) return false;
+      if (isset($this->error_message) !== isset($x->error_message)) return false;
+      if (isset($this->error_message) && $this->error_message !== $x->error_message) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -3330,6 +3443,12 @@ namespace storage_onestore_v3 {
       }
       if (isset($this->disabled_index)) {
         $res .= $prefix . "disabled_index: " . $this->debugFormatBool($this->disabled_index) . "\n";
+      }
+      if (isset($this->workflow_state)) {
+        $res .= $prefix . "workflow_state: " . ($this->workflow_state) . "\n";
+      }
+      if (isset($this->error_message)) {
+        $res .= $prefix . "error_message: " . $this->debugFormatString($this->error_message) . "\n";
       }
       return $res;
     }
