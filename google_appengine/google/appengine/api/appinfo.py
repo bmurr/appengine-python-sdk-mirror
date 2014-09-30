@@ -32,6 +32,12 @@ configuration files.
 
 
 
+
+
+
+
+
+
 import logging
 import os
 import re
@@ -128,13 +134,14 @@ APPLICATION_RE_STRING = (r'(?:%s)?(?:%s)?%s' %
                           DOMAIN_RE_STRING,
                           DISPLAY_APP_ID_RE_STRING))
 
+
+
+
+
+
+
+
 MODULE_ID_RE_STRING = r'^(?!-)[a-z\d\-]{0,%d}[a-z\d]$' % (MODULE_ID_MAX_LEN - 1)
-
-
-
-
-
-
 MODULE_VERSION_ID_RE_STRING = (r'^(?!-)[a-z\d\-]{0,%d}[a-z\d]$' %
                                (MODULE_VERSION_ID_MAX_LEN - 1))
 

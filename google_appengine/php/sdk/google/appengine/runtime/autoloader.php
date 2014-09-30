@@ -93,6 +93,7 @@ final class ClassLoader {
         'storage_onestore_v3\index\property' => 'google/appengine/datastore/entity_pb.php',
         'storage_onestore_v3\index' => 'google/appengine/datastore/entity_pb.php',
         'storage_onestore_v3\compositeindex\state' => 'google/appengine/datastore/entity_pb.php',
+        'storage_onestore_v3\compositeindex\workflowstate' => 'google/appengine/datastore/entity_pb.php',
         'storage_onestore_v3\compositeindex' => 'google/appengine/datastore/entity_pb.php',
         'storage_onestore_v3\searchindexentry' => 'google/appengine/datastore/entity_pb.php',
         'storage_onestore_v3\searchindexexternalid' => 'google/appengine/datastore/entity_pb.php',

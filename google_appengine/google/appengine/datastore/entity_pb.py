@@ -1163,6 +1163,8 @@ class Property(ProtocolBuffer.ProtocolMessage):
   has_value_ = 0
   has_multiple_ = 0
   multiple_ = 0
+  has_embedded_ = 0
+  embedded_ = 0
 
   def __init__(self, contents=None):
     self.value_ = PropertyValue()
@@ -1228,6 +1230,19 @@ class Property(ProtocolBuffer.ProtocolMessage):
 
   def has_multiple(self): return self.has_multiple_
 
+  def embedded(self): return self.embedded_
+
+  def set_embedded(self, x):
+    self.has_embedded_ = 1
+    self.embedded_ = x
+
+  def clear_embedded(self):
+    if self.has_embedded_:
+      self.has_embedded_ = 0
+      self.embedded_ = 0
+
+  def has_embedded(self): return self.has_embedded_
+
 
   def MergeFrom(self, x):
     assert x is not self
@@ -1236,6 +1251,7 @@ class Property(ProtocolBuffer.ProtocolMessage):
     if (x.has_name()): self.set_name(x.name())
     if (x.has_value()): self.mutable_value().MergeFrom(x.value())
     if (x.has_multiple()): self.set_multiple(x.multiple())
+    if (x.has_embedded()): self.set_embedded(x.embedded())
 
   def Equals(self, x):
     if x is self: return 1
@@ -1249,6 +1265,8 @@ class Property(ProtocolBuffer.ProtocolMessage):
     if self.has_value_ and self.value_ != x.value_: return 0
     if self.has_multiple_ != x.has_multiple_: return 0
     if self.has_multiple_ and self.multiple_ != x.multiple_: return 0
+    if self.has_embedded_ != x.has_embedded_: return 0
+    if self.has_embedded_ and self.embedded_ != x.embedded_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -1274,6 +1292,7 @@ class Property(ProtocolBuffer.ProtocolMessage):
     if (self.has_meaning_uri_): n += 1 + self.lengthString(len(self.meaning_uri_))
     n += self.lengthString(len(self.name_))
     n += self.lengthString(self.value_.ByteSize())
+    if (self.has_embedded_): n += 2
     return n + 4
 
   def ByteSizePartial(self):
@@ -1288,6 +1307,7 @@ class Property(ProtocolBuffer.ProtocolMessage):
       n += self.lengthString(self.value_.ByteSizePartial())
     if (self.has_multiple_):
       n += 2
+    if (self.has_embedded_): n += 2
     return n
 
   def Clear(self):
@@ -1296,6 +1316,7 @@ class Property(ProtocolBuffer.ProtocolMessage):
     self.clear_name()
     self.clear_value()
     self.clear_multiple()
+    self.clear_embedded()
 
   def OutputUnchecked(self, out):
     if (self.has_meaning_):
@@ -1311,6 +1332,9 @@ class Property(ProtocolBuffer.ProtocolMessage):
     out.putVarInt32(42)
     out.putVarInt32(self.value_.ByteSize())
     self.value_.OutputUnchecked(out)
+    if (self.has_embedded_):
+      out.putVarInt32(48)
+      out.putBoolean(self.embedded_)
 
   def OutputPartial(self, out):
     if (self.has_meaning_):
@@ -1329,6 +1353,9 @@ class Property(ProtocolBuffer.ProtocolMessage):
       out.putVarInt32(42)
       out.putVarInt32(self.value_.ByteSizePartial())
       self.value_.OutputPartial(out)
+    if (self.has_embedded_):
+      out.putVarInt32(48)
+      out.putBoolean(self.embedded_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -1351,6 +1378,9 @@ class Property(ProtocolBuffer.ProtocolMessage):
         d.skip(length)
         self.mutable_value().TryMerge(tmp)
         continue
+      if tt == 48:
+        self.set_embedded(d.getBoolean())
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
@@ -1367,6 +1397,7 @@ class Property(ProtocolBuffer.ProtocolMessage):
       res+=self.value_.__str__(prefix + "  ", printElemNumber)
       res+=prefix+">\n"
     if self.has_multiple_: res+=prefix+("multiple: %s\n" % self.DebugFormatBool(self.multiple_))
+    if self.has_embedded_: res+=prefix+("embedded: %s\n" % self.DebugFormatBool(self.embedded_))
     return res
 
 
@@ -1378,6 +1409,7 @@ class Property(ProtocolBuffer.ProtocolMessage):
   kname = 3
   kvalue = 5
   kmultiple = 4
+  kembedded = 6
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",
@@ -1386,7 +1418,8 @@ class Property(ProtocolBuffer.ProtocolMessage):
     3: "name",
     4: "multiple",
     5: "value",
-  }, 5)
+    6: "embedded",
+  }, 6)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -1395,7 +1428,8 @@ class Property(ProtocolBuffer.ProtocolMessage):
     3: ProtocolBuffer.Encoder.STRING,
     4: ProtocolBuffer.Encoder.NUMERIC,
     5: ProtocolBuffer.Encoder.STRING,
-  }, 5, ProtocolBuffer.Encoder.MAX_TYPE)
+    6: ProtocolBuffer.Encoder.NUMERIC,
+  }, 6, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
@@ -2716,7 +2750,7 @@ class Index_Property(ProtocolBuffer.ProtocolMessage):
   has_name_ = 0
   name_ = ""
   has_direction_ = 0
-  direction_ = 1
+  direction_ = 0
   has_mode_ = 0
   mode_ = 0
 
@@ -2745,7 +2779,7 @@ class Index_Property(ProtocolBuffer.ProtocolMessage):
   def clear_direction(self):
     if self.has_direction_:
       self.has_direction_ = 0
-      self.direction_ = 1
+      self.direction_ = 0
 
   def has_direction(self): return self.has_direction_
 
@@ -3069,6 +3103,21 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
   def State_Name(cls, x): return cls._State_NAMES.get(x, "")
   State_Name = classmethod(State_Name)
 
+
+
+  PENDING      =    1
+  ACTIVE       =    2
+  COMPLETED    =    3
+
+  _WorkflowState_NAMES = {
+    1: "PENDING",
+    2: "ACTIVE",
+    3: "COMPLETED",
+  }
+
+  def WorkflowState_Name(cls, x): return cls._WorkflowState_NAMES.get(x, "")
+  WorkflowState_Name = classmethod(WorkflowState_Name)
+
   has_app_id_ = 0
   app_id_ = ""
   has_id_ = 0
@@ -3076,6 +3125,10 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
   has_definition_ = 0
   has_state_ = 0
   state_ = 0
+  has_workflow_state_ = 0
+  workflow_state_ = 0
+  has_error_message_ = 0
+  error_message_ = ""
   has_only_use_if_required_ = 0
   only_use_if_required_ = 0
   has_disabled_index_ = 0
@@ -3134,6 +3187,32 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
       self.state_ = 0
 
   def has_state(self): return self.has_state_
+
+  def workflow_state(self): return self.workflow_state_
+
+  def set_workflow_state(self, x):
+    self.has_workflow_state_ = 1
+    self.workflow_state_ = x
+
+  def clear_workflow_state(self):
+    if self.has_workflow_state_:
+      self.has_workflow_state_ = 0
+      self.workflow_state_ = 0
+
+  def has_workflow_state(self): return self.has_workflow_state_
+
+  def error_message(self): return self.error_message_
+
+  def set_error_message(self, x):
+    self.has_error_message_ = 1
+    self.error_message_ = x
+
+  def clear_error_message(self):
+    if self.has_error_message_:
+      self.has_error_message_ = 0
+      self.error_message_ = ""
+
+  def has_error_message(self): return self.has_error_message_
 
   def only_use_if_required(self): return self.only_use_if_required_
 
@@ -3196,6 +3275,8 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     if (x.has_id()): self.set_id(x.id())
     if (x.has_definition()): self.mutable_definition().MergeFrom(x.definition())
     if (x.has_state()): self.set_state(x.state())
+    if (x.has_workflow_state()): self.set_workflow_state(x.workflow_state())
+    if (x.has_error_message()): self.set_error_message(x.error_message())
     if (x.has_only_use_if_required()): self.set_only_use_if_required(x.only_use_if_required())
     if (x.has_disabled_index()): self.set_disabled_index(x.disabled_index())
     for i in xrange(x.read_division_family_size()): self.add_read_division_family(x.read_division_family(i))
@@ -3211,6 +3292,10 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     if self.has_definition_ and self.definition_ != x.definition_: return 0
     if self.has_state_ != x.has_state_: return 0
     if self.has_state_ and self.state_ != x.state_: return 0
+    if self.has_workflow_state_ != x.has_workflow_state_: return 0
+    if self.has_workflow_state_ and self.workflow_state_ != x.workflow_state_: return 0
+    if self.has_error_message_ != x.has_error_message_: return 0
+    if self.has_error_message_ and self.error_message_ != x.error_message_: return 0
     if self.has_only_use_if_required_ != x.has_only_use_if_required_: return 0
     if self.has_only_use_if_required_ and self.only_use_if_required_ != x.only_use_if_required_: return 0
     if self.has_disabled_index_ != x.has_disabled_index_: return 0
@@ -3249,6 +3334,8 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     n += self.lengthVarInt64(self.id_)
     n += self.lengthString(self.definition_.ByteSize())
     n += self.lengthVarInt64(self.state_)
+    if (self.has_workflow_state_): n += 1 + self.lengthVarInt64(self.workflow_state_)
+    if (self.has_error_message_): n += 1 + self.lengthString(len(self.error_message_))
     if (self.has_only_use_if_required_): n += 2
     if (self.has_disabled_index_): n += 2
     n += 1 * len(self.read_division_family_)
@@ -3270,6 +3357,8 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     if (self.has_state_):
       n += 1
       n += self.lengthVarInt64(self.state_)
+    if (self.has_workflow_state_): n += 1 + self.lengthVarInt64(self.workflow_state_)
+    if (self.has_error_message_): n += 1 + self.lengthString(len(self.error_message_))
     if (self.has_only_use_if_required_): n += 2
     if (self.has_disabled_index_): n += 2
     n += 1 * len(self.read_division_family_)
@@ -3282,6 +3371,8 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     self.clear_id()
     self.clear_definition()
     self.clear_state()
+    self.clear_workflow_state()
+    self.clear_error_message()
     self.clear_only_use_if_required()
     self.clear_disabled_index()
     self.clear_read_division_family()
@@ -3309,6 +3400,12 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     if (self.has_disabled_index_):
       out.putVarInt32(72)
       out.putBoolean(self.disabled_index_)
+    if (self.has_workflow_state_):
+      out.putVarInt32(80)
+      out.putVarInt32(self.workflow_state_)
+    if (self.has_error_message_):
+      out.putVarInt32(90)
+      out.putPrefixedString(self.error_message_)
 
   def OutputPartial(self, out):
     if (self.has_app_id_):
@@ -3336,6 +3433,12 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     if (self.has_disabled_index_):
       out.putVarInt32(72)
       out.putBoolean(self.disabled_index_)
+    if (self.has_workflow_state_):
+      out.putVarInt32(80)
+      out.putVarInt32(self.workflow_state_)
+    if (self.has_error_message_):
+      out.putVarInt32(90)
+      out.putPrefixedString(self.error_message_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -3367,6 +3470,12 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
       if tt == 72:
         self.set_disabled_index(d.getBoolean())
         continue
+      if tt == 80:
+        self.set_workflow_state(d.getVarInt32())
+        continue
+      if tt == 90:
+        self.set_error_message(d.getPrefixedString())
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
@@ -3382,6 +3491,8 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
       res+=self.definition_.__str__(prefix + "  ", printElemNumber)
       res+=prefix+">\n"
     if self.has_state_: res+=prefix+("state: %s\n" % self.DebugFormatInt32(self.state_))
+    if self.has_workflow_state_: res+=prefix+("workflow_state: %s\n" % self.DebugFormatInt32(self.workflow_state_))
+    if self.has_error_message_: res+=prefix+("error_message: %s\n" % self.DebugFormatString(self.error_message_))
     if self.has_only_use_if_required_: res+=prefix+("only_use_if_required: %s\n" % self.DebugFormatBool(self.only_use_if_required_))
     if self.has_disabled_index_: res+=prefix+("disabled_index: %s\n" % self.DebugFormatBool(self.disabled_index_))
     cnt=0
@@ -3401,6 +3512,8 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
   kid = 2
   kdefinition = 3
   kstate = 4
+  kworkflow_state = 10
+  kerror_message = 11
   konly_use_if_required = 6
   kdisabled_index = 9
   kread_division_family = 7
@@ -3416,7 +3529,9 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     7: "read_division_family",
     8: "write_division_family",
     9: "disabled_index",
-  }, 9)
+    10: "workflow_state",
+    11: "error_message",
+  }, 11)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -3428,7 +3543,9 @@ class CompositeIndex(ProtocolBuffer.ProtocolMessage):
     7: ProtocolBuffer.Encoder.STRING,
     8: ProtocolBuffer.Encoder.STRING,
     9: ProtocolBuffer.Encoder.NUMERIC,
-  }, 9, ProtocolBuffer.Encoder.MAX_TYPE)
+    10: ProtocolBuffer.Encoder.NUMERIC,
+    11: ProtocolBuffer.Encoder.STRING,
+  }, 11, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
