@@ -2904,11 +2904,14 @@ class DatastoreStub(object):
 
     if self._require_indexes or root_path is None:
 
-      self._index_yaml_updater = None
+      self._index_config_updater = None
     else:
 
-      self._index_yaml_updater = datastore_stub_index.IndexYamlUpdater(
-          root_path)
+
+      updater_class = (
+          datastore_stub_index.DatastoreIndexesAutoXmlUpdater
+          if self._xml_configuration else datastore_stub_index.IndexYamlUpdater)
+      self._index_config_updater = updater_class(root_path)
 
     DatastoreStub.Clear(self)
 
@@ -3309,8 +3312,8 @@ class DatastoreStub(object):
                     created, deleted, len(requested))
 
   def _UpdateIndexes(self):
-    if self._index_yaml_updater is not None:
-      self._index_yaml_updater.UpdateIndexYaml()
+    if self._index_config_updater is not None:
+      self._index_config_updater.UpdateIndexConfig()
 
 
 class StubQueryConverter(object):
@@ -3768,10 +3771,6 @@ class StubServiceConverter(object):
     if v3_req.has_count():
       v4_req.set_suggested_batch_size(v3_req.count())
 
-    datastore_pbs.check_conversion(
-        not (v3_req.has_transaction() and v3_req.has_failover_ms()),
-        'Cannot set failover and transaction handle.')
-
 
     if v3_req.has_transaction():
       v4_req.mutable_read_options().set_transaction(
@@ -3779,7 +3778,7 @@ class StubServiceConverter(object):
     elif v3_req.strong():
       v4_req.mutable_read_options().set_read_consistency(
           datastore_v4_pb.ReadOptions.STRONG)
-    elif v3_req.has_failover_ms():
+    elif v3_req.has_strong():
       v4_req.mutable_read_options().set_read_consistency(
           datastore_v4_pb.ReadOptions.EVENTUAL)
     if v3_req.has_min_safe_time_seconds():
