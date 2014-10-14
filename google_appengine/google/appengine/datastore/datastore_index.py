@@ -47,6 +47,8 @@ indexes:
 
 - kind: Mountain
   properties:
+  - name: name
+    mode: segment
   - name: location
     mode: geospatial
 """
@@ -85,7 +87,7 @@ class Property(validation.Validated):
   Attributes:
     name: Name of attribute to sort by.
     direction: Direction of sort.
-    mode: How the property is indexed. Either 'geospatial'
+    mode: How the property is indexed. Either 'geospatial', 'segment'
         or None (unspecified).
   """
 
@@ -94,7 +96,7 @@ class Property(validation.Validated):
       'direction': validation.Options(('asc', ('ascending',)),
                                       ('desc', ('descending',)),
                                       default='asc'),
-      'mode': validation.Optional(['geospatial']),
+      'mode': validation.Optional(['geospatial', 'segment']),
   }
 
   def __init__(self, **attributes):
@@ -110,9 +112,10 @@ class Property(validation.Validated):
     return self.direction != 'desc'
 
   def CheckInitialized(self):
-    if 'direction' in self._is_set and self.mode == 'geospatial':
-      raise validation.ValidationError('Direction on a geospatial-mode '
-                                       'property is not allowed.')
+    if ('direction' in self._is_set and
+        self.mode in ['geospatial', 'segment']):
+      raise validation.ValidationError('Direction on a %s-mode '
+                                       'property is not allowed.' % self.mode)
 
 
 def _PropertyPresenter(dumper, prop):
@@ -814,12 +817,12 @@ def IndexXmlForQuery(kind, ancestor, props):
 
 
   serialized_xml = []
-  serialized_xml.append('<datastore-index kind="%s" ancestor="%s">'
+  serialized_xml.append('  <datastore-index kind="%s" ancestor="%s">'
                         % (kind, 'true' if ancestor else 'false'))
   for name, direction in props:
-    serialized_xml.append('  <property name="%s" direction="%s" />'
+    serialized_xml.append('    <property name="%s" direction="%s" />'
                           % (name, 'asc' if direction == ASCENDING else 'desc'))
-  serialized_xml.append('</datastore-index>')
+  serialized_xml.append('  </datastore-index>')
   return '\n'.join(serialized_xml)
 
 
@@ -851,6 +854,8 @@ def IndexDefinitionToProto(app_id, index_definition):
 
       if prop.mode == 'geospatial':
         prop_proto.set_mode(entity_pb.Index_Property.GEOSPATIAL)
+      elif prop.mode == 'segment':
+        prop_proto.set_mode(entity_pb.Index_Property.SEGMENT)
       elif prop.IsAscending():
         prop_proto.set_direction(entity_pb.Index_Property.ASCENDING)
       else:
@@ -890,6 +895,8 @@ def ProtoToIndexDefinition(proto):
 
     if prop_proto.mode() == entity_pb.Index_Property.GEOSPATIAL:
       prop_definition.mode = 'geospatial'
+    elif prop_proto.mode() == entity_pb.Index_Property.SEGMENT:
+      prop_definition.mode = 'segment'
     elif prop_proto.direction() == entity_pb.Index_Property.DESCENDING:
       prop_definition.direction = 'desc'
     elif prop_proto.direction() == entity_pb.Index_Property.ASCENDING:
