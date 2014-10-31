@@ -17,6 +17,7 @@
 """Manage the lifecycle of runtime processes and dispatch requests to them."""
 
 
+
 import collections
 import logging
 import threading
@@ -278,6 +279,9 @@ class Instance(object):
       self._last_request_end_time = time.time()
       self._started = True
     logging.debug('Started instance: %s', self)
+    # We are in development mode, here be optimistic for the health of the
+    # instance so it can respond instantly to the first request.
+    self.set_health(True)
     return True
 
   def quit(self, allow_async=False, force=False, expect_shutdown=False):

@@ -130,8 +130,13 @@ class GoVMRuntimeProxy(instance.RuntimeProxy):
         self._vm_runtime_proxy.start(dockerfile_dir=dst_deployment_dir)
 
       logging.info(
-          'GoVM vmservice available at http://127.0.0.1:%s/ !',
-          self._vm_runtime_proxy.PortBinding(VM_SERVICE_PORT))
+          'GoVM vmservice for module "%(module)s" available at '
+          'http://%(host)s:%(port)s/',
+          {
+              'module': self._module_configuration.module_name,
+              'host': self._vm_runtime_proxy.ContainerHost(),
+              'port': self._vm_runtime_proxy.PortBinding(VM_SERVICE_PORT),
+          })
 
     except Exception as e:
       logging.info('Go VM Deployment process failed: %s', str(e))

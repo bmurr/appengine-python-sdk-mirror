@@ -32,6 +32,7 @@ from __future__ import with_statement
 
 
 
+
 try:
   import hashlib
   _MD5_FUNC = hashlib.md5
@@ -170,6 +171,16 @@ _MAX_SCATTERED_ID = _MAX_SEQUENTIAL_ID + 1 + _MAX_SCATTERED_COUNTER
 
 _SCATTER_SHIFT = 64 - _MAX_SEQUENTIAL_BIT + 1
 
+
+_SHOULD_FAIL_ON_BAD_OFFSET = False
+
+def _HandleBadOffset(expected, actual):
+  logging.warn('Encountered an offset %d to Next but expected %d given the '
+               'query offset and the number of skipped entities.' %
+               (actual, expected))
+  if (_SHOULD_FAIL_ON_BAD_OFFSET):
+    raise datastore_errors.BadArgumentError(
+        'Invalid offset provided. Got %s expected %s.' % (actual, expected))
 
 def _GetScatterProperty(entity_proto):
   """Gets the scatter property for an object.
@@ -1010,6 +1021,17 @@ class BaseCursor(object):
     self.app = query.app()
     self.cursor = self._AcquireCursorID()
 
+    if query.has_count():
+      count = query.count()
+    elif query.has_limit():
+      count = query.limit()
+    else:
+      count = BaseDatastore._BATCH_SIZE
+
+    self.__use_persisted_offset = query.persist_offset()
+    self.__persisted_offset = query.offset()
+    self.__persisted_count = count
+
     self.__order_compare_entities = dsquery._order.cmp_for_filter(
         dsquery._filter_predicate)
     if self.group_by:
@@ -1131,6 +1153,34 @@ class BaseCursor(object):
       position.set_start_inclusive(False)
       _SetBeforeAscending(position, self.__first_sort_order)
 
+  def PopulateQueryResult(self, result, count, offset,
+                          compile=False, first_result=False):
+    """Populates a QueryResult with this cursor and the given number of results.
+
+    Args:
+      result: datastore_pb.QueryResult
+      count: integer of how many results to return, or None if not specified
+      offset: integer of how many results to skip
+      compile: boolean, whether we are compiling this query
+      first_result: whether the query result is the first for this query
+
+    Offset and count may be ignored if the query requested information
+    to be persisted.
+    """
+    if count is None:
+      count = BaseDatastore._BATCH_SIZE
+    if self.__use_persisted_offset:
+      offset = self.__persisted_offset
+      count = self.__persisted_count
+    elif self.__persisted_offset != offset:
+      _HandleBadOffset(self.__persisted_offset, offset)
+    self._PopulateQueryResult(result, count, offset,
+                              compile, first_result)
+    self.__persisted_offset -= result.skipped_results()
+
+  def _PopulateQueryResult(self, result, count, offset,
+                           compile, first_result):
+    raise NotImplementedError
 
 class ListCursor(BaseCursor):
   """A query cursor over a list of entities.
@@ -1214,17 +1264,7 @@ class ListCursor(BaseCursor):
         hi = mid
     return lo
 
-  def PopulateQueryResult(self, result, count, offset,
-                          compile=False, first_result=False):
-    """Populates a QueryResult with this cursor and the given number of results.
-
-    Args:
-      result: datastore_pb.QueryResult
-      count: integer of how many results to return
-      offset: integer of how many results to skip
-      compile: boolean, whether we are compiling this query
-      first_result: whether the query result is the first for this query
-    """
+  def _PopulateQueryResult(self, result, count, offset, compile, first_result):
     Check(offset >= 0, 'Offset must be >= 0')
 
     offset = min(offset, self.__count - self.__offset)
@@ -2949,8 +2989,6 @@ class DatastoreStub(object):
     else:
       return os.path.isdir(web_inf)
 
-
-
   def Clear(self):
     """Clears out all stored values."""
     self._query_cursors = {}
@@ -3044,13 +3082,7 @@ class DatastoreStub(object):
     cursor = self._datastore.GetQueryCursor(query, self._trusted, self._app_id,
                                             filter_predicate)
 
-    if query.has_count():
-      count = query.count()
-    elif query.has_limit():
-      count = query.limit()
-    else:
-      count = self._BATCH_SIZE
-
+    count = query.count() if query.has_count() else None
     cursor.PopulateQueryResult(query_result, count, query.offset(),
                                query.compile(), first_result=True)
     if query_result.has_cursor():
@@ -3136,12 +3168,12 @@ class DatastoreStub(object):
     Check(cursor and cursor.app == app,
           'Cursor %d not found' % next_request.cursor().cursor())
 
-    count = self._BATCH_SIZE
-    if next_request.has_count():
-      count = next_request.count()
-
-    cursor.PopulateQueryResult(query_result, count, next_request.offset(),
-                               next_request.compile(), first_result=False)
+    count = next_request.count() if next_request.has_count() else None
+    cursor.PopulateQueryResult(query_result,
+                               count,
+                               next_request.offset(),
+                               next_request.compile(),
+                               first_result=False)
 
     if not query_result.has_cursor():
       del self._query_cursors[next_request.cursor().cursor()]
@@ -3316,11 +3348,11 @@ class DatastoreStub(object):
       self._index_config_updater.UpdateIndexConfig()
 
 
-class StubQueryConverter(object):
+class StubQueryConverter(datastore_pbs._QueryConverter):
   """Converter for v3 and v4 queries suitable for use in stubs."""
 
   def __init__(self, entity_converter):
-    self._entity_converter = entity_converter
+    super(StubQueryConverter, self).__init__(entity_converter)
 
   def v4_to_v3_compiled_cursor(self, v4_cursor, v3_compiled_cursor):
     """Converts a v4 cursor string to a v3 CompiledCursor.
@@ -3468,18 +3500,15 @@ class StubQueryConverter(object):
       get_property_filter = self.__add_property_filter
 
     if v3_query.has_ancestor():
-      self.__v3_query_to_v4_ancestor_filter(v3_query,
-                                            get_property_filter(v4_query))
+      self._v3_query_to_v4_ancestor_filter(v3_query,
+                                           get_property_filter(v4_query))
     for v3_filter in v3_query.filter_list():
-      self.__v3_filter_to_v4_property_filter(v3_filter,
-                                             get_property_filter(v4_query))
+      self._v3_filter_to_v4_property_filter(v3_filter,
+                                            get_property_filter(v4_query))
 
 
     for v3_order in v3_query.order_list():
-      v4_order = v4_query.add_order()
-      v4_order.mutable_property().set_name(v3_order.property())
-      if v3_order.has_direction():
-        v4_order.set_direction(v3_order.direction())
+      self.v3_order_to_v4_order(v3_order, v4_query.add_order())
 
   def __get_property_filter(self, v4_query):
     """Returns the PropertyFilter from the query's top-level filter."""
@@ -3526,54 +3555,17 @@ class StubQueryConverter(object):
             not v4_property_filter.value().list_value_list(),
             ('unsupported value type, %s, in property filter'
              ' on "%s"' % ('list_value', property_name)))
-        prop = v3_filter.add_property()
-        prop.set_multiple(False)
-        prop.set_name(property_name)
-        self._entity_converter.v4_value_to_v3_property_value(
-            v4_property_filter.value(), prop.mutable_value())
+        self._entity_converter.v4_to_v3_property(property_name,
+                                                 False,
+                                                 False,
+                                                 v4_property_filter.value(),
+                                                 v3_filter.add_property())
     elif v4_filter.has_composite_filter():
       datastore_pbs.check_conversion((v4_filter.composite_filter().operator()
                                       == datastore_v4_pb.CompositeFilter.AND),
                                      'unsupported composite property operator')
       for v4_sub_filter in v4_filter.composite_filter().filter_list():
         self.__populate_v3_filters(v4_sub_filter, v3_query)
-
-  def __v3_filter_to_v4_property_filter(self, v3_filter, v4_property_filter):
-    """Converts a v3 Filter to a v4 PropertyFilter.
-
-    Args:
-      v3_filter: a datastore_pb.Filter
-      v4_property_filter: a datastore_v4_pb.PropertyFilter to populate
-
-    Raises:
-      InvalidConversionError if the filter cannot be converted
-    """
-    datastore_pbs.check_conversion(v3_filter.property_size() == 1,
-                                   'invalid filter')
-    datastore_pbs.check_conversion(v3_filter.op() <= 5,
-                                   'unsupported filter op: %d' % v3_filter.op())
-    v4_property_filter.Clear()
-    v4_property_filter.set_operator(v3_filter.op())
-    v4_property_filter.mutable_property().set_name(v3_filter.property(0).name())
-    self._entity_converter.v3_property_to_v4_value(
-        v3_filter.property(0), True, v4_property_filter.mutable_value())
-
-  def __v3_query_to_v4_ancestor_filter(self, v3_query, v4_property_filter):
-    """Converts a v3 Query to a v4 ancestor PropertyFilter.
-
-    Args:
-      v3_query: a datastore_pb.Query
-      v4_property_filter: a datastore_v4_pb.PropertyFilter to populate
-    """
-    v4_property_filter.Clear()
-    v4_property_filter.set_operator(
-        datastore_v4_pb.PropertyFilter.HAS_ANCESTOR)
-    prop = v4_property_filter.mutable_property()
-    prop.set_name(datastore_pbs.PROPERTY_NAME_KEY)
-    self._entity_converter.v3_to_v4_key(
-        v3_query.ancestor(),
-        v4_property_filter.mutable_value().mutable_key_value())
-
 
 
 __query_converter = StubQueryConverter(datastore_pbs.get_entity_converter())

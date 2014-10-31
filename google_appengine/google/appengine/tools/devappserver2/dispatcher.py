@@ -46,6 +46,7 @@ DISPATCH_AH_URL_PATH_PREFIX_WHITELIST = ('/_ah/queue/deferred',)
 
 
 class PortRegistry(object):
+
   def __init__(self):
     self._ports = {}
     self._ports_lock = threading.RLock()
@@ -82,7 +83,6 @@ class Dispatcher(request_info.Dispatcher):
                automatic_restart,
                allow_skipped_files,
                module_to_threadsafe_override):
-
     """Initializer for Dispatcher.
 
     Args:
@@ -107,8 +107,7 @@ class Dispatcher(request_info.Dispatcher):
           required configuration for local Google Cloud SQL development. If None
           then Cloud SQL will not be available.
       vm_config: A runtime_config_pb2.VMConfig instance containing
-          VM runtime-specific configuration. If vm_config does not have
-          docker_daemon_url specified all docker-related stuff is disabled.
+          VM runtime-specific configuration.
       module_to_max_instances: A mapping between a module name and the maximum
           number of instances that can be created (this overrides the settings
           found in the configuration argument) e.g.
@@ -144,7 +143,8 @@ class Dispatcher(request_info.Dispatcher):
     self._dispatch_server = None
     self._quit_event = threading.Event()  # Set when quit() has been called.
     self._update_checking_thread = threading.Thread(
-        target=self._loop_checking_for_updates)
+        target=self._loop_checking_for_updates,
+        name='Dispatcher Update Checking')
     self._module_to_max_instances = module_to_max_instances or {}
     self._use_mtime_file_watcher = use_mtime_file_watcher
     self._automatic_restart = automatic_restart
@@ -441,7 +441,7 @@ class Dispatcher(request_info.Dispatcher):
       else:
         raise request_info.ModuleDoesNotExistError(module_name)
     if (version is not None and
-          version != self._module_configurations[module_name].major_version):
+        version != self._module_configurations[module_name].major_version):
       raise request_info.VersionDoesNotExistError()
     return self._module_name_to_module[module_name]
 
@@ -574,7 +574,7 @@ class Dispatcher(request_info.Dispatcher):
     port = _module.get_instance_port(instance_id) if instance_id else (
         _module.balanced_port)
     environ = _module.build_request_environ(method, relative_url, headers, body,
-                                          source_ip, port)
+                                            source_ip, port)
 
     _THREAD_POOL.submit(self._handle_request,
                         environ,
@@ -661,6 +661,10 @@ class Dispatcher(request_info.Dispatcher):
     if not hostname or hostname == default_address:
       return self._module_for_request(path), None
 
+
+
+
+
     default_address_offset = hostname.find(default_address)
     if default_address_offset > 0:
       prefix = hostname[:default_address_offset - 1]
@@ -710,7 +714,7 @@ class Dispatcher(request_info.Dispatcher):
     """
     try:
       return _module._handle_request(environ, start_response, inst=inst,
-                                   request_type=request_type)
+                                     request_type=request_type)
     except:
       if catch_and_log_exceptions:
         logging.exception('Internal error while handling request.')
