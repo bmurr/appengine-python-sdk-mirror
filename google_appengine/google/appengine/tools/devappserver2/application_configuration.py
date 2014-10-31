@@ -19,6 +19,8 @@
 # TODO: Support more than just app.yaml.
 
 
+
+import datetime
 import errno
 import logging
 import os
@@ -33,7 +35,11 @@ from google.appengine.api import appinfo_includes
 from google.appengine.api import backendinfo
 from google.appengine.api import dispatchinfo
 from google.appengine.client.services import port_manager
+from google.appengine.tools import app_engine_web_xml_parser
+from google.appengine.tools import java_quickstart
 from google.appengine.tools import queue_xml_parser
+from google.appengine.tools import web_xml_parser
+from google.appengine.tools import xml_parser_utils
 from google.appengine.tools import yaml_translator
 from google.appengine.tools.devappserver2 import errors
 
@@ -46,6 +52,10 @@ INBOUND_SERVICES_CHANGED = 4
 ENV_VARIABLES_CHANGED = 5
 ERROR_HANDLERS_CHANGED = 6
 NOBUILD_FILES_CHANGED = 7
+
+
+
+
 
 
 _HEALTH_CHECK_DEFAULTS = {
@@ -135,13 +145,18 @@ class ModuleConfiguration(object):
     self._forwarded_ports = {}
     if self.runtime == 'vm':
       vm_settings = self._app_info_external.vm_settings
+      ports = None
       if vm_settings:
         ports = vm_settings.get('forwarded_ports')
-        if ports:
-          logging.debug('setting forwarded ports %s', ports)
-          pm = port_manager.PortManager()
-          pm.Add(ports, 'forwarded')
-          self._forwarded_ports = pm.GetAllMappedPorts()
+      if not ports:
+        if (self._app_info_external.network and
+            self._app_info_external.network.forwarded_ports):
+          ports = ','.join(self._app_info_external.network.forwarded_ports)
+      if ports:
+        logging.debug('setting forwarded ports %s', ports)
+        pm = port_manager.PortManager()
+        pm.Add(ports, 'forwarded')
+        self._forwarded_ports = pm.GetAllMappedPorts()
 
     self._translate_configuration_files()
 
@@ -361,6 +376,11 @@ class ModuleConfiguration(object):
         config, files = appinfo_includes.ParseAndReturnIncludePaths(f)
     if self._forced_app_id:
       config.application = self._forced_app_id
+
+    if config.runtime == 'vm' and not config.version:
+      config.version = generate_version_id()
+      logging.info('No version specified. Generated version id: %s',
+                   config.version)
     return config, [configuration_path] + files
 
   def _parse_java_configuration(self, app_engine_web_xml_path):
@@ -379,17 +399,34 @@ class ModuleConfiguration(object):
     """
     with open(app_engine_web_xml_path) as f:
       app_engine_web_xml_str = f.read()
+    app_engine_web_xml = (
+        app_engine_web_xml_parser.AppEngineWebXmlParser().ProcessXml(
+            app_engine_web_xml_str))
+
+    quickstart = xml_parser_utils.BooleanValue(
+        app_engine_web_xml.beta_settings.get('java_quickstart', 'false'))
+
     web_inf_dir = os.path.dirname(app_engine_web_xml_path)
-    web_xml_path = os.path.join(web_inf_dir, 'web.xml')
-    with open(web_xml_path) as f:
-      web_xml_str = f.read()
+    if quickstart:
+      app_dir = os.path.dirname(web_inf_dir)
+      web_xml_str, web_xml_path = java_quickstart.quickstart_generator(app_dir)
+      webdefault_xml_str = java_quickstart.get_webdefault_xml()
+      web_xml_str = java_quickstart.remove_mappings(
+          web_xml_str, webdefault_xml_str)
+    else:
+      web_xml_path = os.path.join(web_inf_dir, 'web.xml')
+      with open(web_xml_path) as f:
+        web_xml_str = f.read()
+
     has_jsps = False
     for _, _, filenames in os.walk(self.application_root):
       if any(f.endswith('.jsp') for f in filenames):
         has_jsps = True
         break
+
+    web_xml = web_xml_parser.WebXmlParser().ProcessXml(web_xml_str, has_jsps)
     app_yaml_str = yaml_translator.TranslateXmlToYamlForDevAppServer(
-        app_engine_web_xml_str, web_xml_str, has_jsps, self.application_root)
+        app_engine_web_xml, web_xml, self.application_root)
     config = appinfo.LoadSingleAppInfo(app_yaml_str)
     return config, [app_engine_web_xml_path, web_xml_path]
 
@@ -859,3 +896,15 @@ def get_app_error_file(module_configuration):
       return os.path.join(module_configuration.application_root,
                           error_handler.file)
   return None
+
+
+def generate_version_id(datetime_getter=datetime.datetime.now):
+  """Generates a version id based off the current time.
+
+  Args:
+    datetime_getter: A function that returns a datetime.datetime instance.
+
+  Returns:
+    A version string based.
+  """
+  return datetime_getter().isoformat().lower().translate(None, ':-')[:15]

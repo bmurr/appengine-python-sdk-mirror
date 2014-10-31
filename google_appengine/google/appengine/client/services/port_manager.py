@@ -18,12 +18,13 @@
 
 import logging
 
+from google.appengine.client.services import vme_constants
 from google.appengine.client.services import vme_errors
 
 # These ports are used by our code or critical system daemons.
 RESERVED_HOST_PORTS = [22,  # SSH
                        5000,  # Docker registry
-                       8080,  # HTTP server
+                       vme_constants.DEFAULT_SERVING_PORT,  # HTTP server
                        10000,  # For unlocking?
                        10001,  # Nanny stubby proxy endpoint
                       ]
@@ -33,8 +34,8 @@ RESERVED_DOCKER_PORTS = [22,  # SSH
                          10001,  # Nanny stubby proxy endpoint
                         ]
 
-DEFAULT_CONTAINER_PORT = 8080
-VM_PORT_FOR_CONTAINER = 8080
+DEFAULT_CONTAINER_PORT = vme_constants.DEFAULT_SERVING_PORT
+VM_PORT_FOR_CONTAINER = vme_constants.DEFAULT_SERVING_PORT
 
 
 class InconsistentPortConfigurationError(vme_errors.PermanentAppError):
@@ -51,8 +52,8 @@ def CreatePortManager(forwarded_ports, container_port):
   """Construct a PortManager object with port forwarding configured.
 
   Args:
-    forwarded_ports: A dictionary containing desired mappings from VM host port
-        to docker container port.
+    forwarded_ports: A string containing desired mappings from VM host ports
+        to docker container ports.
     container_port: An integer port number for the container port.
 
   Returns:
