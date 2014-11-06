@@ -16,10 +16,8 @@
 #
 """Monitors a directory tree for changes using mtime polling."""
 
-import logging
 import os
 import threading
-import time
 import warnings
 
 from google.appengine.tools.devappserver2 import watcher_common
@@ -74,12 +72,8 @@ class MtimeFileWatcher(object):
       since start was called.
     """
     self._startup_thread.join()
-    if timeout_ms != 0:
-      beginning = time.clock()
     timeout_s = timeout_ms / 1000.0
 
-    # TODO: if the scanning takes more than timeout_ms, cut it short and
-    # resume it at the next poll.
     old_filename_to_mtime = self._filename_to_mtime
     try:
       self._refresh()
@@ -89,14 +83,7 @@ class MtimeFileWatcher(object):
       if diff_items or timeout_ms == 0:
         return {k for k, _ in diff_items}
 
-      time_used_to_scan_s = time.clock() - beginning
-      remaining_s = timeout_s - time_used_to_scan_s
-      if remaining_s > 0.0:
-        self._timeout.wait(remaining_s)
-      else:
-        logging.warning(
-            'It took %f s to scan under %s for changes.',
-            time_used_to_scan_s, self._directory)
+      self._timeout.wait(timeout_s)
     except ShutdownError:
       pass
     return set()

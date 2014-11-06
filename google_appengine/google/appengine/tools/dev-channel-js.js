@@ -2752,17 +2752,17 @@ goog.dom.isNodeList = function(val) {
   }
   return!1;
 };
-goog.dom.getAncestorByTagNameAndClass = function(element, opt_tag, opt_class) {
+goog.dom.getAncestorByTagNameAndClass = function(element, opt_tag, opt_class, opt_maxSearchSteps) {
   if (!opt_tag && !opt_class) {
     return null;
   }
   var tagName = opt_tag ? opt_tag.toUpperCase() : null;
   return goog.dom.getAncestor(element, function(node) {
     return(!tagName || node.nodeName == tagName) && (!opt_class || goog.isString(node.className) && goog.array.contains(node.className.split(/\s+/), opt_class));
-  }, !0);
+  }, !0, opt_maxSearchSteps);
 };
-goog.dom.getAncestorByClass = function(element, className) {
-  return goog.dom.getAncestorByTagNameAndClass(element, null, className);
+goog.dom.getAncestorByClass = function(element, className, opt_maxSearchSteps) {
+  return goog.dom.getAncestorByTagNameAndClass(element, null, className, opt_maxSearchSteps);
 };
 goog.dom.getAncestor = function(element, matcher, opt_includeNode, opt_maxSearchSteps) {
   opt_includeNode || (element = element.parentNode);
