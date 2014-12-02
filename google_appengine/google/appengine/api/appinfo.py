@@ -531,6 +531,55 @@ _MAX_COOKIE_LENGTH = 4096
 _MAX_URL_LENGTH = 2047
 
 
+
+
+
+_CANNED_RUNTIMES = ('contrib-dart', 'dart', 'go', 'php', 'python', 'python27',
+                    'java', 'java7', 'vm', 'custom')
+_all_runtimes = _CANNED_RUNTIMES
+_vm_runtimes = _CANNED_RUNTIMES
+
+
+def GetAllRuntimes():
+  """Returns the list of all valid runtimes.
+
+  This can include third-party runtimes as well as canned runtimes.
+
+  Returns:
+    Tuple of strings.
+  """
+  return _all_runtimes
+
+
+def SetAllRuntimes(runtimes):
+  """Sets the list of all valid runtimes.
+
+  Args:
+    runtimes: Tuple of strings defining the names of all valid runtimes.
+  """
+  global _all_runtimes
+  _all_runtimes = runtimes
+
+
+def GetVmRuntimes():
+  """Returns the list of runtimes for the vm_runtimes field.
+
+  Returns:
+    Tuple of strings.
+  """
+  return _vm_runtimes
+
+
+def SetVmRuntimes(runtimes):
+  """Sets the list of all runtimes valid for the vm_runtimes field.
+
+  Args:
+    runtimes: Tuple of strings defining all valid vm runtimes.
+  """
+  global _vm_runtimes
+  _vm_runtimes = runtimes
+
+
 class HandlerBase(validation.Validated):
   """Base class for URLMap and ApiConfigHandler."""
   ATTRIBUTES = {
@@ -1425,6 +1474,10 @@ def VmSafeSetRuntime(appyaml, runtime):
       appyaml.vm_settings['has_docker_image'] = True
 
 
+    elif runtime not in GetVmRuntimes():
+      runtime = 'custom'
+
+
 
     appyaml.vm_settings['vm_runtime'] = runtime
     appyaml.runtime = 'vm'
@@ -1763,11 +1816,6 @@ class AppInfoExternal(validation.Validated):
   }
 
 
-
-
-
-  _skip_runtime_checks = False
-
   def CheckInitialized(self):
     """Performs non-regex-based validation.
 
@@ -1804,9 +1852,17 @@ class AppInfoExternal(validation.Validated):
           'Found more than %d URLMap entries in application configuration' %
           MAX_URL_MAPS)
 
+    vm_runtime_python27 = (
+        self.runtime == 'vm' and
+        (hasattr(self, 'vm_settings') and
+         self.vm_settings and
+         self.vm_settings.get('vm_runtime') == 'python27') or
+        (hasattr(self, 'beta_settings') and
+         self.beta_settings and
+         self.beta_settings.get('vm_runtime') == 'python27'))
+
     if (self.threadsafe is None and
-        self.runtime == 'python27' and
-        not self._skip_runtime_checks):
+        (self.runtime == 'python27' or vm_runtime_python27)):
       raise appinfo_errors.MissingThreadsafe(
           'threadsafe must be present and set to either "yes" or "no"')
 
@@ -1825,16 +1881,7 @@ class AppInfoExternal(validation.Validated):
           + datastore_auto_ids_url + '\n' + appcfg_auto_ids_url + '\n')
 
     if self.libraries:
-      vm_runtime_python27 = (
-          self.runtime == 'vm' and
-          (hasattr(self, 'vm_settings') and
-           self.vm_settings and
-           self.vm_settings['vm_runtime'] == 'python27') or
-          (hasattr(self, 'beta_settings') and
-           self.beta_settings and
-           self.beta_settings['vm_runtime'] == 'python27'))
-      if not self._skip_runtime_checks and not (
-          vm_runtime_python27 or self.runtime == 'python27'):
+      if not (vm_runtime_python27 or self.runtime == 'python27'):
         raise appinfo_errors.RuntimeDoesNotSupportLibraries(
             'libraries entries are only supported by the "python27" runtime')
 
@@ -1860,9 +1907,9 @@ class AppInfoExternal(validation.Validated):
         raise appinfo_errors.MissingApiConfig(
             'An api_endpoint handler was specified, but the required '
             'api_config stanza was not configured.')
-      if (self.threadsafe and
-          self.runtime == 'python27' and
-          not self._skip_runtime_checks):
+      if self.threadsafe and self.runtime == 'python27':
+
+
         for handler in self.handlers:
           if (handler.script and (handler.script.endswith('.py') or
                                   '/' in handler.script)):
@@ -1875,7 +1922,6 @@ class AppInfoExternal(validation.Validated):
       raise appinfo_errors.TooManyScalingSettingsError(
           "There may be only one of 'automatic_scaling', 'manual_scaling', "
           "or 'basic_scaling'.")
-
 
   def GetAllLibraries(self):
     """Returns a list of all Library instances active for this configuration.

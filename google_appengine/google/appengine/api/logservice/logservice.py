@@ -84,6 +84,12 @@ _REQUEST_ID_PATTERN = r'^[\da-fA-F]+$'
 _REQUEST_ID_RE = re.compile(_REQUEST_ID_PATTERN)
 
 
+
+
+
+_NEWLINE_REPLACEMENT = '\0'
+
+
 class Error(Exception):
   """Base error class for this module."""
 
@@ -226,10 +232,12 @@ class _LogsDequeBuffer(object):
                         for line in self._buffer)
     return [logsutil.ParseLogEntry(line) for line in without_newlines if line]
 
-  def write(self, line):
+  def write(self, lines):
     """Writes a line to the logs buffer."""
     with self._lock:
-      return self._write(line)
+
+      for line in cStringIO.StringIO(lines):
+        self._write(line)
 
   def writelines(self, seq):
     """Writes each line in the given sequence to the logs buffer."""
@@ -367,6 +375,33 @@ def write(message):
     message: A message (string) to be written to application logs.
   """
   logs_buffer().write(message)
+
+
+def write_record(level, created, message):
+  """Add a 'record' to the logs buffer, and checks for autoflush.
+
+  Arguments:
+    level: the logging level of the record. From 0 to 4 inclusive.
+    created: the time in seconds the record was created.
+    message: the formatted message.
+  """
+
+
+
+
+
+  message = message.replace('\r\n', _NEWLINE_REPLACEMENT)
+  message = message.replace('\r', _NEWLINE_REPLACEMENT)
+  message = message.replace('\n', _NEWLINE_REPLACEMENT)
+  if isinstance(message, unicode):
+    message = message.encode('UTF-8')
+
+
+
+
+  logs_buffer().write('LOG %d %d %s\n' % (level,
+                                          long(created * 1000 * 1000),
+                                          message))
 
 
 def clear():
