@@ -238,7 +238,6 @@ class Paths(object):
         'endpointscfg.py': self.v1_extra_paths + self.endpointscfg_extra_paths,
         'gen_protorpc.py': self.v1_extra_paths,
         'google_sql.py': self.v1_extra_paths + self.google_sql_extra_paths,
-        'old_dev_appserver.py': self.v1_extra_paths,
         'php_cli.py': devappserver2_paths,
         'remote_api_shell.py': self.v1_extra_paths,
         'vmboot.py': self.v1_extra_paths,
@@ -247,7 +246,6 @@ class Paths(object):
     }
 
     self._wrapper_name_to_real_name = {
-        'old_dev_appserver.py': 'dev_appserver_main.py',
         'dev_appserver.py': 'devappserver2.py',
         '_php_runtime.py': 'runtime.py',
         '_python_runtime.py': 'runtime.py',

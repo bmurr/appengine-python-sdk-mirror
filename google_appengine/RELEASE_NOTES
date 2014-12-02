@@ -3,6 +3,30 @@ All rights reserved.
 
 App Engine SDK - Release Notes
 
+Version 1.9.17
+
+Managed VMs
+==============================
+- Managed VMs are now available as an open Beta feature of App Engine.
+- User-defined health checks on App Engine Managed VMs no longer
+  require an 'ok' message body; any status 200 response is considered
+  healthy.
+
+Python
+==================================
+- The old development appserver (old_dev_appserver.py) has been removed
+  from the SDK. However, old SDKs that contain old_dev_appserver.py
+  will continue to be available.
+
+PHP
+==================================
+- Fixed the issue which prevented the ability to fseek a GCS file
+  beyond 524287 (=0x7FFFF).
+    https://code.google.com/p/googleappengine/issues/detail?id=10881
+- Fixed the issue causing a value of "valid metadata with spaces" to
+  fail validation.
+    https://code.google.com/p/googleappengine/issues/detail?id=11443
+
 Version 1.9.15
 
 All

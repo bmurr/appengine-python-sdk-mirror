@@ -57,6 +57,7 @@ import base64
 import collections
 import pickle
 
+from google.net.proto import ProtocolBuffer
 from google.appengine.datastore import entity_pb
 
 from google.appengine.api import datastore_errors
@@ -2236,13 +2237,19 @@ class Query(_BaseQuery):
 
 
     if query_options.start_cursor is not None:
-      pb.mutable_compiled_cursor().ParseFromString(
-          query_options.start_cursor.to_bytes())
+      try:
+        pb.mutable_compiled_cursor().ParseFromString(
+            query_options.start_cursor.to_bytes())
+      except ProtocolBuffer.ProtocolBufferDecodeError:
+        raise datastore_errors.BadRequestError('invalid cursor')
 
 
     if query_options.end_cursor is not None:
-      pb.mutable_end_compiled_cursor().ParseFromString(
-          query_options.end_cursor.to_bytes())
+      try:
+        pb.mutable_end_compiled_cursor().ParseFromString(
+            query_options.end_cursor.to_bytes())
+      except ProtocolBuffer.ProtocolBufferDecodeError:
+        raise datastore_errors.BadRequestError('invalid cursor')
 
 
     if ((query_options.hint == QueryOptions.ORDER_FIRST and pb.order_size()) or
