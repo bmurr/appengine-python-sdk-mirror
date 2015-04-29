@@ -214,7 +214,10 @@ abstract class CloudStorageClient {
   protected $object_name;  // The name of the object.
   protected $context_options = [];  // Any context arguments supplied on open.
   protected $url;  // GCS URL of the object.
+  protected $filename;  // GCS filename of the object
   protected $anonymous;  // Use anonymous access when contacting GCS.
+  protected static $stat_cache = [];  // Cache of stat results.
+  protected $hash_value = null;  // The hash value of this GCS object
 
   /**
    * Construct an object of CloudStorageClient.
@@ -240,7 +243,8 @@ abstract class CloudStorageClient {
     $this->anonymous = ArrayUtil::findByKeyOrNull($this->context_options,
                                                   "anonymous");
 
-    $this->url = $this->createObjectUrl($bucket, $object);
+    $this->filename = self::createGcsFilename($bucket, $object);
+    $this->url = self::createObjectUrl($bucket, $object);
   }
 
   public function __destruct() {
@@ -335,11 +339,14 @@ abstract class CloudStorageClient {
   }
 
   /**
-   * Create a URL for a target bucket and optional object.
+   * Create a GCS filename for a target bucket and optional object.
    *
-   * @visibleForTesting
+   * @param string $bucket The bucket name.
+   * @param string $object Optional object name.
+   *
+   * @returns string The GCS filename for the bucket and object names.
    */
-  public static function createObjectUrl($bucket, $object = null) {
+  protected static function createGcsFilename($bucket, $object = null) {
     if (!isset($object)) {
       $object = "";
     }
@@ -349,9 +356,72 @@ abstract class CloudStorageClient {
       $object = substr($object, 1);
     }
 
-    $gs_filename = CloudStorageTools::getFilename($bucket, $object);
+    return CloudStorageTools::getFilename($bucket, $object);
+  }
+
+  /**
+   * Create a URL for a target bucket and optional object.
+   *
+   * @visibleForTesting
+   */
+  public static function createObjectUrl($bucket, $object = null) {
+    $gs_filename = self::createGcsFilename($bucket, $object);
     return CloudStorageTools::getPublicUrl($gs_filename, true);
   }
+
+  /**
+   * Create a Unique hash for the given GCS filename.
+   *
+   * @param string $filename The filename to generate the hash value for.
+   * @return string The hash value.
+   */
+  protected static function getHashValue($filename) {
+    return hash('ripemd256', $filename);
+  }
+
+  /**
+   * Clear the stat cache.
+   *
+   * @param string $filename Option filename to clear from the cache.
+   */
+  public static function clearStatCache($filename = null) {
+    if (!empty($filename)) {
+      unset(self::$stat_cache[self::getHashValue($filename)]);
+    } else {
+      self::$stat_cache = [];
+    }
+  }
+
+  /**
+   * Try and retrieve a stat result from the stat cache.
+   *
+   * @param array $stat_result Value to write the stat result to, if found.
+   * @returns boolean True if the result was found, False otherwise.
+   */
+  protected function tryGetFromStatCache(&$stat_result) {
+    if (!$this->hash_value) {
+      $this->hash_value = self::getHashValue($this->filename);
+    }
+
+    if (array_key_exists($this->hash_value, self::$stat_cache)) {
+      $stat_result = self::$stat_cache[$this->hash_value];
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Add a stat result from the stat cache.
+   *
+   * @param array $stat_result Value to write the stat cache
+   */
+  protected function addToStatCache($stat_result) {
+    if (!$this->hash_value) {
+      $this->hash_value = self::getHashValue($this->filename);
+    }
+    self::$stat_cache[$this->hash_value] = $stat_result;
+  }
+
 
   /**
    * Return a Range HTTP header.

@@ -233,6 +233,10 @@ final class CloudStorageStreamWrapper {
     return false;
   }
 
+  public function stream_lock($operation) {
+    return false;
+  }
+
   public function stream_open($path, $mode, $options, &$opened_path) {
     if (!CloudStorageTools::parseFilename($path, $bucket, $object) ||
         !isset($object)) {

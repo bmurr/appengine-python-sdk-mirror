@@ -31,13 +31,11 @@ use google\appengine\ModulesServiceError\ErrorCode;
 use google\appengine\runtime\ApplicationError;
 use google\appengine\testing\ApiProxyTestBase;
 use google\appengine\util\StringUtil;
-use org\bovigo\vfs\vfsStream;
 
 class SplOverrideTest extends ApiProxyTestBase {
 
   public static function setUpBeforeClass() {
-    // Initialize VFS like Setup.php.
-    vfsStream::setup('root', null, ['temp' => []]);
+    VirtualFileSystem::getInstance()->initialize();
   }
 
   // See api\modules\ModulesServiceTest::testGetHostname().

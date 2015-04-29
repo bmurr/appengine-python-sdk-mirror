@@ -112,7 +112,7 @@ class MessageTest extends ApiProxyTestBase {
   public function testCheckValidEmails() {
     $valid_emails = ["test@test.com"];
     if (function_exists('mailparse_rfc822_parse_addresses')) {
-      $valid_emails = array_push($valid_emails, [
+      $valid_emails = array_merge($valid_emails, [
           "<test@test.com>", "Foo <test@test.com>",
           "Foo Bar <test@test.com>"]);
     }

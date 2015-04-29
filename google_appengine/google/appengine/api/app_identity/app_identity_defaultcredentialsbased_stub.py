@@ -30,6 +30,7 @@ from __future__ import with_statement
 
 import json
 import threading
+import time
 import urllib
 
 from oauth2client import client
@@ -67,6 +68,8 @@ class DefaultCredentialsBasedAppIdentityServiceStub(
 
     self._credentials = (
         client.GoogleCredentials.get_application_default())
+    self._access_token_cache_lock = threading.Lock()
+    self._access_token_cache = {}
     self._x509_init_lock = threading.Lock()
     self._default_gcs_bucket_name = (
         app_identity_stub.APP_DEFAULT_GCS_BUCKET_NAME)
@@ -176,6 +179,22 @@ class DefaultCredentialsBasedAppIdentityServiceStub(
       apiproxy_errors.ApplicationError: If unexpected response from
                                         Google server.
     """
-    token = self._credentials.get_access_token()
-    response.set_access_token(token['access_token'])
-    response.set_expiration_time(token['expires_in'])
+    scope = ' '.join(request.scope_list())
+    with self._access_token_cache_lock:
+      rv = self._access_token_cache.get(scope, None)
+    now = int(time.time())
+
+    if not (rv and rv['expires'] > (now + 60)):
+      credentials = self._credentials
+      if credentials.create_scoped_required():
+        credentials = credentials.create_scoped(request.scope_list())
+      token = credentials.get_access_token()
+      rv = {
+          'access_token': token.access_token,
+          'expires': now + token.expires_in,
+      }
+      with self._access_token_cache_lock:
+        self._access_token_cache[scope] = rv
+
+    response.set_access_token(rv['access_token'])
+    response.set_expiration_time(rv['expires'])

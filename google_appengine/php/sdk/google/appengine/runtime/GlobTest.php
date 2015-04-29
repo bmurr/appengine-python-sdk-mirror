@@ -63,7 +63,31 @@ class GlobTest extends \PHPUnit_Framework_TestCase {
     $this->setupBasicRead(['foo.txt', 'bar.jpg']);
     $this->setupBasicRead(['foo.txt', 'bar.jpg']);
     $result = Glob::doGlob('{*.txt,*.jpg}', GLOB_BRACE);
-    $this->assertEquals(['foo.txt', 'bar.jpg'], $result);
+    $expected = ['foo.txt', 'bar.jpg'];
+    $this->assertEquals($expected, $result);
+    // We want to ensure that the items in the result array are also in the
+    // expected order.
+    while (!empty($expected)) {
+      $val1 = array_shift($expected);
+      $val2 = array_shift($result);
+      $this->assertEquals($val1, $val2);
+    }
+  }
+
+  public function testGlobSortOrder() {
+    // Make sure sorting does not maintain the original index
+    $this->setupBasicRead(['foo.txt', 'zoo.txt', 'bar.txt']);
+    $result = Glob::doGlob('*');
+    // The order is important.
+    $expected = ['bar.txt', 'foo.txt', 'zoo.txt'];
+    $this->assertEquals($expected, $result);
+    // We want to ensure that the items in the result array are also in the
+    // expected order.
+    while (!empty($expected)) {
+      $val1 = array_shift($expected);
+      $val2 = array_shift($result);
+      $this->assertEquals($val1, $val2);
+    }
   }
 
   public function testNoBraceExpansionGlob() {

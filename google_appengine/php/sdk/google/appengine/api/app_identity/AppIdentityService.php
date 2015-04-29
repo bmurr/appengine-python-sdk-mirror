@@ -274,11 +274,31 @@ final class AppIdentityService {
    * @access private
    */
   private static function putTokenInCache($name, $value, $expiry_secs) {
-    $cache_time = $expiry_secs - self::EXPIRY_SAFETY_MARGIN_SECS -
+    $expiry_time_from_epoch = $expiry_secs - self::EXPIRY_SAFETY_MARGIN_SECS -
         self::EXPIRY_SHORT_MARGIN_SECS;
     $memcache = new \Memcache();
-    $memcache->set($name, $value, null, $cache_time);
-    apc_store($name, $value, self::getTTLForToken($cache_time));
+    $memcache->set($name, $value, null, $expiry_time_from_epoch);
+    // Record the expiry time in the object being cached, so we can check it
+    // when read from APC.
+    self::putTokenInApc($name, $value, $expiry_secs);
+  }
+
+  /**
+   * Put an access token into the in process cache.
+   * @param string $name The name of the token to add to the cache.
+   * @param mixed $value An assoicative array containing the token and the
+   * expiration time.
+   * @param int $expiry_secs The unix time since epoch when the value should
+   * expire.
+   *
+   * @access private
+   */
+  private static function putTokenInApc($name, $value, $expiry_secs) {
+    $expiry_time_from_epoch = $expiry_secs - self::EXPIRY_SAFETY_MARGIN_SECS -
+        self::EXPIRY_SHORT_MARGIN_SECS;
+    $cache_ttl = self::getTTLForToken($expiry_time_from_epoch);
+    $value['eviction_time_epoch'] = $cache_ttl['eviction_time_epoch'];
+    apc_store($name, $value, $cache_ttl['apc_ttl_in_seconds']);
   }
 
   /**
@@ -294,7 +314,8 @@ final class AppIdentityService {
   private static function getTokenFromCache($name) {
     $success = false;
     $result = apc_fetch($name, $success);
-    if ($success) {
+    if ($success && time() < $result['eviction_time_epoch']) {
+      unset($result['eviction_time_epoch']);
       return $result;
     }
     $memcache = new \Memcache();
@@ -302,10 +323,7 @@ final class AppIdentityService {
     // If there was a result in memcache but not in apc we can add using a
     // short timeout.
     if ($result !== false) {
-      $cache_time = $result['expiration_time'] -
-                    self::EXPIRY_SAFETY_MARGIN_SECS -
-                    self::EXPIRY_SHORT_MARGIN_SECS;
-      apc_store($name, $result, self::getTTLForToken($cache_time));
+      self::putTokenInApc($name, $result, $result['expiration_time']);
     }
     return $result;
   }
@@ -316,6 +334,9 @@ final class AppIdentityService {
    * convert from unix time to number of seconds.
    *
    * @param int $cache_time The unix time that the token will expire.
+   * @returns mixed An associate array with the following keys:
+   * - 'eviction_time_epoch': Seconds from epoch that this item expires.
+   * - 'apc_ttl_in_seconds': Seconds from now when this item expires.
    *
    * @access private
    */
@@ -324,7 +345,10 @@ final class AppIdentityService {
     // do not expire the key at the same time.
     $cache_time += rand(0, self::EXPIRY_SHORT_MARGIN_SECS);
     // APC expects a TTL in seconds, $cache_time is seconds since epoch().
-    return $cache_time - time();
+    return [
+      'eviction_time_epoch' => $cache_time,
+      'apc_ttl_in_seconds' => $cache_time - time(),
+    ];
   }
 
   /**
