@@ -16,8 +16,6 @@
  */
 namespace google\appengine\runtime;
 
-use org\bovigo\vfs\vfsStream;
-
 /**
  * Handle direct file uploads by placing contents in virtual file system.
  *

@@ -41,6 +41,11 @@ function apc_fetch($name, &$success) {
 
 function apc_store($name, $value, $ttl) {
   $GLOBALS['store_calls']++;
+  $GLOBALS['store_calls_data'][] = [
+    'name' => $name,
+    'value' => $value,
+    'ttl' => $ttl,
+  ];
   return false;
 }
 
@@ -217,6 +222,7 @@ class AppIdentityServiceTest extends ApiProxyTestBase {
     $GLOBALS['apc_fetch_result'][] = ['value' => [
         'access_token' => 'foobar token',
         'expiration_time' => 54321,
+        'eviction_time_epoch' => 5,  // time() always returns 0
       ],
       'result' => true,
     ];
@@ -227,6 +233,36 @@ class AppIdentityServiceTest extends ApiProxyTestBase {
     $this->assertEquals($result['expiration_time'], 54321);
     $this->assertEquals(1, $GLOBALS['fetch_calls']);
     $this->assertEquals(0, $GLOBALS['store_calls']);
+    $this->apiProxyMock->verify();
+  }
+
+  public function testGetAccessTokenCacheExpired() {
+    $scope = 'mail.google.com/send';
+
+    $GLOBALS['apc_fetch_result'][] = ['value' => [
+        'access_token' => 'foobar token',
+        'expiration_time' => 54321,
+        'eviction_time_epoch' => -1,  // time() always returns 0
+      ],
+      'result' => true,
+    ];
+
+    self::expectGetAccessTokenRequest(array($scope), true);
+
+    $result = AppIdentityService::getAccessToken($scope);
+
+    $this->assertEquals($result['access_token'], 'foo token');
+    $this->assertEquals($result['expiration_time'], 12345);
+    // Check the expiration time for the value cached in APC
+    $apc_call = array_shift($GLOBALS['store_calls_data']);
+    $this->assertLessThan(12345, $apc_call['ttl']);
+    $this->assertGreaterThanOrEqual(
+      12345 -
+      AppIdentityService::EXPIRY_SAFETY_MARGIN_SECS -
+      AppIdentityService::EXPIRY_SHORT_MARGIN_SECS,
+      $apc_call['ttl']);
+    $this->assertEquals(1, $GLOBALS['fetch_calls']);
+    $this->assertEquals(1, $GLOBALS['store_calls']);
     $this->apiProxyMock->verify();
   }
 

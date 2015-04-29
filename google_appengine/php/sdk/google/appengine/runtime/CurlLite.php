@@ -160,6 +160,7 @@ final class CurlLite {
       CURLINFO_CONTENT_LENGTH_DOWNLOAD => "download_content_length",
       CURLINFO_CONTENT_LENGTH_UPLOAD => "upload_content_length",
       CURLINFO_CONTENT_TYPE => "content_type",
+      CURLINFO_HEADER_OUT => "request_header"
   ];
 
   const CONTENT_TYPE_HEADER = 'Content-Type';
@@ -557,8 +558,8 @@ final class CurlLite {
     }
 
     if ($this->tryGetOption(CURLINFO_HEADER_OUT, $value) && $value) {
-      $headers_out = $this->response_header_block;
-      foreach($this->request->getHeaders() as $header) {
+      $headers_out = '';
+      foreach($this->request->getHeaderList() as $header) {
         $headers_out .= sprintf("%s: %s%s",
                                 $header->getKey(),
                                 $header->getValue(),

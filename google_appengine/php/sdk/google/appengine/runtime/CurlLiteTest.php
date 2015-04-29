@@ -200,11 +200,17 @@ class CurlLiteTest extends ApiProxyTestBase {
       CURLOPT_RETURNTRANSFER => true,
       CURLOPT_USERAGENT => 'test agent',
       CURLOPT_COOKIE => 'foo=bar;zoo=baz',
+      CURLINFO_HEADER_OUT => true,
     ]);
     $result = $curl_lite->exec();
+    $out_headers = $curl_lite->getInfo(CURLINFO_HEADER_OUT);
     unset($curl_lite);
 
+    $expected_request_heders = 'User-Agent: test agent\r\n' .
+        'Cookie: foo=bar;zoo=baz\r\n';
+
     $this->assertEquals($response_body, $result);
+    $this->assertEquals($expected_request_heders, $out_headers);
     $this->apiProxyMock->verify();
   }
 

@@ -191,6 +191,7 @@ final class SplOverride {
    * @see http://php.net/function.sys-get-temp-dir.php
    */
   public static function sys_get_temp_dir() {
+    VirtualFileSystem::getInstance()->initialize();
     return vfsStream::url('root/temp');
   }
 

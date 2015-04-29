@@ -1131,6 +1131,7 @@ namespace storage_onestore_v3\Property {
     const BLOBKEY = 17;
     const ENTITY_PROTO = 19;
     const INDEX_VALUE = 18;
+    const EMPTY_LIST = 24;
   }
 }
 namespace storage_onestore_v3 {
@@ -2527,6 +2528,126 @@ namespace storage_onestore_v3 {
       }
       if (isset($this->owner)) {
         $res .= $prefix . "owner <\n" . $this->owner->shortDebugString($prefix . "  ") . $prefix . ">\n";
+      }
+      return $res;
+    }
+  }
+}
+namespace storage_onestore_v3 {
+  class EntityMetadata extends \google\net\ProtocolMessage {
+    public function getCreatedVersion() {
+      if (!isset($this->created_version)) {
+        return "0";
+      }
+      return $this->created_version;
+    }
+    public function setCreatedVersion($val) {
+      if (is_double($val)) {
+        $this->created_version = sprintf('%0.0F', $val);
+      } else {
+        $this->created_version = $val;
+      }
+      return $this;
+    }
+    public function clearCreatedVersion() {
+      unset($this->created_version);
+      return $this;
+    }
+    public function hasCreatedVersion() {
+      return isset($this->created_version);
+    }
+    public function getUpdatedVersion() {
+      if (!isset($this->updated_version)) {
+        return "0";
+      }
+      return $this->updated_version;
+    }
+    public function setUpdatedVersion($val) {
+      if (is_double($val)) {
+        $this->updated_version = sprintf('%0.0F', $val);
+      } else {
+        $this->updated_version = $val;
+      }
+      return $this;
+    }
+    public function clearUpdatedVersion() {
+      unset($this->updated_version);
+      return $this;
+    }
+    public function hasUpdatedVersion() {
+      return isset($this->updated_version);
+    }
+    public function clear() {
+      $this->clearCreatedVersion();
+      $this->clearUpdatedVersion();
+    }
+    public function byteSizePartial() {
+      $res = 0;
+      if (isset($this->created_version)) {
+        $res += 1;
+        $res += $this->lengthVarInt64($this->created_version);
+      }
+      if (isset($this->updated_version)) {
+        $res += 1;
+        $res += $this->lengthVarInt64($this->updated_version);
+      }
+      return $res;
+    }
+    public function outputPartial($out) {
+      if (isset($this->created_version)) {
+        $out->putVarInt32(8);
+        $out->putVarInt64($this->created_version);
+      }
+      if (isset($this->updated_version)) {
+        $out->putVarInt32(16);
+        $out->putVarInt64($this->updated_version);
+      }
+    }
+    public function tryMerge($d) {
+      while($d->avail() > 0) {
+        $tt = $d->getVarInt32();
+        switch ($tt) {
+          case 8:
+            $this->setCreatedVersion($d->getVarInt64());
+            break;
+          case 16:
+            $this->setUpdatedVersion($d->getVarInt64());
+            break;
+          case 0:
+            throw new \google\net\ProtocolBufferDecodeError();
+            break;
+          default:
+            $d->skipData($tt);
+        }
+      };
+    }
+    public function checkInitialized() {
+      return null;
+    }
+    public function mergeFrom($x) {
+      if ($x === $this) { throw new \IllegalArgumentException('Cannot copy message to itself'); }
+      if ($x->hasCreatedVersion()) {
+        $this->setCreatedVersion($x->getCreatedVersion());
+      }
+      if ($x->hasUpdatedVersion()) {
+        $this->setUpdatedVersion($x->getUpdatedVersion());
+      }
+    }
+    public function equals($x) {
+      if ($x === $this) { return true; }
+      if (isset($this->created_version) !== isset($x->created_version)) return false;
+      if (isset($this->created_version) && !$this->integerEquals($this->created_version, $x->created_version)) return false;
+      if (isset($this->updated_version) !== isset($x->updated_version)) return false;
+      if (isset($this->updated_version) && !$this->integerEquals($this->updated_version, $x->updated_version)) return false;
+      return true;
+    }
+    public function shortDebugString($prefix = "") {
+      $res = '';
+      if (isset($this->created_version)) {
+        $res .= $prefix . "created_version: " . $this->debugFormatInt64($this->created_version) . "\n";
+      }
+      if (isset($this->updated_version)) {
+        $res .= $prefix . "updated_version: " . $this->debugFormatInt64($this->updated_version) . "\n";
       }
       return $res;
     }

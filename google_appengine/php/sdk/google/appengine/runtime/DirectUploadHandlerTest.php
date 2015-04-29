@@ -16,12 +16,9 @@
  */
 namespace google\appengine\runtime;
 
-use org\bovigo\vfs\vfsStream;
-
 class DirectUploadHandlerTest extends \PHPUnit_Framework_TestCase {
   public static function setUpBeforeClass() {
-    // Initialize VFS like Setup.php.
-    vfsStream::setup('root', null, ['uploads' => []]);
+    VirtualFileSystem::getInstance()->initialize();
   }
 
   public function testHandler() {

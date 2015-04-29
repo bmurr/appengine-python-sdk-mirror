@@ -62,11 +62,11 @@ final class Glob {
           break;
         }
       } else {
+        if (($options & GLOB_NOSORT) === 0) {
+          sort($out);
+        }
         $results = array_merge($results, $out);
       }
-    }
-    if (($options & GLOB_NOSORT) === 0) {
-      asort($results);
     }
     if (($options & GLOB_NOCHECK) && empty($results)) {
       $results[] = $pattern;
