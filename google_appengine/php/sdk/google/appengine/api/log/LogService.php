@@ -398,6 +398,10 @@ final class LogService {
     $app_log_line->setLevel($severity);
     $app_log_line->setMessage($message);
 
+    if (function_exists('_gae_stderr_log')) {
+      _gae_stderr_log($severity, $message);
+    }
+
     self::flushIfNeeded();
   }
 
@@ -523,16 +527,6 @@ final class LogService {
     return (double) $datetime->getTimeStamp() * 1e6;
   }
 
-  /**
-   * The GAE PECL extension calls this directly instead of the built-in syslog.
-   */
-  private static function syslog($priority, $message) {
-    $log_level = self::getAppEngineLogLevel($priority);
-    self::log($log_level, $message);
-    if (function_exists('_gae_syslog')) {
-      _gae_syslog($log_level, $message);
-    }
-  }
 }
 
 /**

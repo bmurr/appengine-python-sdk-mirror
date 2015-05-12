@@ -23,6 +23,9 @@
  */
 
 namespace {
+
+use google\appengine\api\cloud_storage\CloudStorageTools;
+
 // Mock Memcache class
 class Memcache {
   // Mock object to validate calls to memcache
@@ -55,6 +58,10 @@ class Memcached {
 
 // Mock APC functions for App Identity service.
 function apc_fetch($name, &$success) {
+  if ($name == CloudStorageTools::GS_DEFAULT_BUCKET_APC_KEY) {
+    $success = true;
+    return 'bucket';
+  }
   $success = false;
   return false;
 }
@@ -77,24 +84,21 @@ use google\appengine\ext\cloud_storage_streams\HttpResponse;
 use google\appengine\URLFetchRequest\RequestMethod;
 use google\appengine\URLFetchServiceError\ErrorCode;
 use google\appengine\runtime\ApplicationError;
+use google\appengine\testing\TestUtils;
 
 class CloudStorageStreamWrapperTest extends ApiProxyTestBase {
-
-  public static $allowed_gs_bucket = "";
 
   protected function setUp() {
     parent::setUp();
     $this->_SERVER = $_SERVER;
 
     if (!defined("GAE_INCLUDE_GS_BUCKETS")) {
-      define("GAE_INCLUDE_GS_BUCKETS", "foo, bucket/object_name.png, bar, to_bucket");
+      define("GAE_INCLUDE_GS_BUCKETS", "#default#/object_name.png, to_bucket");
     }
 
     stream_wrapper_register("gs",
         "\\google\\appengine\\ext\\cloud_storage_streams\\CloudStorageStreamWrapper",
         STREAM_IS_URL);
-
-    CloudStorageStreamWrapperTest::$allowed_gs_bucket = "";
 
     // By default disable caching so we don't have to mock out memcache in
     // every test.
@@ -1815,7 +1819,6 @@ class CloudStorageStreamWrapperTest extends ApiProxyTestBase {
         0);
 
     $body = '<?php $a = "foo";';
-
     $this->expectFileReadRequest([
         'body' =>$body,
         'start_byte' => 0,
@@ -2632,6 +2635,9 @@ function ini_get($varname)  {
     return true;
   }
   if ($varname == 'google_app_engine.enable_gcs_stat_cache') {
+    return true;
+  }
+  if ($varname == 'google_app_engine.gcs_default_keyword') {
     return true;
   }
   return \ini_get($varname);

@@ -22,7 +22,7 @@ namespace google\appengine\testing;
 
 final class TestUtils {
   /**
-   * Call protected/private method of a class.
+   * Call protected/private non-static method of an object.
    *
    * @param object &$object    Instantiated object that we will run method on.
    * @param string $methodName Method name to call
@@ -38,6 +38,65 @@ final class TestUtils {
     $method->setAccessible(true);
 
     return $method->invokeArgs($object, $parameters);
+  }
+
+  /**
+   * Call protected/private static method of a class.
+   *
+   * @param string $className  Name of the class for the static method.
+   * @param string $methodName Method name to call
+   * @param array  $parameters Array of parameters to pass into method.
+   *
+   * @return mixed Method return.
+   */
+  public static function invokeStaticMethod($className,
+                                            $methodName,
+                                            array $parameters = []) {
+    $reflection = new \ReflectionClass($className);
+    $method = $reflection->getMethod($methodName);
+    $method->setAccessible(true);
+
+    return $method->invokeArgs(null, $parameters);
+  }
+
+  /**
+   * Set protected/private non-static property of an object.
+   *
+   * @param object &$object      Instantiated object with the property to set.
+   * @param string $propertyName Name of the property to set.
+   * @param mixed  $value        New value for the property.
+   *
+   * @return mixed Previous value for the property before the update.
+   */
+  public static function setProperty(&$object,
+                                     $propertyName,
+                                     $value) {
+    $reflection = new \ReflectionClass(get_class($object));
+    $property = $reflection->getProperty($propertyName);
+    $property->setAccessible(true);
+    $old_value = $property->getValue($object);
+    $property->setValue($object, $value);
+    return $old_value;
+  }
+
+  /**
+   * Set protected/private static property of a class.
+   *
+   * @param object $className    Name of the class for the static property.
+   * @param string $propertyName Name of the property to set.
+   * @param mixed  $value        New value for the property.
+   *
+   * @return mixed Previous value for the property before the update.
+   */
+  public static function setStaticProperty($className,
+                                           $propertyName,
+                                           $value) {
+    $reflection = new \ReflectionClass($className);
+    $property = $reflection->getProperty($propertyName);
+    $property->setAccessible(true);
+    $old_value = $property->getValue();
+    $property->setValue(null, $value);
+    return $old_value;
   }
 
 
