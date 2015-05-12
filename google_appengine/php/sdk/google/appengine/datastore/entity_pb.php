@@ -1226,22 +1226,39 @@ namespace storage_onestore_v3 {
     public function hasValue() {
       return isset($this->value);
     }
-    public function getEmbedded() {
-      if (!isset($this->embedded)) {
+    public function getStashed() {
+      if (!isset($this->stashed)) {
+        return -1;
+      }
+      return $this->stashed;
+    }
+    public function setStashed($val) {
+      $this->stashed = $val;
+      return $this;
+    }
+    public function clearStashed() {
+      unset($this->stashed);
+      return $this;
+    }
+    public function hasStashed() {
+      return isset($this->stashed);
+    }
+    public function getComputed() {
+      if (!isset($this->computed)) {
         return false;
       }
-      return $this->embedded;
+      return $this->computed;
     }
-    public function setEmbedded($val) {
-      $this->embedded = $val;
+    public function setComputed($val) {
+      $this->computed = $val;
       return $this;
     }
-    public function clearEmbedded() {
-      unset($this->embedded);
+    public function clearComputed() {
+      unset($this->computed);
       return $this;
     }
-    public function hasEmbedded() {
-      return isset($this->embedded);
+    public function hasComputed() {
+      return isset($this->computed);
     }
     public function clear() {
       $this->clearMeaning();
@@ -1249,7 +1266,8 @@ namespace storage_onestore_v3 {
       $this->clearName();
       $this->clearMultiple();
       $this->clearValue();
-      $this->clearEmbedded();
+      $this->clearStashed();
+      $this->clearComputed();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -1272,7 +1290,11 @@ namespace storage_onestore_v3 {
         $res += 1;
         $res += $this->lengthString($this->value->byteSizePartial());
       }
-      if (isset($this->embedded)) {
+      if (isset($this->stashed)) {
+        $res += 1;
+        $res += $this->lengthVarInt64($this->stashed);
+      }
+      if (isset($this->computed)) {
         $res += 2;
       }
       return $res;
@@ -1299,9 +1321,13 @@ namespace storage_onestore_v3 {
         $out->putVarInt32($this->value->byteSizePartial());
         $this->value->outputPartial($out);
       }
-      if (isset($this->embedded)) {
+      if (isset($this->stashed)) {
         $out->putVarInt32(48);
-        $out->putBoolean($this->embedded);
+        $out->putVarInt32($this->stashed);
+      }
+      if (isset($this->computed)) {
+        $out->putVarInt32(56);
+        $out->putBoolean($this->computed);
       }
     }
     public function tryMerge($d) {
@@ -1331,7 +1357,10 @@ namespace storage_onestore_v3 {
             $this->mutableValue()->tryMerge($tmp);
             break;
           case 48:
-            $this->setEmbedded($d->getBoolean());
+            $this->setStashed($d->getVarInt32());
+            break;
+          case 56:
+            $this->setComputed($d->getBoolean());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -1364,8 +1393,11 @@ namespace storage_onestore_v3 {
       if ($x->hasValue()) {
         $this->mutableValue()->mergeFrom($x->getValue());
       }
-      if ($x->hasEmbedded()) {
-        $this->setEmbedded($x->getEmbedded());
+      if ($x->hasStashed()) {
+        $this->setStashed($x->getStashed());
+      }
+      if ($x->hasComputed()) {
+        $this->setComputed($x->getComputed());
       }
     }
     public function equals($x) {
@@ -1380,8 +1412,10 @@ namespace storage_onestore_v3 {
       if (isset($this->multiple) && $this->multiple !== $x->multiple) return false;
       if (isset($this->value) !== isset($x->value)) return false;
       if (isset($this->value) && !$this->value->equals($x->value)) return false;
-      if (isset($this->embedded) !== isset($x->embedded)) return false;
-      if (isset($this->embedded) && $this->embedded !== $x->embedded) return false;
+      if (isset($this->stashed) !== isset($x->stashed)) return false;
+      if (isset($this->stashed) && !$this->integerEquals($this->stashed, $x->stashed)) return false;
+      if (isset($this->computed) !== isset($x->computed)) return false;
+      if (isset($this->computed) && $this->computed !== $x->computed) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -1401,8 +1435,11 @@ namespace storage_onestore_v3 {
       if (isset($this->value)) {
         $res .= $prefix . "value <\n" . $this->value->shortDebugString($prefix . "  ") . $prefix . ">\n";
       }
-      if (isset($this->embedded)) {
-        $res .= $prefix . "embedded: " . $this->debugFormatBool($this->embedded) . "\n";
+      if (isset($this->stashed)) {
+        $res .= $prefix . "stashed: " . $this->debugFormatInt32($this->stashed) . "\n";
+      }
+      if (isset($this->computed)) {
+        $res .= $prefix . "computed: " . $this->debugFormatBool($this->computed) . "\n";
       }
       return $res;
     }

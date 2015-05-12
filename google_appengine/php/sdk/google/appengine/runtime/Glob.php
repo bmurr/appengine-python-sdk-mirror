@@ -272,9 +272,9 @@ final class Glob {
    *     is no wildcard in the path.
    */
   private static function splitPathOnWildcard($path) {
-    $pattern = sprintf(static::WILDCARD_PATTERN,
-                       DIRECTORY_SEPARATOR,
-                       DIRECTORY_SEPARATOR);
+    // On windows DIRECTORY_SEPARATOR is a '\' which we need to escape.
+    $sep = addslashes(DIRECTORY_SEPARATOR);
+    $pattern = sprintf(static::WILDCARD_PATTERN, $sep, $sep);
     if (preg_match($pattern, $path, $matches)) {
       return array_slice($matches, 1);
     }

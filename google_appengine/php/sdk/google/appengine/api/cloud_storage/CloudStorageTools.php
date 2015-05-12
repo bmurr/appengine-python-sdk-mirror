@@ -66,6 +66,12 @@ final class CloudStorageTools {
   // The maximum value in seconds for the upload URL timeout option.
   const MAX_URL_EXPIRY_TIME_SECONDS = 86400;  // 24 hours
 
+  // The keyword to be replaced by app's default bucket in GCS filename.
+  const GS_DEFAULT_BUCKET_KEYWORD = '#default#';
+
+  // The key to use when caching the default GCS bucket name in APC.
+  const GS_DEFAULT_BUCKET_APC_KEY = '__DEFAULT_GCS_BUCKET_NAME__';
+
   /**
    * The list of options that can be supplied to createUploadUrl.
    * @see CloudStorageTools::createUploadUrl()
@@ -462,6 +468,18 @@ final class CloudStorageTools {
       return false;
     }
 
+    // Substitute default bucket name.
+    if (ini_get('google_app_engine.gcs_default_keyword')) {
+      if ($bucket === self::GS_DEFAULT_BUCKET_KEYWORD) {
+        $bucket = self::getDefaultGoogleStorageBucketName();
+        if (!$bucket) {
+          throw new \InvalidArgumentException(
+              'Application does not have a default Cloud Storage Bucket, ' .
+              'must specify a bucket name');
+        }
+      }
+    }
+
     // Validate bucket & object names.
     if (self::validateBucketName($bucket) === false) {
       trigger_error(sprintf('Invalid cloud storage bucket name \'%s\'',
@@ -628,6 +646,12 @@ final class CloudStorageTools {
    * configured.
    */
   public static function getDefaultGoogleStorageBucketName() {
+    $success = false;
+    $default_bucket_name = apc_fetch(self::GS_DEFAULT_BUCKET_APC_KEY, $success);
+    if ($success) {
+      return $default_bucket_name;
+    }
+
     $request = new GetDefaultGcsBucketNameRequest();
     $response = new GetDefaultGcsBucketNameResponse();
 
@@ -636,7 +660,11 @@ final class CloudStorageTools {
                            $request,
                            $response);
 
-    return $response->getDefaultGcsBucketName();
+    $default_bucket_name = $response->getDefaultGcsBucketName();
+    if ($default_bucket_name) {
+      apc_store(self::GS_DEFAULT_BUCKET_APC_KEY, $default_bucket_name);
+    }
+    return $default_bucket_name;
   }
 
   /**
