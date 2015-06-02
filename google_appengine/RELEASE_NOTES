@@ -3,6 +3,23 @@ All rights reserved.
 
 App Engine SDK - Release Notes
 
+Version 1.9.21 - May 8, 2015
+
+All
+============================
+- The Files API, which has been deprecated since June 2013, will soon be
+  restricted to existing users only in preparation for its future removal.
+  Further information about the removal of this API is available here: 
+  https://cloud.google.com/appengine/docs/deprecations/
+
+PHP
+===============================
+- Add support for basic authorization when using HTTP streams
+    https://code.google.com/p/googleappengine/issues/detail?id=11901
+- Upgraded the version of libcurl to 7.42.0.
+    http://curl.haxx.se/changes.html
+
+
 Version 1.9.20
 
 All

@@ -2936,8 +2936,7 @@ def _CopyQueryOptionsToProtocolBuffer(
     for snippeted_field in snippeted_fields:
       expression = u'snippet(%s, %s)' % (_QuoteString(query), snippeted_field)
       _CopyFieldExpressionToProtocolBuffer(
-          FieldExpression(
-              name=snippeted_field, expression=expression.encode('utf-8')),
+          FieldExpression(name=snippeted_field, expression=expression),
           field_spec_pb.add_expression())
     for expression in returned_expressions:
       _CopyFieldExpressionToProtocolBuffer(

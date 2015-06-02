@@ -1838,7 +1838,6 @@ class AppVersionUpload(object):
   def __init__(self, rpcserver, config, module_yaml_path='app.yaml',
                backend=None,
                error_fh=None,
-               get_version=sdk_update_checker.GetVersionObject,
                usage_reporting=False, ignore_endpoints_failures=True):
     """Creates a new AppVersionUpload.
 
@@ -1852,8 +1851,6 @@ class AppVersionUpload(object):
       backend: If specified, indicates the update applies to the given backend.
         The backend name must match an entry in the backends: stanza.
       error_fh: Unexpected HTTPErrors are printed to this file handle.
-      get_version: Method for determining the current SDK version. The override
-        is used for testing.
       usage_reporting: Whether or not to report usage.
       ignore_endpoints_failures: True to finish deployment even if there are
         errors updating the Google Cloud Endpoints configuration (if there is
@@ -1900,11 +1897,6 @@ class AppVersionUpload(object):
     if not self.config.vm_settings:
       self.config.vm_settings = appinfo.VmSettings()
     self.config.vm_settings['module_yaml_path'] = module_yaml_path
-
-    if not self.config.vm_settings.get('image'):
-      sdk_version = get_version()
-      if sdk_version and sdk_version.get('release'):
-        self.config.vm_settings['image'] = sdk_version['release']
 
     if not self.config.auto_id_policy:
       self.config.auto_id_policy = appinfo.DATASTORE_ID_POLICY_DEFAULT

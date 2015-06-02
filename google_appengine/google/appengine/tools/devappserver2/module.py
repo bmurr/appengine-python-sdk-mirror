@@ -269,9 +269,11 @@ class Module(object):
     handlers.append(wsgi_handler.WSGIHandler(login.application,
                                              url_pattern))
     url_pattern = '/%s' % blob_upload.UPLOAD_URL_PATH
-    # The blobstore upload handler forwards successful requests back to self
+    # The blobstore upload handler forwards successful requests to the
+    # dispatcher.
     handlers.append(
-        wsgi_handler.WSGIHandler(blob_upload.Application(self), url_pattern))
+        wsgi_handler.WSGIHandler(blob_upload.Application(self._dispatcher),
+                                 url_pattern))
 
     url_pattern = '/%s' % blob_image.BLOBIMAGE_URL_PATTERN
     handlers.append(
