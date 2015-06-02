@@ -253,11 +253,14 @@ class PHPRuntimeInstanceFactory(instance.InstanceFactory):
 
   @classmethod
   def _check_environment(cls, php_executable_path, env):
-    check_process = safe_subprocess.start_process(
-        [php_executable_path, '-n', '-f', _CHECK_ENVIRONMENT_SCRIPT_PATH],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=env)
+    # Clear auto_prepend_file & auto_append_file ini directives as they can
+    # trigger error and cause non-zero return.
+    args = [php_executable_path, '-f', _CHECK_ENVIRONMENT_SCRIPT_PATH,
+            '-d', 'auto_prepend_file=NULL', '-d', 'auto_append_file=NULL']
+    check_process = safe_subprocess.start_process(args,
+                                                  stdout=subprocess.PIPE,
+                                                  stderr=subprocess.PIPE,
+                                                  env=env)
     check_process_stdout, _ = check_process.communicate()
     if check_process.returncode:
       raise _PHPEnvironmentError(check_process_stdout)

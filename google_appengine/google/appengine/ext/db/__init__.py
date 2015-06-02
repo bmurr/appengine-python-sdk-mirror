@@ -2814,7 +2814,7 @@ class UnindexedProperty(Property):
 
 
 class TextProperty(UnindexedProperty):
-  """A string that can be longer than 500 bytes."""
+  """A string that can be longer than 1500 bytes."""
 
   data_type = Text
 
@@ -2850,11 +2850,11 @@ class StringProperty(Property):
       raise BadValueError('Property %s is not multi-line' % self.name)
     if value is not None and len(value) > self.MAX_LENGTH:
       raise BadValueError(
-          'Property %s is %d characters long; it must be %d or less.'
+          'Property %s is %d bytes long; it must be %d or less.'
           % (self.name, len(value), self.MAX_LENGTH))
     return value
 
-  MAX_LENGTH = 500
+  MAX_LENGTH = 1500
   data_type = basestring
 
 
@@ -2938,13 +2938,13 @@ class PostalAddressProperty(_CoercingProperty):
 
 
 class BlobProperty(UnindexedProperty):
-  """A byte string that can be longer than 500 bytes."""
+  """A byte string that can be longer than 1500 bytes."""
 
   data_type = Blob
 
 
 class ByteStringProperty(Property):
-  """A short (<=500 bytes) byte string.
+  """A short (<=1500 bytes) byte string.
 
   This type should be used for short binary values that need to be indexed. If
   you do not require indexing (regardless of length), use BlobProperty instead.
@@ -2975,7 +2975,7 @@ class ByteStringProperty(Property):
           % (self.name, len(value), self.MAX_LENGTH))
     return value
 
-  MAX_LENGTH = 500
+  MAX_LENGTH = 1500
   data_type = ByteString
 
 

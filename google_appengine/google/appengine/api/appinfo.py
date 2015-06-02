@@ -466,7 +466,7 @@ _SUPPORTED_LIBRARIES = [
 
     _VersionedLibrary(
         'PyAMF',
-        'http://www.pyamf.org/',
+        'http://pyamf.appspot.com/index.html',
         'A library that provides (AMF) Action Message Format functionality.',
         ['0.6.1'],
         latest_version='0.6.1',

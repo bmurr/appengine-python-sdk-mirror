@@ -569,6 +569,8 @@ class PropertyValue_ReferenceValue(ProtocolBuffer.ProtocolMessage):
   app_ = ""
   has_name_space_ = 0
   name_space_ = ""
+  has_database_ = 0
+  database_ = ""
 
   def __init__(self, contents=None):
     self.pathelement_ = []
@@ -616,12 +618,26 @@ class PropertyValue_ReferenceValue(ProtocolBuffer.ProtocolMessage):
 
   def clear_pathelement(self):
     self.pathelement_ = []
+  def database(self): return self.database_
+
+  def set_database(self, x):
+    self.has_database_ = 1
+    self.database_ = x
+
+  def clear_database(self):
+    if self.has_database_:
+      self.has_database_ = 0
+      self.database_ = ""
+
+  def has_database(self): return self.has_database_
+
 
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_app()): self.set_app(x.app())
     if (x.has_name_space()): self.set_name_space(x.name_space())
     for i in xrange(x.pathelement_size()): self.add_pathelement().CopyFrom(x.pathelement(i))
+    if (x.has_database()): self.set_database(x.database())
 
   def Equals(self, x):
     if x is self: return 1
@@ -632,6 +648,8 @@ class PropertyValue_ReferenceValue(ProtocolBuffer.ProtocolMessage):
     if len(self.pathelement_) != len(x.pathelement_): return 0
     for e1, e2 in zip(self.pathelement_, x.pathelement_):
       if e1 != e2: return 0
+    if self.has_database_ != x.has_database_: return 0
+    if self.has_database_ and self.database_ != x.database_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -650,6 +668,7 @@ class PropertyValue_ReferenceValue(ProtocolBuffer.ProtocolMessage):
     if (self.has_name_space_): n += 2 + self.lengthString(len(self.name_space_))
     n += 2 * len(self.pathelement_)
     for i in xrange(len(self.pathelement_)): n += self.pathelement_[i].ByteSize()
+    if (self.has_database_): n += 2 + self.lengthString(len(self.database_))
     return n + 1
 
   def ByteSizePartial(self):
@@ -660,12 +679,14 @@ class PropertyValue_ReferenceValue(ProtocolBuffer.ProtocolMessage):
     if (self.has_name_space_): n += 2 + self.lengthString(len(self.name_space_))
     n += 2 * len(self.pathelement_)
     for i in xrange(len(self.pathelement_)): n += self.pathelement_[i].ByteSizePartial()
+    if (self.has_database_): n += 2 + self.lengthString(len(self.database_))
     return n
 
   def Clear(self):
     self.clear_app()
     self.clear_name_space()
     self.clear_pathelement()
+    self.clear_database()
 
   def OutputUnchecked(self, out):
     out.putVarInt32(106)
@@ -677,6 +698,9 @@ class PropertyValue_ReferenceValue(ProtocolBuffer.ProtocolMessage):
     if (self.has_name_space_):
       out.putVarInt32(162)
       out.putPrefixedString(self.name_space_)
+    if (self.has_database_):
+      out.putVarInt32(186)
+      out.putPrefixedString(self.database_)
 
   def OutputPartial(self, out):
     if (self.has_app_):
@@ -689,6 +713,9 @@ class PropertyValue_ReferenceValue(ProtocolBuffer.ProtocolMessage):
     if (self.has_name_space_):
       out.putVarInt32(162)
       out.putPrefixedString(self.name_space_)
+    if (self.has_database_):
+      out.putVarInt32(186)
+      out.putPrefixedString(self.database_)
 
   def TryMerge(self, d):
     while 1:
@@ -702,6 +729,9 @@ class PropertyValue_ReferenceValue(ProtocolBuffer.ProtocolMessage):
         continue
       if tt == 162:
         self.set_name_space(d.getPrefixedString())
+        continue
+      if tt == 186:
+        self.set_database(d.getPrefixedString())
         continue
 
 
@@ -721,6 +751,7 @@ class PropertyValue_ReferenceValue(ProtocolBuffer.ProtocolMessage):
       res+=e.__str__(prefix + "  ", printElemNumber)
       res+=prefix+"}\n"
       cnt+=1
+    if self.has_database_: res+=prefix+("database: %s\n" % self.DebugFormatString(self.database_))
     return res
 
 class PropertyValue(ProtocolBuffer.ProtocolMessage):
@@ -1047,6 +1078,7 @@ class PropertyValue(ProtocolBuffer.ProtocolMessage):
   kReferenceValuePathElementtype = 15
   kReferenceValuePathElementid = 16
   kReferenceValuePathElementname = 17
+  kReferenceValuedatabase = 23
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",
@@ -1072,7 +1104,8 @@ class PropertyValue(ProtocolBuffer.ProtocolMessage):
     20: "name_space",
     21: "federated_identity",
     22: "federated_provider",
-  }, 22)
+    23: "database",
+  }, 23)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -1098,7 +1131,8 @@ class PropertyValue(ProtocolBuffer.ProtocolMessage):
     20: ProtocolBuffer.Encoder.STRING,
     21: ProtocolBuffer.Encoder.STRING,
     22: ProtocolBuffer.Encoder.STRING,
-  }, 22, ProtocolBuffer.Encoder.MAX_TYPE)
+    23: ProtocolBuffer.Encoder.STRING,
+  }, 23, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
@@ -1740,6 +1774,8 @@ class Reference(ProtocolBuffer.ProtocolMessage):
   has_name_space_ = 0
   name_space_ = ""
   has_path_ = 0
+  has_database_ = 0
+  database_ = ""
 
   def __init__(self, contents=None):
     self.path_ = Path()
@@ -1779,12 +1815,26 @@ class Reference(ProtocolBuffer.ProtocolMessage):
 
   def has_path(self): return self.has_path_
 
+  def database(self): return self.database_
+
+  def set_database(self, x):
+    self.has_database_ = 1
+    self.database_ = x
+
+  def clear_database(self):
+    if self.has_database_:
+      self.has_database_ = 0
+      self.database_ = ""
+
+  def has_database(self): return self.has_database_
+
 
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_app()): self.set_app(x.app())
     if (x.has_name_space()): self.set_name_space(x.name_space())
     if (x.has_path()): self.mutable_path().MergeFrom(x.path())
+    if (x.has_database()): self.set_database(x.database())
 
   def Equals(self, x):
     if x is self: return 1
@@ -1794,6 +1844,8 @@ class Reference(ProtocolBuffer.ProtocolMessage):
     if self.has_name_space_ and self.name_space_ != x.name_space_: return 0
     if self.has_path_ != x.has_path_: return 0
     if self.has_path_ and self.path_ != x.path_: return 0
+    if self.has_database_ != x.has_database_: return 0
+    if self.has_database_ and self.database_ != x.database_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -1814,6 +1866,7 @@ class Reference(ProtocolBuffer.ProtocolMessage):
     n += self.lengthString(len(self.app_))
     if (self.has_name_space_): n += 2 + self.lengthString(len(self.name_space_))
     n += self.lengthString(self.path_.ByteSize())
+    if (self.has_database_): n += 2 + self.lengthString(len(self.database_))
     return n + 2
 
   def ByteSizePartial(self):
@@ -1825,12 +1878,14 @@ class Reference(ProtocolBuffer.ProtocolMessage):
     if (self.has_path_):
       n += 1
       n += self.lengthString(self.path_.ByteSizePartial())
+    if (self.has_database_): n += 2 + self.lengthString(len(self.database_))
     return n
 
   def Clear(self):
     self.clear_app()
     self.clear_name_space()
     self.clear_path()
+    self.clear_database()
 
   def OutputUnchecked(self, out):
     out.putVarInt32(106)
@@ -1841,6 +1896,9 @@ class Reference(ProtocolBuffer.ProtocolMessage):
     if (self.has_name_space_):
       out.putVarInt32(162)
       out.putPrefixedString(self.name_space_)
+    if (self.has_database_):
+      out.putVarInt32(186)
+      out.putPrefixedString(self.database_)
 
   def OutputPartial(self, out):
     if (self.has_app_):
@@ -1853,6 +1911,9 @@ class Reference(ProtocolBuffer.ProtocolMessage):
     if (self.has_name_space_):
       out.putVarInt32(162)
       out.putPrefixedString(self.name_space_)
+    if (self.has_database_):
+      out.putVarInt32(186)
+      out.putPrefixedString(self.database_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -1869,6 +1930,9 @@ class Reference(ProtocolBuffer.ProtocolMessage):
       if tt == 162:
         self.set_name_space(d.getPrefixedString())
         continue
+      if tt == 186:
+        self.set_database(d.getPrefixedString())
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
@@ -1883,6 +1947,7 @@ class Reference(ProtocolBuffer.ProtocolMessage):
       res+=prefix+"path <\n"
       res+=self.path_.__str__(prefix + "  ", printElemNumber)
       res+=prefix+">\n"
+    if self.has_database_: res+=prefix+("database: %s\n" % self.DebugFormatString(self.database_))
     return res
 
 
@@ -1892,20 +1957,23 @@ class Reference(ProtocolBuffer.ProtocolMessage):
   kapp = 13
   kname_space = 20
   kpath = 14
+  kdatabase = 23
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",
     13: "app",
     14: "path",
     20: "name_space",
-  }, 20)
+    23: "database",
+  }, 23)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
     13: ProtocolBuffer.Encoder.STRING,
     14: ProtocolBuffer.Encoder.STRING,
     20: ProtocolBuffer.Encoder.STRING,
-  }, 20, ProtocolBuffer.Encoder.MAX_TYPE)
+    23: ProtocolBuffer.Encoder.STRING,
+  }, 23, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""

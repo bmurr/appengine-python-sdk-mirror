@@ -34,6 +34,15 @@ from google.appengine.api.search.stub import tokens
 
 MSEC_PER_DAY = 86400000
 
+
+INEQUALITY_COMPARISON_TYPES = [
+    QueryParser.GT,
+    QueryParser.GE,
+    QueryParser.LESSTHAN,
+    QueryParser.LE,
+    ]
+
+
 class ExpressionTreeException(Exception):
   """An error occurred while analyzing/translating the expression parse tree."""
 
@@ -225,7 +234,11 @@ class DocumentMatcher(object):
 
   def _CheckValidDateComparison(self, field_name, match):
     """Check if match is a valid date value."""
-    if match.getType() == QueryParser.VALUE:
+    if match.getType() == QueryParser.FUNCTION:
+      name, _ = match.children
+      raise ExpressionTreeException('Unable to compare "%s" with "%s()"' %
+                                    (field_name, name))
+    elif match.getType() == QueryParser.VALUE:
       try:
         match_val = query_parser.GetPhraseQueryNodeText(match)
 
@@ -426,7 +439,12 @@ class DocumentMatcher(object):
       if isinstance(x, geo_util.LatLng) and isinstance(y, basestring):
         x, y = y, x
       if isinstance(x, basestring) and isinstance(y, geo_util.LatLng):
-        distance = float(query_parser.GetQueryNodeText(match))
+        match_val = query_parser.GetQueryNodeText(match)
+        try:
+          distance = float(match_val)
+        except ValueError:
+          raise ExpressionTreeException('Unable to compare "%s()" with "%s"' %
+                                        (name, match_val))
         matcher = DistanceMatcher(y, distance)
         return self._MatchGeoField(x, matcher, operator, document)
     return False
@@ -480,9 +498,10 @@ class DocumentMatcher(object):
     if node.getType() == QueryParser.NEGATION:
       return not self._CheckMatch(node.children[0], document)
 
+    if node.getType() == QueryParser.NE:
+      raise ExpressionTreeException('!= comparison operator is not available')
+
     if node.getType() in query_parser.COMPARISON_TYPES:
-      if node.getType() == QueryParser.NE:
-        raise ExpressionTreeException('!= comparison operator is not available')
       lhs, match = node.children
       if lhs.getType() == QueryParser.GLOBAL:
         return self._MatchGlobal(match, document)
@@ -492,11 +511,12 @@ class DocumentMatcher(object):
 
 
 
-      schema = self._inverted_index.GetSchema()
+
       field_name = self._GetFieldName(lhs)
-      if field_name in schema:
-        field_type_list = schema[field_name].type_list()
-        if all(f == document_pb.FieldValue.DATE for f in field_type_list):
+      if node.getType() in INEQUALITY_COMPARISON_TYPES:
+        try:
+          float(query_parser.GetQueryNodeText(match))
+        except ValueError:
           self._CheckValidDateComparison(field_name, match)
       return self._MatchAnyField(lhs, match, node.getType(), document)
 
