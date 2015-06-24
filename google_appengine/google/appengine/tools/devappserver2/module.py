@@ -386,7 +386,10 @@ class Module(object):
       runtime_config.vm_config.CopyFrom(self._vm_config)
       # If the effective runtime is "custom" and --custom_entrypoint is not set,
       # bail out early; otherwise, load custom into runtime_config.
-      if self._module_configuration.effective_runtime == 'custom':
+      # TODO: Remove the GAE_LOCAL_VM_RUNTIME check here once
+      # sandboxing is disabled.
+      if (self._module_configuration.effective_runtime == 'custom' and
+          os.environ.get('GAE_LOCAL_VM_RUNTIME') != '0'):
         if not self._custom_config.custom_entrypoint:
           raise ValueError('The --custom_entrypoint flag must be set for '
                            'custom runtimes')

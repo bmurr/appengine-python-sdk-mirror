@@ -232,6 +232,26 @@ class DocumentMatcher(object):
       return query_parser.GetQueryNodeText(field)
     return field
 
+  def _IsValidDateValue(self, value):
+    """Returns whether value is a valid date."""
+    try:
+
+
+
+
+      datetime.datetime.strptime(value, '%Y-%m-%d')
+    except ValueError:
+      return False
+    return True
+
+  def _IsValidNumericValue(self, value):
+    """Returns whether value is a valid number."""
+    try:
+      float(value)
+    except ValueError:
+      return False
+    return True
+
   def _CheckValidDateComparison(self, field_name, match):
     """Check if match is a valid date value."""
     if match.getType() == QueryParser.FUNCTION:
@@ -239,14 +259,8 @@ class DocumentMatcher(object):
       raise ExpressionTreeException('Unable to compare "%s" with "%s()"' %
                                     (field_name, name))
     elif match.getType() == QueryParser.VALUE:
-      try:
-        match_val = query_parser.GetPhraseQueryNodeText(match)
-
-
-
-
-        datetime.datetime.strptime(match_val, '%Y-%m-%d')
-      except ValueError:
+      match_val = query_parser.GetPhraseQueryNodeText(match)
+      if not self._IsValidDateValue(match_val):
         raise ExpressionTreeException('Unable to compare "%s" with "%s"' %
                                       (field_name, match_val))
 
@@ -331,29 +345,6 @@ class DocumentMatcher(object):
         'Operator %s not supported for numerical fields on development server.'
         % match.getText())
 
-  def _CheckInvalidNumericComparison(self, match, document):
-    """Check if this is an invalid numeric comparison.
-
-    Valid numeric comparisons are "numeric_field OP numeric_constant" where OP
-    is one of [>, <, >=, <=, =, :].
-
-    Args:
-      match: The right hand side argument of the operator.
-      document: The document we are checking for a match.
-
-    Raises:
-      ExpressionTreeException: when right hand side of numeric comparison is not
-      a numeric constant.
-    """
-    match_text = query_parser.GetQueryNodeText(match)
-    match_fields = search_util.GetFieldInDocument(document, match_text,
-                                                  document_pb.FieldValue.NUMBER)
-
-
-    if match_fields:
-      raise ExpressionTreeException(
-          'Expected numeric constant, found \"' + match_text + '\"')
-
   def _MatchAnyField(self, field, match, operator, document):
     """Check if a field matches a query tree.
 
@@ -370,8 +361,6 @@ class DocumentMatcher(object):
     """
     fields = search_util.GetAllFieldInDocument(document,
                                                self._GetFieldName(field))
-    self._CheckInvalidNumericComparison(match, document)
-
     return any(self._MatchField(f, match, operator, document) for f in fields)
 
   def _MatchField(self, field, match, operator, document):
@@ -518,6 +507,13 @@ class DocumentMatcher(object):
           float(query_parser.GetQueryNodeText(match))
         except ValueError:
           self._CheckValidDateComparison(field_name, match)
+      elif (self._IsValidDateValue(field_name) or
+            self._IsValidNumericValue(field_name)):
+
+
+
+
+        raise ExpressionTreeException('Invalid field name "%s"' % field_name)
       return self._MatchAnyField(lhs, match, node.getType(), document)
 
     return False

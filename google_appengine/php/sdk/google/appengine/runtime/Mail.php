@@ -28,6 +28,9 @@ use google\appengine\util\StringUtil;
 
 final class Mail {
 
+  // The format string for the default sender address.
+  const DEFAULT_SENDER_ADDRESS_FORMAT = 'mailer@%s.appspotmail.com';
+
   /**
    * Send an email.
    *
@@ -55,9 +58,9 @@ final class Mail {
                                   $additional_parameters = null) {
     $raw_mail = "To: $to\r\nSubject: $subject\r\n";
     if ($additional_headers != null) {
-      $raw_mail .= $additional_headers;
+      $raw_mail .= trim($additional_headers);
     }
-    $raw_mail .= "\r\n$message";
+    $raw_mail .= "\r\n\r\n$message";
 
     $mime = mailparse_msg_create();
     mailparse_msg_parse($mime, $raw_mail);
@@ -66,18 +69,18 @@ final class Mail {
     // Set sender address based on the following order
     // 1. "From" header in $additional_headers
     // 2. "sendmail_from" ini setting
-    // 3. App's service account
+    // 3. Default address "mailer@<app-id>.appspotmail.com
     $from = ini_get('sendmail_from');
     if (isset($root_part['headers']['from'])) {
       $from = $root_part['headers']['from'];
     }
     if ($from === false || $from == "") {
-      $from = AppIdentityService::getServiceAccountName();
-    }
-    if ($from === false || $from == "") {
-      trigger_error('mail(): "sendmail_from" not set in php.ini or custom ' .
-                    '"From:" header missing.', E_USER_WARNING);
-      return false;
+      $from = sprintf(self::DEFAULT_SENDER_ADDRESS_FORMAT,
+                      AppIdentityService::getApplicationId());
+      syslog(LOG_WARNING,
+             "mail(): Unable to determine sender's email address from the " .
+             "'sendmail_from' directive in php.ini or from the 'From' " .
+             "header. Falling back to the default $from.");
     }
 
     $email = new Message();

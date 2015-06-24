@@ -29,6 +29,7 @@ final class ClassLoader {
         'org\bovigo\vfs\visitor\vfsstreamabstractvisitor' => 'third_party/vfsstream/vendor/mikey179/vfsStream/src/main/php/org/bovigo/vfs/visitor/vfsStreamAbstractVisitor.php',
         'google\appengine\util\stringutil' => 'google/appengine/util/string_util.php',
         'google\appengine\util\httputil' => 'google/appengine/util/http_util.php',
+        'google\appengine\util\arrayutiltest' => 'google/appengine/util/array_util_test.php',
         'google\appengine\util\arrayutil' => 'google/appengine/util/array_util.php',
         'google\appengine\testing\testutils' => 'google/appengine/testing/TestUtils.php',
         'google\appengine\testing\apiproxytestbase' => 'google/appengine/testing/ApiProxyTestBase.php',

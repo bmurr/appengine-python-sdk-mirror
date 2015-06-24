@@ -449,6 +449,12 @@ def create_command_line_parser():
       const=True,
       default=True,
       help=argparse.SUPPRESS)
+  blobstore_group.add_argument(
+      '--blobstore_enable_files_api',
+      action=boolean_action.BooleanAction,
+      const=True,
+      default=False,
+      help=argparse.SUPPRESS)
 
   # Cloud SQL
   cloud_sql_group = parser.add_argument_group('Cloud SQL')
@@ -799,6 +805,7 @@ class DevelopmentServer(object):
     storage_path = _get_storage_path(options.storage_path, configuration.app_id)
 
     # TODO: Remove after the Files API is really gone.
+    api_server.set_filesapi_enabled(options.blobstore_enable_files_api)
     if options.blobstore_warn_on_files_api_use:
       api_server.enable_filesapi_tracking(request_data)
 

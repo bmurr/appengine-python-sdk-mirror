@@ -65,6 +65,7 @@ from google.appengine.api import croninfo
 from google.appengine.api import dispatchinfo
 from google.appengine.api import dosinfo
 from google.appengine.api import queueinfo
+from google.appengine.api import validation
 from google.appengine.api import yaml_errors
 from google.appengine.api import yaml_object
 from google.appengine.datastore import datastore_index
@@ -3052,6 +3053,14 @@ class AppCfgApp(object):
       An OptionParser instance.
     """
 
+    def AppendSourceReference(option, opt_str, value, parser):
+      """Validates the source reference string and appends it to the list."""
+      try:
+        appinfo.ValidateSourceReference(value)
+      except validation.ValidationError, e:
+        raise optparse.OptionValueError('option %s: %s' % (opt_str, e.message))
+      getattr(parser.values, option.dest).append(value)
+
     class Formatter(optparse.IndentedHelpFormatter):
       """Custom help formatter that does not reformat the description."""
 
@@ -3143,6 +3152,11 @@ class AppCfgApp(object):
                             'value from app.yaml file.'))
     parser.add_option('-r', '--runtime', action='store', dest='runtime',
                       help='Override runtime from app.yaml file.')
+    parser.add_option('--source_ref', metavar='[repository_uri#]revision',
+                      type='string', action='callback',
+                      callback=AppendSourceReference, dest='source_ref',
+                      default=[],
+                      help=optparse.SUPPRESS_HELP)
     parser.add_option('-E', '--env_variable', action='update',
                       dest='env_variables', metavar='NAME:VALUE',
                       help=('Set an environment variable, potentially '
@@ -3425,6 +3439,15 @@ class AppCfgApp(object):
       if appyaml.env_variables is None:
         appyaml.env_variables = appinfo.EnvironmentVariables()
       appyaml.env_variables.update(self.options.env_variables)
+    if self.options.source_ref:
+      try:
+        combined_refs = '\n'.join(self.options.source_ref)
+        appinfo.ValidateCombinedSourceReferencesString(combined_refs)
+        if appyaml.beta_settings is None:
+          appyaml.beta_settings = appinfo.BetaSettings()
+        appyaml.beta_settings['source_reference'] = combined_refs
+      except validation.ValidationError, e:
+        self.parser.error(e.message)
 
     if not appyaml.application:
       self.parser.error('Expected -A app_id when application property in file '

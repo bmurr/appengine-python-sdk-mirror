@@ -268,6 +268,12 @@ CODE_LOCK = 'code_lock'
 ENV_VARIABLES = 'env_variables'
 PAGESPEED = 'pagespeed'
 
+SOURCE_REPO_RE_STRING = r'^[a-z][a-z0-9\-\+\.]*:[^#]*$'
+SOURCE_REVISION_RE_STRING = r'^[0-9a-fA-F]+$'
+
+
+SOURCE_REFERENCES_MAX_SIZE = 2048
+
 INSTANCE_CLASS = 'instance_class'
 
 MINIMUM_PENDING_LATENCY = 'min_pending_latency'
@@ -1456,6 +1462,7 @@ class BetaSettings(VmSettings):
   """Class for Beta (internal or unreleased) settings.
 
   This class is meant to replace VmSettings eventually.
+  All new beta settings must be registered in shared_constants.py.
 
   We don't validate these further here.  They're validated in Olympus.
   """
@@ -1564,6 +1571,45 @@ def NormalizeVmSettings(appyaml):
           appyaml.beta_settings[field] = appyaml.vm_settings[field]
 
   return appyaml
+
+
+def ValidateSourceReference(ref):
+  """Determines if a source reference is valid.
+
+  Args:
+    ref: A source reference in a [repository_uri#]revision form.
+
+  Raises:
+    ValidationError: when the reference is malformed.
+  """
+  repo_revision = ref.split('#', 1)
+  revision_id = repo_revision[-1]
+  if not re.match(SOURCE_REVISION_RE_STRING, revision_id):
+    raise validation.ValidationError('Bad revision identifier: %s' %
+                                     revision_id)
+
+  if len(repo_revision) == 2:
+    uri = repo_revision[0]
+    if not re.match(SOURCE_REPO_RE_STRING, uri):
+      raise validation.ValidationError('Bad repository URI: %s' % uri)
+
+
+def ValidateCombinedSourceReferencesString(source_refs):
+  """Determines if source_refs contains a valid list of source references.
+
+  Args:
+    source_refs: A multi-line string containing one source reference per line.
+
+  Raises:
+    ValidationError: when the reference is malformed.
+  """
+  if len(source_refs) > SOURCE_REFERENCES_MAX_SIZE:
+    raise validation.ValidationError(
+        'Total source reference(s) size exceeds the limit: %d > %d' % (
+            len(source_refs), SOURCE_REFERENCES_MAX_SIZE))
+
+  for ref in source_refs.splitlines():
+    ValidateSourceReference(ref.strip())
 
 
 class HealthCheck(validation.Validated):
@@ -1925,6 +1971,11 @@ class AppInfoExternal(validation.Validated):
           "legacy ids manually using the allocate_ids() API functions.\n"
           "For more information see:\n"
           + datastore_auto_ids_url + '\n' + appcfg_auto_ids_url + '\n')
+
+    if (hasattr(self, 'beta_settings') and self.beta_settings
+        and self.beta_settings.get('source_reference')):
+      ValidateCombinedSourceReferencesString(
+          self.beta_settings.get('source_reference'))
 
     if self.libraries:
       if not (vm_runtime_python27 or self.runtime == 'python27'):
