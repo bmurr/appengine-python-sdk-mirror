@@ -40,6 +40,8 @@ namespace google\appengine\runtime {
     UnlinkUploads::removeEmptyFiles($_FILES);
   }
 
+  register_shutdown_function('google\appengine\api\log\LogService::flush');
+
   // Setup the GS stream wrapper
   $url_flags = STREAM_IS_URL;
   if (GAE_INCLUDE_REQUIRE_GS_STREAMS === 1) {

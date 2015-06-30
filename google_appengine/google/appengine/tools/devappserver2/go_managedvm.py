@@ -90,7 +90,12 @@ class GoManagedVMApp(object):
 
   def get_environment(self):
     """Return the environment that will be used to run the Go executable."""
-    return {'RUN_WITH_DEVAPPSERVER': '1'}
+    environ = {'RUN_WITH_DEVAPPSERVER': '1'}
+    if 'SYSTEMROOT' in os.environ:
+      environ['SYSTEMROOT'] = os.environ['SYSTEMROOT']
+    if 'USER' in os.environ:
+      environ['USER'] = os.environ['USER']
+    return environ
 
   def _build(self):
     """Builds the Managed VM app locally.

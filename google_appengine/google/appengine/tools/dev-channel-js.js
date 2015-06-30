@@ -293,6 +293,15 @@ goog.normalizePath_ = function(path) {
   }
   return components.join("/");
 };
+goog.loadFileSync_ = function(src) {
+  if (goog.global.CLOSURE_LOAD_FILE_SYNC) {
+    return goog.global.CLOSURE_LOAD_FILE_SYNC(src);
+  }
+  var xhr = new goog.global.XMLHttpRequest;
+  xhr.open("get", src, !1);
+  xhr.send();
+  return xhr.responseText;
+};
 goog.retrieveAndExecModule_ = function() {
 };
 goog.typeOf = function(value) {
@@ -1741,7 +1750,7 @@ goog.i18n.bidi.toDir = function(givenDir, opt_noNeutral) {
   return "number" == typeof givenDir ? 0 < givenDir ? goog.i18n.bidi.Dir.LTR : 0 > givenDir ? goog.i18n.bidi.Dir.RTL : opt_noNeutral ? null : goog.i18n.bidi.Dir.NEUTRAL : null == givenDir ? null : givenDir ? goog.i18n.bidi.Dir.RTL : goog.i18n.bidi.Dir.LTR;
 };
 goog.i18n.bidi.ltrChars_ = "A-Za-z\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u02b8\u0300-\u0590\u0800-\u1fff\u200e\u2c00-\ufb1c\ufe00-\ufe6f\ufefd-\uffff";
-goog.i18n.bidi.rtlChars_ = "\u0591-\u07ff\u200f\ufb1d-\ufdff\ufe70-\ufefc";
+goog.i18n.bidi.rtlChars_ = "\u0591-\u06ef\u06fa-\u07ff\u200f\ufb1d-\ufdff\ufe70-\ufefc";
 goog.i18n.bidi.htmlSkipReg_ = /<[^>]*>|&[^;]+;/g;
 goog.i18n.bidi.stripHtmlIfNeeded_ = function(str, opt_isStripNeeded) {
   return opt_isStripNeeded ? str.replace(goog.i18n.bidi.htmlSkipReg_, "") : str;
@@ -1830,7 +1839,7 @@ goog.i18n.bidi.normalizeHebrewQuote = function(str) {
   return str.replace(goog.i18n.bidi.doubleQuoteSubstituteRe_, "$1\u05f4").replace(goog.i18n.bidi.singleQuoteSubstituteRe_, "$1\u05f3");
 };
 goog.i18n.bidi.wordSeparatorRe_ = /\s+/;
-goog.i18n.bidi.hasNumeralsRe_ = /\d/;
+goog.i18n.bidi.hasNumeralsRe_ = /[\d\u06f0-\u06f9]/;
 goog.i18n.bidi.rtlDetectionThreshold_ = .4;
 goog.i18n.bidi.estimateDirection = function(str, opt_isHtml) {
   for (var rtlCount = 0, totalCount = 0, hasWeaklyLtr = !1, tokens = goog.i18n.bidi.stripHtmlIfNeeded_(str, opt_isHtml).split(goog.i18n.bidi.wordSeparatorRe_), i = 0;i < tokens.length;i++) {
@@ -2344,8 +2353,8 @@ goog.math.angleDifference = function(startAngle, endAngle) {
   180 < d ? d -= 360 : -180 >= d && (d = 360 + d);
   return d;
 };
-goog.math.sign = function(x) {
-  return 0 == x ? 0 : 0 > x ? -1 : 1;
+goog.math.sign = Math.sign || function(x) {
+  return 0 < x ? 1 : 0 > x ? -1 : x;
 };
 goog.math.longestCommonSubsequence = function(array1, array2, opt_compareFn, opt_collectorFn) {
   for (var compare = opt_compareFn || function(a, b) {
@@ -2394,6 +2403,9 @@ goog.math.isInt = function(num) {
 };
 goog.math.isFiniteNumber = function(num) {
   return isFinite(num) && !isNaN(num);
+};
+goog.math.isNegativeZero = function(num) {
+  return 0 == num && 0 > 1 / num;
 };
 goog.math.log10Floor = function(num) {
   if (0 < num) {
@@ -2843,6 +2855,10 @@ JSCompiler_temp_const$$0.DOCUMENT_MODE = JSCompiler_inline_result$$1;
 goog.dom.BrowserFeature = {CAN_ADD_NAME_OR_TYPE_ATTRIBUTES:!goog.userAgent.IE || goog.userAgent.isDocumentModeOrHigher(9), CAN_USE_CHILDREN_ATTRIBUTE:!goog.userAgent.GECKO && !goog.userAgent.IE || goog.userAgent.IE && goog.userAgent.isDocumentModeOrHigher(9) || goog.userAgent.GECKO && goog.userAgent.isVersionOrHigher("1.9.1"), CAN_USE_INNER_TEXT:goog.userAgent.IE && !goog.userAgent.isVersionOrHigher("9"), CAN_USE_PARENT_ELEMENT_PROPERTY:goog.userAgent.IE || goog.userAgent.OPERA || goog.userAgent.WEBKIT, 
 INNER_HTML_NEEDS_SCOPED_ELEMENT:goog.userAgent.IE, LEGACY_IE_RANGES:goog.userAgent.IE && !goog.userAgent.isDocumentModeOrHigher(9)};
 goog.dom.safe = {};
+goog.dom.safe.InsertAdjacentHtmlPosition = {AFTERBEGIN:"afterbegin", AFTEREND:"afterend", BEFOREBEGIN:"beforebegin", BEFOREEND:"beforeend"};
+goog.dom.safe.insertAdjacentHtml = function(node, position, html) {
+  node.insertAdjacentHTML(position, goog.html.SafeHtml.unwrap(html));
+};
 goog.dom.safe.setInnerHtml = function(elem, html) {
   elem.innerHTML = goog.html.SafeHtml.unwrap(html);
 };
@@ -3008,7 +3024,7 @@ goog.dom.getDocumentScrollElement = function() {
   return goog.dom.getDocumentScrollElement_(document);
 };
 goog.dom.getDocumentScrollElement_ = function(doc) {
-  return !goog.userAgent.WEBKIT && goog.dom.isCss1CompatMode_(doc) ? doc.documentElement : doc.body || doc.documentElement;
+  return doc.scrollingElement ? doc.scrollingElement : !goog.userAgent.WEBKIT && goog.dom.isCss1CompatMode_(doc) ? doc.documentElement : doc.body || doc.documentElement;
 };
 goog.dom.getWindow = function(opt_doc) {
   return opt_doc ? goog.dom.getWindow_(opt_doc) : window;
@@ -4018,7 +4034,15 @@ goog.events.listen_ = function(src, type, listener, callOnce, opt_capt, opt_hand
   listenerObj.proxy = proxy;
   proxy.src = src;
   proxy.listener = listenerObj;
-  src.addEventListener ? src.addEventListener(type.toString(), proxy, capture) : src.attachEvent(goog.events.getOnString_(type.toString()), proxy);
+  if (src.addEventListener) {
+    src.addEventListener(type.toString(), proxy, capture);
+  } else {
+    if (src.attachEvent) {
+      src.attachEvent(goog.events.getOnString_(type.toString()), proxy);
+    } else {
+      throw Error("addEventListener and attachEvent are unavailable.");
+    }
+  }
   goog.events.listenerCountEstimate_++;
   return listenerObj;
 };
@@ -6066,9 +6090,10 @@ goog.async.run.initializeRunner_ = function() {
     };
   }
 };
-goog.async.run.forceNextTick = function() {
+goog.async.run.forceNextTick = function(opt_realSetTimeout) {
   goog.async.run.schedule_ = function() {
     goog.async.nextTick(goog.async.run.processWorkQueue);
+    opt_realSetTimeout && opt_realSetTimeout(goog.async.run.processWorkQueue);
   };
 };
 goog.async.run.workQueueScheduled_ = !1;
@@ -6171,7 +6196,7 @@ goog.Promise.returnEntry_ = function(entry) {
 goog.Promise.RESOLVE_FAST_PATH_ = function() {
 };
 goog.Promise.resolve = function(opt_value) {
-  return new goog.Promise(goog.Promise.RESOLVE_FAST_PATH_, opt_value);
+  return opt_value instanceof goog.Promise ? opt_value : new goog.Promise(goog.Promise.RESOLVE_FAST_PATH_, opt_value);
 };
 goog.Promise.reject = function(opt_reason) {
   return new goog.Promise(function(resolve, reject) {
@@ -7312,7 +7337,7 @@ goog.Uri.removeDotSegments = function(path) {
   return path;
 };
 goog.Uri.decodeOrEmpty_ = function(val, opt_preserveReserved) {
-  return val ? opt_preserveReserved ? decodeURI(val) : decodeURIComponent(val) : "";
+  return val ? opt_preserveReserved ? decodeURI(val.replace(/%25/g, "%2525")) : decodeURIComponent(val) : "";
 };
 goog.Uri.encodeSpecialChars_ = function(unescapedPart, extra, opt_removeDoubleEncoding) {
   if (goog.isString(unescapedPart)) {

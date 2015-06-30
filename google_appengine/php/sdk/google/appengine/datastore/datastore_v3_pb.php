@@ -60,22 +60,22 @@ namespace google\appengine_datastore_v3 {
     public function hasApiSettings() {
       return isset($this->api_settings);
     }
-    public function getRequestingProjectId() {
-      if (!isset($this->requesting_project_id)) {
+    public function getRequestingProjectNumber() {
+      if (!isset($this->requesting_project_number)) {
         return '';
       }
-      return $this->requesting_project_id;
+      return $this->requesting_project_number;
     }
-    public function setRequestingProjectId($val) {
-      $this->requesting_project_id = $val;
+    public function setRequestingProjectNumber($val) {
+      $this->requesting_project_number = $val;
       return $this;
     }
-    public function clearRequestingProjectId() {
-      unset($this->requesting_project_id);
+    public function clearRequestingProjectNumber() {
+      unset($this->requesting_project_number);
       return $this;
     }
-    public function hasRequestingProjectId() {
-      return isset($this->requesting_project_id);
+    public function hasRequestingProjectNumber() {
+      return isset($this->requesting_project_number);
     }
     public function getRequestingVersionId() {
       if (!isset($this->requesting_version_id)) {
@@ -97,7 +97,7 @@ namespace google\appengine_datastore_v3 {
     public function clear() {
       $this->clearRequestingAppId();
       $this->clearApiSettings();
-      $this->clearRequestingProjectId();
+      $this->clearRequestingProjectNumber();
       $this->clearRequestingVersionId();
     }
     public function byteSizePartial() {
@@ -110,9 +110,9 @@ namespace google\appengine_datastore_v3 {
         $res += 1;
         $res += $this->lengthString(strlen($this->api_settings));
       }
-      if (isset($this->requesting_project_id)) {
+      if (isset($this->requesting_project_number)) {
         $res += 1;
-        $res += $this->lengthString(strlen($this->requesting_project_id));
+        $res += $this->lengthString(strlen($this->requesting_project_number));
       }
       if (isset($this->requesting_version_id)) {
         $res += 1;
@@ -129,9 +129,9 @@ namespace google\appengine_datastore_v3 {
         $out->putVarInt32(26);
         $out->putPrefixedString($this->api_settings);
       }
-      if (isset($this->requesting_project_id)) {
+      if (isset($this->requesting_project_number)) {
         $out->putVarInt32(34);
-        $out->putPrefixedString($this->requesting_project_id);
+        $out->putPrefixedString($this->requesting_project_number);
       }
       if (isset($this->requesting_version_id)) {
         $out->putVarInt32(42);
@@ -154,7 +154,7 @@ namespace google\appengine_datastore_v3 {
             break;
           case 34:
             $length = $d->getVarInt32();
-            $this->setRequestingProjectId(substr($d->buffer(), $d->pos(), $length));
+            $this->setRequestingProjectNumber(substr($d->buffer(), $d->pos(), $length));
             $d->skip($length);
             break;
           case 42:
@@ -181,8 +181,8 @@ namespace google\appengine_datastore_v3 {
       if ($x->hasApiSettings()) {
         $this->setApiSettings($x->getApiSettings());
       }
-      if ($x->hasRequestingProjectId()) {
-        $this->setRequestingProjectId($x->getRequestingProjectId());
+      if ($x->hasRequestingProjectNumber()) {
+        $this->setRequestingProjectNumber($x->getRequestingProjectNumber());
       }
       if ($x->hasRequestingVersionId()) {
         $this->setRequestingVersionId($x->getRequestingVersionId());
@@ -194,8 +194,8 @@ namespace google\appengine_datastore_v3 {
       if (isset($this->requesting_app_id) && $this->requesting_app_id !== $x->requesting_app_id) return false;
       if (isset($this->api_settings) !== isset($x->api_settings)) return false;
       if (isset($this->api_settings) && $this->api_settings !== $x->api_settings) return false;
-      if (isset($this->requesting_project_id) !== isset($x->requesting_project_id)) return false;
-      if (isset($this->requesting_project_id) && $this->requesting_project_id !== $x->requesting_project_id) return false;
+      if (isset($this->requesting_project_number) !== isset($x->requesting_project_number)) return false;
+      if (isset($this->requesting_project_number) && $this->requesting_project_number !== $x->requesting_project_number) return false;
       if (isset($this->requesting_version_id) !== isset($x->requesting_version_id)) return false;
       if (isset($this->requesting_version_id) && $this->requesting_version_id !== $x->requesting_version_id) return false;
       return true;
@@ -208,8 +208,8 @@ namespace google\appengine_datastore_v3 {
       if (isset($this->api_settings)) {
         $res .= $prefix . "api_settings: " . $this->debugFormatString($this->api_settings) . "\n";
       }
-      if (isset($this->requesting_project_id)) {
-        $res .= $prefix . "requesting_project_id: " . $this->debugFormatString($this->requesting_project_id) . "\n";
+      if (isset($this->requesting_project_number)) {
+        $res .= $prefix . "requesting_project_number: " . $this->debugFormatString($this->requesting_project_number) . "\n";
       }
       if (isset($this->requesting_version_id)) {
         $res .= $prefix . "requesting_version_id: " . $this->debugFormatString($this->requesting_version_id) . "\n";
