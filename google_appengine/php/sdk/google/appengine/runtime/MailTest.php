@@ -20,8 +20,6 @@
  */
 
 use google\appengine\base\VoidProto;
-use google\appengine\GetServiceAccountNameRequest;
-use google\appengine\GetServiceAccountNameResponse;
 use google\appengine\MailMessage;
 use google\appengine\runtime\Mail;
 use google\appengine\testing\ApiProxyTestBase;
@@ -31,6 +29,7 @@ class MailTest extends ApiProxyTestBase {
   public function setUp() {
     parent::setUp();
     ini_set('sendmail_from', '');
+    putenv('APPLICATION_ID=');
   }
 
   public function testSetSenderUsingIniSetting() {
@@ -48,17 +47,11 @@ class MailTest extends ApiProxyTestBase {
     $this->apiProxyMock->verify();
   }
 
-  public function testSetSenderUsingServiceAccount() {
-    $req = new GetServiceAccountNameRequest();
-    $resp = new GetServiceAccountNameResponse();
-    $resp->setServiceAccountName('foo@gserviceaccount.google.com');
-    $this->apiProxyMock->expectCall('app_identity_service',
-                                    'GetServiceAccountName',
-                                    $req,
-                                    $resp);
+  public function testSetSenderUsingDefaultAddress() {
+    putenv('APPLICATION_ID=appid');
 
     $message_proto = new MailMessage();
-    $message_proto->setSender('foo@gserviceaccount.google.com');
+    $message_proto->setSender('mailer@appid.appspotmail.com');
     $message_proto->addTo('bar@bar.com');
     $message_proto->setSubject('subject');
     $message_proto->setTextBody('text');
@@ -66,22 +59,6 @@ class MailTest extends ApiProxyTestBase {
     $this->apiProxyMock->expectCall('mail', 'Send', $message_proto, $response);
 
     $this->assertTrue(Mail::sendMail('bar@bar.com', 'subject', 'text'));
-    $this->apiProxyMock->verify();
-  }
-
-  public function testSendMailFailWithoutFrom() {
-    $req = new GetServiceAccountNameRequest();
-    $resp = new GetServiceAccountNameResponse();
-    $resp->setServiceAccountName('');
-    $this->apiProxyMock->expectCall('app_identity_service',
-                                    'GetServiceAccountName',
-                                    $req,
-                                    $resp);
-    $this->setExpectedException('PHPUnit_Framework_Error_Warning',
-                                'mail(): "sendmail_from" not set in php.ini ' .
-                                'or custom "From:" header missing.');
-
-    $this->assertFalse(Mail::sendMail('foo@foo.com', 'subject', 'body'));
     $this->apiProxyMock->verify();
   }
 
@@ -107,6 +84,21 @@ class MailTest extends ApiProxyTestBase {
 
   public function testSendSimpleMail() {
     $headers = "From: foo@foo.com\r\n";
+    $message_proto = new MailMessage();
+    $message_proto->setSender('foo@foo.com');
+    $message_proto->addTo('bar@bar.com');
+    $message_proto->setSubject('subject');
+    $message_proto->setTextBody('text');
+    $response = new VoidProto();
+    $this->apiProxyMock->expectCall('mail', 'Send', $message_proto, $response);
+
+    $ret = Mail::sendMail('bar@bar.com', 'subject', 'text', $headers);
+    $this->assertTrue($ret);
+    $this->apiProxyMock->verify();
+  }
+
+  public function testSendMailUsingHeadersWithoutTrailingLinebreak() {
+    $headers = "From: foo@foo.com";
     $message_proto = new MailMessage();
     $message_proto->setSender('foo@foo.com');
     $message_proto->addTo('bar@bar.com');

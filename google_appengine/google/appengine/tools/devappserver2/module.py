@@ -47,6 +47,7 @@ from google.appengine.tools.devappserver2 import blob_image
 from google.appengine.tools.devappserver2 import blob_upload
 from google.appengine.tools.devappserver2 import channel
 from google.appengine.tools.devappserver2 import constants
+from google.appengine.tools.devappserver2 import custom_runtime
 from google.appengine.tools.devappserver2 import endpoints
 from google.appengine.tools.devappserver2 import errors
 from google.appengine.tools.devappserver2 import file_watcher
@@ -199,6 +200,7 @@ class Module(object):
       'php55': php_runtime.PHPRuntimeInstanceFactory,
       'python': python_runtime.PythonRuntimeInstanceFactory,
       'python27': python_runtime.PythonRuntimeInstanceFactory,
+      'custom': custom_runtime.CustomRuntimeInstanceFactory,
       # TODO: uncomment for GA.
       # 'vm': vm_runtime_factory.VMRuntimeInstanceFactory,
   }
@@ -334,6 +336,10 @@ class Module(object):
       A runtime_config_pb2.Config instance representing the configuration to be
       passed to an instance. NOTE: This does *not* include the instance_id
       field, which must be populated elsewhere.
+
+    Raises:
+      ValueError: The runtime type is "custom" with vm: true and
+        --custom_entrypoint is not specified.
     """
     runtime_config = runtime_config_pb2.Config()
     runtime_config.app_id = self._module_configuration.application
@@ -378,6 +384,17 @@ class Module(object):
 
     if self._vm_config:
       runtime_config.vm_config.CopyFrom(self._vm_config)
+      # If the effective runtime is "custom" and --custom_entrypoint is not set,
+      # bail out early; otherwise, load custom into runtime_config.
+      # TODO: Remove the GAE_LOCAL_VM_RUNTIME check here once
+      # sandboxing is disabled.
+      if (self._module_configuration.effective_runtime == 'custom' and
+          os.environ.get('GAE_LOCAL_VM_RUNTIME') != '0'):
+        if not self._custom_config.custom_entrypoint:
+          raise ValueError('The --custom_entrypoint flag must be set for '
+                           'custom runtimes')
+        else:
+          runtime_config.custom_config.CopyFrom(self._custom_config)
 
     runtime_config.vm = self._module_configuration.runtime == 'vm'
 
@@ -446,6 +463,7 @@ class Module(object):
                php_config,
                python_config,
                java_config,
+               custom_config,
                cloud_sql_config,
                vm_config,
                default_version_port,
@@ -478,6 +496,9 @@ class Module(object):
           Python runtime-specific configuration. If None then defaults are used.
       java_config: A runtime_config_pb2.JavaConfig instance containing
           Java runtime-specific configuration. If None then defaults are used.
+      custom_config: A runtime_config_pb2.CustomConfig instance. If None, or
+          'custom_entrypoint' is not set, then attempting to instantiate a
+          custom runtime module will result in an error.
       cloud_sql_config: A runtime_config_pb2.CloudSQL instance containing the
           required configuration for local Google Cloud SQL development. If None
           then Cloud SQL will not be available.
@@ -516,6 +537,7 @@ class Module(object):
     self._php_config = php_config
     self._python_config = python_config
     self._java_config = java_config
+    self._custom_config = custom_config
     self._cloud_sql_config = cloud_sql_config
     self._vm_config = vm_config
     self._request_data = request_data
@@ -1051,6 +1073,7 @@ class Module(object):
                                       self._php_config,
                                       self._python_config,
                                       self._java_config,
+                                      self._custom_config,
                                       self._cloud_sql_config,
                                       self._vm_config,
                                       self._default_version_port,
@@ -2709,6 +2732,7 @@ class InteractiveCommandModule(Module):
                php_config,
                python_config,
                java_config,
+               custom_config,
                cloud_sql_config,
                vm_config,
                default_version_port,
@@ -2742,6 +2766,9 @@ class InteractiveCommandModule(Module):
           Python runtime-specific configuration. If None then defaults are used.
       java_config: A runtime_config_pb2.JavaConfig instance containing
           Java runtime-specific configuration. If None then defaults are used.
+      custom_config: A runtime_config_pb2.CustomConfig instance. If None, or
+          'custom_entrypoint' is not set, then attempting to instantiate a
+          custom runtime module will result in an error.
       cloud_sql_config: A runtime_config_pb2.CloudSQL instance containing the
           required configuration for local Google Cloud SQL development. If None
           then Cloud SQL will not be available.
@@ -2774,6 +2801,7 @@ class InteractiveCommandModule(Module):
         php_config,
         python_config,
         java_config,
+        custom_config,
         cloud_sql_config,
         vm_config,
         default_version_port,

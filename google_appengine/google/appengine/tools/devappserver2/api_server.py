@@ -102,6 +102,7 @@ _DATASTORE_V4_METHODS = {
 
 # TODO: Remove after the Files API is really gone.
 _FILESAPI_USE_TRACKER = None
+_FILESAPI_ENABLED = True
 
 
 def enable_filesapi_tracking(request_data):
@@ -113,6 +114,12 @@ def enable_filesapi_tracking(request_data):
   """
   global _FILESAPI_USE_TRACKER
   _FILESAPI_USE_TRACKER = request_data
+
+
+def set_filesapi_enabled(enabled):
+  """Enables or disables the Files API."""
+  global _FILESAPI_ENABLED
+  _FILESAPI_ENABLED = enabled
 
 
 def _execute_request(request):
@@ -149,6 +156,13 @@ def _execute_request(request):
   if not request_class:
     raise apiproxy_errors.CallNotFoundError('%s.%s does not exist' % (service,
                                                                       method))
+
+  # TODO: Remove after the Files API is really gone.
+  if not _FILESAPI_ENABLED and service == 'file':
+    raise apiproxy_errors.CallNotFoundError(
+        'Files API method %s.%s is disabled. Further information: '
+        'https://cloud.google.com/appengine/docs/deprecations/files_api'
+        % (service, method))
 
   request_data = request_class()
   request_data.ParseFromString(request.request())
