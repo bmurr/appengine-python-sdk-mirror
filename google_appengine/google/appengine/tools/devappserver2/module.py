@@ -129,20 +129,17 @@ _QUIETER_RESOURCES = ('/_ah/health',)
 
 # TODO: Remove after the Files API is really gone.
 _FILESAPI_DEPRECATION_WARNING_PYTHON = (
-    'The Files API is deprecated and will soon be removed. Please use the'
-    ' Google Cloud Storage Client library instead. Migration documentation is'
-    ' available here: https://cloud.google.com/appengine/docs'
-    '/python/googlecloudstorageclient/migrate')
+    'The Files API is deprecated and will soon be removed. Further information'
+    ' is available here: https://cloud.google.com/appengine/docs/deprecations'
+    '/files_api')
 _FILESAPI_DEPRECATION_WARNING_JAVA = (
-    'The Google Cloud Storage Java API is deprecated and will soon be'
-    ' removed. Please use the Google Cloud Storage Client library instead.'
-    ' Migration documentation is available here: https://cloud.google.com'
-    '/appengine/docs/java/googlecloudstorageclient/migrate')
+    'The Files API is deprecated and will soon be removed. Further information'
+    ' is available here: https://cloud.google.com/appengine/docs/deprecations'
+    '/files_api')
 _FILESAPI_DEPRECATION_WARNING_GO = (
-    'The Files API is deprecated and will soon be removed. Please use the'
-    ' Google Cloud Storage Client library instead. Documentation is'
-    ' available here: https://cloud.google.com/appengine/docs'
-    '/go/googlecloudstorageclient')
+    'The Files API is deprecated and will soon be removed. Further information'
+    ' is available here: https://cloud.google.com/appengine/docs/deprecations'
+    '/files_api')
 
 
 def _static_files_regex_from_handlers(handlers):
@@ -239,7 +236,7 @@ class Module(object):
     """
     # TODO: Remove this when we have sandboxing disabled for all
     # runtimes.
-    if (os.environ.get('GAE_LOCAL_VM_RUNTIME') and
+    if (os.environ.get('GAE_LOCAL_VM_RUNTIME') != '0' and
         module_configuration.runtime == 'vm'):
       runtime = module_configuration.effective_runtime
     else:
@@ -1737,7 +1734,7 @@ class ManualScalingModule(Module):
       health_check_config = self.module_configuration.health_check
       if (self.module_configuration.runtime == 'vm' and
           health_check_config.enable_health_check and
-          'GAE_LOCAL_VM_RUNTIME' not in os.environ):
+          os.environ.get('GAE_LOCAL_VM_RUNTIME') == '0'):
         # Health checks should only get added after the build is done and the
         # container starts.
         def _add_health_checks_callback(unused_future):
@@ -2053,7 +2050,7 @@ class ExternalModule(Module):
     """Returns the port of the HTTP server for an instance."""
     if instance_id != 0:
       raise request_info.InvalidInstanceIdError()
-    return self._wsgi_servr.port
+    return self._wsgi_server.port
 
   @property
   def instances(self):

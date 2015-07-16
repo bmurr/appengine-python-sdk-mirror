@@ -1864,7 +1864,7 @@ class AppInfoExternal(validation.Validated):
       PROJECT: validation.Optional(APPLICATION_RE_STRING),
       MODULE: validation.Optional(MODULE_ID_RE_STRING),
       VERSION: validation.Optional(MODULE_VERSION_ID_RE_STRING),
-      RUNTIME: RUNTIME_RE_STRING,
+      RUNTIME: validation.Optional(RUNTIME_RE_STRING),
 
 
       API_VERSION: API_VERSION_RE_STRING,
@@ -1935,6 +1935,13 @@ class AppInfoExternal(validation.Validated):
           that does not support it (e.g. python25).
     """
     super(AppInfoExternal, self).CheckInitialized()
+    if self.runtime is None and not self.vm:
+      raise appinfo_errors.MissingRuntimeError(
+          'You must specify a "runtime" field for non-vm applications.')
+    elif self.runtime is None:
+
+
+      self.runtime = 'custom'
     if (not self.handlers and not self.builtins and not self.includes
         and not self.vm):
       raise appinfo_errors.MissingURLMapping(

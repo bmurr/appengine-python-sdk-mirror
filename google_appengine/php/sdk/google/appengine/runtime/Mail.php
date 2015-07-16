@@ -93,6 +93,9 @@ final class Mail {
       if (isset($root_part['headers']['bcc'])) {
         $email->AddBcc($root_part['headers']['bcc']);
       }
+      if (isset($root_part['headers']['reply-to'])) {
+        $email->setReplyTo($root_part['headers']['reply-to']);
+      }
       $email->setSubject($root_part['headers']['subject']);
       $parts = mailparse_msg_get_structure($mime);
       if (count($parts) > 1) {
@@ -105,7 +108,15 @@ final class Mail {
       }  else if ($root_part['content-type'] == 'text/html') {
         $email->setHtmlBody($message);
       }
-
+      $extra_headers = array_diff_key($root_part['headers'], array_flip([
+          'from', 'to', 'cc', 'bcc', 'reply-to', 'subject', 'content-type']));
+      foreach ($extra_headers as $key => $value) {
+        try {
+          $email->addHeader($key, $value);
+        } catch (\InvalidArgumentException $e) {
+          syslog(LOG_WARNING, "mail:() Dropping disallowed email header $key");
+        }
+      }
       $email->send();
     } catch (\Exception $e) {
       trigger_error('mail(): ' . $e->getMessage(), E_USER_WARNING);

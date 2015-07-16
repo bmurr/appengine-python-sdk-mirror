@@ -1211,7 +1211,7 @@ class _EntityConverter(object):
       v3_meaning = None
     else:
 
-      v1_value.null_value = googledatastore.Value.NULL_VALUE
+      v1_value.null_value = googledatastore.NULL_VALUE
 
     if is_zlib_value:
       v1_value.meaning = MEANING_ZLIB
