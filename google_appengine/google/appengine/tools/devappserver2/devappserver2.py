@@ -29,6 +29,7 @@ import tempfile
 import time
 
 from google.appengine.api import appinfo
+from google.appengine.api import request_info
 from google.appengine.datastore import datastore_stub_util
 from google.appengine.tools import boolean_action
 from google.appengine.tools.devappserver2 import api_server
@@ -821,6 +822,11 @@ class DevelopmentServer(object):
                                      self._dispatcher, configuration, xsrf_path)
     admin.start()
     self._running_modules.append(admin)
+    try:
+      default = self._dispatcher.get_module_by_name('default')
+      apis.set_balanced_address(default.balanced_address)
+    except request_info.ModuleDoesNotExistError:
+      logging.warning('No default module found. Ignoring.')
 
   def stop(self):
     """Stops all running devappserver2 modules."""

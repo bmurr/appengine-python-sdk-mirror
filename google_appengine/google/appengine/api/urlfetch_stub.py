@@ -87,6 +87,9 @@ _CONNECTION_SUPPORTS_TIMEOUT = sys.version_info >= (2, 6)
 _CONNECTION_SUPPORTS_SSL_TUNNEL = sys.version_info >= (2, 6)
 
 
+_MAX_REQUEST_SIZE = 10485760
+
+
 
 
 
@@ -208,6 +211,10 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
       logging.error('Invalid method: %s', request.method())
       raise apiproxy_errors.ApplicationError(
         urlfetch_service_pb.URLFetchServiceError.INVALID_URL)
+
+    if payload is not None and len(payload) > _MAX_REQUEST_SIZE:
+      raise apiproxy_errors.ApplicationError(
+          urlfetch_service_pb.URLFetchServiceError.PAYLOAD_TOO_LARGE)
 
     if not (protocol == 'http' or protocol == 'https'):
       logging.error('Invalid protocol: %s', protocol)
@@ -371,8 +378,6 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
           if os.environ.get('HTTP_PROXY') and not _IsLocalhost(host):
             _, proxy_host, _, _, _ = (
                 urlparse.urlsplit(os.environ.get('HTTP_PROXY')))
-
-          full_path = urlparse.urlunsplit((protocol, host, path, query, ''))
         elif protocol == 'https':
           if (validate_certificate and _CanValidateCerts() and
               CERT_PATH):
@@ -388,8 +393,6 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
               os.environ.get('HTTPS_PROXY') and not _IsLocalhost(host)):
             _, proxy_host, _, _, _ = (
                 urlparse.urlsplit(os.environ.get('HTTPS_PROXY')))
-
-          full_path = urlparse.urlunsplit(('', '', path, query, ''))
         else:
 
           error_msg = 'Redirect specified invalid protocol: "%s"' % protocol
@@ -410,11 +413,13 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
           connection = connection_class(
               proxy_address, proxy_port if proxy_port else default_port,
               **connection_kwargs)
+          full_path = urlparse.urlunsplit((protocol, host, path, query, ''))
 
           if protocol == 'https':
             connection.set_tunnel(host)
         else:
           connection = connection_class(host, **connection_kwargs)
+          full_path = urlparse.urlunsplit(('', '', path, query, ''))
 
 
 

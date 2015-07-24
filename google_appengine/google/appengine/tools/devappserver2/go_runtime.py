@@ -104,7 +104,7 @@ class GoRuntimeInstanceFactory(instance.InstanceFactory):
     self._module_configuration = module_configuration
     self._application_lock = threading.Lock()
     if (module_configuration.runtime == 'vm' and
-        'GAE_LOCAL_VM_RUNTIME' in os.environ):
+        os.environ.get('GAE_LOCAL_VM_RUNTIME') != '0'):
       self._start_process_flavor = http_runtime.START_PROCESS_REVERSE
       self._go_application = go_managedvm.GoManagedVMApp(
           self._module_configuration)
