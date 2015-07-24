@@ -66,8 +66,7 @@ class DistanceMatcher(object):
           'Operator %s not supported for distance matches on development server.'
           % str(op))
 
-  def _IsDistanceMatch(self, geopoint, op):
-    distance = geopoint - self._geopoint
+  def _IsDistanceMatch(self, distance, op):
     if op == QueryParser.GT or op == QueryParser.GE:
       return distance >= self._distance
     if op == QueryParser.LESSTHAN or op == QueryParser.LE:
@@ -78,16 +77,13 @@ class DistanceMatcher(object):
   def IsMatch(self, field_values, op):
     self._CheckOp(op)
 
+    if not field_values:
+      return False
 
 
-    for field_value in field_values:
-      geo_pb = field_value.geo()
-      geopoint = geo_util.LatLng(geo_pb.lat(), geo_pb.lng())
-      if self._IsDistanceMatch(geopoint, op):
-        return True
-
-
-    return False
+    return self._IsDistanceMatch(min([
+        geo_util.LatLng(field_value.geo().lat(), field_value.geo().lng())
+        - self._geopoint for field_value in field_values]), op)
 
 
 class DocumentMatcher(object):

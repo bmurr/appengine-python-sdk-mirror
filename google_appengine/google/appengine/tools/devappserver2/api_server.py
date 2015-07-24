@@ -197,6 +197,7 @@ class APIServer(wsgi_server.WsgiServer):
     self._app_id = app_id
     self._host = host
     super(APIServer, self).__init__((host, port), self)
+    self.set_balanced_address('localhost:8080')
 
   def start(self):
     """Start the API Server."""
@@ -206,6 +207,16 @@ class APIServer(wsgi_server.WsgiServer):
   def quit(self):
     cleanup_stubs()
     super(APIServer, self).quit()
+
+  def set_balanced_address(self, balanced_address):
+    """Sets the balanced address from the dispatcher (e.g. "localhost:8080").
+
+    This is used to enable APIs to build valid URLs.
+
+    Args:
+      balanced_address: string address of the balanced HTTP server.
+    """
+    self._balanced_address = balanced_address
 
   def _handle_POST(self, environ, start_response):
     start_response('200 OK', [('Content-Type', 'application/octet-stream')])
@@ -225,6 +236,12 @@ class APIServer(wsgi_server.WsgiServer):
       else:
         wsgi_input = environ['wsgi.input'].read(int(environ['CONTENT_LENGTH']))
       request.ParseFromString(wsgi_input)
+      if request.has_request_id():
+        request_id = request.request_id()
+        service = request.service_name()
+        service_stub = apiproxy_stub_map.apiproxy.GetStub(service)
+        environ['HTTP_HOST'] = self._balanced_address
+        service_stub.request_data.register_request_id(environ, request_id)
       api_response = _execute_request(request).Encode()
       response.set_response(api_response)
     except Exception, e:

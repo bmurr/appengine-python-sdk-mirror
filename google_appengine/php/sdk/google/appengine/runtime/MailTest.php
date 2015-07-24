@@ -24,6 +24,9 @@ use google\appengine\MailMessage;
 use google\appengine\runtime\Mail;
 use google\appengine\testing\ApiProxyTestBase;
 
+/**
+ * @requires extension mailparse
+ */
 class MailTest extends ApiProxyTestBase {
 
   public function setUp() {
@@ -116,20 +119,48 @@ class MailTest extends ApiProxyTestBase {
     $to = "user@example.com, Another User <anotheruser@example.com>";
     $cc = "user2@example.com, user3@example.com";
     $bcc = "User 4 <user4@example.com>";
+    $reply_to = "User5 <user5@example.com";
     $headers = "From: foo@foo.com\r\n" .
                "Cc: $cc\r\n" .
-               "Bcc: $bcc\r\n";
+               "Bcc: $bcc\r\n" .
+               "Reply-To: $reply_to\r\n";
     $message_proto = new MailMessage();
     $message_proto->setSender('foo@foo.com');
     $message_proto->addTo($to);
     $message_proto->addCc($cc);
     $message_proto->addBcc($bcc);
+    $message_proto->setReplyTo($reply_to);
     $message_proto->setSubject('subject');
     $message_proto->setTextBody('text');
     $response = new VoidProto();
     $this->apiProxyMock->expectCall('mail', 'Send', $message_proto, $response);
 
     $ret = Mail::sendMail($to, 'subject', 'text', $headers);
+    $this->assertTrue($ret);
+    $this->apiProxyMock->verify();
+  }
+
+  public function testSendMailWithExtraHeaders() {
+    $html = "<b>html</b>";
+    $headers = "From: foo@foo.com\r\n" .
+               "List-Id: 12345\r\n" .
+               "On-Behalf-Of: bar2@bar.com\r\n" .
+               "X-Mailer: foo";  // Expected to be dropped.
+    $message_proto = new MailMessage();
+    $message_proto->setSender('foo@foo.com');
+    $message_proto->addTo('bar@bar.com');
+    $message_proto->setSubject('subject');
+    $message_proto->setTextBody('text');
+    $header = $message_proto->addHeader();
+    $header->setName('list-id');
+    $header->setValue('12345');
+    $header = $message_proto->addHeader();
+    $header->setName('on-behalf-of');
+    $header->setValue('bar2@bar.com');
+    $response = new VoidProto();
+    $this->apiProxyMock->expectCall('mail', 'Send', $message_proto, $response);
+
+    $ret = Mail::sendMail('bar@bar.com', 'subject', 'text', $headers);
     $this->assertTrue($ret);
     $this->apiProxyMock->verify();
   }
