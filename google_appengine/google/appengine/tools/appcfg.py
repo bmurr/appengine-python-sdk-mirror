@@ -4835,6 +4835,7 @@ class AppCfgApp(object):
                      'has_header',
                      'loader_opts',
                      'log_file',
+                     'passin',
                      'email',
                      'debug',
                      'exporter_opts',

@@ -552,7 +552,6 @@ class TestModuleGetRuntimeConfig(parameterized.ParameterizedTestCase):
     self.assertTrue(config.threadsafe)
 
   @parameterized.Parameters(
-      ('php', 'php_config', runtime_config_pb2.PhpConfig),
       ('php55', 'php_config', runtime_config_pb2.PhpConfig),
       ('java', 'java_config', runtime_config_pb2.JavaConfig),
       ('java7', 'java_config', runtime_config_pb2.JavaConfig),
