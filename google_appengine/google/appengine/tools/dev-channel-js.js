@@ -554,14 +554,8 @@ goog.MODIFY_FUNCTION_PROTOTYPES && (Function.prototype.bind = Function.prototype
     return goog.bind.apply(null, args);
   }
   return goog.bind(this, selfObj);
-}, Function.prototype.partial = function(var_args) {
-  var args = Array.prototype.slice.call(arguments);
-  args.unshift(this, null);
-  return goog.bind.apply(null, args);
 }, Function.prototype.inherits = function(parentCtor) {
   goog.inherits(this, parentCtor);
-}, Function.prototype.mixin = function(source) {
-  goog.mixin(this.prototype, source);
 });
 goog.defineClass = function(superClass, def) {
   var constructor = def.constructor, statics = def.statics;
@@ -2070,10 +2064,15 @@ goog.html.SafeUrl.unwrap = function(safeUrl) {
 goog.html.SafeUrl.fromConstant = function(url) {
   return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(goog.string.Const.unwrap(url));
 };
-goog.html.SAFE_BLOB_TYPE_PATTERN_ = /^image\/(?:bmp|gif|jpeg|jpg|png|tiff|webp)$/i;
+goog.html.SAFE_MIME_TYPE_PATTERN_ = /^(?:image\/(?:bmp|gif|jpeg|jpg|png|tiff|webp)|video\/(?:mpeg|mp4|ogg|webm))$/i;
 goog.html.SafeUrl.fromBlob = function(blob) {
-  var url = goog.html.SAFE_BLOB_TYPE_PATTERN_.test(blob.type) ? goog.fs.url.createObjectUrl(blob) : goog.html.SafeUrl.INNOCUOUS_STRING;
+  var url = goog.html.SAFE_MIME_TYPE_PATTERN_.test(blob.type) ? goog.fs.url.createObjectUrl(blob) : goog.html.SafeUrl.INNOCUOUS_STRING;
   return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(url);
+};
+goog.html.DATA_URL_PATTERN_ = /^data:([^;,]*);base64,[a-z0-9+\/]+=*$/i;
+goog.html.SafeUrl.fromDataUrl = function(dataUrl) {
+  var match = dataUrl.match(goog.html.DATA_URL_PATTERN_), valid = match && goog.html.SAFE_MIME_TYPE_PATTERN_.test(match[1]);
+  return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(valid ? dataUrl : goog.html.SafeUrl.INNOCUOUS_STRING);
 };
 goog.html.SAFE_URL_PATTERN_ = /^(?:(?:https?|mailto|ftp):|[^&:/?#]*(?:[/?#]|$))/i;
 goog.html.SafeUrl.sanitize = function(url) {
@@ -2081,21 +2080,9 @@ goog.html.SafeUrl.sanitize = function(url) {
     return url;
   }
   url = url.implementsGoogStringTypedString ? url.getTypedStringValue() : String(url);
-  url = goog.html.SAFE_URL_PATTERN_.test(url) ? goog.html.SafeUrl.normalize_(url) : goog.html.SafeUrl.INNOCUOUS_STRING;
+  goog.html.SAFE_URL_PATTERN_.test(url) || (url = goog.html.SafeUrl.INNOCUOUS_STRING);
   return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(url);
 };
-goog.html.SafeUrl.normalize_ = function(url) {
-  try {
-    var normalized = encodeURI(url);
-  } catch (e) {
-    return goog.html.SafeUrl.INNOCUOUS_STRING;
-  }
-  return normalized.replace(goog.html.SafeUrl.NORMALIZE_MATCHER_, function(match) {
-    return goog.html.SafeUrl.NORMALIZE_REPLACER_MAP_[match];
-  });
-};
-goog.html.SafeUrl.NORMALIZE_MATCHER_ = /[()']|%5B|%5D|%25/g;
-goog.html.SafeUrl.NORMALIZE_REPLACER_MAP_ = {"'":"%27", "(":"%28", ")":"%29", "%5B":"[", "%5D":"]", "%25":"%"};
 goog.html.SafeUrl.TYPE_MARKER_GOOG_HTML_SECURITY_PRIVATE_ = {};
 goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse = function(url) {
   var safeUrl = new goog.html.SafeUrl;
@@ -2573,13 +2560,16 @@ goog.labs.userAgent.browser.matchOpera_ = function() {
   return goog.labs.userAgent.util.matchUserAgent("Opera") || goog.labs.userAgent.util.matchUserAgent("OPR");
 };
 goog.labs.userAgent.browser.matchIE_ = function() {
-  return goog.labs.userAgent.util.matchUserAgent("Edge") || goog.labs.userAgent.util.matchUserAgent("Trident") || goog.labs.userAgent.util.matchUserAgent("MSIE");
+  return goog.labs.userAgent.util.matchUserAgent("Trident") || goog.labs.userAgent.util.matchUserAgent("MSIE");
+};
+goog.labs.userAgent.browser.matchEdge_ = function() {
+  return goog.labs.userAgent.util.matchUserAgent("Edge");
 };
 goog.labs.userAgent.browser.matchFirefox_ = function() {
   return goog.labs.userAgent.util.matchUserAgent("Firefox");
 };
 goog.labs.userAgent.browser.matchSafari_ = function() {
-  return goog.labs.userAgent.util.matchUserAgent("Safari") && !(goog.labs.userAgent.browser.matchChrome_() || goog.labs.userAgent.browser.matchCoast_() || goog.labs.userAgent.browser.matchOpera_() || goog.labs.userAgent.browser.matchIE_() || goog.labs.userAgent.browser.isSilk() || goog.labs.userAgent.util.matchUserAgent("Android"));
+  return goog.labs.userAgent.util.matchUserAgent("Safari") && !(goog.labs.userAgent.browser.matchChrome_() || goog.labs.userAgent.browser.matchCoast_() || goog.labs.userAgent.browser.matchOpera_() || goog.labs.userAgent.browser.matchEdge_() || goog.labs.userAgent.browser.isSilk() || goog.labs.userAgent.util.matchUserAgent("Android"));
 };
 goog.labs.userAgent.browser.matchCoast_ = function() {
   return goog.labs.userAgent.util.matchUserAgent("Coast");
@@ -2588,13 +2578,14 @@ goog.labs.userAgent.browser.matchIosWebview_ = function() {
   return (goog.labs.userAgent.util.matchUserAgent("iPad") || goog.labs.userAgent.util.matchUserAgent("iPhone")) && !goog.labs.userAgent.browser.matchSafari_() && !goog.labs.userAgent.browser.matchChrome_() && !goog.labs.userAgent.browser.matchCoast_() && goog.labs.userAgent.util.matchUserAgent("AppleWebKit");
 };
 goog.labs.userAgent.browser.matchChrome_ = function() {
-  return (goog.labs.userAgent.util.matchUserAgent("Chrome") || goog.labs.userAgent.util.matchUserAgent("CriOS")) && !goog.labs.userAgent.browser.matchOpera_() && !goog.labs.userAgent.browser.matchIE_();
+  return (goog.labs.userAgent.util.matchUserAgent("Chrome") || goog.labs.userAgent.util.matchUserAgent("CriOS")) && !goog.labs.userAgent.browser.matchOpera_() && !goog.labs.userAgent.browser.matchEdge_();
 };
 goog.labs.userAgent.browser.matchAndroidBrowser_ = function() {
   return goog.labs.userAgent.util.matchUserAgent("Android") && !(goog.labs.userAgent.browser.isChrome() || goog.labs.userAgent.browser.isFirefox() || goog.labs.userAgent.browser.isOpera() || goog.labs.userAgent.browser.isSilk());
 };
 goog.labs.userAgent.browser.isOpera = goog.labs.userAgent.browser.matchOpera_;
 goog.labs.userAgent.browser.isIE = goog.labs.userAgent.browser.matchIE_;
+goog.labs.userAgent.browser.isEdge = goog.labs.userAgent.browser.matchEdge_;
 goog.labs.userAgent.browser.isFirefox = goog.labs.userAgent.browser.matchFirefox_;
 goog.labs.userAgent.browser.isSafari = goog.labs.userAgent.browser.matchSafari_;
 goog.labs.userAgent.browser.isCoast = goog.labs.userAgent.browser.matchCoast_;
@@ -2622,6 +2613,9 @@ goog.labs.userAgent.browser.getVersion = function() {
   if (goog.labs.userAgent.browser.isOpera()) {
     return lookUpValueWithKeys(["Version", "Opera", "OPR"]);
   }
+  if (goog.labs.userAgent.browser.isEdge()) {
+    return lookUpValueWithKeys(["Edge"]);
+  }
   if (goog.labs.userAgent.browser.isChrome()) {
     return lookUpValueWithKeys(["Chrome", "CriOS"]);
   }
@@ -2635,10 +2629,6 @@ goog.labs.userAgent.browser.getIEVersion_ = function(userAgent) {
   var rv = /rv: *([\d\.]*)/.exec(userAgent);
   if (rv && rv[1]) {
     return rv[1];
-  }
-  var edge = /Edge\/([\d\.]+)/.exec(userAgent);
-  if (edge) {
-    return edge[1];
   }
   var version = "", msie = /MSIE +([\d\.]+)/.exec(userAgent);
   if (msie && msie[1]) {
@@ -2764,12 +2754,13 @@ goog.labs.userAgent.platform.isVersionOrHigher = function(version) {
 };
 goog.userAgent = {};
 goog.userAgent.ASSUME_IE = !1;
+goog.userAgent.ASSUME_EDGE = !1;
 goog.userAgent.ASSUME_GECKO = !1;
 goog.userAgent.ASSUME_WEBKIT = !1;
 goog.userAgent.ASSUME_MOBILE_WEBKIT = !1;
 goog.userAgent.ASSUME_OPERA = !1;
 goog.userAgent.ASSUME_ANY_VERSION = !1;
-goog.userAgent.BROWSER_KNOWN_ = goog.userAgent.ASSUME_IE || goog.userAgent.ASSUME_GECKO || goog.userAgent.ASSUME_MOBILE_WEBKIT || goog.userAgent.ASSUME_WEBKIT || goog.userAgent.ASSUME_OPERA;
+goog.userAgent.BROWSER_KNOWN_ = goog.userAgent.ASSUME_IE || goog.userAgent.ASSUME_EDGE || goog.userAgent.ASSUME_GECKO || goog.userAgent.ASSUME_MOBILE_WEBKIT || goog.userAgent.ASSUME_WEBKIT || goog.userAgent.ASSUME_OPERA;
 goog.userAgent.getUserAgentString = function() {
   return goog.labs.userAgent.util.getUserAgent();
 };
@@ -2778,6 +2769,8 @@ goog.userAgent.getNavigator = function() {
 };
 goog.userAgent.OPERA = goog.userAgent.BROWSER_KNOWN_ ? goog.userAgent.ASSUME_OPERA : goog.labs.userAgent.browser.isOpera();
 goog.userAgent.IE = goog.userAgent.BROWSER_KNOWN_ ? goog.userAgent.ASSUME_IE : goog.labs.userAgent.browser.isIE();
+goog.userAgent.EDGE = goog.userAgent.BROWSER_KNOWN_ ? goog.userAgent.ASSUME_EDGE : goog.labs.userAgent.engine.isEdge();
+goog.userAgent.EDGE_OR_IE = goog.userAgent.EDGE || goog.userAgent.IE;
 goog.userAgent.GECKO = goog.userAgent.BROWSER_KNOWN_ ? goog.userAgent.ASSUME_GECKO : goog.labs.userAgent.engine.isGecko();
 goog.userAgent.WEBKIT = goog.userAgent.BROWSER_KNOWN_ ? goog.userAgent.ASSUME_WEBKIT || goog.userAgent.ASSUME_MOBILE_WEBKIT : goog.labs.userAgent.engine.isWebKit();
 goog.userAgent.isMobile_ = function() {
@@ -2819,7 +2812,7 @@ goog.userAgent.determineVersion_ = function() {
   }
   var version = "", arr = goog.userAgent.getVersionRegexResult_();
   arr && (version = arr ? arr[1] : "");
-  if (goog.userAgent.IE && !goog.labs.userAgent.engine.isEdge()) {
+  if (goog.userAgent.IE) {
     var docMode = goog.userAgent.getDocumentMode_();
     if (docMode > parseFloat(version)) {
       return String(docMode);
@@ -2832,7 +2825,7 @@ goog.userAgent.getVersionRegexResult_ = function() {
   if (goog.userAgent.GECKO) {
     return /rv\:([^\);]+)(\)|;)/.exec(userAgent);
   }
-  if (goog.userAgent.IE && goog.labs.userAgent.engine.isEdge()) {
+  if (goog.userAgent.EDGE) {
     return /Edge\/([\d\.]+)/.exec(userAgent);
   }
   if (goog.userAgent.IE) {
@@ -2856,13 +2849,13 @@ goog.userAgent.isVersionOrHigher = function(version) {
 };
 goog.userAgent.isVersion = goog.userAgent.isVersionOrHigher;
 goog.userAgent.isDocumentModeOrHigher = function(documentMode) {
-  return goog.userAgent.IE && (goog.labs.userAgent.engine.isEdge() || goog.userAgent.DOCUMENT_MODE >= documentMode);
+  return goog.userAgent.DOCUMENT_MODE >= documentMode;
 };
 goog.userAgent.isDocumentMode = goog.userAgent.isDocumentModeOrHigher;
-var JSCompiler_temp_const$$0 = goog.userAgent, JSCompiler_inline_result$$1;
-var doc$$inline_2 = goog.global.document, mode$$inline_3 = goog.userAgent.getDocumentMode_();
-JSCompiler_inline_result$$1 = !doc$$inline_2 || !goog.userAgent.IE || !mode$$inline_3 && goog.labs.userAgent.engine.isEdge() ? void 0 : mode$$inline_3 || ("CSS1Compat" == doc$$inline_2.compatMode ? parseInt(goog.userAgent.VERSION, 10) : 5);
-JSCompiler_temp_const$$0.DOCUMENT_MODE = JSCompiler_inline_result$$1;
+var JSCompiler_inline_result$$0;
+var doc$$inline_1 = goog.global.document, mode$$inline_2 = goog.userAgent.getDocumentMode_();
+JSCompiler_inline_result$$0 = doc$$inline_1 && goog.userAgent.IE ? mode$$inline_2 || ("CSS1Compat" == doc$$inline_1.compatMode ? parseInt(goog.userAgent.VERSION, 10) : 5) : void 0;
+goog.userAgent.DOCUMENT_MODE = JSCompiler_inline_result$$0;
 goog.dom.BrowserFeature = {CAN_ADD_NAME_OR_TYPE_ATTRIBUTES:!goog.userAgent.IE || goog.userAgent.isDocumentModeOrHigher(9), CAN_USE_CHILDREN_ATTRIBUTE:!goog.userAgent.GECKO && !goog.userAgent.IE || goog.userAgent.IE && goog.userAgent.isDocumentModeOrHigher(9) || goog.userAgent.GECKO && goog.userAgent.isVersionOrHigher("1.9.1"), CAN_USE_INNER_TEXT:goog.userAgent.IE && !goog.userAgent.isVersionOrHigher("9"), CAN_USE_PARENT_ELEMENT_PROPERTY:goog.userAgent.IE || goog.userAgent.OPERA || goog.userAgent.WEBKIT, 
 INNER_HTML_NEEDS_SCOPED_ELEMENT:goog.userAgent.IE, LEGACY_IE_RANGES:goog.userAgent.IE && !goog.userAgent.isDocumentModeOrHigher(9)};
 goog.dom.safe = {};
@@ -3230,16 +3223,16 @@ goog.dom.getChildren = function(element) {
   });
 };
 goog.dom.getFirstElementChild = function(node) {
-  return void 0 != node.firstElementChild ? node.firstElementChild : goog.dom.getNextElementNode_(node.firstChild, !0);
+  return goog.isDef(node.firstElementChild) ? node.firstElementChild : goog.dom.getNextElementNode_(node.firstChild, !0);
 };
 goog.dom.getLastElementChild = function(node) {
-  return void 0 != node.lastElementChild ? node.lastElementChild : goog.dom.getNextElementNode_(node.lastChild, !1);
+  return goog.isDef(node.lastElementChild) ? node.lastElementChild : goog.dom.getNextElementNode_(node.lastChild, !1);
 };
 goog.dom.getNextElementSibling = function(node) {
-  return void 0 != node.nextElementSibling ? node.nextElementSibling : goog.dom.getNextElementNode_(node.nextSibling, !0);
+  return goog.isDef(node.nextElementSibling) ? node.nextElementSibling : goog.dom.getNextElementNode_(node.nextSibling, !0);
 };
 goog.dom.getPreviousElementSibling = function(node) {
-  return void 0 != node.previousElementSibling ? node.previousElementSibling : goog.dom.getNextElementNode_(node.previousSibling, !1);
+  return goog.isDef(node.previousElementSibling) ? node.previousElementSibling : goog.dom.getNextElementNode_(node.previousSibling, !1);
 };
 goog.dom.getNextElementNode_ = function(node, forward) {
   for (;node && node.nodeType != goog.dom.NodeType.ELEMENT;) {
@@ -6669,10 +6662,12 @@ goog.uri.utils.assertNoFragmentsOrQueries_ = function(uri) {
   }
 };
 goog.uri.utils.parseQueryData = function(encodedQuery, callback) {
-  for (var pairs = encodedQuery.split("&"), i = 0;i < pairs.length;i++) {
-    var indexOfEquals = pairs[i].indexOf("="), name = null, value = null;
-    0 <= indexOfEquals ? (name = pairs[i].substring(0, indexOfEquals), value = pairs[i].substring(indexOfEquals + 1)) : name = pairs[i];
-    callback(name, value ? goog.string.urlDecode(value) : "");
+  if (encodedQuery) {
+    for (var pairs = encodedQuery.split("&"), i = 0;i < pairs.length;i++) {
+      var indexOfEquals = pairs[i].indexOf("="), name = null, value = null;
+      0 <= indexOfEquals ? (name = pairs[i].substring(0, indexOfEquals), value = pairs[i].substring(indexOfEquals + 1)) : name = pairs[i];
+      callback(name, value ? goog.string.urlDecode(value) : "");
+    }
   }
 };
 goog.uri.utils.appendQueryData_ = function(buffer) {

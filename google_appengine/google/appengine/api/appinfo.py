@@ -291,6 +291,17 @@ COOL_DOWN_PERIOD_SEC = 'cool_down_period_sec'
 CPU_UTILIZATION = 'cpu_utilization'
 CPU_UTILIZATION_UTILIZATION = 'target_utilization'
 CPU_UTILIZATION_AGGREGATION_WINDOW_LENGTH_SEC = 'aggregation_window_length_sec'
+TARGET_NETWORK_SENT_BYTES_PER_SEC = 'target_network_sent_bytes_per_sec'
+TARGET_NETWORK_SENT_PACKETS_PER_SEC = 'target_network_sent_packets_per_sec'
+TARGET_NETWORK_RECEIVED_BYTES_PER_SEC = 'target_network_received_bytes_per_sec'
+TARGET_NETWORK_RECEIVED_PACKETS_PER_SEC = (
+    'target_network_received_packets_per_sec')
+TARGET_DISK_WRITE_BYTES_PER_SEC = 'target_disk_write_bytes_per_sec'
+TARGET_DISK_WRITE_OPS_PER_SEC = 'target_disk_write_ops_per_sec'
+TARGET_DISK_READ_BYTES_PER_SEC = 'target_disk_read_bytes_per_sec'
+TARGET_DISK_READ_OPS_PER_SEC = 'target_disk_read_ops_per_sec'
+TARGET_REQUEST_COUNT_PER_SEC = 'target_request_count_per_sec'
+TARGET_CONCURRENT_REQUESTS = 'target_concurrent_requests'
 
 
 
@@ -474,8 +485,9 @@ _SUPPORTED_LIBRARIES = [
         'PyAMF',
         'http://pyamf.appspot.com/index.html',
         'A library that provides (AMF) Action Message Format functionality.',
-        ['0.6.1'],
+        ['0.6.1', '0.7.2'],
         latest_version='0.6.1',
+        experimental_versions=['0.7.2'],
         ),
     _VersionedLibrary(
         'pycrypto',
@@ -1420,6 +1432,26 @@ class AutomaticScaling(validation.Validated):
       COOL_DOWN_PERIOD_SEC: validation.Optional(
           validation.Range(60, sys.maxint, int)),
       CPU_UTILIZATION: validation.Optional(CpuUtilization),
+      TARGET_NETWORK_SENT_BYTES_PER_SEC:
+      validation.Optional(validation.Range(1, sys.maxint)),
+      TARGET_NETWORK_SENT_PACKETS_PER_SEC:
+      validation.Optional(validation.Range(1, sys.maxint)),
+      TARGET_NETWORK_RECEIVED_BYTES_PER_SEC:
+      validation.Optional(validation.Range(1, sys.maxint)),
+      TARGET_NETWORK_RECEIVED_PACKETS_PER_SEC:
+      validation.Optional(validation.Range(1, sys.maxint)),
+      TARGET_DISK_WRITE_BYTES_PER_SEC:
+      validation.Optional(validation.Range(1, sys.maxint)),
+      TARGET_DISK_WRITE_OPS_PER_SEC:
+      validation.Optional(validation.Range(1, sys.maxint)),
+      TARGET_DISK_READ_BYTES_PER_SEC:
+      validation.Optional(validation.Range(1, sys.maxint)),
+      TARGET_DISK_READ_OPS_PER_SEC:
+      validation.Optional(validation.Range(1, sys.maxint)),
+      TARGET_REQUEST_COUNT_PER_SEC:
+      validation.Optional(validation.Range(1, sys.maxint)),
+      TARGET_CONCURRENT_REQUESTS:
+      validation.Optional(validation.Range(1, sys.maxint)),
   }
 
 

@@ -193,7 +193,6 @@ class Module(object):
 
   _RUNTIME_INSTANCE_FACTORIES = {
       'go': go_runtime.GoRuntimeInstanceFactory,
-      'php': php_runtime.PHPRuntimeInstanceFactory,
       'php55': php_runtime.PHPRuntimeInstanceFactory,
       'python': python_runtime.PythonRuntimeInstanceFactory,
       'python27': python_runtime.PythonRuntimeInstanceFactory,
