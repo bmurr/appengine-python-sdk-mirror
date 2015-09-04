@@ -246,6 +246,23 @@ def _PrepareSpecialProperties(entity_proto, is_load):
         entity_proto.property_list().append(special_property)
 
 
+
+
+_METADATA_PROPERTY_NAME = '__metadata__'
+
+
+def _ScrubMetadataProperty(entity):
+  """Remove the metadata property from an entity protobuf.
+
+  Args:
+    entity: An Entity protobuf.
+  """
+  for i in reversed(xrange(entity.property_size())):
+    property = entity.property(i)
+    if _METADATA_PROPERTY_NAME == property.name():
+      del entity.property_list()[i]
+
+
 def _GetGroupByKey(entity, property_names):
   """Computes a key value that uniquely identifies the 'group' of an entity.
 

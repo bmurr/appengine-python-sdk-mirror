@@ -375,7 +375,8 @@ class Module(object):
         self._module_configuration.runtime.startswith('python')):
       runtime_config.python_config.CopyFrom(self._python_config)
     if (self._java_config and
-        self._module_configuration.runtime.startswith('java')):
+        (self._module_configuration.runtime.startswith('java') or
+         self._module_configuration.effective_runtime.startswith('java'))):
       runtime_config.java_config.CopyFrom(self._java_config)
 
     if self._vm_config:
@@ -882,7 +883,9 @@ class Module(object):
               return request_rewriter.frontend_rewriter_middleware(app)(
                   environ, wrapped_start_response)
             else:
-              return handler.handle(match, environ, wrapped_start_response)
+              ret = handler.handle(match, environ, wrapped_start_response)
+              if ret is not None:
+                return ret
         return self._no_handler_for_request(environ, wrapped_start_response,
                                             request_id)
       except StandardError, e:
