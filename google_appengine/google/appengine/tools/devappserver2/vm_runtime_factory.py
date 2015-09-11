@@ -23,7 +23,6 @@ import google
 from google.appengine.api import appinfo
 from google.appengine.tools.devappserver2 import instance
 from google.appengine.tools.devappserver2 import vm_runtime_proxy
-from google.appengine.tools.devappserver2 import vm_runtime_proxy_go
 from google.appengine.tools.docker import containers
 
 
@@ -42,10 +41,6 @@ class VMRuntimeInstanceFactory(instance.InstanceFactory):
       url='/_ah/warmup',
       script='/dev/null',
       login='admin')
-
-  RUNTIME_SPECIFIC_PROXY = {
-      'go': vm_runtime_proxy_go.GoVMRuntimeProxy,
-  }
 
   SUPPORTS_INTERACTIVE_REQUESTS = True
   FILE_CHANGE_INSTANCE_RESTART_POLICY = instance.ALWAYS
@@ -72,7 +67,7 @@ class VMRuntimeInstanceFactory(instance.InstanceFactory):
     self._runtime_config_getter = runtime_config_getter
     self._module_configuration = module_configuration
     self._docker_client = containers.NewDockerClient(
-        version='1.9',
+        version='1.16',
         timeout=self.DOCKER_D_REQUEST_TIMEOUT_SECS)
 
   def new_instance(self, instance_id, expect_ready_request=False):
@@ -94,11 +89,7 @@ class VMRuntimeInstanceFactory(instance.InstanceFactory):
       runtime_config.instance_id = str(instance_id)
       return runtime_config
 
-    effective_runtime = self._module_configuration.effective_runtime
-    proxy_class = self.RUNTIME_SPECIFIC_PROXY.get(
-        effective_runtime, vm_runtime_proxy.VMRuntimeProxy)
-
-    proxy = proxy_class(
+    proxy = vm_runtime_proxy.VMRuntimeProxy(
         self._docker_client, runtime_config_getter, self._module_configuration)
     return instance.Instance(self.request_data,
                              instance_id,

@@ -100,12 +100,11 @@ class JavaRuntimeInstanceFactory(instance.InstanceFactory):
     if self._for_jetty9:
       jetty_home = os.environ.get('APP_ENGINE_JETTY_HOME', None)
       jetty_base = os.environ.get('APP_ENGINE_JETTY_BASE', None)
-      appengine_dir = os.path.dirname(tools_dir)
       if not jetty_home:
-        jetty_home = os.path.join(appengine_dir,
-                                  'javamanagedvm', 'appengine-java-vmruntime')
+        jetty_home = os.path.join(java_lib_dir, 'java-managed-vm',
+                                  'appengine-java-vmruntime')
       if not jetty_base:
-        jetty_base = os.path.join(appengine_dir, 'jettybasesdk')
+        jetty_base = os.path.join(java_lib_dir, 'jetty-base-sdk')
 
       args = [
           java_bin,

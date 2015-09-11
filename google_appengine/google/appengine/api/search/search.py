@@ -3491,6 +3491,9 @@ class Index(object):
     Raises:
       DeleteError: If the schema failed to be deleted.
     """
+
+
+
     warnings.warn('delete_schema is deprecated in 1.7.4.',
                   DeprecationWarning, stacklevel=2)
     request = search_service_pb.DeleteSchemaRequest()

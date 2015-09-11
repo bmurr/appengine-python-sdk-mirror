@@ -170,6 +170,7 @@ BUILTIN_NAME_PREFIX = 'ah-builtin'
 RUNTIME_RE_STRING = r'[a-z][a-z0-9\-]{0,29}'
 
 API_VERSION_RE_STRING = r'[\w.]{1,32}'
+ENV_RE_STRING = r'[\w.]{1,32}'
 
 SOURCE_LANGUAGE_RE_STRING = r'[\w.\-]{1,32}'
 
@@ -246,6 +247,7 @@ MAJOR_VERSION = 'major_version'
 MINOR_VERSION = 'minor_version'
 RUNTIME = 'runtime'
 API_VERSION = 'api_version'
+ENV = 'env'
 SOURCE_LANGUAGE = 'source_language'
 BUILTINS = 'builtins'
 INCLUDES = 'includes'
@@ -1900,6 +1902,8 @@ class AppInfoExternal(validation.Validated):
 
 
       API_VERSION: API_VERSION_RE_STRING,
+
+      ENV: validation.Optional(ENV_RE_STRING),
       INSTANCE_CLASS: validation.Optional(_INSTANCE_CLASS_REGEX),
       SOURCE_LANGUAGE: validation.Optional(
           validation.Regex(SOURCE_LANGUAGE_RE_STRING)),

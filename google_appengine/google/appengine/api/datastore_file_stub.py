@@ -468,6 +468,7 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
       for encoded_entity in self.__ReadPickled(self.__datastore_file):
         try:
           entity = entity_pb.EntityProto(encoded_entity)
+          datastore_stub_util._ScrubMetadataProperty(entity)
         except self.READ_PB_EXCEPTIONS, e:
           raise apiproxy_errors.ApplicationError(
               datastore_pb.Error.INTERNAL_ERROR,

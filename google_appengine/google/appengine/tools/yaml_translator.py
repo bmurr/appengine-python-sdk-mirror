@@ -123,6 +123,7 @@ class AppYamlTranslator(object):
     for entry_name, field in [
         ('runtime', self.GetRuntime()),
         ('vm', self.app_engine_web_xml.vm),
+        ('env', self.app_engine_web_xml.env),
         ('threadsafe', self.app_engine_web_xml.threadsafe),
         ('instance_class', self.app_engine_web_xml.instance_class),
         ('auto_id_policy', self.app_engine_web_xml.auto_id_policy),
@@ -219,7 +220,8 @@ class AppYamlTranslator(object):
 
   def TranslateBetaSettings(self):
     """Translates Beta settings in appengine-web.xml to yaml."""
-    if not self.app_engine_web_xml.vm:
+    if ((not self.app_engine_web_xml.vm) and
+        (self.app_engine_web_xml.env != '2')):
       return []
 
     settings = self.app_engine_web_xml.beta_settings or {}
@@ -238,7 +240,8 @@ class AppYamlTranslator(object):
 
   def TranslateVmSettings(self):
     """Translates VM settings in appengine-web.xml to yaml."""
-    if not self.app_engine_web_xml.vm:
+    if ((not self.app_engine_web_xml.vm) and
+        (self.app_engine_web_xml.env != '2')):
       return []
 
     settings = self.app_engine_web_xml.vm_settings or {}
