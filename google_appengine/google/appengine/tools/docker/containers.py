@@ -291,6 +291,10 @@ class Image(BaseImage):
       error = e.explanation
       error_detail = ''
     finally:
+      # Close the client before calling anything else.
+      # This is to fix b/22324455 Some versions of docker throw an error if
+      # the same connection is used for a build and then another API call.
+      self._docker_client.close()
       logging.info('-' * 56)
 
     if not log_records:

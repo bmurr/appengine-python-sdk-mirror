@@ -234,6 +234,7 @@ def _DedupingEntityGenerator(cursor):
 
     seen.add(encoded_row_key)
     entity = entity_pb.EntityProto(row_entity)
+    datastore_stub_util._ScrubMetadataProperty(entity)
     datastore_stub_util.PrepareSpecialPropertiesForLoad(entity)
     yield entity
 
@@ -266,6 +267,7 @@ def _ProjectionPartialEntityGenerator(cursor):
       prop_to_add.mutable_value().Merge(value_decoder)
       prop_to_add.set_multiple(False)
 
+    datastore_stub_util._ScrubMetadataProperty(entity)
     datastore_stub_util.PrepareSpecialPropertiesForLoad(entity)
     yield entity
 
@@ -1263,6 +1265,7 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
       if row:
         entity = entity_pb.EntityProto()
         entity.ParseFromString(row[0])
+        datastore_stub_util._ScrubMetadataProperty(entity)
         return datastore_stub_util.LoadEntity(entity)
     finally:
       self._ReleaseConnection(conn)
@@ -1294,9 +1297,12 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     conn = self._GetConnection()
     try:
       db_cursor = conn.execute(sql_stmt, params)
-      entities = (entity_pb.EntityProto(row[1]) for row in db_cursor.fetchall())
-      return dict((datastore_types.ReferenceToKeyValue(entity.key()), entity)
-                  for entity in entities)
+      entities = {}
+      for row in db_cursor.fetchall():
+        entity = entity_pb.EntityProto(row[1])
+        datastore_stub_util._ScrubMetadataProperty(entity)
+        entities[datastore_types.ReferenceToKeyValue(entity.key())] = entity
+      return entities
     finally:
 
       self._ReleaseConnection(conn)
