@@ -233,10 +233,10 @@ def _DedupingEntityGenerator(cursor):
       continue
 
     seen.add(encoded_row_key)
-    entity = entity_pb.EntityProto(row_entity)
-    datastore_stub_util._ScrubMetadataProperty(entity)
-    datastore_stub_util.PrepareSpecialPropertiesForLoad(entity)
-    yield entity
+    storage_entity = entity_pb.EntityProto(row_entity)
+    record = datastore_stub_util._FromStorageEntity(storage_entity)
+    record = datastore_stub_util.LoadRecord(record)
+    yield record.entity
 
 
 def _ProjectionPartialEntityGenerator(cursor):
@@ -252,10 +252,13 @@ def _ProjectionPartialEntityGenerator(cursor):
     Partial entities resulting from the projection.
   """
   for row in cursor:
-    entity_original = entity_pb.EntityProto(row[1])
+    storage_entity = entity_pb.EntityProto(row[1])
+    record = datastore_stub_util._FromStorageEntity(storage_entity)
+    original_entity = record.entity
+
     entity = entity_pb.EntityProto()
-    entity.mutable_key().MergeFrom(entity_original.key())
-    entity.mutable_entity_group().MergeFrom(entity_original.entity_group())
+    entity.mutable_key().MergeFrom(original_entity.key())
+    entity.mutable_entity_group().MergeFrom(original_entity.entity_group())
 
     for name, value_data in zip(row[2::2], row[3::2]):
       prop_to_add = entity.add_property()
@@ -267,7 +270,6 @@ def _ProjectionPartialEntityGenerator(cursor):
       prop_to_add.mutable_value().Merge(value_decoder)
       prop_to_add.set_multiple(False)
 
-    datastore_stub_util._ScrubMetadataProperty(entity)
     datastore_stub_util.PrepareSpecialPropertiesForLoad(entity)
     yield entity
 
@@ -1244,13 +1246,15 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
 
 
 
-  def _Put(self, entity, insert):
+  def _Put(self, record, insert):
     conn = self._GetConnection()
     try:
-      self.__DeleteIndexEntries(conn, [entity.key()])
-      entity = datastore_stub_util.StoreEntity(entity)
-      self.__InsertEntities(conn, [entity])
-      self.__InsertIndexEntries(conn, [entity])
+      self.__DeleteIndexEntries(conn, [record.entity.key()])
+      record = datastore_stub_util.StoreRecord(record)
+      entity_stored = datastore_stub_util._ToStorageEntity(record)
+      self.__InsertEntities(conn, [entity_stored])
+
+      self.__InsertIndexEntries(conn, [record.entity])
     finally:
       self._ReleaseConnection(conn)
 
@@ -1265,8 +1269,8 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
       if row:
         entity = entity_pb.EntityProto()
         entity.ParseFromString(row[0])
-        datastore_stub_util._ScrubMetadataProperty(entity)
-        return datastore_stub_util.LoadEntity(entity)
+        record = datastore_stub_util._FromStorageEntity(entity)
+        return datastore_stub_util.LoadRecord(record)
     finally:
       self._ReleaseConnection(conn)
 
@@ -1300,8 +1304,8 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
       entities = {}
       for row in db_cursor.fetchall():
         entity = entity_pb.EntityProto(row[1])
-        datastore_stub_util._ScrubMetadataProperty(entity)
-        entities[datastore_types.ReferenceToKeyValue(entity.key())] = entity
+        key = datastore_types.ReferenceToKeyValue(entity.key())
+        entities[key] = datastore_stub_util._FromStorageEntity(entity)
       return entities
     finally:
 
