@@ -45,10 +45,8 @@ class JavaApplication(object):
                'PWD': self._module_configuration.application_root,
                'TZ': 'UTC',
                'APPLICATION_ID': self._module_configuration.application}
-
     # Most of the env variables are needed for a JVM on Windows.
-    for var in ('PATH', 'SYSTEMROOT', 'USER', 'GAE_LOCAL_VM_RUNTIME',
-                'TMP', 'TEMP'):
+    for var in ('PATH', 'SYSTEMROOT', 'USER', 'TMP', 'TEMP'):
       if var in os.environ:
         environ[var] = os.environ[var]
     return environ

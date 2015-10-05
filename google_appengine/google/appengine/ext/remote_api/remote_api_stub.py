@@ -668,8 +668,10 @@ _OAUTH_SCOPES = [
     ]
 
 
-def ConfigureRemoteApiForOAuth(servername, path, secure=True,
-                               service_account=None, key_file_path=None):
+def ConfigureRemoteApiForOAuth(
+    servername, path, secure=True, service_account=None, key_file_path=None,
+    oauth2_parameters=None, save_cookies=False, auth_tries=3,
+    rpc_server_factory=None):
   """Does necessary setup to allow easy remote access to App Engine APIs.
 
   This function uses OAuth2 with Application Default Credentials
@@ -689,6 +691,12 @@ def ConfigureRemoteApiForOAuth(servername, path, secure=True,
       instead.
     key_file_path: The path to a .p12 file containing the private key for
       service_account. Must be set if service_account is provided.
+    oauth2_parameters: None, or an
+      appengine_rpc_httplib2.HttpRpcServerOAuth2.OAuth2Parameters object
+      representing the OAuth2 parameters for this connection.
+    save_cookies: If true, save OAuth2 information in a file.
+    auth_tries: Number of attempts to make to authenticate.
+    rpc_server_factory: Factory to make RPC server instances.
 
   Returns:
     server, a server which may be useful for calling the application directly.
@@ -718,39 +726,46 @@ def ConfigureRemoteApiForOAuth(servername, path, secure=True,
     raise ImportError('Use of OAuth credentials requires the '
                       'appengine_rpc_httplib2 module. %s' % e)
 
-  if key_file_path:
-    if not client.HAS_CRYPTO:
-      raise ImportError('Use of a key file to access the Remote API '
-                        'requires an encryption library. Please install '
-                        'either PyOpenSSL or PyCrypto 2.6 or later.')
+  rpc_server_factory = (rpc_server_factory
+                        or appengine_rpc_httplib2.HttpRpcServerOAuth2)
 
-    with open(key_file_path, 'rb') as key_file:
-      key = key_file.read()
-      credentials = client.SignedJwtAssertionCredentials(
-          service_account,
-          key,
-          _OAUTH_SCOPES)
-  else:
-    credentials = client.GoogleCredentials.get_application_default()
-    credentials = credentials.create_scoped(_OAUTH_SCOPES)
+  if not oauth2_parameters:
+    if key_file_path:
+      if not client.HAS_CRYPTO:
+        raise ImportError('Use of a key file to access the Remote API '
+                          'requires an encryption library. Please install '
+                          'either PyOpenSSL or PyCrypto 2.6 or later.')
+
+      with open(key_file_path, 'rb') as key_file:
+        key = key_file.read()
+        credentials = client.SignedJwtAssertionCredentials(
+            service_account,
+            key,
+            _OAUTH_SCOPES)
+    else:
+      credentials = client.GoogleCredentials.get_application_default()
+      credentials = credentials.create_scoped(_OAUTH_SCOPES)
 
 
-  oauth2_parameters = (
-      appengine_rpc_httplib2.HttpRpcServerOAuth2.OAuth2Parameters(
-          access_token=None,
-          client_id=None,
-          client_secret=None,
-          scope=None,
-          refresh_token=None,
-          credential_file=None,
-          credentials=credentials))
+    oauth2_parameters = (
+        appengine_rpc_httplib2.HttpRpcServerOAuth2.OAuth2Parameters(
+            access_token=None,
+            client_id=None,
+            client_secret=None,
+            scope=None,
+            refresh_token=None,
+            credential_file=None,
+            credentials=credentials))
+
   return ConfigureRemoteApi(
       app_id=None,
       path=path,
       auth_func=oauth2_parameters,
       servername=servername,
       secure=secure,
-      rpc_server_factory=appengine_rpc_httplib2.HttpRpcServerOAuth2)
+      save_cookies=save_cookies,
+      auth_tries=auth_tries,
+      rpc_server_factory=rpc_server_factory)
 
 
 def ConfigureRemoteApi(app_id,
@@ -763,6 +778,7 @@ def ConfigureRemoteApi(app_id,
                        services=None,
                        default_auth_domain=None,
                        save_cookies=False,
+                       auth_tries=3,
                        use_remote_datastore=True):
   """Does necessary setup to allow easy remote access to App Engine APIs.
 
@@ -792,6 +808,7 @@ def ConfigureRemoteApi(app_id,
       services are configured; by default all supported services are configured.
     default_auth_domain: The authentication domain to use by default.
     save_cookies: Forwarded to rpc_server_factory function.
+    auth_tries: Number of attempts to make to authenticate.
     use_remote_datastore: Whether to use RemoteDatastoreStub instead of passing
       through datastore requests. RemoteDatastoreStub batches transactional
       datastore requests since, in production, datastore requires are scoped to
@@ -810,9 +827,10 @@ def ConfigureRemoteApi(app_id,
     raise ConfigurationError('app_id or servername required')
   if not servername:
     servername = '%s.appspot.com' % (app_id,)
-  server = rpc_server_factory(servername, auth_func, GetUserAgent(),
-                              GetSourceName(), save_cookies=save_cookies,
-                              debug_data=False, secure=secure)
+  server = rpc_server_factory(
+      servername, auth_func, GetUserAgent(), GetSourceName(),
+      save_cookies=save_cookies, auth_tries=auth_tries, debug_data=False,
+      secure=secure)
   if not app_id:
     app_id = GetRemoteAppIdFromServer(server, path, rtok)
 
