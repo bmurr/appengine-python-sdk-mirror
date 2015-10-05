@@ -123,13 +123,14 @@ class AppYamlTranslator(object):
     for entry_name, field in [
         ('runtime', self.GetRuntime()),
         ('vm', self.app_engine_web_xml.vm),
-        ('env', self.app_engine_web_xml.env),
         ('threadsafe', self.app_engine_web_xml.threadsafe),
         ('instance_class', self.app_engine_web_xml.instance_class),
         ('auto_id_policy', self.app_engine_web_xml.auto_id_policy),
         ('code_lock', self.app_engine_web_xml.codelock)]:
       if field:
         basic_statements.append('%s: %s' % (entry_name, field))
+    if self.app_engine_web_xml.env != '1':
+      basic_statements.append('env: %s' % self.app_engine_web_xml.env)
     return basic_statements
 
   def TranslateAutomaticScaling(self):

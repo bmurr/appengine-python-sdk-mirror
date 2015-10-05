@@ -358,6 +358,74 @@ namespace google\appengine {
     public function hasAllowStretch() {
       return isset($this->allow_stretch);
     }
+    public function getWidthSet() {
+      if (!isset($this->width_set)) {
+        return false;
+      }
+      return $this->width_set;
+    }
+    public function setWidthSet($val) {
+      $this->width_set = $val;
+      return $this;
+    }
+    public function clearWidthSet() {
+      unset($this->width_set);
+      return $this;
+    }
+    public function hasWidthSet() {
+      return isset($this->width_set);
+    }
+    public function getHeightSet() {
+      if (!isset($this->height_set)) {
+        return false;
+      }
+      return $this->height_set;
+    }
+    public function setHeightSet($val) {
+      $this->height_set = $val;
+      return $this;
+    }
+    public function clearHeightSet() {
+      unset($this->height_set);
+      return $this;
+    }
+    public function hasHeightSet() {
+      return isset($this->height_set);
+    }
+    public function getCropRightXSet() {
+      if (!isset($this->crop_right_x_set)) {
+        return false;
+      }
+      return $this->crop_right_x_set;
+    }
+    public function setCropRightXSet($val) {
+      $this->crop_right_x_set = $val;
+      return $this;
+    }
+    public function clearCropRightXSet() {
+      unset($this->crop_right_x_set);
+      return $this;
+    }
+    public function hasCropRightXSet() {
+      return isset($this->crop_right_x_set);
+    }
+    public function getCropBottomYSet() {
+      if (!isset($this->crop_bottom_y_set)) {
+        return false;
+      }
+      return $this->crop_bottom_y_set;
+    }
+    public function setCropBottomYSet($val) {
+      $this->crop_bottom_y_set = $val;
+      return $this;
+    }
+    public function clearCropBottomYSet() {
+      unset($this->crop_bottom_y_set);
+      return $this;
+    }
+    public function hasCropBottomYSet() {
+      return isset($this->crop_bottom_y_set);
+    }
     public function clear() {
       $this->clearWidth();
       $this->clearHeight();
@@ -373,6 +441,10 @@ namespace google\appengine {
       $this->clearCropOffsetX();
       $this->clearCropOffsetY();
       $this->clearAllowStretch();
+      $this->clearWidthSet();
+      $this->clearHeightSet();
+      $this->clearCropRightXSet();
+      $this->clearCropBottomYSet();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -420,6 +492,18 @@ namespace google\appengine {
       }
       if (isset($this->allow_stretch)) {
         $res += 2;
+      }
+      if (isset($this->width_set)) {
+        $res += 3;
+      }
+      if (isset($this->height_set)) {
+        $res += 3;
+      }
+      if (isset($this->crop_right_x_set)) {
+        $res += 3;
+      }
+      if (isset($this->crop_bottom_y_set)) {
+        $res += 3;
       }
       return $res;
     }
@@ -480,6 +564,22 @@ namespace google\appengine {
         $out->putVarInt32(112);
         $out->putBoolean($this->allow_stretch);
       }
+      if (isset($this->width_set)) {
+        $out->putVarInt32(808);
+        $out->putBoolean($this->width_set);
+      }
+      if (isset($this->height_set)) {
+        $out->putVarInt32(816);
+        $out->putBoolean($this->height_set);
+      }
+      if (isset($this->crop_right_x_set)) {
+        $out->putVarInt32(864);
+        $out->putBoolean($this->crop_right_x_set);
+      }
+      if (isset($this->crop_bottom_y_set)) {
+        $out->putVarInt32(872);
+        $out->putBoolean($this->crop_bottom_y_set);
+      }
     }
     public function tryMerge($d) {
       while($d->avail() > 0) {
@@ -526,6 +626,18 @@ namespace google\appengine {
             break;
           case 112:
             $this->setAllowStretch($d->getBoolean());
+            break;
+          case 808:
+            $this->setWidthSet($d->getBoolean());
+            break;
+          case 816:
+            $this->setHeightSet($d->getBoolean());
+            break;
+          case 864:
+            $this->setCropRightXSet($d->getBoolean());
+            break;
+          case 872:
+            $this->setCropBottomYSet($d->getBoolean());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -582,6 +694,18 @@ namespace google\appengine {
       if ($x->hasAllowStretch()) {
         $this->setAllowStretch($x->getAllowStretch());
       }
+      if ($x->hasWidthSet()) {
+        $this->setWidthSet($x->getWidthSet());
+      }
+      if ($x->hasHeightSet()) {
+        $this->setHeightSet($x->getHeightSet());
+      }
+      if ($x->hasCropRightXSet()) {
+        $this->setCropRightXSet($x->getCropRightXSet());
+      }
+      if ($x->hasCropBottomYSet()) {
+        $this->setCropBottomYSet($x->getCropBottomYSet());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -613,6 +737,14 @@ namespace google\appengine {
       if (isset($this->crop_offset_y) && $this->crop_offset_y !== $x->crop_offset_y) return false;
       if (isset($this->allow_stretch) !== isset($x->allow_stretch)) return false;
       if (isset($this->allow_stretch) && $this->allow_stretch !== $x->allow_stretch) return false;
+      if (isset($this->width_set) !== isset($x->width_set)) return false;
+      if (isset($this->width_set) && $this->width_set !== $x->width_set) return false;
+      if (isset($this->height_set) !== isset($x->height_set)) return false;
+      if (isset($this->height_set) && $this->height_set !== $x->height_set) return false;
+      if (isset($this->crop_right_x_set) !== isset($x->crop_right_x_set)) return false;
+      if (isset($this->crop_right_x_set) && $this->crop_right_x_set !== $x->crop_right_x_set) return false;
+      if (isset($this->crop_bottom_y_set) !== isset($x->crop_bottom_y_set)) return false;
+      if (isset($this->crop_bottom_y_set) && $this->crop_bottom_y_set !== $x->crop_bottom_y_set) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -658,6 +790,18 @@ namespace google\appengine {
       }
       if (isset($this->allow_stretch)) {
         $res .= $prefix . "allow_stretch: " . $this->debugFormatBool($this->allow_stretch) . "\n";
+      }
+      if (isset($this->width_set)) {
+        $res .= $prefix . "width_set: " . $this->debugFormatBool($this->width_set) . "\n";
+      }
+      if (isset($this->height_set)) {
+        $res .= $prefix . "height_set: " . $this->debugFormatBool($this->height_set) . "\n";
+      }
+      if (isset($this->crop_right_x_set)) {
+        $res .= $prefix . "crop_right_x_set: " . $this->debugFormatBool($this->crop_right_x_set) . "\n";
+      }
+      if (isset($this->crop_bottom_y_set)) {
+        $res .= $prefix . "crop_bottom_y_set: " . $this->debugFormatBool($this->crop_bottom_y_set) . "\n";
       }
       return $res;
     }
