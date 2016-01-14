@@ -84,23 +84,6 @@ namespace google\appengine_datastore_v3 {
     public function hasMarkChanges() {
       return isset($this->mark_changes);
     }
-    public function getAFieldThatShouldNeverBeUsed() {
-      if (!isset($this->a_field_that_should_never_be_used)) {
-        return '';
-      }
-      return $this->a_field_that_should_never_be_used;
-    }
-    public function setAFieldThatShouldNeverBeUsed($val) {
-      $this->a_field_that_should_never_be_used = $val;
-      return $this;
-    }
-    public function clearAFieldThatShouldNeverBeUsed() {
-      unset($this->a_field_that_should_never_be_used);
-      return $this;
-    }
-    public function hasAFieldThatShouldNeverBeUsed() {
-      return isset($this->a_field_that_should_never_be_used);
-    }
     public function getCompositeIndexSize() {
       return sizeof($this->composite_index);
     }
@@ -153,7 +136,6 @@ namespace google\appengine_datastore_v3 {
       $this->clearHandle();
       $this->clearApp();
       $this->clearMarkChanges();
-      $this->clearAFieldThatShouldNeverBeUsed();
       $this->clearCompositeIndex();
       $this->clearDatabase();
     }
@@ -168,10 +150,6 @@ namespace google\appengine_datastore_v3 {
       }
       if (isset($this->mark_changes)) {
         $res += 2;
-      }
-      if (isset($this->a_field_that_should_never_be_used)) {
-        $res += 1;
-        $res += $this->lengthString(strlen($this->a_field_that_should_never_be_used));
       }
       $this->checkProtoArray($this->composite_index);
       $res += 1 * sizeof($this->composite_index);
@@ -196,10 +174,6 @@ namespace google\appengine_datastore_v3 {
       if (isset($this->mark_changes)) {
         $out->putVarInt32(24);
         $out->putBoolean($this->mark_changes);
-      }
-      if (isset($this->a_field_that_should_never_be_used)) {
-        $out->putVarInt32(34);
-        $out->putPrefixedString($this->a_field_that_should_never_be_used);
       }
       $this->checkProtoArray($this->composite_index);
       foreach ($this->composite_index as $value) {
@@ -226,11 +200,6 @@ namespace google\appengine_datastore_v3 {
             break;
           case 24:
             $this->setMarkChanges($d->getBoolean());
-            break;
-          case 34:
-            $length = $d->getVarInt32();
-            $this->setAFieldThatShouldNeverBeUsed(substr($d->buffer(), $d->pos(), $length));
-            $d->skip($length);
             break;
           case 42:
             $length = $d->getVarInt32();
@@ -270,9 +239,6 @@ namespace google\appengine_datastore_v3 {
       if ($x->hasMarkChanges()) {
         $this->setMarkChanges($x->getMarkChanges());
       }
-      if ($x->hasAFieldThatShouldNeverBeUsed()) {
-        $this->setAFieldThatShouldNeverBeUsed($x->getAFieldThatShouldNeverBeUsed());
-      }
       foreach ($x->getCompositeIndexList() as $v) {
         $this->addCompositeIndex()->copyFrom($v);
       }
@@ -288,8 +254,6 @@ namespace google\appengine_datastore_v3 {
       if (isset($this->app) && $this->app !== $x->app) return false;
       if (isset($this->mark_changes) !== isset($x->mark_changes)) return false;
       if (isset($this->mark_changes) && $this->mark_changes !== $x->mark_changes) return false;
-      if (isset($this->a_field_that_should_never_be_used) !== isset($x->a_field_that_should_never_be_used)) return false;
-      if (isset($this->a_field_that_should_never_be_used) && $this->a_field_that_should_never_be_used !== $x->a_field_that_should_never_be_used) return false;
       if (sizeof($this->composite_index) !== sizeof($x->composite_index)) return false;
       foreach (array_map(null, $this->composite_index, $x->composite_index) as $v) {
         if (!$v[0]->equals($v[1])) return false;
@@ -308,9 +272,6 @@ namespace google\appengine_datastore_v3 {
       }
       if (isset($this->mark_changes)) {
         $res .= $prefix . "mark_changes: " . $this->debugFormatBool($this->mark_changes) . "\n";
-      }
-      if (isset($this->a_field_that_should_never_be_used)) {
-        $res .= $prefix . "a_field_that_should_never_be_used: " . $this->debugFormatString($this->a_field_that_should_never_be_used) . "\n";
       }
       foreach ($this->composite_index as $value) {
         $res .= $prefix . "composite_index <\n" . $value->shortDebugString($prefix . "  ") . $prefix . ">\n";
