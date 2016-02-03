@@ -21,3 +21,8 @@ import mimetypes
 
 def init():
   mimetypes.add_type('application/dart', '.dart')
+  mimetypes.add_type('text/css', '.gss')
+  mimetypes.add_type('text/html', '.ng')
+  mimetypes.add_type('application/octet-stream', '.ttf')
+  mimetypes.add_type('application/octet-stream', '.woff')
+  mimetypes.add_type('application/octet-stream', '.woff2')
