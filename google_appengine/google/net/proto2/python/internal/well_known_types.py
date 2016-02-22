@@ -54,9 +54,12 @@ class ParseError(Error):
 class Any(object):
   """Class for Any Message type."""
 
-  def Pack(self, msg):
+  def Pack(self, msg, type_url_prefix='type.googleapis.com/'):
     """Packs the specified message into current Any message."""
-    self.type_url = 'type.googleapis.com/%s' % msg.DESCRIPTOR.full_name
+    if len(type_url_prefix) < 1 or type_url_prefix[-1] != '/':
+      self.type_url = '%s/%s' % (type_url_prefix, msg.DESCRIPTOR.full_name)
+    else:
+      self.type_url = '%s%s' % (type_url_prefix, msg.DESCRIPTOR.full_name)
     self.value = msg.SerializeToString()
 
   def Unpack(self, msg):
