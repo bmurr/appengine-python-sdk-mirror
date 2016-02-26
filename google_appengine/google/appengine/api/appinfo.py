@@ -1528,69 +1528,6 @@ class EnvironmentVariables(validation.ValidatedDict):
             if result_env_variables else None)
 
 
-def VmSafeSetRuntime(appyaml, runtime):
-  """Sets the runtime while respecting vm runtimes rules for runtime settings.
-
-  Args:
-     appyaml: AppInfoExternal instance, which will be modified.
-     runtime: The runtime to use.
-
-  Returns:
-     The passed in appyaml (which has been modified).
-  """
-  if appyaml.env == '2' or appyaml.vm:
-    if not appyaml.vm_settings:
-      appyaml.vm_settings = VmSettings()
-
-
-
-    appyaml.vm_settings['vm_runtime'] = runtime
-    appyaml.runtime = 'vm'
-  else:
-    appyaml.runtime = runtime
-  return appyaml
-
-
-def NormalizeVmSettings(appyaml):
-  """Normalize Vm settings.
-
-  Args:
-    appyaml: AppInfoExternal instance.
-
-  Returns:
-    Normalized app yaml.
-  """
-
-
-
-
-
-
-
-  if appyaml.env == '2' or appyaml.vm:
-    if not appyaml.vm_settings:
-      appyaml.vm_settings = VmSettings()
-
-    if 'vm_runtime' not in appyaml.vm_settings:
-      appyaml = VmSafeSetRuntime(appyaml, appyaml.runtime)
-
-
-
-    if hasattr(appyaml, 'beta_settings') and appyaml.beta_settings:
-
-
-
-
-      for field in ['vm_runtime',
-                    'has_docker_image',
-                    'image',
-                    'module_yaml_path']:
-        if field not in appyaml.beta_settings and field in appyaml.vm_settings:
-          appyaml.beta_settings[field] = appyaml.vm_settings[field]
-
-  return appyaml
-
-
 def ValidateSourceReference(ref):
   """Determines if a source reference is valid.
 
@@ -1798,7 +1735,8 @@ class AppInclude(validation.Validated):
       appyaml.handlers.extend(tail)
 
     appyaml = cls._CommonMergeOps(appyaml, appinclude)
-    return NormalizeVmSettings(appyaml)
+    appyaml.NormalizeVmSettings()
+    return appyaml
 
   @classmethod
   def MergeAppIncludes(cls, appinclude_one, appinclude_two):
@@ -1957,12 +1895,12 @@ class AppInfoExternal(validation.Validated):
           and CGI handlers are specified.
       TooManyScalingSettingsError: if more than one scaling settings block is
           present.
-      LibrariesNotSupported: if application configuration does not allow for
-          libraries.  e.g. python25 or vm: true or env == 2
+      RuntimeDoesNotSupportLibraries: if libraries clause is used for a runtime
+          that does not support it (e.g. python25).
       ModuleAndServiceDefined: if both 'module' and 'service' keywords are used.
     """
     super(AppInfoExternal, self).CheckInitialized()
-    if self.runtime is None and not self.vm and self.env != '2':
+    if self.runtime is None and not self.IsVm():
       raise appinfo_errors.MissingRuntimeError(
           'You must specify a "runtime" field for non-vm applications.')
     elif self.runtime is None:
@@ -1970,7 +1908,7 @@ class AppInfoExternal(validation.Validated):
 
       self.runtime = 'custom'
     if (not self.handlers and not self.builtins and not self.includes
-        and not (self.vm or self.env == '2')):
+        and not self.IsVm()):
       raise appinfo_errors.MissingURLMapping(
           'No URLMap entries found in application configuration')
     if self.handlers and len(self.handlers) > MAX_URL_MAPS:
@@ -1983,15 +1921,17 @@ class AppInfoExternal(validation.Validated):
 
     vm_runtime_python27 = (
         self.runtime == 'vm' and
-        (self.vm_settings and
+        (hasattr(self, 'vm_settings') and
+         self.vm_settings and
          self.vm_settings.get('vm_runtime') == 'python27') or
-        (self.beta_settings and
+        (hasattr(self, 'beta_settings') and
+         self.beta_settings and
          self.beta_settings.get('vm_runtime') == 'python27'))
 
     if (self.threadsafe is None and
         (self.runtime == 'python27' or vm_runtime_python27)):
       raise appinfo_errors.MissingThreadsafe(
-          'threadsafe must be present and set to true or false in python27')
+          'threadsafe must be present and set to a true or false YAML value')
 
     if self.auto_id_policy == DATASTORE_ID_POLICY_LEGACY:
       datastore_auto_ids_url = ('http://developers.google.com/'
@@ -2013,15 +1953,8 @@ class AppInfoExternal(validation.Validated):
           self.beta_settings.get('source_reference'))
 
     if self.libraries:
-      if self.vm or self.env == '2':
-        raise appinfo_errors.LibrariesNotSupported(
-            'The "libraries:" directive has been deprecated for Managed VMs. '
-            'Please delete this section from your app.yaml, use pip '
-            '(https://pip.pypa.io/) to install your dependencies, and save '
-            'them to a requirements.txt.  For more information, please visit '
-            'http://cloud.google.com/python.')
-      elif self.runtime != 'python27':
-        raise appinfo_errors.LibrariesNotSupported(
+      if not (vm_runtime_python27 or self.runtime == 'python27'):
+        raise appinfo_errors.RuntimeDoesNotSupportLibraries(
             'libraries entries are only supported by the "python27" runtime')
 
       library_names = [library.name for library in self.libraries]
@@ -2100,10 +2033,6 @@ class AppInfoExternal(validation.Validated):
       if library.default_version and library.name not in enabled_libraries:
         libraries.append(Library(name=library.name,
                                  version=library.default_version))
-    for library in libraries:
-      if library.version == 'latest':
-        library.version = _NAME_TO_SUPPORTED_LIBRARY[
-            library.name].supported_versions[-1]
     return libraries
 
   def ApplyBackendSettings(self, backend_name):
@@ -2160,6 +2089,57 @@ class AppInfoExternal(validation.Validated):
         and self.beta_settings is not None):
       return self.beta_settings.get('vm_runtime')
     return self.runtime
+
+  def SetEffectiveRuntime(self, runtime):
+    """Sets the runtime while respecting vm runtimes rules for runtime settings.
+
+    Args:
+       runtime: The runtime to use.
+    """
+    if self.IsVm():
+      if not self.vm_settings:
+        self.vm_settings = VmSettings()
+
+
+
+      self.vm_settings['vm_runtime'] = runtime
+      self.runtime = 'vm'
+    else:
+      self.runtime = runtime
+
+  def NormalizeVmSettings(self):
+    """Normalize Vm settings.
+    """
+
+
+
+
+
+
+    if self.IsVm():
+      if not self.vm_settings:
+        self.vm_settings = VmSettings()
+
+      if 'vm_runtime' not in self.vm_settings:
+        self.SetEffectiveRuntime(self.runtime)
+
+
+
+      if hasattr(self, 'beta_settings') and self.beta_settings:
+
+
+
+
+        for field in ['vm_runtime',
+                      'has_docker_image',
+                      'image',
+                      'module_yaml_path']:
+          if field not in self.beta_settings and field in self.vm_settings:
+            self.beta_settings[field] = self.vm_settings[field]
+
+
+  def IsVm(self):
+    return self.vm or self.env == '2'
 
 
 def ValidateHandlers(handlers, is_include_file=False):
@@ -2231,7 +2211,8 @@ def LoadSingleAppInfo(app_info):
     appyaml.application = appyaml.project
     appyaml.project = None
 
-  return NormalizeVmSettings(appyaml)
+  appyaml.NormalizeVmSettings()
+  return appyaml
 
 
 class AppInfoSummary(validation.Validated):

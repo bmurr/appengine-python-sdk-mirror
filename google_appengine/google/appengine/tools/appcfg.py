@@ -53,6 +53,7 @@ import urllib2
 
 
 import google
+from oauth2client import devshell
 import yaml
 
 from google.appengine.cron import groctimespecification
@@ -586,22 +587,6 @@ def MigratePython27Notice():
       'https://developers.google.com/appengine/docs/python/python25/migrate27.')
 
 
-def MigratePageSpeedNotice():
-  """Tells the user that PageSpeed service is deprecated.
-
-  Encourages the user to remove PageSpeed configs from their app.yaml file.
-
-  Prints a message to sys.stdout. The caller should have tested that the user
-  has pagespeed configurations in their app.yaml file.
-  """
-  ErrorUpdate(
-      'WARNING: This application contains PageSpeed related configurations, '
-      'which is deprecated! Those configurations will stop working after '
-      'December 1, 2015. Read '
-      'https://cloud.google.com/appengine/docs/adminconsole/pagespeed#disabling-pagespeed'
-      ' to learn how to disable PageSpeed.')
-
-
 class IndexDefinitionUpload(object):
   """Provides facilities to upload index definitions to the hosting service."""
 
@@ -729,50 +714,6 @@ class DosEntryUpload(object):
       self.rpcserver.Send('/api/dos/update',
                           app_id=app_id,
                           payload=self.dos.ToYAML())
-
-
-class PagespeedEntryUpload(object):
-  """Provides facilities to upload pagespeed configs to the hosting service."""
-
-  def __init__(self, rpcserver, config, pagespeed, error_fh=sys.stderr):
-    """Creates a new PagespeedEntryUpload.
-
-    Args:
-      rpcserver: The RPC server to use. Should be an instance of a subclass of
-        AbstractRpcServer.
-      config: The AppInfoExternal object derived from the app.yaml file.
-      pagespeed: The PagespeedEntry object from config.
-      error_fh: Where to send status and error messages.
-    """
-    self.rpcserver = rpcserver
-    self.config = config
-    self.pagespeed = pagespeed
-    self.error_fh = error_fh
-
-  def DoUpload(self):
-    """Uploads the pagespeed entries."""
-
-    pagespeed_yaml = ''
-    if self.pagespeed:
-      StatusUpdate('Uploading PageSpeed configuration.', self.error_fh)
-      pagespeed_yaml = self.pagespeed.ToYAML()
-    try:
-      self.rpcserver.Send('/api/appversion/updatepagespeed',
-                          app_id=self.config.application,
-                          version=self.config.version,
-                          payload=pagespeed_yaml)
-    except urllib2.HTTPError, err:
-
-
-
-
-
-
-
-
-
-      if err.code != 404 or self.pagespeed is not None:
-        raise
 
 
 class DefaultVersionSet(object):
@@ -3281,11 +3222,20 @@ class AppCfgApp(object):
                                  ignore_certs=self.options.ignore_certs,
                                  options=self.options)
 
+  def _MaybeGetDevshellOAuth2AccessToken(self):
+    """Returns a valid OAuth2 access token when running in Cloud Shell."""
+    try:
+      creds = devshell.DevshellCredentials()
+      return creds.access_token
+    except devshell.NoDevshellServer:
+      return None
+
   def _GetOAuth2Parameters(self):
     """Returns appropriate an OAuth2Parameters object for authentication."""
     oauth2_parameters = (
         appengine_rpc_httplib2.HttpRpcServerOAuth2.OAuth2Parameters(
-            access_token=self.options.oauth2_access_token,
+            access_token=(self.options.oauth2_access_token or
+                          self._MaybeGetDevshellOAuth2AccessToken()),
             client_id=self.oauth_client_id,
             client_secret=self.oauth_client_secret,
             scope=self.oauth_scopes,
@@ -3391,7 +3341,7 @@ class AppCfgApp(object):
     if self.options.version:
       appyaml.version = self.options.version
     if self.options.runtime:
-      appinfo.VmSafeSetRuntime(appyaml, self.options.runtime)
+      appyaml.SetEffectiveRuntime(self.options.runtime)
     if self.options.env_variables:
       if appyaml.env_variables is None:
         appyaml.env_variables = appinfo.EnvironmentVariables()
@@ -3693,10 +3643,10 @@ class AppCfgApp(object):
     paths = self.file_iterator(basepath, appyaml.skip_files, appyaml.runtime)
     openfunc = lambda path: self.opener(os.path.join(basepath, path), 'rb')
 
-
-    if (appyaml.GetEffectiveRuntime() == 'go' and
-        not (appyaml.runtime == 'vm' and
-             'GAE_LOCAL_VM_RUNTIME' in os.environ)):
+    if appyaml.GetEffectiveRuntime() == 'go':
+      if appyaml.runtime == 'vm':
+        raise RuntimeError(
+            'The Go runtime with "vm: true" is only supported with gcloud.')
 
       sdk_base = os.path.normpath(os.path.join(
           google.appengine.__file__, '..', '..', '..'))
@@ -3777,7 +3727,6 @@ class AppCfgApp(object):
     rpcserver = self._GetRpcServer()
     all_files = [self.basepath] + self.args
     has_python25_version = False
-    has_pagespeed = False
 
     for yaml_path in all_files:
       file_name = os.path.basename(yaml_path)
@@ -3789,9 +3738,6 @@ class AppCfgApp(object):
       if module_yaml.runtime == 'python':
         has_python25_version = True
 
-      if module_yaml.pagespeed:
-        has_pagespeed = True
-
 
 
       if not module_yaml.module and file_name != 'app.yaml':
@@ -3801,8 +3747,6 @@ class AppCfgApp(object):
       self.UpdateVersion(rpcserver, self.basepath, module_yaml, file_name)
     if has_python25_version:
       MigratePython27Notice()
-    if has_pagespeed:
-      MigratePageSpeedNotice()
 
   def Update(self):
     """Updates and deploys a new appversion and global app configs."""
@@ -3895,8 +3839,6 @@ class AppCfgApp(object):
 
     if appyaml.runtime == 'python':
       MigratePython27Notice()
-    if appyaml.pagespeed:
-      MigratePageSpeedNotice()
 
 
     if self.options.backends:
@@ -3956,20 +3898,6 @@ class AppCfgApp(object):
                                             dispatch_yaml,
                                             self.error_fh)
       dispatch_upload.DoUpload()
-
-
-    if appyaml:
-      pagespeed_upload = PagespeedEntryUpload(
-          rpcserver, appyaml, appyaml.pagespeed, self.error_fh)
-      try:
-        pagespeed_upload.DoUpload()
-      except urllib2.HTTPError, e:
-        ErrorUpdate('Error %d: --- begin server output ---\n'
-                    '%s\n--- end server output ---' %
-                    (e.code, e.read().rstrip('\n')))
-        print >> self.error_fh, (
-            'Your app was updated, but there was an error updating PageSpeed. '
-            'Please try the update again later.')
 
   def _UpdateOptions(self, parser):
     """Adds update-specific options to 'parser'.
