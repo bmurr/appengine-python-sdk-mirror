@@ -453,7 +453,7 @@ _SUPPORTED_LIBRARIES = [
         'http://mysql-python.sourceforge.net/',
         'A Python DB API v2.0 compatible interface to MySQL.',
         ['1.2.4b4', '1.2.4', '1.2.5'],
-        latest_version='1.2.4b4',
+        latest_version='1.2.5',
         experimental_versions=['1.2.4b4', '1.2.4', '1.2.5']
         ),
     _VersionedLibrary(
