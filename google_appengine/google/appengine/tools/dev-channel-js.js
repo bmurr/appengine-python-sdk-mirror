@@ -74,10 +74,12 @@ goog.globalize = function(obj, opt_global) {
     global[x] = obj[x];
   }
 };
-goog.addDependency = function(relPath, provides, requires, opt_isModule) {
+goog.addDependency = function(relPath, provides, requires, opt_loadFlags) {
   if (goog.DEPENDENCIES_ENABLED) {
-    for (var provide, require, path = relPath.replace(/\\/g, "/"), deps = goog.dependencies_, i = 0;provide = provides[i];i++) {
-      deps.nameToPath[provide] = path, deps.pathIsModule[path] = !!opt_isModule;
+    var provide, require, path = relPath.replace(/\\/g, "/"), deps = goog.dependencies_;
+    opt_loadFlags && "boolean" !== typeof opt_loadFlags || (opt_loadFlags = opt_loadFlags ? {module:"goog"} : {});
+    for (var i = 0;provide = provides[i];i++) {
+      deps.nameToPath[provide] = path, deps.pathIsModule[path] = "goog" == opt_loadFlags.module;
     }
     for (var j = 0;require = requires[j];j++) {
       path in deps.requires || (deps.requires[path] = {}), deps.requires[path][require] = !0;
@@ -759,7 +761,7 @@ goog.string.unescapeEntitiesUsingDom_ = function(str, opt_document) {
       return value;
     }
     if ("#" == entity.charAt(0)) {
-      var n = +("0" + entity.substr(1));
+      var n = Number("0" + entity.substr(1));
       isNaN(n) || (value = String.fromCharCode(n));
     }
     value || (div.innerHTML = s + " ", value = div.firstChild.nodeValue.slice(0, -1));
@@ -779,7 +781,7 @@ goog.string.unescapePureXmlEntities_ = function(str) {
         return '"';
       default:
         if ("#" == entity.charAt(0)) {
-          var n = +("0" + entity.substr(1));
+          var n = Number("0" + entity.substr(1));
           if (!isNaN(n)) {
             return String.fromCharCode(n);
           }
@@ -935,7 +937,7 @@ goog.string.createUniqueString = function() {
   return "goog_" + goog.string.uniqueStringCounter_++;
 };
 goog.string.toNumber = function(str) {
-  var num = +str;
+  var num = Number(str);
   return 0 == num && goog.string.isEmptyOrWhitespace(str) ? NaN : num;
 };
 goog.string.isLowerCamelCase = function(str) {
@@ -986,7 +988,7 @@ goog.string.editDistance = function(a, b) {
   for (i = 0;i < a.length;i++) {
     v1[0] = i + 1;
     for (var j = 0;j < b.length;j++) {
-      var cost = +(a[i] != b[j]);
+      var cost = Number(a[i] != b[j]);
       v1[j + 1] = Math.min(v1[j] + 1, v0[j + 1] + 1, v0[j] + cost);
     }
     for (j = 0;j < v0.length;j++) {
@@ -2231,6 +2233,12 @@ goog.html.TrustedResourceUrl.unwrap = function(trustedResourceUrl) {
 goog.html.TrustedResourceUrl.fromConstant = function(url) {
   return goog.html.TrustedResourceUrl.createTrustedResourceUrlSecurityPrivateDoNotAccessOrElse(goog.string.Const.unwrap(url));
 };
+goog.html.TrustedResourceUrl.fromConstants = function(parts) {
+  for (var unwrapped = "", i = 0;i < parts.length;i++) {
+    unwrapped += goog.string.Const.unwrap(parts[i]);
+  }
+  return goog.html.TrustedResourceUrl.createTrustedResourceUrlSecurityPrivateDoNotAccessOrElse(unwrapped);
+};
 goog.html.TrustedResourceUrl.TYPE_MARKER_GOOG_HTML_SECURITY_PRIVATE_ = {};
 goog.html.TrustedResourceUrl.createTrustedResourceUrlSecurityPrivateDoNotAccessOrElse = function(url) {
   var trustedResourceUrl = new goog.html.TrustedResourceUrl;
@@ -2597,7 +2605,7 @@ goog.math.Coordinate.prototype.round = function() {
   return this;
 };
 goog.math.Coordinate.prototype.translate = function(tx, opt_ty) {
-  tx instanceof goog.math.Coordinate ? (this.x += tx.x, this.y += tx.y) : (this.x += +tx, goog.isNumber(opt_ty) && (this.y += opt_ty));
+  tx instanceof goog.math.Coordinate ? (this.x += tx.x, this.y += tx.y) : (this.x += Number(tx), goog.isNumber(opt_ty) && (this.y += opt_ty));
   return this;
 };
 goog.math.Coordinate.prototype.scale = function(sx, opt_sy) {
@@ -2794,23 +2802,12 @@ goog.userAgent.X11 = goog.userAgent.PLATFORM_KNOWN_ ? goog.userAgent.ASSUME_X11 
 goog.userAgent.ANDROID = goog.userAgent.PLATFORM_KNOWN_ ? goog.userAgent.ASSUME_ANDROID : goog.labs.userAgent.platform.isAndroid();
 goog.userAgent.IPHONE = goog.userAgent.PLATFORM_KNOWN_ ? goog.userAgent.ASSUME_IPHONE : goog.labs.userAgent.platform.isIphone();
 goog.userAgent.IPAD = goog.userAgent.PLATFORM_KNOWN_ ? goog.userAgent.ASSUME_IPAD : goog.labs.userAgent.platform.isIpad();
-goog.userAgent.operaVersion_ = function() {
-  var version = goog.global.opera.version;
-  try {
-    return version();
-  } catch (e) {
-    return version;
-  }
-};
 goog.userAgent.determineVersion_ = function() {
-  if (goog.userAgent.OPERA && goog.global.opera) {
-    return goog.userAgent.operaVersion_();
-  }
   var version = "", arr = goog.userAgent.getVersionRegexResult_();
   arr && (version = arr ? arr[1] : "");
   if (goog.userAgent.IE) {
     var docMode = goog.userAgent.getDocumentMode_();
-    if (docMode > parseFloat(version)) {
+    if (null != docMode && docMode > parseFloat(version)) {
       return String(docMode);
     }
   }
@@ -2830,6 +2827,9 @@ goog.userAgent.getVersionRegexResult_ = function() {
   if (goog.userAgent.WEBKIT) {
     return /WebKit\/(\S+)/.exec(userAgent);
   }
+  if (goog.userAgent.OPERA) {
+    return /(?:Version)[ \/]?(\S+)/.exec(userAgent);
+  }
 };
 goog.userAgent.getDocumentMode_ = function() {
   var doc = goog.global.document;
@@ -2845,7 +2845,7 @@ goog.userAgent.isVersionOrHigher = function(version) {
 };
 goog.userAgent.isVersion = goog.userAgent.isVersionOrHigher;
 goog.userAgent.isDocumentModeOrHigher = function(documentMode) {
-  return +goog.userAgent.DOCUMENT_MODE >= documentMode;
+  return Number(goog.userAgent.DOCUMENT_MODE) >= documentMode;
 };
 goog.userAgent.isDocumentMode = goog.userAgent.isDocumentModeOrHigher;
 var JSCompiler_inline_result$$0;
@@ -3745,7 +3745,7 @@ goog.Disposable.instances_ = {};
 goog.Disposable.getUndisposedObjects = function() {
   var ret = [], id;
   for (id in goog.Disposable.instances_) {
-    goog.Disposable.instances_.hasOwnProperty(id) && ret.push(goog.Disposable.instances_[+id]);
+    goog.Disposable.instances_.hasOwnProperty(id) && ret.push(goog.Disposable.instances_[Number(id)]);
   }
   return ret;
 };
@@ -6584,7 +6584,7 @@ goog.Timer.callOnce = function(listener, opt_delay, opt_handler) {
       throw Error("Invalid listener argument");
     }
   }
-  return +opt_delay > goog.Timer.MAX_TIMEOUT_ ? goog.Timer.INVALID_TIMEOUT_ID_ : goog.Timer.defaultTimerObject.setTimeout(listener, opt_delay || 0);
+  return Number(opt_delay) > goog.Timer.MAX_TIMEOUT_ ? goog.Timer.INVALID_TIMEOUT_ID_ : goog.Timer.defaultTimerObject.setTimeout(listener, opt_delay || 0);
 };
 goog.Timer.clear = function(timerId) {
   goog.Timer.defaultTimerObject.clearTimeout(timerId);
@@ -6647,7 +6647,7 @@ goog.uri.utils.getDomain = function(uri) {
   return goog.uri.utils.decodeIfPossible_(goog.uri.utils.getDomainEncoded(uri), !0);
 };
 goog.uri.utils.getPort = function(uri) {
-  return +goog.uri.utils.getComponentByIndex_(goog.uri.utils.ComponentIndex.PORT, uri) || null;
+  return Number(goog.uri.utils.getComponentByIndex_(goog.uri.utils.ComponentIndex.PORT, uri)) || null;
 };
 goog.uri.utils.getPathEncoded = function(uri) {
   return goog.uri.utils.getComponentByIndex_(goog.uri.utils.ComponentIndex.PATH, uri);
@@ -7276,7 +7276,7 @@ goog.Uri.prototype.getPort = function() {
 goog.Uri.prototype.setPort = function(newPort) {
   this.enforceReadOnly();
   if (newPort) {
-    newPort = +newPort;
+    newPort = Number(newPort);
     if (isNaN(newPort) || 0 > newPort) {
       throw Error("Bad port number " + newPort);
     }
