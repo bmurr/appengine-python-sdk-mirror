@@ -2377,7 +2377,7 @@ class AppVersionUpload(object):
     start_time_usec = self.logging_context.GetCurrentTimeUsec()
     logging.info('Reading app configuration.')
 
-    StatusUpdate('\nStarting update of %s' % self.Describe(), self.error_fh)
+    StatusUpdate('Starting update of %s' % self.Describe(), self.error_fh)
 
 
     path = ''
@@ -3857,7 +3857,7 @@ class AppCfgApp(object):
                     (e.code, e.read().rstrip('\n')))
         print >> self.error_fh, (
             'Your app was updated, but there was an error updating your '
-            'indexes. Please retry later with appcfg.py update_indexes.')
+            'indexes.')
 
 
     if cron_yaml:
@@ -3870,7 +3870,7 @@ class AppCfgApp(object):
                     (e.code, e.read().rstrip('\n')))
         print >> self.error_fh, (
             'Your app was updated, but there was an error updating your '
-            'cron tasks. Please retry later with appcfg.py update_cron.')
+            'cron tasks.')
 
 
     if queue_yaml:
@@ -3883,7 +3883,7 @@ class AppCfgApp(object):
                     (e.code, e.read().rstrip('\n')))
         print >> self.error_fh, (
             'Your app was updated, but there was an error updating your '
-            'queues. Please retry later with appcfg.py update_queues.')
+            'queues.')
 
 
     if dos_yaml:
