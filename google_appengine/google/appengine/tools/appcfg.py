@@ -3685,8 +3685,6 @@ class AppCfgApp(object):
         ]
         if goroot:
           gab_argv.extend(['-goroot', goroot])
-        if appyaml.runtime == 'vm':
-          gab_argv.append('-vm')
         gab_argv.extend(go_files)
 
         env = {
