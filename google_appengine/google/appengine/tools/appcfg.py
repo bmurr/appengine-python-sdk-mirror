@@ -2697,7 +2697,7 @@ def GetUserAgent(get_version=sdk_update_checker.GetVersionObject,
   """
   product_tokens = []
 
-  product_tokens.append('Cloud SDK Command Line Tool')
+  product_tokens.append('google-cloud-sdk')
 
 
   sdk_name = os.environ.get('APPCFG_SDK_NAME')
@@ -3687,8 +3687,6 @@ class AppCfgApp(object):
         ]
         if goroot:
           gab_argv.extend(['-goroot', goroot])
-        if appyaml.runtime == 'vm':
-          gab_argv.append('-vm')
         gab_argv.extend(go_files)
 
         env = {
