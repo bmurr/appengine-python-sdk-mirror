@@ -1822,7 +1822,9 @@ class AppVersionUpload(object):
     self.rpcserver = rpcserver
     self.config = config
     self.app_id = self.config.application
-    self.module = self.config.module
+
+
+    self.module = self.config.module or self.config.service
     self.backend = backend
     self.error_fh = error_fh or sys.stderr
 
