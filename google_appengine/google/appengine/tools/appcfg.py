@@ -3161,6 +3161,11 @@ class AppCfgApp(object):
     parser.add_option('--no_ignore_endpoints_failures', action='store_false',
                       dest='ignore_endpoints_failures',
                       help=optparse.SUPPRESS_HELP)
+
+
+
+
+
     return parser
 
   def _MakeSpecificParser(self, action):
@@ -3235,6 +3240,11 @@ class AppCfgApp(object):
 
     oauth2_parameters = self._GetOAuth2Parameters()
 
+    extra_headers = {}
+
+
+
+
 
     return self.rpc_server_class(self.options.server, oauth2_parameters,
                                  GetUserAgent(), source,
@@ -3244,6 +3254,7 @@ class AppCfgApp(object):
                                  account_type='HOSTED_OR_GOOGLE',
                                  secure=self.options.secure,
                                  ignore_certs=self.options.ignore_certs,
+                                 extra_headers=extra_headers,
                                  options=self.options)
 
   def _MaybeGetDevshellOAuth2AccessToken(self):
@@ -3425,11 +3436,11 @@ class AppCfgApp(object):
         self.parser.error('Directory %r does not contain configuration file '
                           '%s.yaml' %
                           (os.path.abspath(basepath), basename))
-    else:
 
 
-      appyaml.module = appyaml.module or appyaml.service
-      appyaml.service = None
+
+    appyaml.module = appyaml.module or appyaml.service
+    appyaml.service = None
 
     orig_application = appyaml.application
     orig_module = appyaml.module
