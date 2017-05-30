@@ -16,6 +16,6 @@
 #
 """A simple mapping of go versions to goroot directories."""
 GOROOTS = {
-    'go1': 'goroot',
-    'go1.6': 'goroot',
+    'go1': 'goroot-1.6',
+    'go1.6': 'goroot-1.6',
 }
