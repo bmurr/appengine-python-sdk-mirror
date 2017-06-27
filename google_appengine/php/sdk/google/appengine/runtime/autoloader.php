@@ -299,8 +299,6 @@ if (!defined('GOOGLE_APPENGINE_CLASSLOADER')) {
         'google\appengine\createlogouturlresponse' => 'google/appengine/api/user_service_pb.php',
         'google\appengine\getoauthuserrequest' => 'google/appengine/api/user_service_pb.php',
         'google\appengine\getoauthuserresponse' => 'google/appengine/api/user_service_pb.php',
-        'google\appengine\checkoauthsignaturerequest' => 'google/appengine/api/user_service_pb.php',
-        'google\appengine\checkoauthsignatureresponse' => 'google/appengine/api/user_service_pb.php',
         'google\appengine\urlfetchserviceerror\errorcode' => 'google/appengine/api/urlfetch_service_pb.php',
         'google\appengine\urlfetchserviceerror' => 'google/appengine/api/urlfetch_service_pb.php',
         'google\appengine\urlfetchrequest\requestmethod' => 'google/appengine/api/urlfetch_service_pb.php',
