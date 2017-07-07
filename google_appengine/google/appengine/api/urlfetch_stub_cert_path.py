@@ -14,9 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""A simple mapping of go versions to goroot directories."""
-GOROOTS = {
-    'go1': 'goroot-1.6',
-    'go1.6': 'goroot-1.6',
-    'go1.8': 'goroot-1.8',
-}
+"""Provide the path to the cert file to use with the urlfetch_stub module."""
+
+
+import os
+
+
+
+CERT_PATH = os.path.join(
+    os.path.dirname(__file__), '..', '..', '..', 'lib', 'cacerts',
+    'urlfetch_cacerts.txt')
