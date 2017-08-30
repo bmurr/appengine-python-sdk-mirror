@@ -311,7 +311,7 @@ def enable_sandbox(config):
     _install_fake_file(config, python_lib_paths, path_override_hook)
     _install_open_hooks()
 
-  # NOTE(bryanmau): The sys.platform was a hack needed to solve
+  # NOTE(user): The sys.platform was a hack needed to solve
   # b/7482060.  After python version 2.7.4 this is no longer needed.
   def was_created_before(ver1, ver2):
     """Returns true if the integer tuple ver1 is less than the tuple ver2."""

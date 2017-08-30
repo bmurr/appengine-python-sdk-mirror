@@ -206,7 +206,7 @@ class Module(object):
     runtime = module_configuration.runtime
     if runtime == 'vm':
       runtime = module_configuration.effective_runtime
-      # NOTE(bryanmau): b/24139391
+      # NOTE(user): b/24139391
       # If in env: 2, users either use a compat runtime or custom.
       if util.is_env_flex(module_configuration.env):
         if runtime not in _ALLOWED_RUNTIMES_ENV_FLEX:
