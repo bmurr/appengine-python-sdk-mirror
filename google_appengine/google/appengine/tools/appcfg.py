@@ -2709,8 +2709,6 @@ def GetUserAgent(get_version=sdk_update_checker.GetVersionObject,
   """
   product_tokens = []
 
-  product_tokens.append('google-cloud-sdk')
-
 
   sdk_name = os.environ.get('APPCFG_SDK_NAME')
   if sdk_name:
