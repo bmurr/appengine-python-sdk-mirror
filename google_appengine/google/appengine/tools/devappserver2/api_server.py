@@ -174,6 +174,7 @@ def _execute_request(request, use_proto3=False):
     if request.request_id:
       request_id = request.request_id
     else:
+      # This logging could be time consuming. Hence set as debug level.
       logging.debug('Received a request without request_id: %s', request)
       request_id = None
   else:
@@ -243,10 +244,17 @@ def _execute_request(request, use_proto3=False):
 class APIServer(wsgi_server.WsgiServer):
   """Serves API calls over HTTP and GRPC(optional)."""
 
-  def __init__(self, host, port, app_id, use_grpc=False, grpc_api_port=0):
+  def __init__(self, host, port, app_id, use_grpc=False, grpc_api_port=0,
+               enable_host_checking=True):
     self._app_id = app_id
     self._host = host
-    super(APIServer, self).__init__((host, port), self)
+
+    if enable_host_checking:
+      api_server_module = wsgi_server.WsgiHostCheck([host], self)
+    else:
+      api_server_module = self
+    super(APIServer, self).__init__((host, port), api_server_module)
+
     self.set_balanced_address('localhost:8080')
 
     self._use_grpc = use_grpc
@@ -267,8 +275,8 @@ class APIServer(wsgi_server.WsgiServer):
           api_response = _execute_request(request, use_proto3=True)
           response.response = api_response.Encode()
         except apiproxy_errors.ApplicationError, e:
-          response.application_error = grpc_service_pb2.ApplicationError(
-              code=e.application_error, detail=e.error_detail)
+          response.application_error.code = e.application_error
+          response.application_error.detail = e.error_detail
         return response
 
     self._grpc_server = grpc_service_pb2.beta_create_CallHandler_server(
@@ -478,8 +486,8 @@ def create_api_server(
 
   user_login_url = '/%s?%s=%%s' % (
       login.LOGIN_URL_RELATIVE, login.CONTINUE_PARAM)
-  user_logout_url = '%s&%s=%s' % (
-      user_login_url, login.ACTION_PARAM, login.LOGOUT_ACTION)
+  user_logout_url = '/%s?%s=%%s' % (
+      login.LOGOUT_URL_RELATIVE, login.CONTINUE_PARAM)
 
   if options.datastore_consistency_policy == 'time':
     consistency = datastore_stub_util.TimeBasedHRConsistencyPolicy()
@@ -530,7 +538,7 @@ def create_api_server(
   return APIServer(
       options.api_host, options.api_port, app_id,
       options.api_server_supports_grpc or options.support_datastore_emulator,
-      options.grpc_api_port)
+      options.grpc_api_port, options.enable_host_checking)
 
 
 def _clear_datastore_storage(datastore_path):
@@ -908,7 +916,7 @@ def setup_test_stubs(
     taskqueue_auto_run_tasks=False,
     taskqueue_default_http_server='http://localhost:8080',
     user_login_url='/_ah/login?continue=%s',
-    user_logout_url='/_ah/login?continue=%s',
+    user_logout_url='/_ah/logout?continue=%s',
     default_gcs_bucket_name=None,
     appidentity_oauth_url=None):
   """Similar to setup_stubs with reasonable test defaults and recallable."""

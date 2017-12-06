@@ -445,6 +445,21 @@ def create_command_line_parser(configuration=None):
                             const=True,
                             default=False,
                             help=argparse.SUPPRESS)
+  enable_host_checking_help = ('determines whether to enforce HTTP Host '
+                               'checking for application modules, API server, '
+                               'and admin server. host checking protects '
+                               'against DNS rebinding attacks, so only disable '
+                               'after understanding the security implications.')
+
+
+
+
+
+  common_group.add_argument('--enable_host_checking',
+                            action=boolean_action.BooleanAction,
+                            const=True,
+                            default=True,
+                            help=enable_host_checking_help)
 
   # PHP
   php_group = parser.add_argument_group('PHP')
@@ -536,6 +551,13 @@ def create_command_line_parser(configuration=None):
       help='Enable watching $GOPATH for go app dependency changes. If file '
       'watcher complains about too many files to watch, you can set it to '
       'False.')
+  go_group.add_argument(
+      '--go_debugging',
+      restrict_configuration=[DEV_APPSERVER_CONFIGURATION],
+      action=boolean_action.BooleanAction,
+      const=True,
+      default=False,
+      help='Enable debugging. Connect to the running app with delve.')
 
   # Custom
   custom_group = parser.add_argument_group('Custom VM Runtime')

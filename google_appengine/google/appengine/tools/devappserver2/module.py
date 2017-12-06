@@ -236,9 +236,13 @@ class Module(object):
     """
     handlers = []
     # Add special URL handlers (taking precedence over user-defined handlers)
-    url_pattern = '/%s$' % login.LOGIN_URL_RELATIVE
-    handlers.append(wsgi_handler.WSGIHandler(login.application,
-                                             url_pattern))
+
+    # Login/logout handlers.
+    handlers.append(wsgi_handler.WSGIHandler(
+        login.application, '/%s$' % login.LOGIN_URL_RELATIVE))
+    handlers.append(wsgi_handler.WSGIHandler(
+        login.application, '/%s$' % login.LOGOUT_URL_RELATIVE))
+
     url_pattern = '/%s' % blob_upload.UPLOAD_URL_PATH
     # The blobstore upload handler forwards successful requests to the
     # dispatcher.
@@ -452,7 +456,8 @@ class Module(object):
                watcher_ignore_re,
                automatic_restarts,
                allow_skipped_files,
-               threadsafe_override):
+               threadsafe_override,
+               enable_host_checking=True):
     """Initializer for Module.
     Args:
       module_configuration: An application_configuration.ModuleConfiguration
@@ -511,7 +516,8 @@ class Module(object):
           directive.
       threadsafe_override: If not None, ignore the YAML file value of threadsafe
           and use this value instead.
-
+      enable_host_checking: A bool indicating that HTTP Host checking should
+          be enforced for incoming requests.
     Raises:
       errors.InvalidAppConfigError: For runtime: custom, either mistakenly set
         both --custom_entrypoint and --runtime or neither.
@@ -577,8 +583,14 @@ class Module(object):
       self._watcher = None
     self._handler_lock = threading.Lock()
     self._handlers = self._create_url_handlers()
+
+    if enable_host_checking:
+      wsgi_module = wsgi_server.WsgiHostCheck([self._host], self)
+    else:
+      wsgi_module = self
     self._balanced_module = wsgi_server.WsgiServer(
-        (self._host, self._balanced_port), self)
+        (self._host, self._balanced_port), wsgi_module)
+
     self._quit_event = threading.Event()  # Set when quit() has been called.
 
     # TODO: Remove after the Files API is really gone.
