@@ -42,8 +42,8 @@ from google.net.proto2.python.internal import type_checkers
 from google.net.proto2.python.public import descriptor
 from google.net.proto2.python.public import text_encoding
 
-__all__ = ['MessageToString', 'PrintMessage', 'PrintField', 'PrintFieldValue',
-           'Merge']
+__all__ = ['MessageToString', 'Parse', 'PrintMessage', 'PrintField',
+           'PrintFieldValue', 'Merge']
 
 _INTEGER_CHECKERS = (type_checkers.Uint32ValueChecker(),
                      type_checkers.Int32ValueChecker(),
@@ -1303,7 +1303,8 @@ class Tokenizer(object):
 
   def ParseError(self, message):
     """Creates and *returns* a ParseError for the current token."""
-    return ParseError(message, self._line + 1, self._column + 1)
+    return ParseError('\'' + self._current_line + '\': ' + message,
+                      self._line + 1, self._column + 1)
 
   def _StringParseError(self, e):
     return self.ParseError('Couldn\'t parse string: ' + str(e))
