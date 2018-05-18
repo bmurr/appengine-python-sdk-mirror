@@ -54,8 +54,12 @@ GeneratedProtocolMessageType = message_impl.GeneratedProtocolMessageType
 MESSAGE_CLASS_CACHE = {}
 
 
+
 def ParseMessage(descriptor, byte_str):
   """Generate a new Message instance from this Descriptor and a byte string.
+
+  DEPRECATED: ParseMessage is deprecated because it is using MakeClass().
+  Please use MessageFactory.GetPrototype() instead.
 
   Args:
     descriptor: Protobuf Descriptor object
@@ -70,8 +74,13 @@ def ParseMessage(descriptor, byte_str):
   return new_msg
 
 
+
 def MakeClass(descriptor):
   """Construct a class object for a protobuf described by descriptor.
+
+  DEPRECATED: use MessageFactory.GetPrototype() instead.
+  This function will lead to duplicate message classes, which won't play well
+  with extensions. Message factory info is also missing.
 
   Composite descriptors are handled by defining the new class as a member of the
   parent class, recursing as deep as necessary.

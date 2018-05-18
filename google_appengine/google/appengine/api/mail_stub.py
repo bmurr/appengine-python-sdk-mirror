@@ -30,6 +30,7 @@ send real email via SMTP or sendmail."""
 
 
 
+import collections
 from email import encoders
 import functools
 import logging
@@ -192,7 +193,7 @@ class MailServiceStub(apiproxy_stub.APIProxyStub):
     Returns:
       An instance of mail.EmailMessage.
     """
-    headers = {}
+    headers = collections.OrderedDict()
     for header in mail_message_proto.header_list():
       headers[header.name()] = header.value()
     if headers:

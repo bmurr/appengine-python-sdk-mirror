@@ -20,6 +20,8 @@ ValueMixin provides comparison (including equality) methods and hashing
 based on the values of fields.
 """
 
+from __future__ import unicode_literals
+
 
 class ValueMixin(object):
   def __cmp__(self, other):
@@ -35,7 +37,7 @@ class ValueMixin(object):
       return 1
 
   def __hash__(self):
-    return hash(frozenset(self.__dict__.items()))
+    return hash(frozenset(list(self.__dict__.items())))
 
   def __repr__(self):
 

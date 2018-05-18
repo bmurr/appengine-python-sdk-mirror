@@ -100,6 +100,7 @@ GOOGLE_ANALYTICS_DIMENSIONS = {
     'SupportDatastoreEmulator': 'cd10',
     'DatastoreDataType': 'cd11',
     'UseSsl': 'cd12',
+    'CmdArgs': 'cd13',
 }
 
 # Devappserver Google Analytics Custom Metrics.
@@ -131,13 +132,14 @@ class _MetricsLogger(object):
     self._support_datastore_emulator = None
     self._datastore_data_type = None
     self._use_ssl = False
+    self._cmd_args = None
 
     # Stores events for batch logging once Stop has been called.
     self._log_once_on_stop_events = {}
 
   def Start(self, client_id, user_agent=None, runtimes=None, environment=None,
             support_datastore_emulator=None, datastore_data_type=None,
-            use_ssl=False):
+            use_ssl=False, cmd_args=None):
     """Starts a Google Analytics session for the current client.
 
     Args:
@@ -150,6 +152,8 @@ class _MetricsLogger(object):
       datastore_data_type: A string representing the type of data for local
         datastore file.
       use_ssl: A boolean indicating whether SSL was enabled.
+      cmd_args: An argparse.Namespace object representing commandline arguments
+        passed to dev_appserver.
     """
     self._client_id = client_id
     self._user_agent = user_agent
@@ -159,6 +163,7 @@ class _MetricsLogger(object):
     self._support_datastore_emulator = support_datastore_emulator
     self._datastore_data_type = datastore_data_type
     self._use_ssl = use_ssl
+    self._cmd_args = json.dumps(vars(cmd_args)) if cmd_args else None
     self.Log(DEVAPPSERVER_CATEGORY, START_ACTION)
     self._start_time = Now()
 
@@ -285,6 +290,7 @@ class _MetricsLogger(object):
         GOOGLE_ANALYTICS_DIMENSIONS[
             'DatastoreDataType']: self._datastore_data_type,
         GOOGLE_ANALYTICS_DIMENSIONS['UseSsl']: self._use_ssl,
+        GOOGLE_ANALYTICS_DIMENSIONS['CmdArgs']: self._cmd_args,
         # Required event data
         'ec': category,
         'ea': action

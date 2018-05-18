@@ -907,7 +907,9 @@ class Module(object):
           if match:
             # Only check secure: if module was configured to run with SSL
             if self._ssl_port:
-              if (handler.url_map.secure == 'always' and
+              handler_secure = getattr(getattr(handler, '_url_map', None),
+                                       'secure', None)
+              if (handler_secure == 'always' and
                   environ['wsgi.url_scheme'] != 'https'):
                 # Since secure: was set to 'always', redirect to the https
                 # version of the url
@@ -918,7 +920,7 @@ class Module(object):
                                                   include_query_params=True,
                                                   port=self._ssl_port))])
                 return []
-              elif (handler.url_map.secure == 'never' and
+              elif (handler_secure == 'never' and
                     environ['wsgi.url_scheme'] != 'http'):
                 # Since secure: was set to 'never', redirect to the http version
                 # of the url, but without the query params

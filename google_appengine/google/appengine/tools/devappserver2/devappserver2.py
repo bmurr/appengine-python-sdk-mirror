@@ -160,7 +160,7 @@ class DevelopmentServer(object):
           {module.runtime for module in configuration.modules},
           {module.env or 'standard' for module in configuration.modules},
           options.support_datastore_emulator, datastore_data_type,
-          bool(ssl_certificate_paths))
+          bool(ssl_certificate_paths), options)
 
     self._dispatcher = dispatcher.Dispatcher(
         configuration, options.host, options.port, options.auth_domain,
