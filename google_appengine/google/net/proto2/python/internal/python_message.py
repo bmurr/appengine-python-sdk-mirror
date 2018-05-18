@@ -44,6 +44,7 @@ import sys
 import weakref
 
 from google.appengine._internal import six
+from google.appengine._internal.six.moves import range
 
 
 from google.net.proto2.python.internal import api_implementation
@@ -112,6 +113,21 @@ class GeneratedProtocolMessageType(type):
       Newly-allocated class.
     """
     descriptor = dictionary[GeneratedProtocolMessageType._DESCRIPTOR_KEY]
+
+
+
+
+
+
+
+
+
+
+
+    new_class = getattr(descriptor, '_concrete_class', None)
+    if new_class:
+      return new_class
+
     if descriptor.full_name in well_known_types.WKTBASES:
       bases += (well_known_types.WKTBASES[descriptor.full_name],)
     _AddClassAttributesForNestedExtensions(descriptor, dictionary)
@@ -139,6 +155,16 @@ class GeneratedProtocolMessageType(type):
         type.
     """
     descriptor = dictionary[GeneratedProtocolMessageType._DESCRIPTOR_KEY]
+
+
+
+    existing_class = getattr(descriptor, '_concrete_class', None)
+    if existing_class:
+      assert existing_class is cls, (
+          'Duplicate `GeneratedProtocolMessageType` created for descriptor %r'
+          % (descriptor.full_name))
+      return
+
     cls._decoders_by_tag = {}
     if (descriptor.has_options and
         descriptor.GetOptions().message_set_wire_format):
@@ -410,6 +436,9 @@ def _DefaultValueConstructorForField(field):
 
     message_type = field.message_type
     def MakeSubMessageDefault(message):
+      assert getattr(message_type, '_concrete_class', None), (
+          'Uninitialized concrete class found for field %r (message type %r)'
+          % (field.full_name, message_type.full_name))
       result = message_type._concrete_class()
       result._SetListener(
           _OneofListener(message, field)
@@ -1459,6 +1488,10 @@ class _ExtensionDict(object):
     if extension_handle.label == _FieldDescriptor.LABEL_REPEATED:
       result = extension_handle._default_constructor(self._extended_message)
     elif extension_handle.cpp_type == _FieldDescriptor.CPPTYPE_MESSAGE:
+      assert getattr(extension_handle.message_type, '_concrete_class', None), (
+          'Uninitialized concrete class found for field %r (message type %r)'
+          % (extension_handle.full_name,
+             extension_handle.message_type.full_name))
       result = extension_handle.message_type._concrete_class()
       try:
         result._SetListener(self._extended_message._listener_for_children)

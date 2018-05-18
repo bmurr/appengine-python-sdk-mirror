@@ -152,9 +152,6 @@ if _implementation_type == 'cpp':
 else:
   _python_proto3_preserve_unknowns_default = True
 
-  _python_proto3_preserve_unknowns_default = False
-
-
   def GetPythonProto3PreserveUnknownsDefault():
     return _python_proto3_preserve_unknowns_default
 

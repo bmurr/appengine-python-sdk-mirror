@@ -3410,11 +3410,13 @@ class Index(ProtocolBuffer.ProtocolMessage):
   VERSION_UNSPECIFIED =    0
   V1           =    1
   V2           =    2
+  V3           =    3
 
   _Version_NAMES = {
     0: "VERSION_UNSPECIFIED",
     1: "V1",
     2: "V2",
+    3: "V3",
   }
 
   def Version_Name(cls, x): return cls._Version_NAMES.get(x, "")
