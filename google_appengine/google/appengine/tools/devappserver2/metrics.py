@@ -71,6 +71,9 @@ _GOOGLE_ANALYTICS_EVENT_TYPE = 'event'
 # Devappserver Google Analytics Event Categories
 API_STUB_USAGE_CATEGORY = 'api_stub_usage'
 DEVAPPSERVER_CATEGORY = 'devappserver'
+ADMIN_CONSOLE_CATEGORY = 'admin-console'
+DEVAPPSERVER_SERVICE_CATEGORY = 'devappserver-service'
+API_SERVER_CATEGORY = 'apiserver'
 
 # Devappserver Google Analytics Event Actions
 API_STUB_USAGE_ACTION_TEMPLATE = 'use-%s'
@@ -101,6 +104,8 @@ GOOGLE_ANALYTICS_DIMENSIONS = {
     'DatastoreDataType': 'cd11',
     'UseSsl': 'cd12',
     'CmdArgs': 'cd13',
+    'MultiModule': 'cd14',
+    'DispatchConfig': 'cd15',
 }
 
 # Devappserver Google Analytics Custom Metrics.
@@ -133,13 +138,17 @@ class _MetricsLogger(object):
     self._datastore_data_type = None
     self._use_ssl = False
     self._cmd_args = None
+    self._multi_module = None
+    self._dispatch_config = None
+    self._category = None
 
     # Stores events for batch logging once Stop has been called.
     self._log_once_on_stop_events = {}
 
   def Start(self, client_id, user_agent=None, runtimes=None, environment=None,
             support_datastore_emulator=None, datastore_data_type=None,
-            use_ssl=False, cmd_args=None):
+            use_ssl=False, cmd_args=None, multi_module=None,
+            dispatch_config=None, category=DEVAPPSERVER_CATEGORY):
     """Starts a Google Analytics session for the current client.
 
     Args:
@@ -154,6 +163,9 @@ class _MetricsLogger(object):
       use_ssl: A boolean indicating whether SSL was enabled.
       cmd_args: An argparse.Namespace object representing commandline arguments
         passed to dev_appserver.
+      multi_module: True if we have more than one module
+      dispatch_config: True if we're using dispatch.yaml
+      category: A string representing Google Analytics Event Categories.
     """
     self._client_id = client_id
     self._user_agent = user_agent
@@ -164,6 +176,9 @@ class _MetricsLogger(object):
     self._datastore_data_type = datastore_data_type
     self._use_ssl = use_ssl
     self._cmd_args = json.dumps(vars(cmd_args)) if cmd_args else None
+    self._multi_module = multi_module
+    self._dispatch_config = dispatch_config
+    self._category = category
     self.Log(DEVAPPSERVER_CATEGORY, START_ACTION)
     self._start_time = Now()
 
@@ -180,7 +195,7 @@ class _MetricsLogger(object):
     if self._start_time:
       total_run_time = int((Now() - self._start_time).total_seconds())
       self.LogOnceOnStop(
-          DEVAPPSERVER_CATEGORY, STOP_ACTION, value=total_run_time, **kwargs)
+          self._category, STOP_ACTION, value=total_run_time, **kwargs)
       self.LogBatch(self._log_once_on_stop_events.itervalues())
 
   def Log(self, category, action, label=None, value=None, **kwargs):
@@ -291,6 +306,8 @@ class _MetricsLogger(object):
             'DatastoreDataType']: self._datastore_data_type,
         GOOGLE_ANALYTICS_DIMENSIONS['UseSsl']: self._use_ssl,
         GOOGLE_ANALYTICS_DIMENSIONS['CmdArgs']: self._cmd_args,
+        GOOGLE_ANALYTICS_DIMENSIONS['MultiModule']: self._multi_module,
+        GOOGLE_ANALYTICS_DIMENSIONS['DispatchConfig']: self._dispatch_config,
         # Required event data
         'ec': category,
         'ea': action
