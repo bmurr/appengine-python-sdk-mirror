@@ -72,7 +72,7 @@ class ServicePortParser(PortParser):
     res = {}
     for service_port_str in value.split(','):
       service_port = service_port_str.split(':')
-      if len(service_port) is not 2:
+      if len(service_port) != 2:
         raise argparse.ArgumentTypeError(
             ' %s is not in the format of service-name:port,service-name:port'
             % value)
@@ -696,6 +696,12 @@ def create_command_line_parser(configuration=None):
       const=True,
       default=False,
       help='Support datastore local emulation with Cloud Datastore emulator.')
+  # Port number on which dev_appserver should launch Cloud Datastore emulator.
+  datastore_group.add_argument(
+      '--running_datastore_emulator_host', default=None,
+      help='Overrides the environment variable DATASTORE_EMULATOR_HOST, which'
+      ' means the hostname:port of a running Cloud Datastore emulator that'
+      ' dev_appserver can connect to.')
   # Port number on which dev_appserver should launch Cloud Datastore emulator.
   datastore_group.add_argument(
       '--datastore_emulator_port', type=PortParser(), default=0,

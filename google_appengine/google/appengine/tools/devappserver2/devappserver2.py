@@ -62,6 +62,10 @@ class PhpPathError(Exception):
   """
 
 
+class DevAppserverPathError(Exception):
+  """Raised when dev_appserver is not invoked from the right directory."""
+
+
 class DevelopmentServer(object):
   """Encapsulates the logic for the development server.
 
@@ -88,6 +92,36 @@ class DevelopmentServer(object):
         self._dispatcher.get_default_version(module_name),
         instance)
 
+  @property
+  def _is_inside_cloud_sdk(self):
+    return bool(self._options.datastore_emulator_cmd)
+
+  def _check_datastore_emulator_support(self):
+    """Flag checks for migrating to the Cloud Datastore Emulator."""
+    # When using Cloud Datastore Emulator, the flag datastore_emulator_cmd
+    # must be passed from the cloud sdk dev_appserver.py wrapper located in
+    # google-cloud-sdk/bin.
+    if (self._options.support_datastore_emulator
+        and not self._is_inside_cloud_sdk):
+      raise DevAppserverPathError(
+          'Dev_appserver is not invoked from the right directory! Please '
+          'make sure to install Google Cloud sdk and invoke dev_appserver '
+          'from google-cloud-sdk/bin/dev_appserver.py')
+    # TODO: Once switched to opt-out, remove following message.
+    if (not self._options.support_datastore_emulator
+        and self._is_inside_cloud_sdk):
+      logging.warning(
+          '*** Notice ***\nIn a few weeks dev_appserver will default to using '
+          'the Cloud Datastore Emulator. We strongly recommend you to enable '
+          'this change earlier.\n'
+          'To opt-in, run dev_appserver with the flag '
+          '--support_datastore_emulator=True\n'
+          'Read the documentation: '
+          'https://cloud.google.com/appengine/docs/standard/python/tools/migrate-cloud-datastore-emulator\n'  # pylint: disable=line-too-long
+          'Help us validate that the feature is ready by taking this survey: https://goo.gl/forms/UArIcs8K9CUSCm733\n'  # pylint: disable=line-too-long
+          'Report issues at: '
+          'https://issuetracker.google.com/issues/new?component=187272\n')
+
   def start(self, options):
     """Start devappserver2 servers based on the provided command line arguments.
 
@@ -96,8 +130,12 @@ class DevelopmentServer(object):
 
     Raises:
       PhpPathError: php executable path is not specified for php72.
+      DevAppserverPathError: dev_appserver.py is not invoked from the right
+        directory.
     """
     self._options = options
+
+    self._check_datastore_emulator_support()
 
     logging.getLogger().setLevel(
         constants.LOG_LEVEL_TO_PYTHON_CONSTANT[options.dev_appserver_log_level])
@@ -160,7 +198,10 @@ class DevelopmentServer(object):
           {module.runtime for module in configuration.modules},
           {module.env or 'standard' for module in configuration.modules},
           options.support_datastore_emulator, datastore_data_type,
-          bool(ssl_certificate_paths), options)
+          bool(ssl_certificate_paths), options,
+          multi_module=len(configuration.modules) > 1,
+          dispatch_config=configuration.dispatch is not None,
+      )
 
     self._dispatcher = dispatcher.Dispatcher(
         configuration, options.host, options.port, options.auth_domain,

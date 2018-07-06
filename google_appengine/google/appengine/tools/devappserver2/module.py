@@ -83,7 +83,10 @@ _RESTART_INSTANCES_CONFIG_CHANGES = frozenset(
      # appearing in static content handlers make them unavailable to the
      # runtime.
      application_configuration.HANDLERS_CHANGED,
-     application_configuration.ENV_VARIABLES_CHANGED])
+     application_configuration.ENV_VARIABLES_CHANGED,
+     application_configuration.ENTRYPOINT_ADDED,
+     application_configuration.ENTRYPOINT_CHANGED,
+     application_configuration.ENTRYPOINT_REMOVED])
 
 _REQUEST_LOGGING_BLACKLIST_RE = re.compile(
     r'^/_ah/(?:channel/(?:dev|jsapi)|img|login|upload)')
@@ -227,6 +230,10 @@ class Module(object):
         runtime_config_getter=self._get_runtime_config,
         module_configuration=module_configuration)
 
+  def _is_modern(self):
+    return (
+        self._module_configuration.runtime in runtime_factories.MODERN_RUNTIMES)
+
   def _create_url_handlers(self):
     """Constructs URLHandlers based on the module configuration.
 
@@ -262,22 +269,34 @@ class Module(object):
     handlers.append(
         wsgi_handler.WSGIHandler(gcs_server.Application(), url_pattern))
 
-    # Add a handler for Endpoints, only if version == 1.0
+    # Add a handler for Endpoints, only if version == 1.0 and /_ah/spi handler
+    # is configured.
     runtime_config = self._get_runtime_config()
     for library in runtime_config.libraries:
       if library.name == 'endpoints' and library.version == '1.0':
-        url_pattern = '/%s' % endpoints.API_SERVING_PATTERN
-        handlers.append(
-            wsgi_handler.WSGIHandler(
-                endpoints.EndpointsDispatcher(self._dispatcher), url_pattern))
+        if [url_map for url_map in self._module_configuration.handlers
+            if url_map.url.startswith('/_ah/spi/')]:
+          url_pattern = '/%s' % endpoints.API_SERVING_PATTERN
+          handlers.append(
+              wsgi_handler.WSGIHandler(
+                  endpoints.EndpointsDispatcher(self._dispatcher),
+                  url_pattern))
 
     found_start_handler = False
     found_warmup_handler = False
+
+    if self._is_modern():
+      # Modern runtimes use default handler to route to user defined entrypoint.
+      default_handler = _ScriptHandler(appinfo.URLMap(url='/.*'))
+      handlers.append(default_handler)
+
     # Add user-defined URL handlers
     for url_map in self._module_configuration.handlers:
       handler_type = url_map.GetHandlerType()
       if handler_type == appinfo.HANDLER_SCRIPT:
-        handlers.append(_ScriptHandler(url_map))
+        if not self._is_modern():
+          # Handle script only for traditional runtimes.
+          handlers.append(_ScriptHandler(url_map))
         if not found_start_handler and re.match('%s$' % url_map.url,
                                                 '/_ah/start'):
           found_start_handler = True
@@ -376,7 +395,8 @@ class Module(object):
 
     return runtime_config
 
-  def _maybe_restart_instances(self, config_changed, file_changed):
+  def _maybe_restart_instances(self, config_changed, file_changed,
+                               modern_runtime_dep_libs_changed=False):
     """Restarts instances. May avoid some restarts depending on policy.
 
     If neither config_changed or file_changed is True, returns immediately.
@@ -384,17 +404,21 @@ class Module(object):
     Args:
       config_changed: True if the configuration for the application has changed.
       file_changed: True if any file relevant to the application has changed.
+      modern_runtime_dep_libs_changed: True if dependency libraries of a modern
+        runtime(eg: python3) changed.
     """
     policy = self._instance_factory.FILE_CHANGE_INSTANCE_RESTART_POLICY
     assert policy is not None, 'FILE_CHANGE_INSTANCE_RESTART_POLICY not set'
-    if policy == instance.NEVER or (not config_changed and not file_changed):
+    if policy == instance.NEVER or (
+        not config_changed and not file_changed
+        and not modern_runtime_dep_libs_changed):
       return
 
     logging.debug('Restarting instances.')
     with self._condition:
       instances_to_quit = set()
       for inst in self._instances:
-        if (config_changed or
+        if (config_changed or modern_runtime_dep_libs_changed or
             (policy == instance.ALWAYS) or
             (policy == instance.AFTER_FIRST_REQUEST and inst.total_requests)):
           instances_to_quit.add(inst)
@@ -422,12 +446,20 @@ class Module(object):
       with self._handler_lock:
         self._handlers = handlers
 
+    # For python3, changes to requirements.txt should trigger instance factory
+    # reload
+    dep_libs_changed = None
+    if hasattr(self._instance_factory, 'dependency_libraries_changed'):
+      dep_libs_changed = (
+          self._instance_factory.dependency_libraries_changed(file_changes))
+
     if config_changes & _RESTART_INSTANCES_CONFIG_CHANGES:
       self._instance_factory.configuration_changed(config_changes)
 
     self._maybe_restart_instances(
         config_changed=bool(config_changes & _RESTART_INSTANCES_CONFIG_CHANGES),
-        file_changed=bool(file_changes))
+        file_changed=bool(file_changes),
+        modern_runtime_dep_libs_changed=dep_libs_changed)
 
   def __init__(
       self,
@@ -1120,12 +1152,12 @@ class Module(object):
     raise request_info.NotSupportedWithAutoScalingError()
 
   def report_start_metrics(self):
-    metrics.GetMetricsLogger().Log('devappserver-service',
+    metrics.GetMetricsLogger().Log(metrics.DEVAPPSERVER_SERVICE_CATEGORY,
                                    'ServiceStart',
                                    label=type(self).__name__)
 
   def report_quit_metrics(self, instance_count):
-    metrics.GetMetricsLogger().Log('devappserver-service',
+    metrics.GetMetricsLogger().Log(metrics.DEVAPPSERVER_SERVICE_CATEGORY,
                                    'ServiceQuit',
                                    label=type(self).__name__,
                                    value=instance_count)
