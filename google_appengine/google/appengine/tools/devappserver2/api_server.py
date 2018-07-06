@@ -570,6 +570,10 @@ def create_api_server(
       raise DatastoreFileError(
           'The datastore file %s cannot be recognized by dev_appserver. Please '
           'restart dev_appserver with --clear_datastore=1' % datastore_path)
+    # The flag should override environment variable regarding emulator host.
+    if options.running_datastore_emulator_host:
+      os.environ['DATASTORE_EMULATOR_HOST'] = (
+          options.running_datastore_emulator_host)
     env_emulator_host = os.environ.get('DATASTORE_EMULATOR_HOST')
     if env_emulator_host:  # emulator already running, reuse it.
       logging.warning(
@@ -774,6 +778,13 @@ def main():
   request_info = wsgi_request_info.WSGIRequestInfo(dispatcher)
   # pylint: enable=protected-access
 
+  metrics_logger = metrics.GetMetricsLogger()
+  metrics_logger.Start(
+      options.google_analytics_client_id,
+      user_agent=options.google_analytics_user_agent,
+      support_datastore_emulator=options.support_datastore_emulator,
+      category=metrics.API_SERVER_CATEGORY)
+
   server = create_api_server(
       request_info=request_info,
       storage_path=get_storage_path(options.storage_path, app_id),
@@ -783,6 +794,7 @@ def main():
     server.start()
     shutdown.wait_until_shutdown()
   finally:
+    metrics.GetMetricsLogger().Stop()
     server.quit()
 
 

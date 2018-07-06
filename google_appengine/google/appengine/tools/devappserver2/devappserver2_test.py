@@ -18,6 +18,7 @@
 
 
 
+import argparse
 import unittest
 
 from google.appengine.tools.devappserver2 import devappserver2
@@ -70,6 +71,19 @@ class CreateModuleToSettingTest(unittest.TestCase):
         devappserver2.DevelopmentServer._create_module_to_setting(
             {'m1': 3.5, 'm4': 2.7}, self.application_configuration, '--option'))
 
+
+class DevelopmentServerStartTest(unittest.TestCase):
+
+  def test_fail_wrong_invoke_directory(self):
+    options = argparse.Namespace()
+    # Following flags simulate the scenario of invoking dev_appserver.py from
+    # google-cloud-sdk/platform/google_appengine
+    options.support_datastore_emulator = True
+    options.datastore_emulator_cmd = None
+    with self.assertRaises(devappserver2.DevAppserverPathError) as ctx:
+      devappserver2.DevelopmentServer().start(options)
+    self.assertIn('google-cloud-sdk/bin/dev_appserver.py',
+                  ctx.exception.message)
 
 if __name__ == '__main__':
   unittest.main()

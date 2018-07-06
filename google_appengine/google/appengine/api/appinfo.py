@@ -352,6 +352,7 @@ CONFIG_ID = 'config_id'
 ROLLOUT_STRATEGY = 'rollout_strategy'
 ROLLOUT_STRATEGY_FIXED = 'fixed'
 ROLLOUT_STRATEGY_MANAGED = 'managed'
+TRACE_SAMPLING = 'trace_sampling'
 
 
 ERROR_CODE = 'error_code'
@@ -793,7 +794,7 @@ _MAX_HEADER_SIZE_FOR_EXEMPTED_HEADERS = 10240
 
 _CANNED_RUNTIMES = ('contrib-dart', 'dart', 'go', 'php', 'php55', 'php7',
                     'python', 'python27', 'python-compat', 'java', 'java7',
-                    'vm', 'custom', 'nodejs', 'ruby')
+                    'java8', 'vm', 'custom', 'nodejs', 'ruby')
 _all_runtimes = _CANNED_RUNTIMES
 
 
@@ -1676,6 +1677,8 @@ class EndpointsApiService(validation.Validated):
                                  ROLLOUT_STRATEGY_MANAGED)),
       CONFIG_ID:
           validation.Optional(_NON_WHITE_SPACE_REGEX),
+      TRACE_SAMPLING:
+          validation.Optional(validation.TYPE_BOOL),
   }
 
   def CheckInitialized(self):

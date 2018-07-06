@@ -49,8 +49,8 @@ _INTEGER_CHECKERS = (type_checkers.Uint32ValueChecker(),
                      type_checkers.Int32ValueChecker(),
                      type_checkers.Uint64ValueChecker(),
                      type_checkers.Int64ValueChecker())
-_FLOAT_INFINITY = re.compile('-?inf(?:inity)?f?', re.IGNORECASE)
-_FLOAT_NAN = re.compile('nanf?', re.IGNORECASE)
+_FLOAT_INFINITY = re.compile('-?inf(?:inity)?f?$', re.IGNORECASE)
+_FLOAT_NAN = re.compile('nanf?$', re.IGNORECASE)
 _FLOAT_TYPES = frozenset([descriptor.FieldDescriptor.CPPTYPE_FLOAT,
                           descriptor.FieldDescriptor.CPPTYPE_DOUBLE])
 _QUOTES = frozenset(("'", '"'))
@@ -557,6 +557,9 @@ def MergeLines(lines,
                descriptor_pool=None):
   """Parses a text representation of a protocol message into a message.
 
+  Like ParseLines(), but allows repeated values for a non-repeated field, and
+  uses the last one.
+
   Args:
     lines: An iterable of lines of a message's text representation.
     message: A protocol buffer message to merge into.
@@ -1006,7 +1009,9 @@ class Tokenizer(object):
       r'[a-zA-Z_][0-9a-zA-Z_+-]*',
       r'([0-9+-]|(\.[0-9]))[0-9a-zA-Z_.+-]*',
   ] + [
-      r'{qt}([^{qt}\n\\]|\\.)*({qt}|\\?$)'.format(qt=mark) for mark in _QUOTES
+
+      r'{qt}[^{qt}\n\\]*((\\.)+[^{qt}\n\\]*)*({qt}|\\?$)'.format(qt=mark)
+      for mark in _QUOTES
   ]))
 
   _IDENTIFIER = re.compile(r'[^\d\W]\w*')
