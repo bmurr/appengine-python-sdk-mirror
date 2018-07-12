@@ -236,10 +236,15 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
     }
 
   def _GetRuntimeEnvironmentVariables(self, instance_id=None):
-    res = dict(os.environ, PYTHONHASHSEED='random')
     if self._is_modern():
-      res.update(self.venv_env_vars)
+      res = {'PYTHONHASHSEED': 'random'}
       res.update(self.get_modern_env_vars(instance_id))
+      res.update(self.venv_env_vars)
+    else:
+      # TODO: Do not pass os.environ to local python27 runtime.
+      res = dict(os.environ, PYTHONHASHSEED='random')
+    for kv in self._runtime_config_getter().environ:
+      res[kv.key] = kv.value
     return res
 
   def _get_process_flavor(self):
