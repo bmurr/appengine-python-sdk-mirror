@@ -710,8 +710,11 @@ def create_command_line_parser(configuration=None):
   # The path to an executable shell script that invokes Cloud Datastore
   # emulator.
   datastore_group.add_argument(
-      '--datastore_emulator_cmd', type=parse_path, default=None,
-      help=argparse.SUPPRESS)
+      '--datastore_emulator_cmd', type=parse_path,
+      default=None,
+      help='The path to a script that invokes cloud datastore emulator. If '
+      'left empty, dev_appserver will try to find datastore emulator in the '
+      'Google Cloud SDK.')
   datastore_group.add_argument(
       '--datastore_emulator_is_test_mode',
       action=boolean_action.BooleanAction,

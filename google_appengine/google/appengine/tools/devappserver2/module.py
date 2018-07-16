@@ -285,11 +285,6 @@ class Module(object):
     found_start_handler = False
     found_warmup_handler = False
 
-    if self._is_modern():
-      # Modern runtimes use default handler to route to user defined entrypoint.
-      default_handler = _ScriptHandler(appinfo.URLMap(url='/.*'))
-      handlers.append(default_handler)
-
     # Add user-defined URL handlers
     for url_map in self._module_configuration.handlers:
       handler_type = url_map.GetHandlerType()
@@ -325,6 +320,13 @@ class Module(object):
     if (not found_warmup_handler and
         'warmup' in (self._module_configuration.inbound_services or [])):
       handlers.insert(0, _ScriptHandler(self._instance_factory.WARMUP_URL_MAP))
+
+    if self._is_modern():
+      # Modern runtimes use default handler to route to user defined entrypoint.
+      # This handler should be checked after all other handlers.
+      default_handler = _ScriptHandler(appinfo.URLMap(url='/.*'))
+      handlers.append(default_handler)
+
     return handlers
 
   def _get_runtime_config(self):

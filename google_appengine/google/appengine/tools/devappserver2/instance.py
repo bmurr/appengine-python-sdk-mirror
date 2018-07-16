@@ -574,11 +574,14 @@ class ModernInstanceFactoryMixin(object):
         'GAE_VERSION': (
             self._module_configuration.major_version or instance_start_time),
         'GOOGLE_CLOUD_PROJECT': self._get_google_cloud_project(),
-        'LC_CTYPE': 'C.UTF-8'
-    }
+        'LC_CTYPE': 'C.UTF-8',
 
-    # $HOME and $PWD will just be passed down from the shell executing
-    # dev_appsever.
+        # $HOME, $PWD and $PATH should just be same as in the shell executing
+        # dev_appsever.
+        'HOME': os.environ.get('HOME', ''),
+        'PWD': os.environ.get('PWD', ''),
+        'PATH': os.environ.get('PATH', '')
+    }
 
     # User configured env vars.
     for env_var in self._runtime_config_getter().environ:
