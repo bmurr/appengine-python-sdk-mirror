@@ -21,6 +21,7 @@
 
 import BaseHTTPServer
 import os
+import platform
 import socket
 import urllib
 import wsgiref.headers
@@ -147,3 +148,8 @@ def setup_environ(app_id):
   # runtime processes via app.yaml or the --env_var flag.
   if _DATASTORE_PROJECT_ID_ENV in os.environ:
     del os.environ[_DATASTORE_PROJECT_ID_ENV]
+
+
+def is_windows():
+  """Returns a boolean indicating whether dev_appserver is on windows."""
+  return platform.system().lower() == 'windows'

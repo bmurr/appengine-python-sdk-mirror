@@ -62,8 +62,8 @@ class PhpPathError(Exception):
   """
 
 
-class DevAppserverPathError(Exception):
-  """Raised when dev_appserver is not invoked from the right directory."""
+class MissingDatastoreEmulatorError(Exception):
+  """Raised when Datastore Emulator cannot be found."""
 
 
 class DevelopmentServer(object):
@@ -93,23 +93,33 @@ class DevelopmentServer(object):
         instance)
 
   @property
-  def _is_inside_cloud_sdk(self):
-    return bool(self._options.datastore_emulator_cmd)
+  def _can_find_datastore_emulator(self):
+    return (self._options.datastore_emulator_cmd is not None
+            and os.path.exists(self._options.datastore_emulator_cmd))
+
+  def _correct_datastore_emulator_cmd(self, value):
+    """Returns the path to cloud datastore emulator invocation script."""
+    if value:
+      return value
+    # __file__ returns <cloud-sdk>/platform/google_appengine/dev_appserver.py
+    res = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    emulator_script = (
+        'cloud_datastore_emulator.cmd' if sys.platform.startswith('win')
+        else 'cloud_datastore_emulator')
+
+    return os.path.join(res, 'cloud-datastore-emulator', emulator_script)
 
   def _check_datastore_emulator_support(self):
     """Flag checks for migrating to the Cloud Datastore Emulator."""
-    # When using Cloud Datastore Emulator, the flag datastore_emulator_cmd
-    # must be passed from the cloud sdk dev_appserver.py wrapper located in
-    # google-cloud-sdk/bin.
     if (self._options.support_datastore_emulator
-        and not self._is_inside_cloud_sdk):
-      raise DevAppserverPathError(
-          'Dev_appserver is not invoked from the right directory! Please '
-          'make sure to install Google Cloud sdk and invoke dev_appserver '
-          'from google-cloud-sdk/bin/dev_appserver.py')
+        and not self._can_find_datastore_emulator):
+      raise MissingDatastoreEmulatorError(
+          'Cannot find Cloud Datastore Emulator. Please make sure that you are '
+          'using the Google Cloud SDK and have installed the Cloud Datastore '
+          'Emulator.')
     # TODO: Once switched to opt-out, remove following message.
     if (not self._options.support_datastore_emulator
-        and self._is_inside_cloud_sdk):
+        and self._can_find_datastore_emulator):
       logging.warning(
           '*** Notice ***\nIn a few weeks dev_appserver will default to using '
           'the Cloud Datastore Emulator. We strongly recommend you to enable '
@@ -122,6 +132,12 @@ class DevelopmentServer(object):
           'Report issues at: '
           'https://issuetracker.google.com/issues/new?component=187272\n')
 
+  @classmethod
+  def _check_platform_support(cls, all_module_runtimes):
+    if (any(runtime.startswith('python3') for runtime in all_module_runtimes)
+        and util.is_windows()):
+      raise OSError('Dev_appserver does not support python3 apps on Windows.')
+
   def start(self, options):
     """Start devappserver2 servers based on the provided command line arguments.
 
@@ -130,11 +146,13 @@ class DevelopmentServer(object):
 
     Raises:
       PhpPathError: php executable path is not specified for php72.
-      DevAppserverPathError: dev_appserver.py is not invoked from the right
+      MissingDatastoreEmulatorError: dev_appserver.py is not invoked from the right
         directory.
     """
     self._options = options
 
+    self._options.datastore_emulator_cmd = self._correct_datastore_emulator_cmd(
+        self._options.datastore_emulator_cmd)
     self._check_datastore_emulator_support()
 
     logging.getLogger().setLevel(
@@ -146,6 +164,8 @@ class DevelopmentServer(object):
         app_id=options.app_id,
         runtime=options.runtime,
         env_variables=parsed_env_variables)
+    all_module_runtimes = {module.runtime for module in configuration.modules}
+    self._check_platform_support(all_module_runtimes)
 
     storage_path = api_server.get_storage_path(
         options.storage_path, configuration.app_id)
@@ -195,7 +215,7 @@ class DevelopmentServer(object):
       metrics_logger.Start(
           options.google_analytics_client_id,
           options.google_analytics_user_agent,
-          {module.runtime for module in configuration.modules},
+          all_module_runtimes,
           {module.env or 'standard' for module in configuration.modules},
           options.support_datastore_emulator, datastore_data_type,
           bool(ssl_certificate_paths), options,

@@ -331,6 +331,10 @@ class APIServer(wsgi_server.WsgiServer):
               apiproxy_stub.REQ_SIZE_EXCEEDS_LIMIT_MSG_TEMPLATE % (
                   service, request.method()))
         response = service_stub.MakeSyncCallForRemoteApi(request)
+        metrics.GetMetricsLogger().LogOnceOnStop(
+            metrics.API_STUB_USAGE_CATEGORY,
+            metrics.API_STUB_USAGE_ACTION_TEMPLATE
+            % 'datastore_v3_with_cloud_datastore_emulator')
       else:
         if request.has_request_id():
           request_id = request.request_id()
