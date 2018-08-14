@@ -43,6 +43,7 @@ MODERN_RUNTIMES = set(['python37'])
 
 FACTORIES = {
     'go': go_factory.GoRuntimeInstanceFactory,
+    'go111': go_factory.GoRuntimeInstanceFactory,
 
 
 

@@ -48,6 +48,7 @@ from google.appengine.tools.devappserver2 import util
 from google.appengine.tools.devappserver2 import wsgi_server
 from google.appengine.tools.devappserver2.custom import instance_factory as custom_factory
 from google.appengine.tools.devappserver2.go import application as go_application
+from google.appengine.tools.devappserver2.go import gaego as gaego_application
 from google.appengine.tools.devappserver2.go import instance_factory as go_factory
 from google.appengine.tools.devappserver2.java import instance_factory as java_factory
 from google.appengine.tools.devappserver2.python import instance_factory as python_factory
@@ -2865,6 +2866,12 @@ class InstanceFactoryTest(googletest.TestCase):
     go_application.GoApplication(
         mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
     self._run_test('go', go_factory.GoRuntimeInstanceFactory)
+
+  def test_gaego(self):
+    self.mox.StubOutWithMock(gaego_application, 'GaeGoApplication')
+    gaego_application.GaeGoApplication(
+        mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
+    self._run_test('go111', go_factory.GoRuntimeInstanceFactory)
 
   def test_non_vm_java(self):
     self.mox.StubOutWithMock(

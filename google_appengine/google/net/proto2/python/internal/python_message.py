@@ -1143,7 +1143,6 @@ def _AddMergeFromStringMethod(message_descriptor, cls):
   local_ReadTag = decoder.ReadTag
   local_SkipField = decoder.SkipField
   decoders_by_tag = cls._decoders_by_tag
-  is_proto3 = message_descriptor.syntax == "proto3"
 
   def InternalParse(self, buffer, pos, end):
     """Create a message from serialized bytes.
@@ -1171,12 +1170,10 @@ def _AddMergeFromStringMethod(message_descriptor, cls):
         new_pos = local_SkipField(buffer, new_pos, end, tag_bytes)
         if new_pos == -1:
           return pos
-        if (not is_proto3 or
-            api_implementation.GetPythonProto3PreserveUnknownsDefault()):
-          if not unknown_field_list:
-            unknown_field_list = self._unknown_fields = []
-          unknown_field_list.append(
-              (tag_bytes, buffer[value_start_pos:new_pos].tobytes()))
+        if not unknown_field_list:
+          unknown_field_list = self._unknown_fields = []
+        unknown_field_list.append(
+            (tag_bytes, buffer[value_start_pos:new_pos].tobytes()))
         pos = new_pos
       else:
         pos = field_decoder(buffer, new_pos, end, self, field_dict)

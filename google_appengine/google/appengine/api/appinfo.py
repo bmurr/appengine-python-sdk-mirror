@@ -304,7 +304,6 @@ MAXIMUM_CONCURRENT_REQUEST = 'max_concurrent_requests'
 
 
 
-
 MIN_NUM_INSTANCES = 'min_num_instances'
 MAX_NUM_INSTANCES = 'max_num_instances'
 COOL_DOWN_PERIOD_SEC = 'cool_down_period_sec'
@@ -792,7 +791,7 @@ _MAX_URL_LENGTH = 2047
 
 _MAX_HEADER_SIZE_FOR_EXEMPTED_HEADERS = 10240
 
-_CANNED_RUNTIMES = ('contrib-dart', 'dart', 'go', 'php', 'php55', 'php7',
+_CANNED_RUNTIMES = ('contrib-dart', 'dart', 'go', 'php', 'php55', 'php72',
                     'python', 'python27', 'python-compat', 'java', 'java7',
                     'java8', 'vm', 'custom', 'nodejs', 'ruby')
 _all_runtimes = _CANNED_RUNTIMES
