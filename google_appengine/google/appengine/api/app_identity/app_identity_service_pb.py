@@ -21,7 +21,10 @@ from google.net.proto import ProtocolBuffer
 import abc
 import array
 import base64
-import dummy_thread as thread
+try:
+  from thread import allocate_lock as _Lock
+except ImportError:
+  from threading import Lock as _Lock
 try:
   from google3.net.proto import _net_proto___parse__python
 except ImportError:
@@ -41,6 +44,8 @@ try:
   _server_stub_base_class = rpcserver.BaseRpcServer
 except ImportError:
   _server_stub_base_class = object
+
+if hasattr(__builtins__, 'xrange'): range = xrange
 
 if hasattr(ProtocolBuffer, 'ExtendableProtocolMessage'):
   _extension_runtime = True
@@ -143,7 +148,7 @@ class AppIdentityServiceError(ProtocolBuffer.ProtocolMessage):
       tt = d.getVarInt32()
 
 
-      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
+      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
       d.skipData(tt)
 
 
@@ -153,7 +158,7 @@ class AppIdentityServiceError(ProtocolBuffer.ProtocolMessage):
 
 
   def _BuildTagLookupTable(sparse, maxtag, default=None):
-    return tuple([sparse.get(i, default) for i in xrange(0, 1+maxtag)])
+    return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
 
 
   _TEXT = _BuildTagLookupTable({
@@ -267,7 +272,7 @@ class SignForAppRequest(ProtocolBuffer.ProtocolMessage):
         continue
 
 
-      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
+      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
       d.skipData(tt)
 
 
@@ -278,7 +283,7 @@ class SignForAppRequest(ProtocolBuffer.ProtocolMessage):
 
 
   def _BuildTagLookupTable(sparse, maxtag, default=None):
-    return tuple([sparse.get(i, default) for i in xrange(0, 1+maxtag)])
+    return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
 
   kbytes_to_sign = 1
 
@@ -425,7 +430,7 @@ class SignForAppResponse(ProtocolBuffer.ProtocolMessage):
         continue
 
 
-      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
+      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
       d.skipData(tt)
 
 
@@ -437,7 +442,7 @@ class SignForAppResponse(ProtocolBuffer.ProtocolMessage):
 
 
   def _BuildTagLookupTable(sparse, maxtag, default=None):
-    return tuple([sparse.get(i, default) for i in xrange(0, 1+maxtag)])
+    return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
 
   kkey_name = 1
   ksignature_bytes = 2
@@ -531,7 +536,7 @@ class GetPublicCertificateForAppRequest(ProtocolBuffer.ProtocolMessage):
       tt = d.getVarInt32()
 
 
-      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
+      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
       d.skipData(tt)
 
 
@@ -541,7 +546,7 @@ class GetPublicCertificateForAppRequest(ProtocolBuffer.ProtocolMessage):
 
 
   def _BuildTagLookupTable(sparse, maxtag, default=None):
-    return tuple([sparse.get(i, default) for i in xrange(0, 1+maxtag)])
+    return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
 
 
   _TEXT = _BuildTagLookupTable({
@@ -685,7 +690,7 @@ class PublicCertificate(ProtocolBuffer.ProtocolMessage):
         continue
 
 
-      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
+      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
       d.skipData(tt)
 
 
@@ -697,7 +702,7 @@ class PublicCertificate(ProtocolBuffer.ProtocolMessage):
 
 
   def _BuildTagLookupTable(sparse, maxtag, default=None):
-    return tuple([sparse.get(i, default) for i in xrange(0, 1+maxtag)])
+    return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
 
   kkey_name = 1
   kx509_certificate_pem = 2
@@ -764,7 +769,7 @@ class GetPublicCertificateForAppResponse(ProtocolBuffer.ProtocolMessage):
 
   def MergeFrom(self, x):
     assert x is not self
-    for i in xrange(x.public_certificate_list_size()): self.add_public_certificate_list().CopyFrom(x.public_certificate_list(i))
+    for i in range(x.public_certificate_list_size()): self.add_public_certificate_list().CopyFrom(x.public_certificate_list(i))
     if (x.has_max_client_cache_time_in_second()): self.set_max_client_cache_time_in_second(x.max_client_cache_time_in_second())
 
   if _net_proto___parse__python is not None:
@@ -812,14 +817,14 @@ class GetPublicCertificateForAppResponse(ProtocolBuffer.ProtocolMessage):
   def ByteSize(self):
     n = 0
     n += 1 * len(self.public_certificate_list_)
-    for i in xrange(len(self.public_certificate_list_)): n += self.lengthString(self.public_certificate_list_[i].ByteSize())
+    for i in range(len(self.public_certificate_list_)): n += self.lengthString(self.public_certificate_list_[i].ByteSize())
     if (self.has_max_client_cache_time_in_second_): n += 1 + self.lengthVarInt64(self.max_client_cache_time_in_second_)
     return n
 
   def ByteSizePartial(self):
     n = 0
     n += 1 * len(self.public_certificate_list_)
-    for i in xrange(len(self.public_certificate_list_)): n += self.lengthString(self.public_certificate_list_[i].ByteSizePartial())
+    for i in range(len(self.public_certificate_list_)): n += self.lengthString(self.public_certificate_list_[i].ByteSizePartial())
     if (self.has_max_client_cache_time_in_second_): n += 1 + self.lengthVarInt64(self.max_client_cache_time_in_second_)
     return n
 
@@ -828,7 +833,7 @@ class GetPublicCertificateForAppResponse(ProtocolBuffer.ProtocolMessage):
     self.clear_max_client_cache_time_in_second()
 
   def OutputUnchecked(self, out):
-    for i in xrange(len(self.public_certificate_list_)):
+    for i in range(len(self.public_certificate_list_)):
       out.putVarInt32(10)
       out.putVarInt32(self.public_certificate_list_[i].ByteSize())
       self.public_certificate_list_[i].OutputUnchecked(out)
@@ -837,7 +842,7 @@ class GetPublicCertificateForAppResponse(ProtocolBuffer.ProtocolMessage):
       out.putVarInt64(self.max_client_cache_time_in_second_)
 
   def OutputPartial(self, out):
-    for i in xrange(len(self.public_certificate_list_)):
+    for i in range(len(self.public_certificate_list_)):
       out.putVarInt32(10)
       out.putVarInt32(self.public_certificate_list_[i].ByteSizePartial())
       self.public_certificate_list_[i].OutputPartial(out)
@@ -859,7 +864,7 @@ class GetPublicCertificateForAppResponse(ProtocolBuffer.ProtocolMessage):
         continue
 
 
-      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
+      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
       d.skipData(tt)
 
 
@@ -878,7 +883,7 @@ class GetPublicCertificateForAppResponse(ProtocolBuffer.ProtocolMessage):
 
 
   def _BuildTagLookupTable(sparse, maxtag, default=None):
-    return tuple([sparse.get(i, default) for i in xrange(0, 1+maxtag)])
+    return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
 
   kpublic_certificate_list = 1
   kmax_client_cache_time_in_second = 2
@@ -972,7 +977,7 @@ class GetServiceAccountNameRequest(ProtocolBuffer.ProtocolMessage):
       tt = d.getVarInt32()
 
 
-      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
+      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
       d.skipData(tt)
 
 
@@ -982,7 +987,7 @@ class GetServiceAccountNameRequest(ProtocolBuffer.ProtocolMessage):
 
 
   def _BuildTagLookupTable(sparse, maxtag, default=None):
-    return tuple([sparse.get(i, default) for i in xrange(0, 1+maxtag)])
+    return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
 
 
   _TEXT = _BuildTagLookupTable({
@@ -1096,7 +1101,7 @@ class GetServiceAccountNameResponse(ProtocolBuffer.ProtocolMessage):
         continue
 
 
-      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
+      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
       d.skipData(tt)
 
 
@@ -1107,7 +1112,7 @@ class GetServiceAccountNameResponse(ProtocolBuffer.ProtocolMessage):
 
 
   def _BuildTagLookupTable(sparse, maxtag, default=None):
-    return tuple([sparse.get(i, default) for i in xrange(0, 1+maxtag)])
+    return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
 
   kservice_account_name = 1
 
@@ -1185,7 +1190,7 @@ class GetAccessTokenRequest(ProtocolBuffer.ProtocolMessage):
 
   def MergeFrom(self, x):
     assert x is not self
-    for i in xrange(x.scope_size()): self.add_scope(x.scope(i))
+    for i in range(x.scope_size()): self.add_scope(x.scope(i))
     if (x.has_service_account_id()): self.set_service_account_id(x.service_account_id())
     if (x.has_service_account_name()): self.set_service_account_name(x.service_account_name())
 
@@ -1234,7 +1239,7 @@ class GetAccessTokenRequest(ProtocolBuffer.ProtocolMessage):
   def ByteSize(self):
     n = 0
     n += 1 * len(self.scope_)
-    for i in xrange(len(self.scope_)): n += self.lengthString(len(self.scope_[i]))
+    for i in range(len(self.scope_)): n += self.lengthString(len(self.scope_[i]))
     if (self.has_service_account_id_): n += 1 + self.lengthVarInt64(self.service_account_id_)
     if (self.has_service_account_name_): n += 1 + self.lengthString(len(self.service_account_name_))
     return n
@@ -1242,7 +1247,7 @@ class GetAccessTokenRequest(ProtocolBuffer.ProtocolMessage):
   def ByteSizePartial(self):
     n = 0
     n += 1 * len(self.scope_)
-    for i in xrange(len(self.scope_)): n += self.lengthString(len(self.scope_[i]))
+    for i in range(len(self.scope_)): n += self.lengthString(len(self.scope_[i]))
     if (self.has_service_account_id_): n += 1 + self.lengthVarInt64(self.service_account_id_)
     if (self.has_service_account_name_): n += 1 + self.lengthString(len(self.service_account_name_))
     return n
@@ -1253,7 +1258,7 @@ class GetAccessTokenRequest(ProtocolBuffer.ProtocolMessage):
     self.clear_service_account_name()
 
   def OutputUnchecked(self, out):
-    for i in xrange(len(self.scope_)):
+    for i in range(len(self.scope_)):
       out.putVarInt32(10)
       out.putPrefixedString(self.scope_[i])
     if (self.has_service_account_id_):
@@ -1264,7 +1269,7 @@ class GetAccessTokenRequest(ProtocolBuffer.ProtocolMessage):
       out.putPrefixedString(self.service_account_name_)
 
   def OutputPartial(self, out):
-    for i in xrange(len(self.scope_)):
+    for i in range(len(self.scope_)):
       out.putVarInt32(10)
       out.putPrefixedString(self.scope_[i])
     if (self.has_service_account_id_):
@@ -1288,7 +1293,7 @@ class GetAccessTokenRequest(ProtocolBuffer.ProtocolMessage):
         continue
 
 
-      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
+      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
       d.skipData(tt)
 
 
@@ -1306,7 +1311,7 @@ class GetAccessTokenRequest(ProtocolBuffer.ProtocolMessage):
 
 
   def _BuildTagLookupTable(sparse, maxtag, default=None):
-    return tuple([sparse.get(i, default) for i in xrange(0, 1+maxtag)])
+    return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
 
   kscope = 1
   kservice_account_id = 2
@@ -1459,7 +1464,7 @@ class GetAccessTokenResponse(ProtocolBuffer.ProtocolMessage):
         continue
 
 
-      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
+      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
       d.skipData(tt)
 
 
@@ -1471,7 +1476,7 @@ class GetAccessTokenResponse(ProtocolBuffer.ProtocolMessage):
 
 
   def _BuildTagLookupTable(sparse, maxtag, default=None):
-    return tuple([sparse.get(i, default) for i in xrange(0, 1+maxtag)])
+    return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
 
   kaccess_token = 1
   kexpiration_time = 2
@@ -1565,7 +1570,7 @@ class GetDefaultGcsBucketNameRequest(ProtocolBuffer.ProtocolMessage):
       tt = d.getVarInt32()
 
 
-      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
+      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
       d.skipData(tt)
 
 
@@ -1575,7 +1580,7 @@ class GetDefaultGcsBucketNameRequest(ProtocolBuffer.ProtocolMessage):
 
 
   def _BuildTagLookupTable(sparse, maxtag, default=None):
-    return tuple([sparse.get(i, default) for i in xrange(0, 1+maxtag)])
+    return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
 
 
   _TEXT = _BuildTagLookupTable({
@@ -1689,7 +1694,7 @@ class GetDefaultGcsBucketNameResponse(ProtocolBuffer.ProtocolMessage):
         continue
 
 
-      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError
+      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
       d.skipData(tt)
 
 
@@ -1700,7 +1705,7 @@ class GetDefaultGcsBucketNameResponse(ProtocolBuffer.ProtocolMessage):
 
 
   def _BuildTagLookupTable(sparse, maxtag, default=None):
-    return tuple([sparse.get(i, default) for i in xrange(0, 1+maxtag)])
+    return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
 
   kdefault_gcs_bucket_name = 1
 
