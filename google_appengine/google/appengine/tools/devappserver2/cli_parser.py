@@ -570,7 +570,7 @@ def create_command_line_parser(configuration=None):
       '--enable_watching_go_path',
       action=boolean_action.BooleanAction,
       const=True,
-      default=False,
+      default=True,
       restrict_configuration=[DEV_APPSERVER_CONFIGURATION],
       help='Enable watching $GOPATH for go app dependency changes. If file '
       'watcher complains about too many files to watch, you can set it to '

@@ -55,7 +55,7 @@ import urlparse
 
 import google
 import portpicker
-import yaml
+from google.appengine._internal.ruamel import yaml
 
 from google.appengine.api import apiproxy_stub
 from google.appengine.api import apiproxy_stub_map
@@ -261,8 +261,8 @@ class APIServer(wsgi_server.WsgiServer):
     # We set this GRPC_PORT in environment variable as it is only accessed by
     # the devappserver process.
     os.environ['GRPC_PORT'] = str(self._grpc_api_port)
-    logging.info('Starting GRPC_API_server at: http://localhost:%d',
-                 self._grpc_api_port)
+    logging.info('%s: http://localhost:%d',
+                 constants.GRPC_API_SERVER_STARTING_MSG, self._grpc_api_port)
     self._grpc_server.start()
 
   def start(self):
@@ -271,7 +271,8 @@ class APIServer(wsgi_server.WsgiServer):
     if self._gcd_emulator_launching_thread:
       self._gcd_emulator_launching_thread.join()
     super(APIServer, self).start()
-    logging.info('Starting API server at: http://%s:%d', self._host, self.port)
+    logging.info('%s: http://%s:%d',
+                 constants.API_SERVER_STARTING_MSG, self._host, self.port)
     if self._use_grpc:
       self._start_grpc_server()
 
@@ -789,6 +790,9 @@ def main():
       support_datastore_emulator=options.support_datastore_emulator,
       category=metrics.API_SERVER_CATEGORY)
 
+  # When Cloud Datastore Emulator is invoked from api_server, it should be in
+  # test mode, which stores in memory.
+  options.datastore_emulator_is_test_mode = True
   server = create_api_server(
       request_info=request_info,
       storage_path=get_storage_path(options.storage_path, app_id),
