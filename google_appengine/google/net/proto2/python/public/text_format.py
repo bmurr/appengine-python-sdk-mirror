@@ -142,7 +142,7 @@ def MessageToString(message,
       (per the "Format Specification Mini-Language"); otherwise, str() is used.
     use_field_number: If True, print field numbers instead of names.
     descriptor_pool: A DescriptorPool used to resolve Any types.
-    indent: The indent level, in terms of spaces, for pretty print.
+    indent: The initial indent level, in terms of spaces, for pretty print.
     message_formatter: A function(message, indent, as_one_line): unicode|None
       to custom format selected sub-messages (usually based on message type).
       Use to pretty print parts of the protobuf for easier diffing.
@@ -283,7 +283,7 @@ class _Printer(object):
 
     Args:
       out: To record the text format result.
-      indent: The indent level for pretty print.
+      indent: The initial indent level for pretty print.
       as_utf8: Return unescaped Unicode for non-ASCII characters.
           In Python 3 actual Unicode characters may appear as is in strings.
           In Python 2 the return value will be valid UTF-8 rather than ASCII.
