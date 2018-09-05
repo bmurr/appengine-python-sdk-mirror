@@ -38,7 +38,7 @@ except ImportError:
 PYTHON27_PROD_VERSION = (2, 7, 12)
 
 
-MODERN_RUNTIMES = set(['python37'])
+MODERN_RUNTIMES = set(['python37', 'go111'])
 
 
 FACTORIES = {

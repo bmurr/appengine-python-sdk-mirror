@@ -165,6 +165,7 @@ _PENDING_LATENCY_REGEX = r'^(\d+((\.\d{1,3})?s|ms)|automatic)$'
 _IDLE_TIMEOUT_REGEX = r'^[\d]+(s|m)$'
 
 GCE_RESOURCE_NAME_REGEX = r'^[a-z]([a-z\d-]{0,61}[a-z\d])?$'
+VPC_ACCESS_CONNECTOR_NAME_REGEX = r'^[a-z\d-]+(/[a-z\d-]+)*$'
 
 ALTERNATE_HOSTNAME_SEPARATOR = '-dot-'
 
@@ -253,6 +254,7 @@ RESOURCES = 'resources'
 LIVENESS_CHECK = 'liveness_check'
 READINESS_CHECK = 'readiness_check'
 NETWORK = 'network'
+VPC_ACCESS_CONNECTOR = 'vpc_access_connector'
 VERSION = 'version'
 MAJOR_VERSION = 'major_version'
 MINOR_VERSION = 'minor_version'
@@ -403,6 +405,9 @@ STANDARD_MIN_INSTANCES = 'min_instances'
 STANDARD_MAX_INSTANCES = 'max_instances'
 STANDARD_TARGET_CPU_UTILIZATION = 'target_cpu_utilization'
 STANDARD_TARGET_THROUGHPUT_UTILIZATION = 'target_throughput_utilization'
+
+
+VPC_ACCESS_CONNECTOR_NAME = 'name'
 
 
 class _VersionedLibrary(object):
@@ -2003,6 +2008,15 @@ class Network(validation.Validated):
   }
 
 
+class VpcAccessConnector(validation.Validated):
+  """Class representing the VPC Access connector configuration."""
+
+  ATTRIBUTES = {
+      VPC_ACCESS_CONNECTOR_NAME:
+          validation.Regex(VPC_ACCESS_CONNECTOR_NAME_REGEX),
+  }
+
+
 class AppInclude(validation.Validated):
   """Class representing the contents of an included `app.yaml` file.
 
@@ -2276,6 +2290,7 @@ class AppInfoExternal(validation.Validated):
       LIVENESS_CHECK: validation.Optional(LivenessCheck),
       READINESS_CHECK: validation.Optional(ReadinessCheck),
       NETWORK: validation.Optional(Network),
+      VPC_ACCESS_CONNECTOR: validation.Optional(VpcAccessConnector),
       ZONES: validation.Optional(validation.Repeated(validation.TYPE_STR)),
       BUILTINS: validation.Optional(validation.Repeated(BuiltinHandler)),
       INCLUDES: validation.Optional(validation.Type(list)),

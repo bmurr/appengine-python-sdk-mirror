@@ -65,6 +65,7 @@ def CreateRPC(service, stubmap=None):
   if stubmap is None:
     stubmap = apiproxy
   stub = stubmap.GetStub(service)
+
   assert stub, 'No api proxy found for service "%s"' % service
   assert hasattr(stub, 'CreateRPC'), (('The service "%s" doesn\'t have ' +
                                        'a CreateRPC method.') % service)

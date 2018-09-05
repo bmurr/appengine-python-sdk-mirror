@@ -158,12 +158,12 @@ class GoRuntimeInstanceFactory(instance.InstanceFactory):
       deleted or modified) in these directories will trigger a restart of all
       instances created with this factory.
     """
-    # Go >= 1.11 doesn't need to watch GOPATH if you have a go.mod file, because
-    # all dependencies will be local to this directory so we don't need to
-    # monitor anything but pwd.
+    # Go < 1.11 should always watch GOPATH
+    # Go == 1.11 should only watch GOPATH if GO111MODULE != on
+    # Go > 1.11 should only watch go.mod dir
     go_mod_dir = self._find_go_mod_dir(
         self._module_configuration.application_root)
-    if go_mod_dir:
+    if os.getenv('GO111MODULE', '').lower() == 'on' and go_mod_dir:
       return [go_mod_dir]
 
     # Go <= 1.10 assumes GOPATH, or will infer it

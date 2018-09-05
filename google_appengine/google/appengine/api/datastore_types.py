@@ -1214,7 +1214,18 @@ class Blob(_BaseByteType):
   This behaves identically to the Python str type, except for the
   constructor, which only accepts str arguments.
   """
-  pass
+
+  def __init__(self, *args, **kwargs):
+    super(Blob, self).__init__(*args, **kwargs)
+    self._meaning_uri = None
+
+  @property
+  def meaning_uri(self):
+    return self._meaning_uri
+
+  @meaning_uri.setter
+  def meaning_uri(self, value):
+    self._meaning_uri = value
 
 
 class EmbeddedEntity(_BaseByteType):
@@ -1774,6 +1785,9 @@ def ToPropertyPb(name, values):
     if meaning is not None:
       pb.set_meaning(meaning)
 
+    if hasattr(v, 'meaning_uri') and v.meaning_uri:
+      pb.set_meaning_uri(v.meaning_uri)
+
     pack_prop = _PACK_PROPERTY_VALUES[v.__class__]
     pbvalue = pack_prop(name, v, pb.mutable_value())
     pbs.append(pb)
@@ -1901,6 +1915,9 @@ def FromPropertyPb(pb):
     if pb.has_meaning() and meaning in _PROPERTY_CONVERSIONS:
       conversion = _PROPERTY_CONVERSIONS[meaning]
       value = conversion(value)
+      if (meaning == entity_pb.Property.BLOB
+          and pb.has_meaning_uri()):
+        value.meaning_uri = pb.meaning_uri()
   except (KeyError, ValueError, IndexError, TypeError, AttributeError), msg:
     raise datastore_errors.BadValueError(
       'Error converting pb: %s\nException was: %s' % (pb, msg))
