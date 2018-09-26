@@ -16,8 +16,6 @@
 #
 
 
-
-
 """Validation tools for generic object structures.
 
 This library is used for defining classes with constrained attributes.
@@ -42,14 +40,11 @@ builder.  See yaml_object.py.
 
 
 
-
-
-
-
+from __future__ import absolute_import
 import re
-
 import google
 from google.appengine._internal.ruamel import yaml
+from google.appengine._internal import six_subset
 
 
 class SortedDict(dict):
@@ -134,7 +129,10 @@ def AsValidator(validator):
     AttributeDefinitionError: if validator is not one of the above described
       types.
   """
-  if isinstance(validator, (str, unicode)):
+  if (six_subset.is_basestring(validator)
+      or validator == six_subset.string_types):
+    return StringValidator()
+  if isinstance(validator, (str, six_subset.text_type)):
     return Regex(validator, type(validator))
   if isinstance(validator, type):
     return Type(validator)
@@ -204,7 +202,7 @@ class ValidatedBase(object):
     Raises:
       ValidationError: when no validated attribute exists on class.
     """
-    for key, value in attributes.iteritems():
+    for key, value in attributes.items():
       self.Set(key, value)
 
   def Set(self, key, value):
@@ -314,7 +312,7 @@ class Validated(ValidatedBase):
     self.SetMultiple(attributes)
 
   @classmethod
-  def GetValidator(self, key):
+  def GetValidator(cls, key):
     """Safely get the underlying attribute definition as a Validator.
 
     Args:
@@ -326,16 +324,16 @@ class Validated(ValidatedBase):
     Raises:
       ValidationError: if no such attribute exists.
     """
-    if key not in self.ATTRIBUTES:
+    if key not in cls.ATTRIBUTES:
       raise ValidationError(
           'Unexpected attribute \'%s\' for object of type %s.' %
-          (key, self.__name__))
+          (key, cls.__name__))
 
-    return AsValidator(self.ATTRIBUTES[key])
+    return AsValidator(cls.ATTRIBUTES[key])
 
   def GetWarnings(self):
     ret = []
-    for key in self.ATTRIBUTES:
+    for key in self.ATTRIBUTES.keys():
       ret.extend(self.GetValidator(key).GetWarnings(
           self.GetUnnormalized(key), key, self))
     return ret
@@ -405,10 +403,10 @@ class Validated(ValidatedBase):
       is determined by the validator.  Typically this will be ValueError or
       TypeError.
     """
-    for key in self.ATTRIBUTES.iterkeys():
+    for key in self.ATTRIBUTES.keys():
       try:
         self.GetValidator(key)(self.GetUnnormalized(key), key, self)
-      except MissingAttribute, e:
+      except MissingAttribute as e:
         e.message = "Missing required value '%s'." % key
         raise e
 
@@ -440,7 +438,7 @@ class Validated(ValidatedBase):
 
   def __repr__(self):
     """Formatted view of validated object and nested values."""
-    values = [(attr, getattr(self, attr)) for attr in self.ATTRIBUTES]
+    values = [(attr, getattr(self, attr)) for attr in self.ATTRIBUTES.keys()]
     dent = '    '
     value_list = []
     for attr, value in values:
@@ -462,7 +460,7 @@ class Validated(ValidatedBase):
     """
     if type(self) != type(other):
       return False
-    for key in self.ATTRIBUTES.iterkeys():
+    for key in self.ATTRIBUTES.keys():
       if getattr(self, key) != getattr(other, key):
         return False
     return True
@@ -480,7 +478,7 @@ class Validated(ValidatedBase):
       Hash of validated object.
     """
     result = 0
-    for key in self.ATTRIBUTES.iterkeys():
+    for key in self.ATTRIBUTES.keys():
       value = getattr(self, key)
       if isinstance(value, list):
         value = tuple(value)
@@ -500,7 +498,7 @@ class Validated(ValidatedBase):
       dicts.
     """
     result = {}
-    for name, validator in self.ATTRIBUTES.iteritems():
+    for name, validator in self.ATTRIBUTES.items():
       value = self.GetUnnormalized(name)
 
       if not(isinstance(validator, Validator) and value == validator.default):
@@ -641,7 +639,7 @@ class ValidatedDict(ValidatedBase, dict):
       A dictionary mapping all attributes to simple values or collections.
     """
     result = {}
-    for name, value in self.iteritems():
+    for name, value in self.items():
       validator = self.GetValidator(name)
       result[name] = _SimplifiedValue(validator, value)
     return result
@@ -743,6 +741,24 @@ class Validator(object):
     return []
 
 
+class StringValidator(Validator):
+  """Verifies property is a valid text string.
+
+  In python 2: inherits from basestring
+  In python 3: inherits from str
+  """
+
+  def Validate(self, value, key='???'):
+    if not isinstance(value, six_subset.string_types):
+      if value is None:
+        raise MissingAttribute('Missing value is required.')
+      else:
+        raise ValidationError(
+            'Value %r for %s is not a valid text string.' % (
+                value, key))
+    return value
+
+
 class Type(Validator):
   """Verifies property is of expected type.
 
@@ -804,11 +820,11 @@ class Type(Validator):
       if self.convert:
         try:
           return self.expected_type(value)
-        except ValueError, e:
+        except ValueError as e:
           raise ValidationError(
               'Value %r for %s could not be converted to type %s.' % (
                   value, key, self.expected_type.__name__), e)
-        except TypeError, e:
+        except TypeError as e:
           raise ValidationError(
               'Value %r for %s is not of the expected type %s' % (
                   value, key, self.expected_type.__name__), e)
@@ -829,9 +845,13 @@ class Type(Validator):
 
 TYPE_BOOL = Type(bool)
 TYPE_INT = Type(int)
-TYPE_LONG = Type(long)
+
+
+
+
+TYPE_LONG = Type(int)
 TYPE_STR = Type(str)
-TYPE_UNICODE = Type(unicode)
+TYPE_UNICODE = Type(six_subset.text_type)
 TYPE_FLOAT = Type(float)
 
 
@@ -1036,21 +1056,23 @@ class Regex(Validator):
     my_class(name='AName with space', parent=AnotherClass)
   """
 
-  def __init__(self, regex, string_type=unicode, default=None):
+  def __init__(self, regex, string_type=six_subset.text_type, default=None):
     """Initialized regex validator.
 
     Args:
       regex: Regular expression string to use for comparison.
+      string_type: Type to be considered a string.
+      default: Default value.
 
     Raises:
       AttributeDefinitionError: if string_type is not a kind of string.
     """
     super(Regex, self).__init__(default)
-    if (not issubclass(string_type, basestring) or
-        string_type is basestring):
+    if (not issubclass(string_type, six_subset.string_types) or
+        six_subset.is_basestring(string_type)):
       raise AttributeDefinitionError(
           'Regex fields must be a string type not %s.' % str(string_type))
-    if isinstance(regex, basestring):
+    if isinstance(regex, six_subset.string_types):
       self.re = re.compile('^(?:%s)$' % regex)
     else:
       raise AttributeDefinitionError(
@@ -1154,7 +1176,7 @@ class _RegexStrValue(object):
     regex = self.__BuildRegex()
     try:
       return re.compile(regex)
-    except re.error, e:
+    except re.error as e:
       raise ValidationError('Value \'%s\' for %s does not compile: %s' %
                             (regex, self.__key, e), e)
 
@@ -1198,8 +1220,12 @@ class RegexStr(Validator):
   The attribute will then be a compiled re object.
   """
 
-  def __init__(self, string_type=unicode, default=None):
+  def __init__(self, string_type=six_subset.text_type, default=None):
     """Initialized regex validator.
+
+    Args:
+      string_type: Type to be considered a string.
+      default: Default value.
 
     Raises:
       AttributeDefinitionError: if string_type is not a kind of string.
@@ -1208,8 +1234,11 @@ class RegexStr(Validator):
       default = _RegexStrValue(self, default, None)
       re.compile(str(default))
     super(RegexStr, self).__init__(default)
-    if (not issubclass(string_type, basestring) or
-        string_type is basestring):
+
+
+
+    if (not issubclass(string_type, six_subset.string_types) or
+        six_subset.is_basestring(string_type)):
       raise AttributeDefinitionError(
           'RegexStr fields must be a string type not %s.' % str(string_type))
 
@@ -1269,13 +1298,16 @@ class Range(Validator):
       AttributeDefinitionError: if the specified parameters are incorrect.
     """
     super(Range, self).__init__(default)
+    min_max_type = range_type
+    if range_type in six_subset.integer_types:
+      min_max_type = six_subset.integer_types
     if minimum is None and maximum is None:
       raise AttributeDefinitionError('Must specify minimum or maximum.')
-    if minimum is not None and not isinstance(minimum, range_type):
+    if minimum is not None and not isinstance(minimum, min_max_type):
       raise AttributeDefinitionError(
           'Minimum value must be of type %s, instead it is %s (%s).' %
           (str(range_type), str(type(minimum)), str(minimum)))
-    if maximum is not None and not isinstance(maximum, range_type):
+    if maximum is not None and not isinstance(maximum, min_max_type):
       raise AttributeDefinitionError(
           'Maximum value must be of type %s, instead it is %s (%s).' %
           (str(range_type), str(type(maximum)), str(maximum)))
@@ -1379,7 +1411,7 @@ class TimeValue(Validator):
     Raises:
       ValidationError: if value is not a time value with the expected format.
     """
-    if not isinstance(value, basestring):
+    if not isinstance(value, six_subset.string_types):
       raise ValidationError("Value '%s' for %s is not a string (%s)"
                             % (value, key, TimeValue._EXPECTED_SYNTAX))
     if not value:
