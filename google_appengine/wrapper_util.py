@@ -17,6 +17,7 @@
 """Finds the directory and target script name for App Engine SDK scripts."""
 
 import os
+import subprocess
 import sys
 
 
@@ -114,7 +115,16 @@ class Paths(object):
 
 
 
-    self.grpc_path = os.path.join(dir_path, 'lib', 'grpcio-1.9.1')
+
+    grpc_importable = False
+    grpc_path = os.path.join(dir_path, 'lib', 'grpcio-1.9.1')
+    if os.path.exists(grpc_path):
+      os.chdir(grpc_path)
+
+
+      grpc_importable = not subprocess.call(
+          [sys.executable, '-c', 'import grpc'], stderr=subprocess.PIPE)
+      os.chdir(os.path.join('..', '..'))
 
 
     self.v1_extra_paths = [
@@ -149,8 +159,9 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'concurrent'),
         os.path.join(dir_path, 'lib', 'ipaddr'),
         os.path.join(dir_path, 'lib', 'portpicker'),
-        self.grpc_path,
     ]
+    if grpc_importable:
+      self.api_server_extra_paths.append(grpc_path)
 
 
 
@@ -243,8 +254,9 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'jinja2-2.6'),
         os.path.join(dir_path, 'lib', 'webob-1.2.3'),
         os.path.join(dir_path, 'lib', 'webapp2-2.5.1'),
-        self.grpc_path,
     ]
+    if grpc_importable:
+      devappserver2_paths.append(grpc_path)
 
 
 

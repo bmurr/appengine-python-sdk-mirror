@@ -50,9 +50,6 @@ logging.basicConfig(
 PARSER = cli_parser.create_command_line_parser(
     cli_parser.DEV_APPSERVER_CONFIGURATION)
 
-# Suffixes of Google Analytics Client ID that will be silently enrolled in the
-# migration to Cloud Datastore Emulator.
-_EMULATOR_ENROLL_CID_SUFFIX = ['0', '1']
 
 # Minimum java version required by the Cloud Datastore Emulator
 _CLOUD_DATASTORE_EMULATOR_JAVA_VERSION = 8
@@ -116,10 +113,14 @@ class _DatastoreEmulatorDepManager(object):
 
     self._error_hint = None
     if self._java_major_version < _CLOUD_DATASTORE_EMULATOR_JAVA_VERSION:
-      self._error_hint = ('Cannot find Java %s+.'
-                          % _CLOUD_DATASTORE_EMULATOR_JAVA_VERSION)
+      self._error_hint = (
+          'Cannot use the Cloud Datastore Emulator because Java is absent. '
+          'Please make sure Java %s+ is installed, and added to your system '
+          'path' % _CLOUD_DATASTORE_EMULATOR_JAVA_VERSION)
     elif 'ImportError' in self._grpc_import_report:
-      self._error_hint = 'Cannot import grpcio.'
+      self._error_hint = (
+          'Cannot use the Cloud Datastore Emulator because the packaged grpcio '
+          'is incompatible to this system. Please install grpcio using pip')
 
 
 class DevelopmentServer(object):
@@ -194,8 +195,7 @@ class DevelopmentServer(object):
 
     # If --support_datastore_emulator is empty, select by analytics client ID.
     client_id = self._options.google_analytics_client_id
-    selected = (explicitly_support is None and
-                client_id and client_id[-1] in _EMULATOR_ENROLL_CID_SUFFIX)
+    selected = (explicitly_support is None and client_id)
 
     dep_manager = None
     self.grpc_import_report = None
@@ -210,16 +210,13 @@ class DevelopmentServer(object):
 
     # Adjust logic based on whether dependencies are satisfied
     if explicitly_support and not dep_manager.satisfied:
-      raise RuntimeError(
-          '%s You can avoid this error by removing the flag '
-          '--support_datastore_emulator' % dep_manager.error_hint)
+      raise RuntimeError(dep_manager.error_hint)
     if selected:
       if dep_manager.satisfied:
         # Store the decision result in options.support_datastore_emulator
         self._options.support_datastore_emulator = True
       else:
-        logging.info('%s Will not use Cloud Datastore Emulator',
-                     dep_manager.error_hint)
+        logging.debug(dep_manager.error_hint)
 
     if self._options.support_datastore_emulator:
       # TODO: When rollout is 100%, remove the message.

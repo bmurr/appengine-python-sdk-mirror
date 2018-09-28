@@ -35,8 +35,7 @@ and load from configuration files.
 
 
 
-
-
+from __future__ import absolute_import
 import logging
 import os
 import re
@@ -59,6 +58,8 @@ else:
 
 from google.appengine.api import appinfo_errors
 from google.appengine.api import backendinfo
+from google.appengine._internal import six_subset
+
 
 
 
@@ -813,6 +814,32 @@ def GetAllRuntimes():
   return _all_runtimes
 
 
+def EnsureAsciiBytes(s, err):
+  """Ensure s contains only ASCII-safe characters; return it as bytes-type.
+
+  Arguments:
+    s: the string or bytes to check
+    err: the error to raise if not good.
+  Raises:
+    err if it's not ASCII-safe.
+  Returns:
+    s as a byte string
+  """
+  try:
+    return s.encode('ascii')
+  except UnicodeEncodeError:
+    raise err
+  except UnicodeDecodeError:
+
+
+    raise err
+  except AttributeError:
+    try:
+      return s.decode('ascii').encode('ascii')
+    except UnicodeDecodeError:
+      raise err
+
+
 class HandlerBase(validation.Validated):
   """Base class for URLMap and ApiConfigHandler."""
   ATTRIBUTES = {
@@ -907,12 +934,9 @@ class HttpHeadersDict(validation.ValidatedDict):
       original_name = name
 
 
-      if isinstance(name, unicode):
-        try:
-          name = name.encode('ascii')
-        except UnicodeEncodeError:
-          raise appinfo_errors.InvalidHttpHeaderName(
-              'HTTP header values must not contain non-ASCII data')
+      if isinstance(name, six_subset.string_types):
+        name = EnsureAsciiBytes(name, appinfo_errors.InvalidHttpHeaderName(
+            'HTTP header values must not contain non-ASCII data'))
 
 
       name = name.lower()
@@ -972,12 +996,12 @@ class HttpHeadersDict(validation.ValidatedDict):
          https://www.ietf.org/rfc/rfc2616.txt
       """
 
-      if isinstance(value, unicode):
-        try:
-          value = value.encode('ascii')
-        except UnicodeEncodeError:
-          raise appinfo_errors.InvalidHttpHeaderValue(
-              'HTTP header values must not contain non-ASCII data')
+      if isinstance(value, six_subset.string_types):
+        value = EnsureAsciiBytes(value, appinfo_errors.InvalidHttpHeaderValue(
+            'HTTP header values must not contain non-ASCII data'))
+        b_value = value
+      else:
+        b_value = ('%s' % value).encode('ascii')
 
 
       key = key.lower()
@@ -986,8 +1010,8 @@ class HttpHeadersDict(validation.ValidatedDict):
 
 
 
-      printable = set(string.printable[:-5])
-      if not all(char in printable for char in str(value)):
+      printable = set(string.printable[:-5].encode('ascii'))
+      if not all(b in printable for b in b_value):
         raise appinfo_errors.InvalidHttpHeaderValue(
             'HTTP header field values must consist of printable characters.')
 
@@ -1206,7 +1230,7 @@ class URLMap(HandlerBase):
 
       mapping_type = HANDLER_API_ENDPOINT
     else:
-      for id_field in URLMap.ALLOWED_FIELDS.iterkeys():
+      for id_field in URLMap.ALLOWED_FIELDS:
 
         if getattr(self, id_field) is not None:
 
@@ -1221,7 +1245,7 @@ class URLMap(HandlerBase):
 
 
 
-    for attribute in self.ATTRIBUTES.iterkeys():
+    for attribute in self.ATTRIBUTES:
       if (getattr(self, attribute) is not None and
           not (attribute in allowed_fields or
                attribute in URLMap.COMMON_FIELDS or
@@ -1634,7 +1658,7 @@ class CpuUtilization(validation.Validated):
       CPU_UTILIZATION_UTILIZATION: validation.Optional(
           validation.Range(1e-6, 1.0, float)),
       CPU_UTILIZATION_AGGREGATION_WINDOW_LENGTH_SEC: validation.Optional(
-          validation.Range(1, sys.maxint)),
+          validation.Range(1, sys.maxsize)),
   }
 
 
@@ -1721,11 +1745,11 @@ class AutomaticScaling(validation.Validated):
           validation.Optional(_CONCURRENT_REQUESTS_REGEX),
 
       MIN_NUM_INSTANCES:
-          validation.Optional(validation.Range(1, sys.maxint)),
+          validation.Optional(validation.Range(1, sys.maxsize)),
       MAX_NUM_INSTANCES:
-          validation.Optional(validation.Range(1, sys.maxint)),
+          validation.Optional(validation.Range(1, sys.maxsize)),
       COOL_DOWN_PERIOD_SEC:
-          validation.Optional(validation.Range(60, sys.maxint, int)),
+          validation.Optional(validation.Range(60, sys.maxsize, int)),
       CPU_UTILIZATION:
           validation.Optional(CpuUtilization),
       STANDARD_MAX_INSTANCES:
@@ -1737,25 +1761,25 @@ class AutomaticScaling(validation.Validated):
       STANDARD_TARGET_THROUGHPUT_UTILIZATION:
           validation.Optional(validation.TYPE_FLOAT),
       TARGET_NETWORK_SENT_BYTES_PER_SEC:
-          validation.Optional(validation.Range(1, sys.maxint)),
+          validation.Optional(validation.Range(1, sys.maxsize)),
       TARGET_NETWORK_SENT_PACKETS_PER_SEC:
-          validation.Optional(validation.Range(1, sys.maxint)),
+          validation.Optional(validation.Range(1, sys.maxsize)),
       TARGET_NETWORK_RECEIVED_BYTES_PER_SEC:
-          validation.Optional(validation.Range(1, sys.maxint)),
+          validation.Optional(validation.Range(1, sys.maxsize)),
       TARGET_NETWORK_RECEIVED_PACKETS_PER_SEC:
-          validation.Optional(validation.Range(1, sys.maxint)),
+          validation.Optional(validation.Range(1, sys.maxsize)),
       TARGET_DISK_WRITE_BYTES_PER_SEC:
-          validation.Optional(validation.Range(1, sys.maxint)),
+          validation.Optional(validation.Range(1, sys.maxsize)),
       TARGET_DISK_WRITE_OPS_PER_SEC:
-          validation.Optional(validation.Range(1, sys.maxint)),
+          validation.Optional(validation.Range(1, sys.maxsize)),
       TARGET_DISK_READ_BYTES_PER_SEC:
-          validation.Optional(validation.Range(1, sys.maxint)),
+          validation.Optional(validation.Range(1, sys.maxsize)),
       TARGET_DISK_READ_OPS_PER_SEC:
-          validation.Optional(validation.Range(1, sys.maxint)),
+          validation.Optional(validation.Range(1, sys.maxsize)),
       TARGET_REQUEST_COUNT_PER_SEC:
-          validation.Optional(validation.Range(1, sys.maxint)),
+          validation.Optional(validation.Range(1, sys.maxsize)),
       TARGET_CONCURRENT_REQUESTS:
-          validation.Optional(validation.Range(1, sys.maxint)),
+          validation.Optional(validation.Range(1, sys.maxsize)),
       CUSTOM_METRICS: validation.Optional(validation.Repeated(CustomMetric)),
   }
 
@@ -1922,22 +1946,23 @@ class HealthCheck(validation.Validated):
   """Class representing the health check configuration."""
   ATTRIBUTES = {
       ENABLE_HEALTH_CHECK: validation.Optional(validation.TYPE_BOOL),
-      CHECK_INTERVAL_SEC: validation.Optional(validation.Range(0, sys.maxint)),
-      TIMEOUT_SEC: validation.Optional(validation.Range(0, sys.maxint)),
-      UNHEALTHY_THRESHOLD: validation.Optional(validation.Range(0, sys.maxint)),
-      HEALTHY_THRESHOLD: validation.Optional(validation.Range(0, sys.maxint)),
-      RESTART_THRESHOLD: validation.Optional(validation.Range(0, sys.maxint)),
+      CHECK_INTERVAL_SEC: validation.Optional(validation.Range(0, sys.maxsize)),
+      TIMEOUT_SEC: validation.Optional(validation.Range(0, sys.maxsize)),
+      UNHEALTHY_THRESHOLD: validation.Optional(
+          validation.Range(0, sys.maxsize)),
+      HEALTHY_THRESHOLD: validation.Optional(validation.Range(0, sys.maxsize)),
+      RESTART_THRESHOLD: validation.Optional(validation.Range(0, sys.maxsize)),
       HOST: validation.Optional(validation.TYPE_STR)}
 
 
 class LivenessCheck(validation.Validated):
   """Class representing the liveness check configuration."""
   ATTRIBUTES = {
-      CHECK_INTERVAL_SEC: validation.Optional(validation.Range(0, sys.maxint)),
-      TIMEOUT_SEC: validation.Optional(validation.Range(0, sys.maxint)),
-      FAILURE_THRESHOLD: validation.Optional(validation.Range(0, sys.maxint)),
-      SUCCESS_THRESHOLD: validation.Optional(validation.Range(0, sys.maxint)),
-      INITIAL_DELAY_SEC: validation.Optional(validation.Range(0, sys.maxint)),
+      CHECK_INTERVAL_SEC: validation.Optional(validation.Range(0, sys.maxsize)),
+      TIMEOUT_SEC: validation.Optional(validation.Range(0, sys.maxsize)),
+      FAILURE_THRESHOLD: validation.Optional(validation.Range(0, sys.maxsize)),
+      SUCCESS_THRESHOLD: validation.Optional(validation.Range(0, sys.maxsize)),
+      INITIAL_DELAY_SEC: validation.Optional(validation.Range(0, sys.maxsize)),
       PATH: validation.Optional(validation.TYPE_STR),
       HOST: validation.Optional(validation.TYPE_STR)}
 
@@ -1945,12 +1970,12 @@ class LivenessCheck(validation.Validated):
 class ReadinessCheck(validation.Validated):
   """Class representing the readiness check configuration."""
   ATTRIBUTES = {
-      CHECK_INTERVAL_SEC: validation.Optional(validation.Range(0, sys.maxint)),
-      TIMEOUT_SEC: validation.Optional(validation.Range(0, sys.maxint)),
+      CHECK_INTERVAL_SEC: validation.Optional(validation.Range(0, sys.maxsize)),
+      TIMEOUT_SEC: validation.Optional(validation.Range(0, sys.maxsize)),
       APP_START_TIMEOUT_SEC: validation.Optional(
-          validation.Range(0, sys.maxint)),
-      FAILURE_THRESHOLD: validation.Optional(validation.Range(0, sys.maxint)),
-      SUCCESS_THRESHOLD: validation.Optional(validation.Range(0, sys.maxint)),
+          validation.Range(0, sys.maxsize)),
+      FAILURE_THRESHOLD: validation.Optional(validation.Range(0, sys.maxsize)),
+      SUCCESS_THRESHOLD: validation.Optional(validation.Range(0, sys.maxsize)),
       PATH: validation.Optional(validation.TYPE_STR),
       HOST: validation.Optional(validation.TYPE_STR)}
 
@@ -2079,9 +2104,10 @@ class AppInclude(validation.Validated):
 
 
 
-    instances = max(_Instances(appinclude_one), _Instances(appinclude_two))
-    if instances is not None:
-      appinclude_one.manual_scaling = ManualScaling(instances=str(instances))
+    if _Instances(appinclude_one) or _Instances(appinclude_two):
+      instances = max(_Instances(appinclude_one), _Instances(appinclude_two))
+      if instances is not None:
+        appinclude_one.manual_scaling = ManualScaling(instances=str(instances))
     return appinclude_one
 
   @classmethod
