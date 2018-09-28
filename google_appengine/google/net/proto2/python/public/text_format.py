@@ -317,11 +317,13 @@ class _Printer(object):
 
   def _TryPrintAsAnyMessage(self, message):
     """Serializes if message is a google.protobuf.Any field."""
+    if '/' not in message.type_url:
+      return False
     packed_message = _BuildMessageFromTypeName(message.TypeName(),
                                                self.descriptor_pool)
     if packed_message:
       packed_message.MergeFromString(message.value)
-      self.out.write('%s[%s]' % (self.indent * ' ', message.type_url))
+      self.out.write('%s[%s] ' % (self.indent * ' ', message.type_url))
       self._PrintMessageFieldValue(packed_message)
       self.out.write(' ' if self.as_one_line else '\n')
       return True
@@ -400,11 +402,12 @@ class _Printer(object):
     if field.cpp_type != descriptor.FieldDescriptor.CPPTYPE_MESSAGE:
 
 
-      out.write(': ')
+      out.write(':')
 
   def PrintField(self, field, value):
     """Print a single field name/value pair."""
     self._PrintFieldName(field)
+    self.out.write(' ')
     self.PrintFieldValue(field, value)
     self.out.write(' ' if self.as_one_line else '\n')
 
@@ -428,11 +431,11 @@ class _Printer(object):
       closeb = '}'
 
     if self.as_one_line:
-      self.out.write(' %s ' % openb)
+      self.out.write('%s ' % openb)
       self.PrintMessage(value)
       self.out.write(closeb)
     else:
-      self.out.write(' %s\n' % openb)
+      self.out.write('%s\n' % openb)
       self.indent += 2
       self.PrintMessage(value)
       self.indent -= 2

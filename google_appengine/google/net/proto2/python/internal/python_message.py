@@ -995,7 +995,12 @@ def _AddEqualsMethod(message_descriptor, cls):
       return False
 
 
-    return self._unknown_field_set == other._unknown_field_set
+
+    unknown_fields = list(self._unknown_fields)
+    unknown_fields.sort()
+    other_unknown_fields = list(other._unknown_fields)
+    other_unknown_fields.sort()
+    return unknown_fields == other_unknown_fields
 
   cls.__eq__ = __eq__
 

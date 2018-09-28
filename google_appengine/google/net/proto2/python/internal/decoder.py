@@ -69,9 +69,10 @@ we repeatedly read a tag, look up the corresponding decoder, and invoke it.
 
 
 import struct
-
+import sys
 from google.appengine._internal import six
 
+_UCS2_MAXUNICODE = 65535
 if six.PY3:
   long = int
 else:
@@ -538,7 +539,8 @@ def StringDecoder(field_number, is_repeated, is_packed, key, new_default,
       e.reason = '%s in field: %s' % (e, key.full_name)
       raise
 
-    if is_strict_utf8 and six.PY2:
+    if is_strict_utf8 and six.PY2 and sys.maxunicode > _UCS2_MAXUNICODE:
+
       if _SURROGATE_PATTERN.search(value):
         reason = ('String field %s contains invalid UTF-8 data when parsing'
                   'a protocol buffer: surrogates not allowed. Use'

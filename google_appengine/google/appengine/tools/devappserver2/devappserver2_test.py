@@ -150,7 +150,7 @@ class DecideUseDatastoreEmulatorTest(unittest.TestCase):
     self.assertIn('Using Cloud Datastore Emulator',
                   mock_logging.call_args_list[0][0][0])
 
-  @mock.patch('logging.info')
+  @mock.patch('logging.debug')
   def test_selected_opt_in_fail(self, mock_logging, mock_error_hint):
     mock_error_hint.return_value = 'Some hint'
     self.options.support_datastore_emulator = None
@@ -159,19 +159,7 @@ class DecideUseDatastoreEmulatorTest(unittest.TestCase):
     self.dev_server._decide_use_datastore_emulator()
     self.assertFalse(self.dev_server._options.support_datastore_emulator)
     mock_logging.assert_called_once()
-    self.assertIn('Will not use Cloud Datastore Emulator',
-                  mock_logging.call_args_list[0][0][0])
-    self.assertIn('Some hint', mock_logging.call_args_list[0][0][1])
-
-  @mock.patch('logging.info')
-  def test_not_selected_no_opt_in(self, mock_logging, mock_error_hint):
-    mock_error_hint.return_value = 'Some hint'
-    self.options.support_datastore_emulator = None
-    self.options.google_analytics_client_id = '3333'
-    self.dev_server._options = self.options
-    self.dev_server._decide_use_datastore_emulator()
-    self.assertFalse(self.dev_server._options.support_datastore_emulator)
-    mock_logging.assert_not_called()
+    self.assertEqual('Some hint', mock_logging.call_args_list[0][0][0])
 
   @mock.patch('logging.info')
   def test_explicit_opt_out(self, mock_logging, mock_error_hint):
@@ -205,7 +193,7 @@ class _DatastoreEmulatorDepManagerTest(unittest.TestCase):
     dep_manager = devappserver2._DatastoreEmulatorDepManager()
     self.assertNotIn('ImportError', dep_manager.grpc_import_report)
     self.assertFalse(dep_manager.satisfied)
-    self.assertEqual('Cannot find Java 8+.', dep_manager.error_hint)
+    self.assertIn('make sure Java 8+ is installed', dep_manager.error_hint)
 
   @mock.patch('__builtin__.__import__',
               side_effect=ImportError('Cannot import cygrpc'))
@@ -217,7 +205,7 @@ class _DatastoreEmulatorDepManagerTest(unittest.TestCase):
     self.assertEqual(repr(ImportError('Cannot import cygrpc')),
                      dep_manager.grpc_import_report['ImportError'])
     self.assertFalse(dep_manager.satisfied)
-    self.assertEqual('Cannot import grpcio.', dep_manager.error_hint)
+    self.assertIn('grpcio is incompatible', dep_manager.error_hint)
 
 
 class PlatformSupportCheckTest(unittest.TestCase):

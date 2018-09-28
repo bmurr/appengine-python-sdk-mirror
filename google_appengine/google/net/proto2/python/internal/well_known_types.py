@@ -81,7 +81,7 @@ class Any(object):
 
   def Is(self, descriptor):
     """Checks if this Any represents the given protobuf type."""
-    return self.TypeName() == descriptor.full_name
+    return '/' in self.type_url and self.TypeName() == descriptor.full_name
 
 
 class Timestamp(object):

@@ -122,7 +122,11 @@ class DescriptorDatabase(object):
 
 
       top_level, _, _ = symbol.rpartition('.')
-      return self._file_desc_protos_by_symbol[top_level]
+      try:
+        return self._file_desc_protos_by_symbol[top_level]
+      except KeyError:
+
+        raise KeyError(symbol)
 
   def FindFileContainingExtension(self, extendee_name, extension_number):
 

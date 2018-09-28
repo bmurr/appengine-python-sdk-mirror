@@ -33,6 +33,7 @@ from google.appengine.tools.devappserver2 import application_configuration
 
 from google.appengine.tools.devappserver2 import http_runtime
 from google.appengine.tools.devappserver2 import instance
+from google.appengine.tools.devappserver2 import metrics
 from google.appengine.tools.devappserver2 import util
 from google.appengine.tools.devappserver2.go import application as go_application
 from google.appengine.tools.devappserver2.go import errors as go_errors
@@ -229,6 +230,8 @@ class GoRuntimeInstanceFactory(instance.InstanceFactory):
         logging.error('Failed to build Go application: %s', e)
         # Deploy a failure proxy now and each time a new instance is requested.
         self._last_build_error = e
+        metrics.GetMetricsLogger().LogOnceOnStop(
+            metrics.DEVAPPSERVER_CATEGORY, metrics.ERROR_ACTION, label=repr(e))
 
       self._modified_since_last_build = False
 
