@@ -182,8 +182,8 @@ class DispatchEntry(validation.Validated):
   """A Dispatch entry describes a mapping from a URL pattern to a module."""
   ATTRIBUTES = {
       URL: DispatchEntryURLValidator(),
-      MODULE: validation.Optional(appinfo.MODULE_ID_RE_STRING),
-      SERVICE: validation.Optional(appinfo.MODULE_ID_RE_STRING)
+      SERVICE: validation.Preferred(MODULE, appinfo.MODULE_ID_RE_STRING),
+      MODULE: validation.Deprecated(SERVICE, appinfo.MODULE_ID_RE_STRING),
   }
 
 
@@ -228,15 +228,5 @@ def LoadSingleDispatch(dispatch_info, open_fn=None):
 
 
   dispatch_info_external = parsed_yaml[0]
-  for dispatch in getattr(dispatch_info_external, DISPATCH) or []:
-    if dispatch.module and dispatch.service:
-      raise MalformedDispatchConfigurationError(
-          'Both module: and service: in dispatch entry. Please use only one.')
-    if not (dispatch.module or dispatch.service):
-      raise MalformedDispatchConfigurationError(
-          "Missing required value 'service'.")
-
-
-    dispatch.module = dispatch.module or dispatch.service
-    dispatch.service = None
+  dispatch_info_external.CheckInitialized()
   return dispatch_info_external

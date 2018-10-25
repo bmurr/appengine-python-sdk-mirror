@@ -506,17 +506,6 @@ def create_command_line_parser(configuration=None):
                          restrict_configuration=[DEV_APPSERVER_CONFIGURATION],
                          help='path to the xdebug extension')
 
-
-
-
-
-
-
-
-
-
-
-
   # App Identity
   appidentity_group = parser.add_argument_group('Application Identity')
   appidentity_group.add_argument(
