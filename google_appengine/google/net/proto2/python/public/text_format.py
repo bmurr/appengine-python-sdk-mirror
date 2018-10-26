@@ -212,7 +212,8 @@ def PrintField(field,
   """Print a single field name/value pair."""
   printer = _Printer(out, indent, as_utf8, as_one_line,
                      use_short_repeated_primitives, pointy_brackets,
-                     use_index_order, float_format, message_formatter)
+                     use_index_order, float_format,
+                     message_formatter=message_formatter)
   printer.PrintField(field, value)
 
 
@@ -230,7 +231,8 @@ def PrintFieldValue(field,
   """Print a single field value (not including name)."""
   printer = _Printer(out, indent, as_utf8, as_one_line,
                      use_short_repeated_primitives, pointy_brackets,
-                     use_index_order, float_format, message_formatter)
+                     use_index_order, float_format,
+                     message_formatter=message_formatter)
   printer.PrintFieldValue(field, value)
 
 

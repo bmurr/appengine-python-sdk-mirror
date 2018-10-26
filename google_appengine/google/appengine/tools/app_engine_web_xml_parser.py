@@ -298,6 +298,12 @@ class AppEngineWebXmlParser(object):
   def ProcessEnvNode(self, node):
     self.app_engine_web_xml.env = node.text
 
+  def ProcessEntrypointNode(self, node):
+    self.app_engine_web_xml.entrypoint = node.text
+
+  def ProcessRuntimeChannelNode(self, node):
+    self.app_engine_web_xml.runtime_channel = node.text
+
   def ProcessApiConfigNode(self, node):
     servlet = xml_parser_utils.GetAttribute(node, 'servlet-class').strip()
     url = xml_parser_utils.GetAttribute(node, 'url-pattern').strip()

@@ -165,7 +165,9 @@ class GoRuntimeInstanceFactory(instance.InstanceFactory):
     go_mod_dir = self._find_go_mod_dir(
         self._module_configuration.application_root)
     if os.getenv('GO111MODULE', '').lower() == 'on' and go_mod_dir:
+      logging.info('Building with dependencies from go.mod.')
       return [go_mod_dir]
+    logging.info('Building with dependencies from GOPATH.')
 
     # Go <= 1.10 assumes GOPATH, or will infer it
     if not self._runtime_config_getter().go_config.enable_watching_go_path:
