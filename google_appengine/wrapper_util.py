@@ -206,9 +206,6 @@ class Paths(object):
     devappserver2_dir = os.path.join(
         dir_path, 'google', 'appengine', 'tools', 'devappserver2')
 
-
-
-
     php_runtime_dir = os.path.join(devappserver2_dir, 'php', 'runtime')
     python_runtime_dir = os.path.join(devappserver2_dir, 'python', 'runtime')
 
@@ -261,13 +258,6 @@ class Paths(object):
     if grpc_importable:
       devappserver2_paths.append(grpc_path)
 
-
-
-
-
-
-
-
     php_runtime_paths = [
         dir_path,
         os.path.join(dir_path, 'lib', 'concurrent'),
@@ -301,11 +291,6 @@ class Paths(object):
         'php_cli.py': devappserver2_paths,
         'remote_api_shell.py': self.v1_extra_paths,
         'vmboot.py': self.v1_extra_paths,
-
-
-
-
-
         '_php_runtime.py': php_runtime_paths,
         '_python_runtime.py': python_runtime_paths,
     }
@@ -313,11 +298,6 @@ class Paths(object):
     self._wrapper_name_to_real_name = {
         'api_server.py': 'api_server.py',
         'dev_appserver.py': 'devappserver2.py',
-
-
-
-
-
         '_php_runtime.py': 'runtime.py',
         '_python_runtime.py': 'runtime.py',
     }
@@ -331,11 +311,6 @@ class Paths(object):
     self._script_to_dir = {
         'api_server.py': devappserver2_dir,
         'dev_appserver.py': devappserver2_dir,
-
-
-
-
-
         '_php_runtime.py': php_runtime_dir,
         '_python_runtime.py': python_runtime_dir,
     }

@@ -328,11 +328,6 @@ class DevelopmentServer(object):
     self._dispatcher = dispatcher.Dispatcher(
         configuration, options.host, options.port, options.auth_domain,
         constants.LOG_LEVEL_TO_RUNTIME_CONSTANT[options.log_level],
-
-
-
-
-
         self._create_php_config(options, php_version),
         self._create_python_config(options),
         self._create_java_config(options),
@@ -465,18 +460,6 @@ class DevelopmentServer(object):
       php_config.php_version = php_version
 
     return php_config
-
-
-
-
-
-
-
-
-
-
-
-
 
   @staticmethod
   def _create_python_config(options):
