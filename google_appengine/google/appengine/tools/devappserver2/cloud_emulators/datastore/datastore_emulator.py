@@ -160,7 +160,7 @@ class DatastoreEmulator(object):
           logging.info(
               'Cloud Datastore emulator responded after %f seconds', Elapsed())
           return True
-      except socket.error:
+      except (socket.error, httplib.ResponseNotReady):
         pass
       if Elapsed() >= deadline:
         # Out of time; give up.
