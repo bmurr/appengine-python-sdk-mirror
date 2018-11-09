@@ -1,5 +1,5 @@
-release: "1.9.79"
-timestamp: 1541023693
+release: "1.9.80"
+timestamp: 1541441300
 api_versions: ['1']
 supported_api_versions:
   python:
