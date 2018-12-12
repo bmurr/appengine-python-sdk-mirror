@@ -48,21 +48,13 @@ Many other constants may be defined; these may be used in calls to
 the setsockopt() and getsockopt() methods.
 """
 
-# GOOGLE NOTE: import paths changed to refer to our implementation.
 # pylint: disable=bad-indentation
 # pylint: disable=g-bad-import-order
 # pylint: disable=g-import-not-at-top
 # pylint: disable=reimported
 # pylint: disable=wildcard-import
-import os
-if os.environ.get("GAE_USE_DIRECT_SOCKETS"):
-    import _socket
-    from _socket import *
-    USING_REMOTE_SOCKETS = False
-else:
-    from google.appengine.api.remote_socket import _remote_socket as _socket
-    from google.appengine.api.remote_socket._remote_socket import *
-    USING_REMOTE_SOCKETS = True
+import _socket
+from _socket import *
 from functools import partial
 from types import MethodType
 
@@ -574,11 +566,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT,
                 sock.settimeout(timeout)
             if source_address:
                 sock.bind(source_address)
-            if USING_REMOTE_SOCKETS:
-                # The remote_socket library takes an extra argument
-                sock.connect(sa, host)
-            else:
-                sock.connect(sa)
+            sock.connect(sa)
             return sock
 
         except error as _:
