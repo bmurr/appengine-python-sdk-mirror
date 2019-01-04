@@ -14,11 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 """Directly processes text of dispatch.xml.
 
 DispatchXmlParser is called with an XML string to produce a list of
 DispatchEntry objects containing the data from the XML.
 """
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 from xml.etree import ElementTree
 
