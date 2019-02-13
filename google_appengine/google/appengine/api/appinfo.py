@@ -181,6 +181,9 @@ RUNTIME_RE_STRING = r'((gs://[a-z0-9\-\._/]+)|([a-z][a-z0-9\-\.]{0,29}))'
 API_VERSION_RE_STRING = r'[\w.]{1,32}'
 ENV_RE_STRING = r'(1|2|standard|flex|flexible)'
 
+
+MAIN_RE_STRING = r'[\w.\\\/:]+'
+
 SOURCE_LANGUAGE_RE_STRING = r'[\w.\-]{1,32}'
 
 HANDLER_STATIC_FILES = 'static_files'
@@ -262,6 +265,7 @@ MINOR_VERSION = 'minor_version'
 RUNTIME = 'runtime'
 RUNTIME_CHANNEL = 'runtime_channel'
 API_VERSION = 'api_version'
+MAIN = 'main'
 ENDPOINTS_API_SERVICE = 'endpoints_api_service'
 ENV = 'env'
 ENTRYPOINT = 'entrypoint'
@@ -799,7 +803,8 @@ _MAX_HEADER_SIZE_FOR_EXEMPTED_HEADERS = 10240
 
 _CANNED_RUNTIMES = ('contrib-dart', 'dart', 'go', 'php', 'php55', 'php72',
                     'python', 'python27', 'python-compat', 'java', 'java7',
-                    'java8', 'vm', 'custom', 'nodejs', 'ruby')
+                    'java8', 'vm', 'custom', 'nodejs', 'ruby', 'go111',
+                    'go112')
 _all_runtimes = _CANNED_RUNTIMES
 
 
@@ -2292,6 +2297,7 @@ class AppInfoExternal(validation.Validated):
 
 
       API_VERSION: validation.Optional(API_VERSION_RE_STRING),
+      MAIN: validation.Optional(MAIN_RE_STRING),
 
       ENV: validation.Optional(ENV_RE_STRING),
       ENDPOINTS_API_SERVICE: validation.Optional(EndpointsApiService),
