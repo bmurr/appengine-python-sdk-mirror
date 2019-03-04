@@ -165,7 +165,10 @@ _PENDING_LATENCY_REGEX = r'^(\d+((\.\d{1,3})?s|ms)|automatic)$'
 
 _IDLE_TIMEOUT_REGEX = r'^[\d]+(s|m)$'
 
+GCE_RESOURCE_PATH_REGEX = r'^[a-z\d-]+(/[a-z\d-]+)*$'
+
 GCE_RESOURCE_NAME_REGEX = r'^[a-z]([a-z\d-]{0,61}[a-z\d])?$'
+
 VPC_ACCESS_CONNECTOR_NAME_REGEX = r'^[a-z\d-]+(/[a-z\d-]+)*$'
 
 ALTERNATE_HOSTNAME_SEPARATOR = '-dot-'
@@ -2028,7 +2031,7 @@ class Network(validation.Validated):
           GCE_RESOURCE_NAME_REGEX)),
 
       NETWORK_NAME: validation.Optional(validation.Regex(
-          GCE_RESOURCE_NAME_REGEX)),
+          GCE_RESOURCE_PATH_REGEX)),
 
       SUBNETWORK_NAME: validation.Optional(validation.Regex(
           GCE_RESOURCE_NAME_REGEX)),
