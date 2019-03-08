@@ -9044,6 +9044,122 @@ namespace google\appengine_datastore_v3 {
     }
   }
 }
+namespace google\appengine_datastore_v3 {
+  class UpdateIndexResponse extends \google\net\ProtocolMessage {
+    public function getTypeUrl() {
+      if (!isset($this->type_url)) {
+        return '';
+      }
+      return $this->type_url;
+    }
+    public function setTypeUrl($val) {
+      $this->type_url = $val;
+      return $this;
+    }
+    public function clearTypeUrl() {
+      unset($this->type_url);
+      return $this;
+    }
+    public function hasTypeUrl() {
+      return isset($this->type_url);
+    }
+    public function getValue() {
+      if (!isset($this->value)) {
+        return '';
+      }
+      return $this->value;
+    }
+    public function setValue($val) {
+      $this->value = $val;
+      return $this;
+    }
+    public function clearValue() {
+      unset($this->value);
+      return $this;
+    }
+    public function hasValue() {
+      return isset($this->value);
+    }
+    public function clear() {
+      $this->clearTypeUrl();
+      $this->clearValue();
+    }
+    public function byteSizePartial() {
+      $res = 0;
+      if (isset($this->type_url)) {
+        $res += 1;
+        $res += $this->lengthString(strlen($this->type_url));
+      }
+      if (isset($this->value)) {
+        $res += 1;
+        $res += $this->lengthString(strlen($this->value));
+      }
+      return $res;
+    }
+    public function outputPartial($out) {
+      if (isset($this->type_url)) {
+        $out->putVarInt32(10);
+        $out->putPrefixedString($this->type_url);
+      }
+      if (isset($this->value)) {
+        $out->putVarInt32(18);
+        $out->putPrefixedString($this->value);
+      }
+    }
+    public function tryMerge($d) {
+      while($d->avail() > 0) {
+        $tt = $d->getVarInt32();
+        switch ($tt) {
+          case 10:
+            $length = $d->getVarInt32();
+            $this->setTypeUrl(substr($d->buffer(), $d->pos(), $length));
+            $d->skip($length);
+            break;
+          case 18:
+            $length = $d->getVarInt32();
+            $this->setValue(substr($d->buffer(), $d->pos(), $length));
+            $d->skip($length);
+            break;
+          case 0:
+            throw new \google\net\ProtocolBufferDecodeError();
+            break;
+          default:
+            $d->skipData($tt);
+        }
+      };
+    }
+    public function checkInitialized() {
+      return null;
+    }
+    public function mergeFrom($x) {
+      if ($x === $this) { throw new \IllegalArgumentException('Cannot copy message to itself'); }
+      if ($x->hasTypeUrl()) {
+        $this->setTypeUrl($x->getTypeUrl());
+      }
+      if ($x->hasValue()) {
+        $this->setValue($x->getValue());
+      }
+    }
+    public function equals($x) {
+      if ($x === $this) { return true; }
+      if (isset($this->type_url) !== isset($x->type_url)) return false;
+      if (isset($this->type_url) && $this->type_url !== $x->type_url) return false;
+      if (isset($this->value) !== isset($x->value)) return false;
+      if (isset($this->value) && $this->value !== $x->value) return false;
+      return true;
+    }
+    public function shortDebugString($prefix = "") {
+      $res = '';
+      if (isset($this->type_url)) {
+        $res .= $prefix . "type_url: " . $this->debugFormatString($this->type_url) . "\n";
+      }
+      if (isset($this->value)) {
+        $res .= $prefix . "value: " . $this->debugFormatString($this->value) . "\n";
+      }
+      return $res;
+    }
+  }
+}
 namespace google\appengine_datastore_v3\DatastoreService_3 {
   class Method {
     const Get = 1;
