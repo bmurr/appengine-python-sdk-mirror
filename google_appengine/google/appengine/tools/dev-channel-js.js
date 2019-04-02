@@ -3018,13 +3018,9 @@ goog.html.SafeStyle.fromConstant = function(style) {
   if (0 === styleString.length) {
     return goog.html.SafeStyle.EMPTY;
   }
-  goog.html.SafeStyle.checkStyle_(styleString);
   goog.asserts.assert(goog.string.internal.endsWith(styleString, ";"), "Last character of style string is not ';': " + styleString);
   goog.asserts.assert(goog.string.internal.contains(styleString, ":"), "Style string must contain at least one ':', to specify a \"name: value\" pair: " + styleString);
   return goog.html.SafeStyle.createSafeStyleSecurityPrivateDoNotAccessOrElse(styleString);
-};
-goog.html.SafeStyle.checkStyle_ = function(style) {
-  goog.asserts.assert(!/[<>]/.test(style), "Forbidden characters in style string: " + style);
 };
 goog.html.SafeStyle.prototype.getTypedStringValue = function() {
   return this.privateDoNotAccessOrElseSafeStyleWrappedValue_;
@@ -3057,11 +3053,7 @@ goog.html.SafeStyle.create = function(map) {
     var value = map[name];
     null != value && (value = goog.isArray(value) ? goog.array.map(value, goog.html.SafeStyle.sanitizePropertyValue_).join(" ") : goog.html.SafeStyle.sanitizePropertyValue_(value), style += name + ":" + value + ";");
   }
-  if (!style) {
-    return goog.html.SafeStyle.EMPTY;
-  }
-  goog.html.SafeStyle.checkStyle_(style);
-  return goog.html.SafeStyle.createSafeStyleSecurityPrivateDoNotAccessOrElse(style);
+  return style ? goog.html.SafeStyle.createSafeStyleSecurityPrivateDoNotAccessOrElse(style) : goog.html.SafeStyle.EMPTY;
 };
 goog.html.SafeStyle.sanitizePropertyValue_ = function(value) {
   if (value instanceof goog.html.SafeUrl) {
@@ -3069,7 +3061,9 @@ goog.html.SafeStyle.sanitizePropertyValue_ = function(value) {
     return 'url("' + url.replace(/</g, "%3c").replace(/[\\"]/g, "\\$&") + '")';
   }
   var result = value instanceof goog.string.Const ? goog.string.Const.unwrap(value) : goog.html.SafeStyle.sanitizePropertyValueString_(String(value));
-  goog.asserts.assert(!/[{;}]/.test(result), "Value does not allow [{;}].");
+  if (/[{;}]/.test(result)) {
+    throw new goog.asserts.AssertionError("Value does not allow [{;}], got: %s.", [result]);
+  }
   return result;
 };
 goog.html.SafeStyle.sanitizePropertyValueString_ = function(value) {
@@ -3160,7 +3154,7 @@ goog.html.SafeStyleSheet.createRule = function(selector, style) {
     throw Error("() and [] in selector must be balanced, got: " + selector);
   }
   style instanceof goog.html.SafeStyle || (style = goog.html.SafeStyle.create(style));
-  var styleSheet = selector + "{" + goog.html.SafeStyle.unwrap(style) + "}";
+  var styleSheet = selector + "{" + goog.html.SafeStyle.unwrap(style).replace(/</g, "\\3C ") + "}";
   return goog.html.SafeStyleSheet.createSafeStyleSheetSecurityPrivateDoNotAccessOrElse(styleSheet);
 };
 goog.html.SafeStyleSheet.hasBalancedBrackets_ = function(s) {
