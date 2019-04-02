@@ -116,6 +116,12 @@ class _ExtensionDict(object):
   def __ne__(self, other):
     return not self == other
 
+  def __len__(self):
+    fields = self._extended_message.ListFields()
+
+    extension_fields = [field for field in fields if field[0].is_extension]
+    return len(extension_fields)
+
   def __hash__(self):
     raise TypeError('unhashable object')
 
