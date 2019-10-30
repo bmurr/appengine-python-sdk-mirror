@@ -5543,6 +5543,27 @@ namespace google\appengine_datastore_v3 {
     public function hasAutoIdPolicy() {
       return isset($this->auto_id_policy);
     }
+    public function getSequenceNumber() {
+      if (!isset($this->sequence_number)) {
+        return "0";
+      }
+      return $this->sequence_number;
+    }
+    public function setSequenceNumber($val) {
+      if (is_double($val)) {
+        $this->sequence_number = sprintf('%0.0F', $val);
+      } else {
+        $this->sequence_number = $val;
+      }
+      return $this;
+    }
+    public function clearSequenceNumber() {
+      unset($this->sequence_number);
+      return $this;
+    }
+    public function hasSequenceNumber() {
+      return isset($this->sequence_number);
+    }
     public function clear() {
       $this->clearEntity();
       $this->clearTransaction();
@@ -5552,6 +5573,7 @@ namespace google\appengine_datastore_v3 {
       $this->clearMarkChanges();
       $this->clearSnapshot();
       $this->clearAutoIdPolicy();
+      $this->clearSequenceNumber();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -5586,6 +5608,10 @@ namespace google\appengine_datastore_v3 {
       if (isset($this->auto_id_policy)) {
         $res += 1;
         $res += $this->lengthVarInt64($this->auto_id_policy);
+      }
+      if (isset($this->sequence_number)) {
+        $res += 1;
+        $res += $this->lengthVarInt64($this->sequence_number);
       }
       return $res;
     }
@@ -5629,6 +5655,10 @@ namespace google\appengine_datastore_v3 {
         $out->putVarInt32(80);
         $out->putVarInt32($this->auto_id_policy);
       }
+      if (isset($this->sequence_number)) {
+        $out->putVarInt32(96);
+        $out->putVarInt64($this->sequence_number);
+      }
     }
     public function tryMerge($d) {
       while($d->avail() > 0) {
@@ -5669,6 +5699,9 @@ namespace google\appengine_datastore_v3 {
             break;
           case 80:
             $this->setAutoIdPolicy($d->getVarInt32());
+            break;
+          case 96:
+            $this->setSequenceNumber($d->getVarInt64());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -5717,6 +5750,9 @@ namespace google\appengine_datastore_v3 {
       if ($x->hasAutoIdPolicy()) {
         $this->setAutoIdPolicy($x->getAutoIdPolicy());
       }
+      if ($x->hasSequenceNumber()) {
+        $this->setSequenceNumber($x->getSequenceNumber());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -5742,6 +5778,8 @@ namespace google\appengine_datastore_v3 {
       }
       if (isset($this->auto_id_policy) !== isset($x->auto_id_policy)) return false;
       if (isset($this->auto_id_policy) && $this->auto_id_policy !== $x->auto_id_policy) return false;
+      if (isset($this->sequence_number) !== isset($x->sequence_number)) return false;
+      if (isset($this->sequence_number) && !$this->integerEquals($this->sequence_number, $x->sequence_number)) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -5769,6 +5807,9 @@ namespace google\appengine_datastore_v3 {
       }
       if (isset($this->auto_id_policy)) {
         $res .= $prefix . "auto_id_policy: " . ($this->auto_id_policy) . "\n";
+      }
+      if (isset($this->sequence_number)) {
+        $res .= $prefix . "sequence_number: " . $this->debugFormatInt64($this->sequence_number) . "\n";
       }
       return $res;
     }
@@ -6494,6 +6535,27 @@ namespace google\appengine_datastore_v3 {
     public function clearCompositeIndex() {
       $this->composite_index = array();
     }
+    public function getSequenceNumber() {
+      if (!isset($this->sequence_number)) {
+        return "0";
+      }
+      return $this->sequence_number;
+    }
+    public function setSequenceNumber($val) {
+      if (is_double($val)) {
+        $this->sequence_number = sprintf('%0.0F', $val);
+      } else {
+        $this->sequence_number = $val;
+      }
+      return $this;
+    }
+    public function clearSequenceNumber() {
+      unset($this->sequence_number);
+      return $this;
+    }
+    public function hasSequenceNumber() {
+      return isset($this->sequence_number);
+    }
     public function clear() {
       $this->clearTrusted();
       $this->clearTransaction();
@@ -6502,6 +6564,7 @@ namespace google\appengine_datastore_v3 {
       $this->clearMarkChanges();
       $this->clearSnapshot();
       $this->clearCompositeIndex();
+      $this->clearSequenceNumber();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -6532,6 +6595,10 @@ namespace google\appengine_datastore_v3 {
       $res += 1 * sizeof($this->composite_index);
       foreach ($this->composite_index as $value) {
         $res += $this->lengthString($value->byteSizePartial());
+      }
+      if (isset($this->sequence_number)) {
+        $res += 1;
+        $res += $this->lengthVarInt64($this->sequence_number);
       }
       return $res;
     }
@@ -6571,6 +6638,10 @@ namespace google\appengine_datastore_v3 {
         $out->putVarInt32($value->byteSizePartial());
         $value->outputPartial($out);
       }
+      if (isset($this->sequence_number)) {
+        $out->putVarInt32(96);
+        $out->putVarInt64($this->sequence_number);
+      }
     }
     public function tryMerge($d) {
       while($d->avail() > 0) {
@@ -6608,6 +6679,9 @@ namespace google\appengine_datastore_v3 {
             $tmp = new \google\net\Decoder($d->buffer(), $d->pos(), $d->pos() + $length);
             $d->skip($length);
             $this->addCompositeIndex()->tryMerge($tmp);
+            break;
+          case 96:
+            $this->setSequenceNumber($d->getVarInt64());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -6653,6 +6727,9 @@ namespace google\appengine_datastore_v3 {
       foreach ($x->getCompositeIndexList() as $v) {
         $this->addCompositeIndex()->copyFrom($v);
       }
+      if ($x->hasSequenceNumber()) {
+        $this->setSequenceNumber($x->getSequenceNumber());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -6676,6 +6753,8 @@ namespace google\appengine_datastore_v3 {
       foreach (array_map(null, $this->composite_index, $x->composite_index) as $v) {
         if (!$v[0]->equals($v[1])) return false;
       }
+      if (isset($this->sequence_number) !== isset($x->sequence_number)) return false;
+      if (isset($this->sequence_number) && !$this->integerEquals($this->sequence_number, $x->sequence_number)) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -6700,6 +6779,9 @@ namespace google\appengine_datastore_v3 {
       }
       foreach ($this->composite_index as $value) {
         $res .= $prefix . "composite_index <\n" . $value->shortDebugString($prefix . "  ") . $prefix . ">\n";
+      }
+      if (isset($this->sequence_number)) {
+        $res .= $prefix . "sequence_number: " . $this->debugFormatInt64($this->sequence_number) . "\n";
       }
       return $res;
     }
