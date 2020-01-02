@@ -611,7 +611,7 @@ class _FieldProperty(property):
 def _AddPropertiesForRepeatedField(field, cls):
   """Adds a public property for a "repeated" protocol message field.  Clients
   can use this property to get the value of the field, which will be either a
-  _RepeatedScalarFieldContainer or _RepeatedCompositeFieldContainer (see
+  RepeatedScalarFieldContainer or RepeatedCompositeFieldContainer (see
   below).
 
   Note that when clients add values to these containers, we perform
@@ -667,7 +667,6 @@ def _AddPropertiesForNonRepeatedScalarField(field, cls):
   property_name = _PropertyName(proto_field_name)
   type_checker = type_checkers.GetTypeChecker(field)
   default_value = field.default_value
-  valid_values = set()
   is_proto3 = field.containing_type.syntax == 'proto3'
 
   def getter(self):
@@ -776,7 +775,8 @@ def _AddStaticMethods(cls):
   def RegisterExtension(extension_handle):
     extension_handle.containing_type = cls.DESCRIPTOR
 
-    cls.DESCRIPTOR.file.pool.AddExtensionDescriptor(extension_handle)
+
+    cls.DESCRIPTOR.file.pool._AddExtensionDescriptor(extension_handle)
     _AttachFieldHelpers(cls, extension_handle)
   cls.RegisterExtension = staticmethod(RegisterExtension)
 
@@ -1062,7 +1062,6 @@ def _AddSerializeToStringMethod(message_descriptor, cls):
 
   def SerializeToString(self, **kwargs):
 
-    errors = []
     if not self.IsInitialized():
       raise message_mod.EncodeError(
           'Message %s is missing required fields: %s' % (
@@ -1164,6 +1163,8 @@ def _AddMergeFromStringMethod(message_descriptor, cls):
 
         (tag, _) = decoder._DecodeVarint(tag_bytes, 0)
         field_number, wire_type = wire_format.UnpackTag(tag)
+        if field_number == 0:
+          raise message_mod.DecodeError('Field number 0 is illegal.')
 
         old_pos = new_pos
         (data, new_pos) = decoder._DecodeUnknownField(
@@ -1348,12 +1349,6 @@ def _AddWhichOneofMethod(message_descriptor, cls):
   cls.WhichOneof = WhichOneof
 
 
-def _AddReduceMethod(cls):
-  def __reduce__(self):
-    return (type(self), (), self.__getstate__())
-  cls.__reduce__ = __reduce__
-
-
 def _Clear(self):
 
   self._fields = {}
@@ -1416,7 +1411,6 @@ def _AddMessageMethods(message_descriptor, cls):
   _AddIsInitializedMethod(message_descriptor, cls)
   _AddMergeFromMethod(cls)
   _AddWhichOneofMethod(message_descriptor, cls)
-  _AddReduceMethod(cls)
 
   cls.Clear = _Clear
   cls.UnknownFields = _UnknownFields

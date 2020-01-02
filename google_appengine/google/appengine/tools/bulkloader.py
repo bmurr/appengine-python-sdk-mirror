@@ -98,19 +98,18 @@ import getopt
 import imp
 import logging
 import os
-import Queue
 import re
 import shutil
 import signal
-import StringIO
 import sys
 import threading
 import time
 import traceback
-import urllib2
-import urlparse
 
-from google.appengine.datastore import entity_pb
+import six
+from six.moves import urllib
+import six.moves.queue
+import six.moves.urllib.parse
 
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import datastore
@@ -128,6 +127,7 @@ from google.appengine.runtime import apiproxy_errors
 from google.appengine.tools import adaptive_thread_pool
 from google.appengine.tools import appengine_rpc
 from google.appengine.tools.requeue import ReQueue
+from google.appengine.datastore import entity_pb
 
 
 
@@ -770,7 +770,7 @@ class _WorkItem(adaptive_thread_pool.WorkItem):
 
         status = adaptive_thread_pool.WorkItem.RETRY
         logger.exception('Retrying on non-fatal datastore error: %s', e)
-      except urllib2.HTTPError, e:
+      except urllib.error.HTTPError, e:
         http_status = e.code
         if http_status >= 500 and http_status < 600:
 
@@ -780,7 +780,7 @@ class _WorkItem(adaptive_thread_pool.WorkItem):
         else:
           self.SetError()
           status = adaptive_thread_pool.WorkItem.FAILURE
-      except urllib2.URLError, e:
+      except urllib.error.URLError, e:
         if IsURLErrorFatal(e):
           self.SetError()
           status = adaptive_thread_pool.WorkItem.FAILURE
@@ -1603,7 +1603,7 @@ def IsURLErrorFatal(error):
   Args:
     error: A urllib2.URLError instance.
   """
-  assert isinstance(error, urllib2.URLError)
+  assert isinstance(error, urllib.error.URLError)
   if not hasattr(error, 'reason'):
     return True
   if not isinstance(error.reason[0], int):
@@ -1688,7 +1688,7 @@ class DataSourceThread(_ThreadBase):
           self.thread_pool.SubmitItem(item, block=True, timeout=1.0)
           self.entity_count += item.count
           break
-        except Queue.Full:
+        except six.moves.queue.Full:
           pass
 
 
@@ -2373,7 +2373,7 @@ class _ProgressThreadBase(_ThreadBase):
     while not self.exit_flag:
       try:
         item = self.progress_queue.get(block=True, timeout=1.0)
-      except Queue.Empty:
+      except six.moves.queue.Empty:
 
         continue
       if item == _THREAD_SHOULD_EXIT:
@@ -2855,7 +2855,7 @@ class RestoreLoader(Loader):
 
   def initialize(self, filename, loader_opts):
     CheckFile(filename)
-    self.queue = Queue.Queue(1000)
+    self.queue = six.moves.queue.Queue(1000)
     restore_thread = RestoreThread(self.queue, filename)
     restore_thread.start()
     self.keys_to_reserve = self._find_keys_to_reserve(
@@ -3052,7 +3052,7 @@ class Exporter(object):
     Returns:
       A CSV string.
     """
-    output = StringIO.StringIO()
+    output = six.StringIO()
     writer = csv.writer(output)
     writer.writerow(self.__ExtractProperties(entity))
     return output.getvalue()
@@ -3238,7 +3238,7 @@ class QueueJoinThread(threading.Thread):
     """
     threading.Thread.__init__(self)
     self.setDaemon(True)
-    assert isinstance(queue, (Queue.Queue, ReQueue))
+    assert isinstance(queue, (six.moves.queue.Queue, ReQueue))
     self.queue = queue
 
   def run(self):
@@ -3321,7 +3321,7 @@ class BulkTransporterApp(object):
                max_queue_size=DEFAULT_QUEUE_SIZE,
                request_manager_factory=RequestManager,
                datasourcethread_factory=DataSourceThread,
-               progress_queue_factory=Queue.Queue,
+               progress_queue_factory=six.moves.queue.Queue,
                thread_pool_factory=adaptive_thread_pool.AdaptiveThreadPool,
                throttle_class=None,
                server=None,
@@ -3368,9 +3368,8 @@ class BulkTransporterApp(object):
     self.thread_pool_factory = thread_pool_factory
     self.throttle_class = throttle_class
     self.server = server
-    (scheme,
-     self.host_port, self.url_path,
-     unused_query, unused_fragment) = urlparse.urlsplit(self.post_url)
+    (scheme, self.host_port, self.url_path, unused_query,
+     unused_fragment) = six.moves.urllib.parse.urlsplit(self.post_url)
     self.secure = (scheme == 'https')
     self.oauth2_parameters = oauth2_parameters
 
@@ -3414,8 +3413,8 @@ class BulkTransporterApp(object):
       self.error = True
 
 
-      if not isinstance(e, urllib2.HTTPError) or (
-          e.code != 302 and e.code != 401):
+      if not isinstance(e, urllib.error.HTTPError) or (e.code != 302 and
+                                                       e.code != 401):
         logger.exception('Exception during authentication')
       raise AuthenticationError()
     if (self.request_manager.auth_called and
@@ -3499,7 +3498,7 @@ class BulkTransporterApp(object):
           logger.debug('Joining %s failed', ob)
         else:
           logger.debug('... done.')
-      elif isinstance(ob, (Queue.Queue, ReQueue)):
+      elif isinstance(ob, (six.moves.queue.Queue, ReQueue)):
         if not InterruptibleQueueJoin(ob, thread_local, thread_pool):
           ShutdownThreads(self.data_source_thread, thread_pool)
       else:
@@ -4023,7 +4022,7 @@ def ProcessArguments(arg_dict,
 
 def _GetRemoteAppId(url, throttle, oauth2_parameters, throttle_class=None):
   """Get the App ID from the remote server."""
-  scheme, host_port, url_path, _, _ = urlparse.urlsplit(url)
+  scheme, host_port, url_path, _, _ = six.moves.urllib.parse.urlsplit(url)
 
   secure = (scheme == 'https')
 
@@ -4191,18 +4190,19 @@ def _PerformBulkload(arg_dict,
       workitem_generator_factory = GetCSVGeneratorFactory(
           kind, filename, batch_size, has_header)
 
-      app = BulkUploaderApp(arg_dict,
-                            workitem_generator_factory,
-                            throttle,
-                            progress_db,
-                            ProgressTrackerThread,
-                            max_queue_size,
-                            RequestManager,
-                            DataSourceThread,
-                            Queue.Queue,
-                            throttle_class=throttle_class,
-                            server=server,
-                            oauth2_parameters=oauth2_parameters)
+      app = BulkUploaderApp(
+          arg_dict,
+          workitem_generator_factory,
+          throttle,
+          progress_db,
+          ProgressTrackerThread,
+          max_queue_size,
+          RequestManager,
+          DataSourceThread,
+          six.moves.queue.Queue,
+          throttle_class=throttle_class,
+          server=server,
+          oauth2_parameters=oauth2_parameters)
       try:
         return_code = app.Run()
       except AuthenticationError:
@@ -4227,17 +4227,18 @@ def _PerformBulkload(arg_dict,
                                     progress_db,
                                     result_db)
 
-      app = BulkDownloaderApp(arg_dict,
-                              KeyRangeGeneratorFactory,
-                              throttle,
-                              progress_db,
-                              ExportProgressThreadFactory,
-                              0,
-                              RequestManager,
-                              DataSourceThread,
-                              Queue.Queue,
-                              throttle_class=throttle_class,
-                              server=server)
+      app = BulkDownloaderApp(
+          arg_dict,
+          KeyRangeGeneratorFactory,
+          throttle,
+          progress_db,
+          ExportProgressThreadFactory,
+          0,
+          RequestManager,
+          DataSourceThread,
+          six.moves.queue.Queue,
+          throttle_class=throttle_class,
+          server=server)
       try:
         return_code = app.Run()
       except AuthenticationError:
@@ -4263,17 +4264,18 @@ def _PerformBulkload(arg_dict,
                                     progress_queue,
                                     progress_db)
 
-      app = BulkMapperApp(arg_dict,
-                          KeyRangeGeneratorFactory,
-                          throttle,
-                          progress_db,
-                          MapperProgressThreadFactory,
-                          0,
-                          RequestManager,
-                          DataSourceThread,
-                          Queue.Queue,
-                          throttle_class=throttle_class,
-                          server=server)
+      app = BulkMapperApp(
+          arg_dict,
+          KeyRangeGeneratorFactory,
+          throttle,
+          progress_db,
+          MapperProgressThreadFactory,
+          0,
+          RequestManager,
+          DataSourceThread,
+          six.moves.queue.Queue,
+          throttle_class=throttle_class,
+          server=server)
       try:
         return_code = app.Run()
       except AuthenticationError:

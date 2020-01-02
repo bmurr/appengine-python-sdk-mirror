@@ -28,6 +28,9 @@ import time
 REQUEST_LOG_ID = 'REQUEST_LOG_ID'
 
 
+TRACE_ID = 'TRACE_ID'
+
+
 _U_SEC = 1000000
 
 
@@ -68,6 +71,11 @@ def Stripnl(message):
 def RequestID():
   """Returns the ID of the current request assigned by App Engine."""
   return os.environ.get(REQUEST_LOG_ID, None)
+
+
+def TraceID():
+  """Returns the trace ID of the current request assigned by App Engine."""
+  return os.environ.get(TRACE_ID, None)
 
 
 def _StrictParseLogEntry(entry, clean_message=True):
