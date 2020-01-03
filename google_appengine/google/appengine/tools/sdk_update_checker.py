@@ -23,9 +23,10 @@ import socket
 import ssl
 import sys
 import time
-import urllib2
 
 import google
+
+from six.moves import urllib
 import yaml
 
 from google.appengine.api import validation
@@ -243,7 +244,7 @@ class SDKUpdateChecker(object):
             timestamp=version['timestamp'],
             api_versions=version['api_versions'],
             runtime=runtime))
-    except (urllib2.URLError, socket.error, ssl.SSLError), e:
+    except (urllib.error.URLError, socket.error, ssl.SSLError), e:
       logging.info('Update check failed: %s', e)
       return
 

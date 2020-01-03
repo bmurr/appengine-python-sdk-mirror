@@ -307,3 +307,21 @@ class Message(object):
     if not isinstance(serialized, bytes):
       serialized = serialized.encode('latin1')
     self.ParseFromString(serialized)
+
+  def __reduce__(self):
+    message_descriptor = self.DESCRIPTOR
+    if message_descriptor.containing_type is None:
+      return type(self), (), self.__getstate__()
+
+
+
+    container = message_descriptor
+    return (_InternalConstructMessage, (container.full_name,),
+            self.__getstate__())
+
+
+def _InternalConstructMessage(full_name):
+  """Constructs a nested message."""
+  from google.net.proto2.python.public import symbol_database
+
+  return symbol_database.Default().GetSymbol(full_name)()

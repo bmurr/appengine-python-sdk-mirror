@@ -29,6 +29,9 @@ Simple usage example:
 
 
 
+
+import encodings.raw_unicode_escape
+import encodings.unicode_escape
 import io
 import re
 
@@ -442,8 +445,8 @@ class _Printer(object):
         if self.as_one_line:
           out.write('} ')
         else:
-          out.write('}\n')
           self.indent -= 2
+          out.write(' ' * self.indent + '}\n')
       elif field.wire_type == WIRETYPE_LENGTH_DELIMITED:
         try:
 
@@ -466,8 +469,8 @@ class _Printer(object):
           if self.as_one_line:
             out.write('} ')
           else:
-            out.write('}\n')
             self.indent -= 2
+            out.write(' ' * self.indent + '}\n')
         else:
 
           out.write(': \"')
@@ -601,14 +604,22 @@ def Parse(text,
 
   NOTE: for historical reasons this function does not clear the input
   message. This is different from what the binary msg.ParseFrom(...) does.
+  If text contains a field already set in message, the value is appended if the
+  field is repeated. Otherwise, an error is raised.
 
   Example
     a = MyProto()
     a.repeated_field.append('test')
     b = MyProto()
 
+    # Repeated fields are combined
     text_format.Parse(repr(a), b)
     text_format.Parse(repr(a), b) # repeated_field contains ["test", "test"]
+
+    # Non-repeated fields cannot be overwritten
+    a.singular_field = 1
+    b.singular_field = 2
+    text_format.Parse(repr(a), b) # ParseError
 
     # Binary version:
     b.ParseFromString(a.SerializeToString()) # repeated_field is now "test"
@@ -649,7 +660,8 @@ def Merge(text,
   """Parses a text representation of a protocol message into a message.
 
   Like Parse(), but allows repeated values for a non-repeated field, and uses
-  the last one.
+  the last one. This means any non-repeated, top-level fields specified in text
+  replace those in the message.
 
   Args:
     text: Message text representation.
@@ -685,6 +697,8 @@ def ParseLines(lines,
                allow_unknown_field=False):
   """Parses a text representation of a protocol message into a message.
 
+  See Parse() for caveats.
+
   Args:
     lines: An iterable of lines of a message's text representation.
     message: A protocol buffer message to merge into.
@@ -717,8 +731,7 @@ def MergeLines(lines,
                allow_unknown_field=False):
   """Parses a text representation of a protocol message into a message.
 
-  Like ParseLines(), but allows repeated values for a non-repeated field, and
-  uses the last one.
+  See Merge() for more details.
 
   Args:
     lines: An iterable of lines of a message's text representation.

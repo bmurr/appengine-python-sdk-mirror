@@ -45,21 +45,19 @@ import os
 import random
 import re
 import shutil
-import StringIO
 import subprocess
 import sys
 import tempfile
 import textwrap
 import time
-import urllib
-import urllib2
-import urlparse
 
 import google
 
 from oauth2client import devshell
-
-
+import six
+from six.moves.urllib import error
+from six.moves.urllib import parse
+from six.moves.urllib import request
 import yaml
 
 from google.appengine.cron import groctimespecification
@@ -239,7 +237,7 @@ def _PrintErrorAndExit(stream, msg, exit_code=2):
 
 
 def _IsDevAppserver(server):
-  return urlparse.urlparse('//' + server).hostname in DEV_SERVER_HOSTNAMES
+  return parse.urlparse('//' + server).hostname in DEV_SERVER_HOSTNAMES
 
 
 def JavaSupported():
@@ -456,7 +454,7 @@ def _GetRemoteResourceLimits(logging_context):
   try:
     yaml_data = logging_context.Send('/api/appversion/getresourcelimits')
 
-  except urllib2.HTTPError, err:
+  except error.HTTPError, err:
 
 
 
@@ -766,7 +764,7 @@ class DefaultVersionSet(object):
 
         params = [('app_id', self.app_id), ('version', self.version)]
         params.extend(('module', module) for module in modules)
-        url = '/api/appversion/setdefault?' + urllib.urlencode(sorted(params))
+        url = '/api/appversion/setdefault?' + parse.urlencode(sorted(params))
         self.rpcserver.Send(url)
         return
 
@@ -1376,15 +1374,16 @@ class UploadBatcher(object):
       while boundary in payload:
         boundary += '%04x' % random.randint(0, 0xffff)
         assert len(boundary) < 80, 'Unexpected error, please try again.'
-      part = '\n'.join(['',
-                        'X-Appcfg-File: %s' % urllib.quote(path),
-                        'X-Appcfg-Hash: %s' % _Hash(payload),
-                        'Content-Type: %s' % mime_type,
-                        'Content-Length: %d' % len(payload),
-                        'Content-Transfer-Encoding: 8bit',
-                        '',
-                        payload,
-                       ])
+      part = '\n'.join([
+          '',
+          'X-Appcfg-File: %s' % parse.quote(path),
+          'X-Appcfg-Hash: %s' % _Hash(payload),
+          'Content-Type: %s' % mime_type,
+          'Content-Length: %d' % len(payload),
+          'Content-Transfer-Encoding: 8bit',
+          '',
+          payload,
+      ])
       parts.append(part)
     parts.insert(0,
                  'MIME-Version: 1.0\n'
@@ -1425,7 +1424,7 @@ class UploadBatcher(object):
       return
     try:
       self.SendBatch()
-    except urllib2.HTTPError, err:
+    except error.HTTPError, err:
       if err.code != 404:
         raise
 
@@ -1606,7 +1605,7 @@ def DoDownloadApp(rpcserver, out_dir, app_id, module, app_version,
         contents = rpcserver.Send('/api/files/get', app_id=app_id,
                                   version=full_version, id=file_id)
         return True, contents
-      except urllib2.HTTPError, exc:
+      except error.HTTPError, exc:
 
 
         if exc.code == 503:
@@ -1710,7 +1709,7 @@ class _ClientDeployLoggingContext(object):
       self._RegisterReqestForLogging(url, 200, start_time_usec,
                                      request_size_bytes)
       return result
-    except urllib2.HTTPError, e:
+    except error.HTTPError, e:
       self._RegisterReqestForLogging(url, e.code, start_time_usec,
                                      request_size_bytes)
       raise e
@@ -2275,9 +2274,8 @@ class AppVersionUpload(object):
   def GetLogUrl(self):
     """Get the URL for the app's logs."""
     module = '%s:' % self.module if self.module else ''
-    return ('https://appengine.google.com/logs?' +
-            urllib.urlencode((('app_id', self.app_id),
-                              ('version_id', module + self.version))))
+    return ('https://appengine.google.com/logs?' + parse.urlencode(
+        (('app_id', self.app_id), ('version_id', module + self.version))))
 
   def IsEndpointsConfigUpdated(self):
     """Check if the Endpoints configuration for this app has been updated.
@@ -2408,7 +2406,7 @@ class AppVersionUpload(object):
           appinfo.PYTHON_PRECOMPILED in self.config.derived_file_type):
         try:
           self.Precompile()
-        except urllib2.HTTPError, e:
+        except error.HTTPError, e:
           ErrorUpdate('Error %d: --- begin server output ---\n'
                       '%s\n--- end server output ---' %
                       (e.code, e.read().rstrip('\n')))
@@ -2458,8 +2456,8 @@ class AppVersionUpload(object):
     if isinstance(exception, KeyboardInterrupt):
       return False
 
-    if (isinstance(exception, urllib2.HTTPError)
-        and 400 <= exception.code <= 499):
+    if (isinstance(exception, error.HTTPError) and
+        400 <= exception.code <= 499):
       return False
 
     return True
@@ -2558,7 +2556,7 @@ class AppVersionUpload(object):
 
     if InstanceOf(KeyboardInterrupt):
       logging.info('User interrupted. Aborting.')
-    elif InstanceOf(urllib2.HTTPError):
+    elif InstanceOf(error.HTTPError):
       logging.info('HTTP Error (%s)', exception)
     elif InstanceOf(CannotStartServingError):
       logging.error(exception.message)
@@ -2739,8 +2737,8 @@ def _ReadUrlContents(url):
   Raises:
     urllib2.URLError: If the URL cannot be read.
   """
-  req = urllib2.Request(url, headers={'Metadata-Flavor': 'Google'})
-  return urllib2.urlopen(req).read()
+  req = request.Request(url, headers={'Metadata-Flavor': 'Google'})
+  return request.urlopen(req).read()
 
 
 class AppCfgApp(object):
@@ -2931,7 +2929,7 @@ class AppCfgApp(object):
     """
     try:
       self.action(self)
-    except urllib2.HTTPError, e:
+    except error.HTTPError, e:
       body = e.read()
       if self.wrap_server_error_message:
         error_format = ('Error %d: --- begin server output ---\n'
@@ -3250,7 +3248,7 @@ class AppCfgApp(object):
       url = '%s/%s/scopes' % (METADATA_BASE, SERVICE_ACCOUNT_BASE)
       try:
         vm_scopes_string = self.read_url_contents(url)
-      except urllib2.URLError, e:
+      except error.URLError, e:
         raise RuntimeError('Could not obtain scope list from metadata service: '
                            '%s: %s. This may be because we are not running in '
                            'a Google Compute Engine VM.' % (url, e))
@@ -3327,7 +3325,7 @@ class AppCfgApp(object):
     base_openfunc = openfunc
     def OpenWithContext(name):
       if name in context_file_map:
-        return StringIO.StringIO(context_file_map[name])
+        return six.StringIO(context_file_map[name])
       return base_openfunc(name)
     return (OpenWithContext, itertools.chain(paths, context_file_map.keys()))
 
@@ -3896,7 +3894,7 @@ class AppCfgApp(object):
       index_upload = IndexDefinitionUpload(rpcserver, index_defs, self.error_fh)
       try:
         index_upload.DoUpload()
-      except urllib2.HTTPError, e:
+      except error.HTTPError, e:
         ErrorUpdate('Error %d: --- begin server output ---\n'
                     '%s\n--- end server output ---' %
                     (e.code, e.read().rstrip('\n')))
@@ -3909,7 +3907,7 @@ class AppCfgApp(object):
       cron_upload = CronEntryUpload(rpcserver, cron_yaml, self.error_fh)
       try:
         cron_upload.DoUpload()
-      except urllib2.HTTPError, e:
+      except error.HTTPError, e:
         ErrorUpdate('Error %d: --- begin server output ---\n'
                     '%s\n--- end server output ---' %
                     (e.code, e.read().rstrip('\n')))
@@ -3922,7 +3920,7 @@ class AppCfgApp(object):
       queue_upload = QueueEntryUpload(rpcserver, queue_yaml, self.error_fh)
       try:
         queue_upload.DoUpload()
-      except urllib2.HTTPError, e:
+      except error.HTTPError, e:
         ErrorUpdate('Error %d: --- begin server output ---\n'
                     '%s\n--- end server output ---' %
                     (e.code, e.read().rstrip('\n')))
