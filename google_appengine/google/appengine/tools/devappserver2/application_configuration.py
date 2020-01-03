@@ -33,7 +33,6 @@ from google.appengine.api import appinfo
 from google.appengine.api import appinfo_includes
 from google.appengine.api import backendinfo
 from google.appengine.api import dispatchinfo
-from google.appengine.client.services import port_manager
 from google.appengine.tools import app_engine_web_xml_parser
 from google.appengine.tools import queue_xml_parser
 from google.appengine.tools import web_xml_parser
@@ -210,22 +209,6 @@ class ModuleConfiguration(object):
       # Java to use 1 like everyone else.
       if self._api_version == '1.0':
         self._api_version = '1'
-      vm_settings = self._app_info_external.vm_settings
-      ports = None
-      if vm_settings:
-        ports = vm_settings.get('forwarded_ports')
-      if not ports:
-        if (self._app_info_external.network and
-            self._app_info_external.network.forwarded_ports):
-          # Depending on the YAML formatting, these may be strings or ints.
-          # Force them to be strings.
-          ports = ','.join(
-              str(p) for p in self._app_info_external.network.forwarded_ports)
-      if ports:
-        logging.debug('setting forwarded ports %s', ports)
-        pm = port_manager.PortManager()
-        pm.Add(ports, 'forwarded')
-        self._forwarded_ports = pm.GetAllMappedPorts()['tcp']
 
     self._translate_configuration_files()
 
@@ -330,11 +313,6 @@ class ModuleConfiguration(object):
   @effective_runtime.setter
   def effective_runtime(self, value):
     self._effective_runtime = value
-
-  @property
-  def forwarded_ports(self):
-    """A dictionary with forwarding rules as host_port => container_port."""
-    return self._forwarded_ports
 
   @property
   def threadsafe(self):
@@ -766,10 +744,6 @@ class BackendConfiguration(object):
   @property
   def effective_runtime(self):
     return self._module_configuration.effective_runtime
-
-  @property
-  def forwarded_ports(self):
-    return self._module_configuration.forwarded_ports
 
   @property
   def threadsafe(self):

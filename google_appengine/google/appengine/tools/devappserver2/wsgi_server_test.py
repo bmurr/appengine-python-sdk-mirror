@@ -654,6 +654,40 @@ class WsgiHostCheckTest(unittest.TestCase):
                                                    ':8a2e:370:7348]:8080')
     self.assert_host_check_fails_with_request_host('[evilhost]:8080')
 
+  def test_whitelisted_wildcard_host_passes_host_check(self):
+    self.add_host_check_with_whitelisted_hosts(['local.dev', '*.example.dev',
+                                                '**.deep.example'])
+
+    # with port
+    self.assert_host_check_passes_with_request_host('local.dev:8080')
+    self.assert_host_check_passes_with_request_host('sub.example.dev:8080')
+    self.assert_host_check_passes_with_request_host('sub.deep.example:8080')
+    self.assert_host_check_passes_with_request_host('sub.sub.deep.example:8080')
+    self.assert_host_check_passes_with_request_host('a.b.c.deep.example:8080')
+
+    # without port
+    self.assert_host_check_passes_with_request_host('local.dev')
+    self.assert_host_check_passes_with_request_host('sub.example.dev')
+    self.assert_host_check_passes_with_request_host('sub.deep.example')
+    self.assert_host_check_passes_with_request_host('sub.sub.deep.example')
+    self.assert_host_check_passes_with_request_host('a.b.c.deep.example')
+
+  def test_non_whitelisted_wildcard_host_fails_host_check(self):
+    self.add_host_check_with_whitelisted_hosts(['local.dev', '*.example.dev',
+                                                '**.deep.example'])
+
+    # with port
+    self.assert_host_check_fails_with_request_host('sub.local.dev:8080')
+    self.assert_host_check_fails_with_request_host('example.dev:8080')
+    self.assert_host_check_fails_with_request_host('sub.sub.example.dev:8080')
+    self.assert_host_check_fails_with_request_host('deep.example:8080')
+
+    # without port
+    self.assert_host_check_fails_with_request_host('sub.local.dev')
+    self.assert_host_check_fails_with_request_host('example.dev')
+    self.assert_host_check_fails_with_request_host('sub.sub.example.dev')
+    self.assert_host_check_fails_with_request_host('deep.example')
+
   def test_http_11_request_with_no_http_host_always_fails_host_check(self):
     self.add_host_check_with_whitelisted_hosts([])
     self.assert_host_check_fails_with_request_host('')

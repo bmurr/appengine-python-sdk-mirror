@@ -38,15 +38,18 @@ Please look there for documentation about how to setup the server side.
 
 
 
-import StringIO
-import httplib
-import logging
 import csv
 import getopt
+import logging
 import socket
 import sys
-import urllib
-import urlparse
+
+import google
+
+import six
+from six.moves import urllib
+import six.moves.http_client
+import six.moves.urllib.parse
 
 from google.appengine.ext.bulkload import constants
 
@@ -96,7 +99,7 @@ def ContentGenerator(csv_file,
 
   while not exhausted:
     rows_written = 0
-    content = StringIO.StringIO()
+    content = six.StringIO()
     writer = create_csv_writer(content)
     try:
       for i in xrange(batch_size):
@@ -127,9 +130,9 @@ def PostEntities(host_port, uri, cookie, kind, content):
   """
   logging.debug('Connecting to %s', host_port)
   try:
-    body = urllib.urlencode({
-      constants.KIND_PARAM: kind,
-      constants.CSV_PARAM: content,
+    body = urllib.parse.urlencode({
+        constants.KIND_PARAM: kind,
+        constants.CSV_PARAM: content,
     })
     headers = {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -138,7 +141,7 @@ def PostEntities(host_port, uri, cookie, kind, content):
     }
 
     logging.debug('Posting %d bytes to http://%s%s', len(body), host_port, uri)
-    connection = httplib.HTTPConnection(host_port)
+    connection = six.moves.http_client.HTTPConnection(host_port)
     try:
       connection.request('POST', uri, body, headers)
       response = connection.getresponse()
@@ -147,12 +150,12 @@ def PostEntities(host_port, uri, cookie, kind, content):
       reason = response.reason
       content = response.read()
       logging.debug('Received response code %d: %s', status, reason)
-      if status != httplib.OK:
+      if status != six.moves.http_client.OK:
         raise BadServerStatusError('Received code %d: %s\n%s' % (
                                    status, reason, content))
     finally:
       connection.close()
-  except (IOError, httplib.HTTPException, socket.error), e:
+  except (IOError, six.moves.http_client.HTTPException, socket.error), e:
     logging.debug('Encountered exception accessing HTTP server: %s', e)
     raise PostError(e)
 
@@ -170,7 +173,7 @@ def SplitURL(url):
         port is optional. (e.g., 'blah.com:8080').
       uri: String containing the relative URI of the URL. (e.g., '/stuff').
   """
-  scheme, netloc, path, query, fragment = urlparse.urlsplit(url)
+  scheme, netloc, path, query, fragment = six.moves.urllib.parse.urlsplit(url)
   return netloc, path
 
 

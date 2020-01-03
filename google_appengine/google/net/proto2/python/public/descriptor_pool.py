@@ -56,6 +56,22 @@ from google.net.proto2.python.public import text_encoding
 _USE_C_DESCRIPTORS = descriptor._USE_C_DESCRIPTORS
 
 
+def _Deprecated(func):
+  """Mark functions as deprecated."""
+
+  def NewFunc(*args, **kwargs):
+    warnings.warn(
+        'Call to deprecated function %s(). Note: Do add unlinked descriptors '
+        'to descriptor_pool is wrong. Use Add() or AddSerializedFile() '
+        'instead.' % func.__name__,
+        category=DeprecationWarning)
+    return func(*args, **kwargs)
+  NewFunc.__name__ = func.__name__
+  NewFunc.__doc__ = func.__doc__
+  NewFunc.__dict__.update(func.__dict__)
+  return NewFunc
+
+
 def _NormalizeFullyQualifiedName(name):
   """Remove leading period from fully-qualified type name.
 
@@ -187,7 +203,14 @@ class DescriptorPool(object):
         serialized_file_desc_proto)
     self.Add(file_desc_proto)
 
+
+
+  @_Deprecated
   def AddDescriptor(self, desc):
+    self._AddDescriptor(desc)
+
+
+  def _AddDescriptor(self, desc):
     """Adds a Descriptor to the pool, non-recursively.
 
     If the Descriptor contains nested messages or enums, the caller must
@@ -205,7 +228,14 @@ class DescriptorPool(object):
     self._descriptors[desc.full_name] = desc
     self._AddFileDescriptor(desc.file)
 
+
+
+  @_Deprecated
   def AddEnumDescriptor(self, enum_desc):
+    self._AddEnumDescriptor(enum_desc)
+
+
+  def _AddEnumDescriptor(self, enum_desc):
     """Adds an EnumDescriptor to the pool.
 
     This method also registers the FileDescriptor associated with the enum.
@@ -239,7 +269,14 @@ class DescriptorPool(object):
         self._top_enum_values[full_name] = enum_value
     self._AddFileDescriptor(enum_desc.file)
 
+
+
+  @_Deprecated
   def AddServiceDescriptor(self, service_desc):
+    self._AddServiceDescriptor(service_desc)
+
+
+  def _AddServiceDescriptor(self, service_desc):
     """Adds a ServiceDescriptor to the pool.
 
     Args:
@@ -253,7 +290,14 @@ class DescriptorPool(object):
                                 service_desc.file.name)
     self._service_descriptors[service_desc.full_name] = service_desc
 
+
+
+  @_Deprecated
   def AddExtensionDescriptor(self, extension):
+    self._AddExtensionDescriptor(extension)
+
+
+  def _AddExtensionDescriptor(self, extension):
     """Adds a FieldDescriptor describing an extension to the pool.
 
     Args:
@@ -302,7 +346,12 @@ class DescriptorPool(object):
       self._extensions_by_name[extension.containing_type][
           extension.message_type.full_name] = extension
 
+  @_Deprecated
   def AddFileDescriptor(self, file_desc):
+    self._InternalAddFileDescriptor(file_desc)
+
+
+  def _InternalAddFileDescriptor(self, file_desc):
     """Adds a FileDescriptor to the pool, non-recursively.
 
     If the FileDescriptor contains messages or enums, the caller must explicitly
