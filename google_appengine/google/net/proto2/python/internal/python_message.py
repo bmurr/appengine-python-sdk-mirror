@@ -112,8 +112,15 @@ class GeneratedProtocolMessageType(type):
 
     Returns:
       Newly-allocated class.
+
+    Raises:
+      RuntimeError: Generated code only work with python cpp extension.
     """
     descriptor = dictionary[GeneratedProtocolMessageType._DESCRIPTOR_KEY]
+
+    if isinstance(descriptor, str):
+      raise RuntimeError('The generated code only work with python cpp '
+                         'extension, but it is using pure python runtime.')
 
 
 

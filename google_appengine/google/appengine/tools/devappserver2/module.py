@@ -165,7 +165,7 @@ class _ScriptHandler(url_handler.UserConfiguredURLHandler):
     """
     try:
       url_pattern = re.compile('%s$' % url_map.url)
-    except re.error, e:
+    except re.error as e:
       raise errors.InvalidAppConfigError(
           'invalid url %r in script handler: %s' % (url_map.url, e))
 
@@ -971,7 +971,7 @@ class Module(object):
                 return ret
         return self._no_handler_for_request(environ, wrapped_start_response,
                                             request_id)
-      except StandardError, e:
+      except StandardError as e:
         if logging.getLogger('').isEnabledFor(logging.DEBUG):
           logging.exception('Request to %r failed', path_info)
         else:
@@ -1924,7 +1924,7 @@ class ManualScalingModule(Module):
       logging.debug('Sent start request: %s', inst)
       with self._condition:
         self._condition.notify(self.max_instance_concurrent_requests)
-    except Exception, e:  # pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
       logging.exception('Internal error while handling start request: %s', e)
 
   def _choose_instance(self, timeout_time):

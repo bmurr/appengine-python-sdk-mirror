@@ -16,6 +16,7 @@
 #
 """A PHP devappserver2 runtime."""
 
+from __future__ import print_function
 
 
 import base64
@@ -264,7 +265,7 @@ def main():
       ('localhost', 0),
       request_rewriter.runtime_rewriter_middleware(PHPRuntime(config)))
   server.start()
-  print server.port
+  print(server.port)
   sys.stdout.close()
   sys.stdout = sys.stderr
   try:

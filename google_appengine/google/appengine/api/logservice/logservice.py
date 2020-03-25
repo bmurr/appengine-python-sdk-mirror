@@ -44,6 +44,7 @@ import warnings
 from google.net.proto import ProtocolBuffer
 from google.appengine.api import api_base_pb
 from google.appengine.api import apiproxy_stub_map
+from google.appengine.api.app_identity import app_identity
 from google.appengine.api.logservice import log_service_pb
 from google.appengine.api.logservice import logsutil
 from google.appengine.datastore import datastore_rpc
@@ -1438,8 +1439,7 @@ class _LogsFileBuffer(object):
     logs = logsutil.ParseLogs(line)
     for log in logs:
       entry = self.outputjson(log)
-      self.stream().write(entry)
-      self.stream().write('\n')
+      self.stream().write(entry + '\n')
 
   @staticmethod
   def _truncate(line, max_length=_MAX_LINE_SIZE):
@@ -1455,8 +1455,9 @@ class _LogsFileBuffer(object):
     _, level, message, _ = log
     message = self._truncate(message, self._MAX_LINE_SIZE)
     trace = logsutil.TraceID()
-    entry = {'severity': level, 'message': message}
-    project = os.environ['APPLICATION_ID']
+    severity = logsutil.LogLevelString(level)
+    entry = {'severity': severity, 'message': message}
+    project = app_identity.get_application_id()
 
     entry['logging.googleapis.com/trace'] = ('projects/%s/traces/%s' %
                                              (project, trace))
@@ -1476,11 +1477,10 @@ class _LogsFileBuffer(object):
 
 
 
-def LogsBuffer(stream=None, stderr=False):
+def LogsBuffer(stream=None, stderr=False, force_var_log=False):
 
 
-  if features.IsEnabled('LogsFileBuffer') or os.environ.get(
-      'WRITE_LOGS_TO_VAR_LOG') == '1':
+  if features.IsEnabled('LogsFileBuffer') or force_var_log:
     return _LogsFileBuffer()
   elif stream or stderr or not features.IsEnabled('LogsDequeBuffer'):
     return _LogsStreamBuffer(stream, stderr)
