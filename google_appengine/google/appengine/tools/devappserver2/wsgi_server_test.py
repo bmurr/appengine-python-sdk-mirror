@@ -616,7 +616,7 @@ class WsgiHostCheckTest(unittest.TestCase):
         self.send_http_10_request_as_host(host)
       else:
         self.send_request_as_host(host)
-    except urllib2.HTTPError, error:
+    except urllib2.HTTPError as error:
       self.assertEqual(400, error.code)
     else:
       self.fail('Did not receive expected http error')

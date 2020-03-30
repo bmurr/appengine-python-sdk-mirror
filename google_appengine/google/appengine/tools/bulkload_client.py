@@ -36,6 +36,7 @@ Works with the bulkload mix-in library for google.appengine.ext.bulkload.
 Please look there for documentation about how to setup the server side.
 """
 
+from __future__ import print_function
 
 
 import csv
@@ -155,7 +156,7 @@ def PostEntities(host_port, uri, cookie, kind, content):
                                    status, reason, content))
     finally:
       connection.close()
-  except (IOError, six.moves.http_client.HTTPException, socket.error), e:
+  except (IOError, six.moves.http_client.HTTPException, socket.error) as e:
     logging.debug('Encountered exception accessing HTTP server: %s', e)
     raise PostError(e)
 
@@ -210,7 +211,7 @@ def ImportCSV(filename,
                    num_entities, len(content))
       try:
         content = post_entities(host_port, uri, cookie, kind, content)
-      except PostError, e:
+      except PostError as e:
         logging.error('An error occurred while importing: %s', e)
         return False
   finally:
@@ -225,7 +226,7 @@ def PrintUsageExit(code):
   Args:
     code: Status code to pass to sys.exit() after displaying usage information.
   """
-  print sys.modules['__main__'].__doc__ % sys.argv[0]
+  print(sys.modules['__main__'].__doc__ % sys.argv[0])
   sys.stdout.flush()
   sys.stderr.flush()
   sys.exit(code)
@@ -275,7 +276,7 @@ def ParseArguments(argv):
     if option == '--batch_size':
       batch_size = int(value)
       if batch_size <= 0:
-        print >>sys.stderr, 'batch_size must be 1 or larger'
+        print('batch_size must be 1 or larger', file=sys.stderr)
         PrintUsageExit(1)
     if option == '--kind':
       kind = value
@@ -292,7 +293,7 @@ def main(argv):
 
   args = ParseArguments(argv)
   if [arg for arg in args if arg is None]:
-    print >>sys.stderr, 'Invalid arguments'
+    print('Invalid arguments', file=sys.stderr)
     PrintUsageExit(1)
 
   url, filename, cookie, batch_size, kind = args

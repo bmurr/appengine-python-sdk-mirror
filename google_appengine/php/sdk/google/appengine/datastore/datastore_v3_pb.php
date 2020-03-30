@@ -299,6 +299,7 @@ namespace google\appengine_datastore_v3\Query\Filter {
     const IN = 6;
     const EXISTS = 7;
     const CONTAINED_IN_REGION = 8;
+    const NOT_EQUAL = 9;
   }
 }
 namespace google\appengine_datastore_v3\Query {
@@ -4296,6 +4297,7 @@ namespace google\appengine_datastore_v3\Error {
     const TRY_ALTERNATE_BACKEND = 10;
     const SAFE_TIME_TOO_OLD = 11;
     const RESOURCE_EXHAUSTED = 12;
+    const SNAPSHOT_VERSION_TOO_OLD = 18;
     const NOT_FOUND = 13;
     const ALREADY_EXISTS = 14;
     const FAILED_PRECONDITION = 15;
