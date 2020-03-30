@@ -408,7 +408,7 @@ class ModuleConfiguration(object):
     try:
       app_info_external, files_to_check = self._parse_configuration(
           self._config_path)
-    except Exception, e:  # pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
       failure_message = str(e)
       if failure_message != self._last_failure_message:
         logging.error('Configuration is not valid: %s', failure_message)
@@ -866,7 +866,7 @@ class DispatchConfiguration(object):
       self._mtime = mtime
       try:
         dispatch_info_external = self._parse_configuration(self._config_path)
-      except Exception, e:  # pylint: disable=broad-except
+      except Exception as e:  # pylint: disable=broad-except
         failure_message = str(e)
         logging.error('Configuration is not valid: %s', failure_message)
         return

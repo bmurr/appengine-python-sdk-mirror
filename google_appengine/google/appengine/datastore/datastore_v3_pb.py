@@ -312,6 +312,7 @@ class Query_Filter(ProtocolBuffer.ProtocolMessage):
   IN           =    6
   EXISTS       =    7
   CONTAINED_IN_REGION =    8
+  NOT_EQUAL    =    9
 
   _Operator_NAMES = {
     1: "LESS_THAN",
@@ -322,6 +323,7 @@ class Query_Filter(ProtocolBuffer.ProtocolMessage):
     6: "IN",
     7: "EXISTS",
     8: "CONTAINED_IN_REGION",
+    9: "NOT_EQUAL",
   }
 
   def Operator_Name(cls, x): return cls._Operator_NAMES.get(x, "")
@@ -4345,6 +4347,7 @@ class Error(ProtocolBuffer.ProtocolMessage):
   TRY_ALTERNATE_BACKEND =   10
   SAFE_TIME_TOO_OLD =   11
   RESOURCE_EXHAUSTED =   12
+  SNAPSHOT_VERSION_TOO_OLD =   18
   NOT_FOUND    =   13
   ALREADY_EXISTS =   14
   FAILED_PRECONDITION =   15
@@ -4364,6 +4367,7 @@ class Error(ProtocolBuffer.ProtocolMessage):
     10: "TRY_ALTERNATE_BACKEND",
     11: "SAFE_TIME_TOO_OLD",
     12: "RESOURCE_EXHAUSTED",
+    18: "SNAPSHOT_VERSION_TOO_OLD",
     13: "NOT_FOUND",
     14: "ALREADY_EXISTS",
     15: "FAILED_PRECONDITION",

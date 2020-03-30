@@ -804,8 +804,12 @@ def MessageSetItemDecoder(descriptor):
     if extension is not None:
       value = field_dict.get(extension)
       if value is None:
+        message_type = extension.message_type
+        if not hasattr(message_type, '_concrete_class'):
+
+          message._FACTORY.GetPrototype(message_type)
         value = field_dict.setdefault(
-            extension, extension.message_type._concrete_class())
+            extension, message_type._concrete_class())
       if value._InternalParse(buffer, message_start,message_end) != message_end:
 
 

@@ -92,6 +92,7 @@ Example:
 
 
 
+from __future__ import print_function
 import csv
 import errno
 import getopt
@@ -580,7 +581,7 @@ class CSVGenerator(object):
 
       for record in reader:
         yield record
-    except csv.Error, e:
+    except csv.Error as e:
       if e.args and e.args[0].startswith('field larger than field limit'):
         raise FieldSizeLimitError(csv.field_size_limit())
       else:
@@ -763,14 +764,13 @@ class _WorkItem(adaptive_thread_pool.WorkItem):
           elif transfer_time <= MAXIMUM_HOLD_DURATION:
             instruction = adaptive_thread_pool.ThreadGate.HOLD
       except (db.InternalError, db.NotSavedError, db.Timeout,
-              db.TransactionFailedError,
-              apiproxy_errors.OverQuotaError,
+              db.TransactionFailedError, apiproxy_errors.OverQuotaError,
               apiproxy_errors.DeadlineExceededError,
-              apiproxy_errors.ApplicationError), e:
+              apiproxy_errors.ApplicationError) as e:
 
         status = adaptive_thread_pool.WorkItem.RETRY
         logger.exception('Retrying on non-fatal datastore error: %s', e)
-      except urllib.error.HTTPError, e:
+      except urllib.error.HTTPError as e:
         http_status = e.code
         if http_status >= 500 and http_status < 600:
 
@@ -780,7 +780,7 @@ class _WorkItem(adaptive_thread_pool.WorkItem):
         else:
           self.SetError()
           status = adaptive_thread_pool.WorkItem.FAILURE
-      except urllib.error.URLError, e:
+      except urllib.error.URLError as e:
         if IsURLErrorFatal(e):
           self.SetError()
           status = adaptive_thread_pool.WorkItem.FAILURE
@@ -1414,7 +1414,7 @@ class RequestManager(object):
         results += result_pb.result_list()
 
       return results
-    except apiproxy_errors.ApplicationError, e:
+    except apiproxy_errors.ApplicationError as e:
       raise datastore._ToDatastoreError(e)
 
   def GetEntities(
@@ -1755,7 +1755,7 @@ class _Database(object):
 
     try:
       self.primary_conn.execute(create_table)
-    except sqlite3.OperationalError, e:
+    except sqlite3.OperationalError as e:
 
       if 'already exists' not in e.message:
         raise
@@ -1763,7 +1763,7 @@ class _Database(object):
     if index:
       try:
         self.primary_conn.execute(index)
-      except sqlite3.OperationalError, e:
+      except sqlite3.OperationalError as e:
 
         if 'already exists' not in e.message:
           raise
@@ -1779,7 +1779,7 @@ class _Database(object):
       self.primary_conn.cursor().execute(
           'insert into %s (value) values (?)' % _Database.SIGNATURE_TABLE_NAME,
           (signature,))
-    except sqlite3.OperationalError, e:
+    except sqlite3.OperationalError as e:
       if 'already exists' not in e.message:
         logger.exception('Exception creating table:')
         raise
@@ -3195,7 +3195,7 @@ class Mapper(object):
     pass
 
   def apply(self, entity):
-    print 'Default map function doing nothing to %s' % entity
+    print('Default map function doing nothing to %s' % entity)
 
   def batch_apply(self, entities):
     for entity in entities:
@@ -3409,7 +3409,7 @@ class BulkTransporterApp(object):
 
 
       self.request_manager.Authenticate()
-    except Exception, e:
+    except Exception as e:
       self.error = True
 
 
@@ -3516,7 +3516,7 @@ class BulkTransporterApp(object):
 
     thread_pool.JoinThreads()
     thread_pool.CheckErrors()
-    print ''
+    print('')
 
 
 
@@ -3649,7 +3649,7 @@ def PrintUsageExit(code):
   Args:
     code: Status code to pass to sys.exit() after displaying usage information.
   """
-  print __doc__ % {'arg0': sys.argv[0]}
+  print(__doc__ % {'arg0': sys.argv[0]})
   sys.stdout.flush()
   sys.stderr.flush()
   sys.exit(code)
@@ -3732,8 +3732,9 @@ def ParseArguments(argv, die_fn=lambda: PrintUsageExit(1)):
       continue
     option = option[2:]
     if option in DEPRECATED_OPTIONS:
-      print >> sys.stderr, ('--%s is deprecated, please use --%s.' %
-                           (option, DEPRECATED_OPTIONS[option]))
+      print(('--%s is deprecated, please use --%s.' %
+             (option, DEPRECATED_OPTIONS[option])),
+            file=sys.stderr)
       option = DEPRECATED_OPTIONS[option]
 
     if option in BOOL_ARGS:
@@ -3833,12 +3834,13 @@ def LoadConfig(config_file_name, exit_fn=sys.exit):
         for cls in bulkloader_config.mappers:
           Mapper.RegisterMapper(cls())
 
-    except NameError, e:
+    except NameError as e:
 
 
       m = re.search(r"[^']*'([^']*)'.*", str(e))
       if m.groups() and m.group(1) == 'Loader':
-        print >> sys.stderr, """
+        print(
+            """
 The config file format has changed and you appear to be using an old-style
 config file.  Please make the following changes:
 
@@ -3857,20 +3859,21 @@ loaders = [MyLoader1,...,MyLoaderN]
 
 Where MyLoader1,...,MyLoaderN are the Loader subclasses you want the bulkloader
 to have access to.
-"""
+""",
+            file=sys.stderr)
         exit_fn(1)
       else:
         raise
-    except Exception, e:
+    except Exception as e:
 
 
 
       if isinstance(e, NameClashError) or 'bulkloader_config' in vars() and (
           hasattr(bulkloader_config, 'bulkloader') and
           isinstance(e, bulkloader_config.bulkloader.NameClashError)):
-        print >> sys.stderr, (
-            'Found both %s and %s while aliasing old names on %s.' %
-            (e.old_name, e.new_name, e.klass))
+        print(('Found both %s and %s while aliasing old names on %s.' %
+               (e.old_name, e.new_name, e.klass)),
+              file=sys.stderr)
         exit_fn(1)
       else:
         raise
@@ -3889,7 +3892,7 @@ def GetArgument(kwargs, name, die_fn):
   if name in kwargs:
     return kwargs[name]
   else:
-    print >> sys.stderr, '%s argument required' % name
+    print('%s argument required' % name, file=sys.stderr)
     die_fn()
 
 
@@ -3998,7 +4001,7 @@ def ProcessArguments(arg_dict,
   if namespace:
     try:
       namespace_manager.validate_namespace(namespace)
-    except namespace_manager.BadValueError, msg:
+    except namespace_manager.BadValueError as msg:
       errors.append('namespace parameter %s' % msg)
 
 
@@ -4014,7 +4017,7 @@ def ProcessArguments(arg_dict,
 
 
   if errors:
-    print >> sys.stderr, '\n'.join(errors)
+    print('\n'.join(errors), file=sys.stderr)
     die_fn()
 
   return arg_dict
@@ -4362,7 +4365,7 @@ def main(argv):
             for (key, value) in arg_dict.iteritems()
             if value is REQUIRED_OPTION]
   if errors:
-    print >> sys.stderr, '\n'.join(errors)
+    print('\n'.join(errors), file=sys.stderr)
     PrintUsageExit(1)
 
   SetupLogging(arg_dict)

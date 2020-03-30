@@ -819,7 +819,7 @@ class Dispatcher(request_info.Dispatcher):
 
     else:
       if ':' in hostname:
-        port = int(hostname.split(':', 1)[1])
+        port = int(hostname.rsplit(':', 1)[1])
       else:
         port = 80
       try:
