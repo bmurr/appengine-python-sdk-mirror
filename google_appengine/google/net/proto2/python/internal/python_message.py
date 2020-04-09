@@ -816,7 +816,8 @@ def _AddListFieldsMethod(message_descriptor, cls):
 
   cls.ListFields = ListFields
 
-_PROTO3_ERROR_TEMPLATE = 'Protocol message %s has no non-repeated submessage field "%s"'
+_PROTO3_ERROR_TEMPLATE = ('Protocol message %s has no non-repeated submessage field "%s" '
+   'nor marked as optional')
 _PROTO2_ERROR_TEMPLATE = 'Protocol message %s has no non-repeated field "%s"'
 
 def _AddHasFieldMethod(message_descriptor, cls):
@@ -835,10 +836,9 @@ def _AddHasFieldMethod(message_descriptor, cls):
       continue
     hassable_fields[field.name] = field
 
-  if not is_proto3:
 
-    for oneof in message_descriptor.oneofs:
-      hassable_fields[oneof.name] = oneof
+  for oneof in message_descriptor.oneofs:
+    hassable_fields[oneof.name] = oneof
 
   def HasField(self, field_name):
     try:

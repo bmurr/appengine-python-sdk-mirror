@@ -818,7 +818,7 @@ _MAX_URL_LENGTH = 2047
 
 _MAX_HEADER_SIZE_FOR_EXEMPTED_HEADERS = 10240
 
-_CANNED_RUNTIMES = ('contrib-dart', 'dart', 'go', 'php', 'php55', 'php72',
+_CANNED_RUNTIMES = ('contrib-dart', 'dart', 'php', 'php55', 'php72',
                     'python', 'python27', 'python-compat', 'java', 'java7',
                     'java8', 'vm', 'custom', 'nodejs', 'ruby', 'go111',
                     'go112')

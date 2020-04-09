@@ -73,7 +73,7 @@ _WHITE_LIST_C_MODULES = [
     '_codecs_tw',
     '_collections',  # Python 2.6 compatibility
     'crypt',
-    '_ctypes',
+] + (['_ctypes'] if sys.platform == 'linux2' else []) + [
     'cPickle',
     'cStringIO',
     '_csv',
