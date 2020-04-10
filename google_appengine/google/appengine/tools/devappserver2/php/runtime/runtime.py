@@ -141,6 +141,9 @@ class PHPRuntime(object):
     if 'SYSTEMROOT' in os.environ:
       user_environ['SYSTEMROOT'] = os.environ['SYSTEMROOT']
 
+    if 'LD_LIBRARY_PATH' in os.environ:
+      user_environ['LD_LIBRARY_PATH'] = os.environ['LD_LIBRARY_PATH']
+
     # On Windows, TMP & TEMP environmental variables are used by GetTempPath
     # http://msdn.microsoft.com/library/windows/desktop/aa364992(v=vs.85).aspx
     if 'TMP' in os.environ:
