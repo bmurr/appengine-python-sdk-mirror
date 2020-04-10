@@ -21,9 +21,10 @@
 This file defines container classes which represent categories of protocol
 buffer field types which need extra maintenance. Currently these categories
 are:
-  - Repeated scalar fields - These are all repeated fields which aren't
+
+-   Repeated scalar fields - These are all repeated fields which aren't
     composite (e.g. they are of simple types like int32, string, etc).
-  - Repeated composite fields - Repeated fields which are composite. This
+-   Repeated composite fields - Repeated fields which are composite. This
     includes groups and nested messages.
 """
 
@@ -273,7 +274,6 @@ class RepeatedScalarFieldContainer(BaseContainer):
 
   def MergeFrom(self, other):
     """Appends the contents of another repeated field of the same type to this
-
     one. We do not check the types of the individual fields.
     """
     self._values.extend(other._values)
@@ -404,7 +404,6 @@ class RepeatedCompositeFieldContainer(BaseContainer):
 
   def MergeFrom(self, other):
     """Appends the contents of another repeated field of the same type to this
-
     one, copying each individual message.
     """
     self.extend(other._values)
