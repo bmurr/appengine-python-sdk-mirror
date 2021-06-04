@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,23 +29,6 @@ try:
   _net_proto___parse__python = None
 except ImportError:
   _net_proto___parse__python = None
-import sys
-try:
-  __import__('google.net.base.pywrapnetbase')
-  __import__('google.net.rpc.python.proto_python_api_1_stub')
-  __import__('google.net.rpc.python.pywraprpc')
-  pywrapnetbase = sys.modules.get('google.net.base.pywrapnetbase')
-  proto_python_api_1_stub = sys.modules.get('google.net.rpc.python.proto_python_api_1_stub')
-  pywraprpc = sys.modules.get('google.net.rpc.python.pywraprpc')
-  _client_stub_base_class = proto_python_api_1_stub.Stub
-except ImportError:
-  _client_stub_base_class = object
-try:
-  __import__('google.net.rpc.python.rpcserver')
-  rpcserver = sys.modules.get('google.net.rpc.python.rpcserver')
-  _server_stub_base_class = rpcserver.BaseRpcServer
-except ImportError:
-  _server_stub_base_class = object
 
 if hasattr(__builtins__, 'xrange'): range = xrange
 
@@ -182,189 +165,16 @@ class SetDefaultGcsBucketNameRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.SetDefaultGcsBucketNameRequest'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjthcHBob3N0aW5nL2FwaS9hcHBfaWRlbnRpdHkvYXBwX2lkZW50aXR5X3N0dWJfc2VydmljZS5wcm90bwopYXBwaG9zdGluZy5TZXREZWZhdWx0R2NzQnVja2V0TmFtZVJlcXVlc3QTGhdkZWZhdWx0X2djc19idWNrZXRfbmFtZSABKAIwCTgBFLoB7AIKO2FwcGhvc3RpbmcvYXBpL2FwcF9pZGVudGl0eS9hcHBfaWRlbnRpdHlfc3R1Yl9zZXJ2aWNlLnByb3RvEgphcHBob3N0aW5nGh1hcHBob3N0aW5nL2FwaS9hcGlfYmFzZS5wcm90byJBCh5TZXREZWZhdWx0R2NzQnVja2V0TmFtZVJlcXVlc3QSHwoXZGVmYXVsdF9nY3NfYnVja2V0X25hbWUYASABKAkyfQoWQXBwSWRlbnRpdHlTdHViU2VydmljZRJjChdTZXREZWZhdWx0R2NzQnVja2V0TmFtZRIqLmFwcGhvc3RpbmcuU2V0RGVmYXVsdEdjc0J1Y2tldE5hbWVSZXF1ZXN0GhouYXBwaG9zdGluZy5iYXNlLlZvaWRQcm90byIAQkAKJGNvbS5nb29nbGUuYXBwZW5naW5lLmFwaS5hcHBpZGVudGl0eUIYQXBwSWRlbnRpdHlTdHViU2VydmljZVBi"))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjthcHBob3N0aW5nL2FwaS9hcHBfaWRlbnRpdHkvYXBwX2lkZW50aXR5X3N0dWJfc2VydmljZS5wcm90bwopYXBwaG9zdGluZy5TZXREZWZhdWx0R2NzQnVja2V0TmFtZVJlcXVlc3QTGhdkZWZhdWx0X2djc19idWNrZXRfbmFtZSABKAIwCTgBFA=="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
 
 
 
-class AppIdentityStubServiceStub(object):
-  """Makes Stubby RPC calls to a AppIdentityStubService server."""
 
-  __metaclass__ = abc.ABCMeta
-
-  __slots__ = ()
-
-  @abc.abstractmethod
-  def SetDefaultGcsBucketName(self, request, rpc=None, callback=None, response=None):
-    """Make a SetDefaultGcsBucketName RPC call.
-
-    Args:
-      request: a SetDefaultGcsBucketNameRequest instance.
-      rpc: Optional RPC instance to use for the call.
-      callback: Optional final callback. Will be called as
-          callback(rpc, result) when the rpc completes. If None, the
-          call is synchronous.
-      response: Optional ProtocolMessage to be filled in with response.
-
-    Returns:
-      The google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto if callback is None. Otherwise, returns None.
-    """
-    raise NotImplementedError()
-
-
-class _AppIdentityStubService_ClientBaseStub(
-    AppIdentityStubServiceStub, _client_stub_base_class):
-  """Makes Stubby RPC calls to a AppIdentityStubService server."""
-
-  __slots__ = (
-      '_protorpc_SetDefaultGcsBucketName', '_full_name_SetDefaultGcsBucketName',
-  )
-
-  def __init__(self, rpc_stub, rpc_factory=None):
-    super(_AppIdentityStubService_ClientBaseStub, self).__init__(
-        None, inject_stub=rpc_stub, rpc_factory=rpc_factory)
-
-    self._protorpc_SetDefaultGcsBucketName = pywraprpc.RPC()
-    self._full_name_SetDefaultGcsBucketName = self._stub.GetFullMethodName(
-        'SetDefaultGcsBucketName')
-
-  def SetDefaultGcsBucketName(self, request, rpc=None, callback=None, response=None):
-    """Make a SetDefaultGcsBucketName RPC call.
-
-    Args:
-      request: a SetDefaultGcsBucketNameRequest instance.
-      rpc: Optional RPC instance to use for the call.
-      callback: Optional final callback. Will be called as
-          callback(rpc, result) when the rpc completes. If None, the
-          call is synchronous.
-      response: Optional ProtocolMessage to be filled in with response.
-
-    Returns:
-      The google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto if callback is None. Otherwise, returns None.
-    """
-
-    if response is None:
-      response = google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto
-    return self._MakeCall(rpc,
-                          self._full_name_SetDefaultGcsBucketName,
-                          'SetDefaultGcsBucketName',
-                          request,
-                          response,
-                          callback,
-                          self._protorpc_SetDefaultGcsBucketName,
-                          package_name='apphosting')
-
-
-class _AppIdentityStubService_ClientStub(_AppIdentityStubService_ClientBaseStub):
-  __slots__ = ('_params',)
-  def __init__(self, rpc_stub_parameters, service_name, rpc_factory=None):
-    if service_name is None:
-      service_name = 'AppIdentityStubService'
-    stub = pywraprpc.RPC_GenericStub(service_name, rpc_stub_parameters)
-    super(_AppIdentityStubService_ClientStub, self).__init__(stub, rpc_factory=rpc_factory)
-    self._params = rpc_stub_parameters
-
-
-class _AppIdentityStubService_RPC2ClientStub(_AppIdentityStubService_ClientBaseStub):
-  __slots__ = ()
-  def __init__(self, server, channel, service_name, rpc_factory=None):
-    if service_name is None:
-      service_name = 'AppIdentityStubService'
-    if channel is None:
-      if server is None:
-        raise RuntimeError('Invalid argument combination to create a stub')
-      channel = pywraprpc.NewClientChannel(server)
-    elif channel.version() == 1:
-      raise RuntimeError('Expecting an RPC2 channel to create the stub')
-    stub = pywraprpc.RPC_GenericStub(service_name, channel)
-    super(_AppIdentityStubService_RPC2ClientStub, self).__init__(stub, rpc_factory=rpc_factory)
-
-
-class AppIdentityStubService(_server_stub_base_class):
-  """Base class for AppIdentityStubService Stubby servers."""
-
-  @classmethod
-  def _MethodSignatures(cls):
-    """Returns a dict of {<method-name>: (<request-type>, <response-type>)}."""
-    return {
-      'SetDefaultGcsBucketName': (SetDefaultGcsBucketNameRequest, google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto),
-      }
-
-  @classmethod
-  def _StreamMethodSignatures(cls):
-    """Returns a dict of {<method-name>: (<request-type>, <stream-type>, <response-type>)}."""
-    return {
-      }
-
-  def __init__(self, *args, **kwargs):
-    """Creates a Stubby RPC server.
-
-    The arguments to this constructor are the same as the arguments to
-    BaseRpcServer.__init__ in rpcserver.py *MINUS* export_name. This
-    constructor passes its own value for export_name to
-    BaseRpcServer.__init__, so callers of this constructor should only
-    pass to this constructor values corresponding to
-    BaseRpcServer.__init__'s remaining arguments.
-    """
-    if _server_stub_base_class is object:
-      raise NotImplementedError('Add //net/rpc/python:rpcserver as a '
-                                'dependency for Stubby server support.')
-    _server_stub_base_class.__init__(self, 'apphosting.AppIdentityStubService', *args, **kwargs)
-
-  @staticmethod
-  def NewStub(rpc_stub_parameters, service_name=None, rpc_factory=None):
-    """USE NewRPC2Stub INSTEAD."""
-    if _client_stub_base_class is object:
-      raise RuntimeError('Add //net/rpc/python as a dependency to use Stubby')
-    return _AppIdentityStubService_ClientStub(
-        rpc_stub_parameters, service_name, rpc_factory=rpc_factory)
-
-  @staticmethod
-  def NewRPC2Stub(
-      server=None, channel=None, service_name=None, rpc_factory=None):
-    """Creates a new AppIdentityStubService Stubby2 client stub.
-
-    Args:
-      server: host:port or bns address (favor passing a channel instead).
-      channel: directly use a channel to create a stub. Will ignore server
-          argument if this is specified.
-      service_name: the service name used by the Stubby server.
-      rpc_factory: the rpc factory to use if no rpc argument is specified.
-
-    Returns:
-     A AppIdentityStubServiceStub to be used to invoke RPCs.
-    """
-
-    if _client_stub_base_class is object:
-      raise RuntimeError('Add //net/rpc/python:proto_python_api_2_stub (or maybe //net/rpc/python:proto_python_api_1_stub, but eww and b/67959631) as a dependency to create Stubby stubs')
-    return _AppIdentityStubService_RPC2ClientStub(
-        server, channel, service_name, rpc_factory=rpc_factory)
-
-  def SetDefaultGcsBucketName(self, rpc, request, response):
-    """Handles a SetDefaultGcsBucketName RPC call. You should override this.
-
-    Args:
-      rpc: a Stubby RPC object
-      request: a SetDefaultGcsBucketNameRequest that contains the client request
-      response: a google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto that should be modified to send the response
-    """
-    raise NotImplementedError()
-
-  def _AddMethodAttributes(self):
-    """Sets attributes on Python RPC handlers.
-
-    See BaseRpcServer in rpcserver.py for details.
-    """
-    rpcserver._GetHandlerDecorator(
-        getattr(self.SetDefaultGcsBucketName, '__func__'),
-        SetDefaultGcsBucketNameRequest,
-        google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto,
-        None,
-        'INTEGRITY')
 
 if _extension_runtime:
   pass
 
-__all__ = ['SetDefaultGcsBucketNameRequest','AppIdentityStubService']
+__all__ = ['SetDefaultGcsBucketNameRequest']

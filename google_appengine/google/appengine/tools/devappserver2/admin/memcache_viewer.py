@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -287,7 +287,7 @@ class MemcacheViewerRequestHandler(admin_request_handler.AdminRequestHandler):
     """
     return '&'.join('%s=%s' % (urllib.quote_plus(k.encode('utf8')),
                                urllib.quote_plus(v.encode('utf8')))
-                    for k, v in query.iteritems())
+                    for k, v in query.items())
 
   def post(self):
     """Handle modifying actions and/or redirect to GET page."""

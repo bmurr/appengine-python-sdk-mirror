@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -45,6 +45,7 @@ import json
 import logging
 import os
 import pickle
+import re
 import shutil
 import sys
 import tempfile
@@ -93,6 +94,21 @@ GLOBAL_API_LOCK = threading.RLock()
 # The default app id used when launching the api_server.py as a binary, without
 # providing the context of a specific application.
 DEFAULT_API_SERVER_APP_ID = 'dev~app-id'
+
+
+GO_WORMHOLE_RUNTIME_PATTERN = re.compile('go1([0-9]{2})')
+PYTHON_WORMHOLE_RUNTIME_PATTERN = re.compile('python3([0-9]+)')
+PHP_WORMHOLE_RUNTIME_PATTERN = re.compile('php7([0-9]+)')
+
+WORMHOLE_SERVICES = [
+    'datastore_v3', 'datastore_v4', 'logservice', 'memcache', 'urlfetch']
+
+ENABLE_APP_ENGINE_APIS_MSG_TEMPLATE = (
+    'App Engine APIs are not enabled, for module %s please '
+    'add app_engine_apis: true to your app.yaml to enable.')
+
+NON_WORMHOLE_SERVICE_MSG_TEMPLATE = (
+    'Service %s is not supported for runtime: %s')
 
 
 class DatastoreFileError(Exception):
@@ -210,11 +226,95 @@ class _LocalJavaAppDispatcher(request_info_lib._LocalFakeDispatcher):  # pylint:
     return request_info_lib.ResponseTuple(str(response.getcode()), [], '')
 
 
+def _must_enable_wormhole_for_runtime(runtime):
+  """Returns true if runtime requires the wormhole to be enabled."""
+  m = GO_WORMHOLE_RUNTIME_PATTERN.match(runtime)
+  if m:
+    return int(m.group(1)) >= 12
+
+  if PYTHON_WORMHOLE_RUNTIME_PATTERN.match(runtime):
+    return True
+
+  if PHP_WORMHOLE_RUNTIME_PATTERN.match(runtime):
+    return True
+
+  return False
+
+
+def _verify_wormhole_usage(request_info, request):
+  """Verify the wormhole configuration for the request.
+
+  Args:
+    request_info: An apiproxy_stub.RequestInfo used to lookup request
+      information needed to validate the wormhole usage (may be None).
+    request: A remote_api_pb.Request()
+
+  Raises:
+    apiproxy_errors.FeatureNotEnabledError: If the calling module's
+      requires the 'app_engine_apis: true' in app.yaml and it has not
+      been included.
+    apiproxy_errors.CallNotFoundError: If the calling module accesses a
+      service that is not supported by its runtime.
+  """
+  if not request.has_request_id():
+    # Assume requests without a request id to be valid.
+    return
+
+  if not request_info:
+    # Validation requires self._request_data so we assume
+    # requests are valid if APIServer is not started with one.
+    return
+
+  if not hasattr(request_info, 'get_runtime'):
+    # Validation requires access to the requesting module's runtime.
+    # The WSGIRequestInfo configured in devappserver2 provides
+    # the needed access. Else assume the call is valid.
+    return
+
+  if not hasattr(request_info, 'get_app_engine_apis'):
+    # Validation requires access to the requesting module's app_engine_apis.
+    # The WSGIRequestInfo configured in devappserver2 provides
+    # the needed access. Else assume the call is valid.
+    return
+
+  try:
+    runtime = request_info.get_runtime(request.request_id())
+  except KeyError:
+    # We assume that the request is valid here to handle the case where java
+    # runtime makes an api request with an invalid request_id
+    # (See RemoteApiDelegate.MakeSyncCall).
+    return
+
+  if not _must_enable_wormhole_for_runtime(runtime):
+    return
+
+  try:
+    app_engine_apis = request_info.get_app_engine_apis(
+        request.request_id())
+  except KeyError:
+    # We assume that the request is valid here to handle the case where java
+    # runtime makes an api request with an invalid request_id
+    # (See RemoteApiDelegate.MakeSyncCall).
+    return
+
+  if not app_engine_apis:
+    module = request_info.get_module(request.request_id())
+    raise apiproxy_errors.FeatureNotEnabledError(
+        ENABLE_APP_ENGINE_APIS_MSG_TEMPLATE % module)
+
+  service = request.service_name()
+  if service not in WORMHOLE_SERVICES:
+    raise apiproxy_errors.CallNotFoundError(
+        NON_WORMHOLE_SERVICE_MSG_TEMPLATE % (service, runtime))
+
+
 class APIServer(wsgi_server.WsgiServer):
   """Serves API calls over HTTP and GRPC(optional)."""
 
-  def __init__(self, host, port, app_id, use_grpc=False, grpc_api_port=0,
-               enable_host_checking=True, gcd_emulator_launching_thread=None):
+  def __init__(
+      self, host, port, app_id, use_grpc=False, grpc_api_port=0,
+      enable_host_checking=True, gcd_emulator_launching_thread=None,
+      request_info=None):
     self._app_id = app_id
     self._host = host
 
@@ -229,6 +329,7 @@ class APIServer(wsgi_server.WsgiServer):
     self._use_grpc = use_grpc
     self._grpc_api_port = grpc_api_port
     self._gcd_emulator_launching_thread = gcd_emulator_launching_thread
+    self._request_info = request_info
 
   def _start_grpc_server(self):
     """Starts gRPC API server."""
@@ -330,6 +431,8 @@ class APIServer(wsgi_server.WsgiServer):
 
       service = request.service_name()
       service_stub = apiproxy_stub_map.apiproxy.GetStub(service)
+
+      _verify_wormhole_usage(self._request_info, request)
 
       if isinstance(service_stub, datastore_grpc_stub.DatastoreGrpcStub):
         # len(request.request()) is equivalent to calling ByteSize() on
@@ -478,7 +581,7 @@ def _launch_gcd_emulator(
       invokes the emulator.
     is_test: A boolean. If True, run emulator in --testing mode for unittests.
       Otherwise override some emulator flags for dev_appserver use cases.
-    auto_id_policy: A string specifying how the emualtor assigns auto id,
+    auto_id_policy: A string specifying how the emulator assigns auto id,
       default to sequential.
 
   Returns:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -83,7 +83,7 @@ START_PROCESS_WITH_ENTRYPOINT = -5
 
 # Runtimes which need
 _RUNTIMES_NEED_VM_ENV_VARS = [
-    'go111',
+    'go111', 'go114', 'go115',
 ]
 
 
@@ -194,9 +194,14 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
     cls._quit_with_sigterm = quit_with_sigterm
     return previous_quit_with_sigterm
 
-  def __init__(self, args, runtime_config_getter, module_configuration,
-               env=None, start_process_flavor=START_PROCESS,
-               extra_args_getter=None):
+  def __init__(self,
+               args,
+               runtime_config_getter,
+               module_configuration,
+               env=None,
+               start_process_flavor=START_PROCESS,
+               extra_args_getter=None,
+               request_id_header_name=None):
     """Initializer for HttpRuntimeProxy.
 
     Args:
@@ -215,6 +220,8 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
           by this http_runtime,
           and returns the extra command line parameter that refers to the port
           number.
+      request_id_header_name: Optional string name used to pass request ID to
+          API server.  Defaults to http_runtime_constants.REQUEST_ID_HEADER.
 
     Raises:
       ValueError: An unknown value for start_process_flavor was used.
@@ -240,6 +247,7 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
     if start_process_flavor not in self._VALID_START_PROCESS_FLAVORS:
       raise ValueError('Invalid start_process_flavor.')
     self._start_process_flavor = start_process_flavor
+    self._request_id_header_name = request_id_header_name
     self._proxy = None
 
   def _get_instance_logs(self):
@@ -420,12 +428,14 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
       logging.error(error)
     finally:
       self._proxy = http_proxy.HttpProxy(
-          host=host, port=port,
+          host=host,
+          port=port,
           instance_died_unexpectedly=self._instance_died_unexpectedly,
           instance_logs_getter=self._get_instance_logs,
           error_handler_file=application_configuration.get_app_error_file(
               self._module_configuration),
-          prior_error=error)
+          prior_error=error,
+          request_id_header_name=self._request_id_header_name)
       self._proxy.wait_for_connection(self._process)
 
   def quit(self):

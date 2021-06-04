@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,23 +29,6 @@ try:
   _net_proto___parse__python = None
 except ImportError:
   _net_proto___parse__python = None
-import sys
-try:
-  __import__('google.net.base.pywrapnetbase')
-  __import__('google.net.rpc.python.proto_python_api_1_stub')
-  __import__('google.net.rpc.python.pywraprpc')
-  pywrapnetbase = sys.modules.get('google.net.base.pywrapnetbase')
-  proto_python_api_1_stub = sys.modules.get('google.net.rpc.python.proto_python_api_1_stub')
-  pywraprpc = sys.modules.get('google.net.rpc.python.pywraprpc')
-  _client_stub_base_class = proto_python_api_1_stub.Stub
-except ImportError:
-  _client_stub_base_class = object
-try:
-  __import__('google.net.rpc.python.rpcserver')
-  rpcserver = sys.modules.get('google.net.rpc.python.rpcserver')
-  _server_stub_base_class = rpcserver.BaseRpcServer
-except ImportError:
-  _server_stub_base_class = object
 
 if hasattr(__builtins__, 'xrange'): range = xrange
 
@@ -201,10 +184,11 @@ class AddRequestInfoRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.AddRequestInfoRequest'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zdHViX3NlcnZpY2UucHJvdG8KIGFwcGhvc3RpbmcuQWRkUmVxdWVzdEluZm9SZXF1ZXN0ExoLcmVxdWVzdF9sb2cgASgCMAs4AUoVYXBwaG9zdGluZy5SZXF1ZXN0TG9nowGqAQVjdHlwZbIBBnByb3RvMqQBFLoBlwgKMGFwcGhvc3RpbmcvYXBpL2xvZ3NlcnZpY2UvbG9nX3N0dWJfc2VydmljZS5wcm90bxIKYXBwaG9zdGluZxodYXBwaG9zdGluZy9hcGkvYXBpX2Jhc2UucHJvdG8aK2FwcGhvc3RpbmcvYXBpL2xvZ3NlcnZpY2UvbG9nX3NlcnZpY2UucHJvdG8iRAoVQWRkUmVxdWVzdEluZm9SZXF1ZXN0EisKC3JlcXVlc3RfbG9nGAEgASgLMhYuYXBwaG9zdGluZy5SZXF1ZXN0TG9nIlEKFEFkZEFwcExvZ0xpbmVSZXF1ZXN0EiUKCGxvZ19saW5lGAEgASgLMhMuYXBwaG9zdGluZy5Mb2dMaW5lEhIKCnJlcXVlc3RfaWQYAiABKAkihQIKFlN0YXJ0UmVxdWVzdExvZ1JlcXVlc3QSEgoKcmVxdWVzdF9pZBgBIAIoCRIXCg91c2VyX3JlcXVlc3RfaWQYAiABKAkSCgoCaXAYAyABKAkSDgoGYXBwX2lkGAQgASgJEhIKCnZlcnNpb25faWQYBSABKAkSEAoIbmlja25hbWUYBiABKAkSEgoKdXNlcl9hZ2VudBgHIAEoCRIMCgRob3N0GAggASgJEg4KBm1ldGhvZBgJIAEoCRIQCghyZXNvdXJjZRgKIAEoCRIUCgxodHRwX3ZlcnNpb24YCyABKAkSEgoKc3RhcnRfdGltZRgMIAEoAxIOCgZtb2R1bGUYDSABKAkiUQoURW5kUmVxdWVzdExvZ1JlcXVlc3QSEgoKcmVxdWVzdF9pZBgBIAIoCRIOCgZzdGF0dXMYAiACKAUSFQoNcmVzcG9uc2Vfc2l6ZRgDIAEoBTLaAgoOTG9nU3R1YlNlcnZpY2USUQoOQWRkUmVxdWVzdEluZm8SIS5hcHBob3N0aW5nLkFkZFJlcXVlc3RJbmZvUmVxdWVzdBoaLmFwcGhvc3RpbmcuYmFzZS5Wb2lkUHJvdG8iABJPCg1BZGRBcHBMb2dMaW5lEiAuYXBwaG9zdGluZy5BZGRBcHBMb2dMaW5lUmVxdWVzdBoaLmFwcGhvc3RpbmcuYmFzZS5Wb2lkUHJvdG8iABJPCg1FbmRSZXF1ZXN0TG9nEiAuYXBwaG9zdGluZy5FbmRSZXF1ZXN0TG9nUmVxdWVzdBoaLmFwcGhvc3RpbmcuYmFzZS5Wb2lkUHJvdG8iABJTCg9TdGFydFJlcXVlc3RMb2cSIi5hcHBob3N0aW5nLlN0YXJ0UmVxdWVzdExvZ1JlcXVlc3QaGi5hcHBob3N0aW5nLmJhc2UuVm9pZFByb3RvIgBCOgokY29tLmdvb2dsZS5hcHBob3N0aW5nLmFwaS5sb2dzZXJ2aWNlKAFCEExvZ1N0dWJTZXJ2aWNlUGI="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zdHViX3NlcnZpY2UucHJvdG8KIGFwcGhvc3RpbmcuQWRkUmVxdWVzdEluZm9SZXF1ZXN0ExoLcmVxdWVzdF9sb2cgASgCMAs4AUoVYXBwaG9zdGluZy5SZXF1ZXN0TG9nowGqAQVjdHlwZbIBBnByb3RvMqQBFA=="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class AddAppLogLineRequest(ProtocolBuffer.ProtocolMessage):
   has_log_line_ = 0
@@ -379,10 +363,11 @@ class AddAppLogLineRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.AddAppLogLineRequest'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zdHViX3NlcnZpY2UucHJvdG8KH2FwcGhvc3RpbmcuQWRkQXBwTG9nTGluZVJlcXVlc3QTGghsb2dfbGluZSABKAIwCzgBShJhcHBob3N0aW5nLkxvZ0xpbmWjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoKcmVxdWVzdF9pZCACKAIwCTgBFMIBIGFwcGhvc3RpbmcuQWRkUmVxdWVzdEluZm9SZXF1ZXN0"))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zdHViX3NlcnZpY2UucHJvdG8KH2FwcGhvc3RpbmcuQWRkQXBwTG9nTGluZVJlcXVlc3QTGghsb2dfbGluZSABKAIwCzgBShJhcHBob3N0aW5nLkxvZ0xpbmWjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoKcmVxdWVzdF9pZCACKAIwCTgBFA=="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class StartRequestLogRequest(ProtocolBuffer.ProtocolMessage):
   has_request_id_ = 0
@@ -920,10 +905,11 @@ class StartRequestLogRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.StartRequestLogRequest'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zdHViX3NlcnZpY2UucHJvdG8KIWFwcGhvc3RpbmcuU3RhcnRSZXF1ZXN0TG9nUmVxdWVzdBMaCnJlcXVlc3RfaWQgASgCMAk4AhQTGg91c2VyX3JlcXVlc3RfaWQgAigCMAk4ARQTGgJpcCADKAIwCTgBFBMaBmFwcF9pZCAEKAIwCTgBFBMaCnZlcnNpb25faWQgBSgCMAk4ARQTGghuaWNrbmFtZSAGKAIwCTgBFBMaCnVzZXJfYWdlbnQgBygCMAk4ARQTGgRob3N0IAgoAjAJOAEUExoGbWV0aG9kIAkoAjAJOAEUExoIcmVzb3VyY2UgCigCMAk4ARQTGgxodHRwX3ZlcnNpb24gCygCMAk4ARQTGgpzdGFydF90aW1lIAwoADADOAEUExoGbW9kdWxlIA0oAjAJOAEUwgEgYXBwaG9zdGluZy5BZGRSZXF1ZXN0SW5mb1JlcXVlc3Q="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zdHViX3NlcnZpY2UucHJvdG8KIWFwcGhvc3RpbmcuU3RhcnRSZXF1ZXN0TG9nUmVxdWVzdBMaCnJlcXVlc3RfaWQgASgCMAk4AhQTGg91c2VyX3JlcXVlc3RfaWQgAigCMAk4ARQTGgJpcCADKAIwCTgBFBMaBmFwcF9pZCAEKAIwCTgBFBMaCnZlcnNpb25faWQgBSgCMAk4ARQTGghuaWNrbmFtZSAGKAIwCTgBFBMaCnVzZXJfYWdlbnQgBygCMAk4ARQTGgRob3N0IAgoAjAJOAEUExoGbWV0aG9kIAkoAjAJOAEUExoIcmVzb3VyY2UgCigCMAk4ARQTGgxodHRwX3ZlcnNpb24gCygCMAk4ARQTGgpzdGFydF90aW1lIAwoADADOAEUExoGbW9kdWxlIA0oAjAJOAEU"))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class EndRequestLogRequest(ProtocolBuffer.ProtocolMessage):
   has_request_id_ = 0
@@ -1126,387 +1112,16 @@ class EndRequestLogRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.EndRequestLogRequest'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zdHViX3NlcnZpY2UucHJvdG8KH2FwcGhvc3RpbmcuRW5kUmVxdWVzdExvZ1JlcXVlc3QTGgpyZXF1ZXN0X2lkIAEoAjAJOAIUExoGc3RhdHVzIAIoADAFOAIUExoNcmVzcG9uc2Vfc2l6ZSADKAAwBTgBFMIBIGFwcGhvc3RpbmcuQWRkUmVxdWVzdEluZm9SZXF1ZXN0"))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zdHViX3NlcnZpY2UucHJvdG8KH2FwcGhvc3RpbmcuRW5kUmVxdWVzdExvZ1JlcXVlc3QTGgpyZXF1ZXN0X2lkIAEoAjAJOAIUExoGc3RhdHVzIAIoADAFOAIUExoNcmVzcG9uc2Vfc2l6ZSADKAAwBTgBFA=="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
 
 
 
-class LogStubServiceStub(object):
-  """Makes Stubby RPC calls to a LogStubService server."""
 
-  __metaclass__ = abc.ABCMeta
-
-  __slots__ = ()
-
-  @abc.abstractmethod
-  def AddRequestInfo(self, request, rpc=None, callback=None, response=None):
-    """Make a AddRequestInfo RPC call.
-
-    Args:
-      request: a AddRequestInfoRequest instance.
-      rpc: Optional RPC instance to use for the call.
-      callback: Optional final callback. Will be called as
-          callback(rpc, result) when the rpc completes. If None, the
-          call is synchronous.
-      response: Optional ProtocolMessage to be filled in with response.
-
-    Returns:
-      The google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto if callback is None. Otherwise, returns None.
-    """
-    raise NotImplementedError()
-
-  @abc.abstractmethod
-  def AddAppLogLine(self, request, rpc=None, callback=None, response=None):
-    """Make a AddAppLogLine RPC call.
-
-    Args:
-      request: a AddAppLogLineRequest instance.
-      rpc: Optional RPC instance to use for the call.
-      callback: Optional final callback. Will be called as
-          callback(rpc, result) when the rpc completes. If None, the
-          call is synchronous.
-      response: Optional ProtocolMessage to be filled in with response.
-
-    Returns:
-      The google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto if callback is None. Otherwise, returns None.
-    """
-    raise NotImplementedError()
-
-  @abc.abstractmethod
-  def EndRequestLog(self, request, rpc=None, callback=None, response=None):
-    """Make a EndRequestLog RPC call.
-
-    Args:
-      request: a EndRequestLogRequest instance.
-      rpc: Optional RPC instance to use for the call.
-      callback: Optional final callback. Will be called as
-          callback(rpc, result) when the rpc completes. If None, the
-          call is synchronous.
-      response: Optional ProtocolMessage to be filled in with response.
-
-    Returns:
-      The google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto if callback is None. Otherwise, returns None.
-    """
-    raise NotImplementedError()
-
-  @abc.abstractmethod
-  def StartRequestLog(self, request, rpc=None, callback=None, response=None):
-    """Make a StartRequestLog RPC call.
-
-    Args:
-      request: a StartRequestLogRequest instance.
-      rpc: Optional RPC instance to use for the call.
-      callback: Optional final callback. Will be called as
-          callback(rpc, result) when the rpc completes. If None, the
-          call is synchronous.
-      response: Optional ProtocolMessage to be filled in with response.
-
-    Returns:
-      The google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto if callback is None. Otherwise, returns None.
-    """
-    raise NotImplementedError()
-
-
-class _LogStubService_ClientBaseStub(
-    LogStubServiceStub, _client_stub_base_class):
-  """Makes Stubby RPC calls to a LogStubService server."""
-
-  __slots__ = (
-      '_protorpc_AddRequestInfo', '_full_name_AddRequestInfo',
-      '_protorpc_AddAppLogLine', '_full_name_AddAppLogLine',
-      '_protorpc_EndRequestLog', '_full_name_EndRequestLog',
-      '_protorpc_StartRequestLog', '_full_name_StartRequestLog',
-  )
-
-  def __init__(self, rpc_stub, rpc_factory=None):
-    super(_LogStubService_ClientBaseStub, self).__init__(
-        None, inject_stub=rpc_stub, rpc_factory=rpc_factory)
-
-    self._protorpc_AddRequestInfo = pywraprpc.RPC()
-    self._full_name_AddRequestInfo = self._stub.GetFullMethodName(
-        'AddRequestInfo')
-
-    self._protorpc_AddAppLogLine = pywraprpc.RPC()
-    self._full_name_AddAppLogLine = self._stub.GetFullMethodName(
-        'AddAppLogLine')
-
-    self._protorpc_EndRequestLog = pywraprpc.RPC()
-    self._full_name_EndRequestLog = self._stub.GetFullMethodName(
-        'EndRequestLog')
-
-    self._protorpc_StartRequestLog = pywraprpc.RPC()
-    self._full_name_StartRequestLog = self._stub.GetFullMethodName(
-        'StartRequestLog')
-
-  def AddRequestInfo(self, request, rpc=None, callback=None, response=None):
-    """Make a AddRequestInfo RPC call.
-
-    Args:
-      request: a AddRequestInfoRequest instance.
-      rpc: Optional RPC instance to use for the call.
-      callback: Optional final callback. Will be called as
-          callback(rpc, result) when the rpc completes. If None, the
-          call is synchronous.
-      response: Optional ProtocolMessage to be filled in with response.
-
-    Returns:
-      The google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto if callback is None. Otherwise, returns None.
-    """
-
-    if response is None:
-      response = google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto
-    return self._MakeCall(rpc,
-                          self._full_name_AddRequestInfo,
-                          'AddRequestInfo',
-                          request,
-                          response,
-                          callback,
-                          self._protorpc_AddRequestInfo,
-                          package_name='apphosting')
-
-  def AddAppLogLine(self, request, rpc=None, callback=None, response=None):
-    """Make a AddAppLogLine RPC call.
-
-    Args:
-      request: a AddAppLogLineRequest instance.
-      rpc: Optional RPC instance to use for the call.
-      callback: Optional final callback. Will be called as
-          callback(rpc, result) when the rpc completes. If None, the
-          call is synchronous.
-      response: Optional ProtocolMessage to be filled in with response.
-
-    Returns:
-      The google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto if callback is None. Otherwise, returns None.
-    """
-
-    if response is None:
-      response = google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto
-    return self._MakeCall(rpc,
-                          self._full_name_AddAppLogLine,
-                          'AddAppLogLine',
-                          request,
-                          response,
-                          callback,
-                          self._protorpc_AddAppLogLine,
-                          package_name='apphosting')
-
-  def EndRequestLog(self, request, rpc=None, callback=None, response=None):
-    """Make a EndRequestLog RPC call.
-
-    Args:
-      request: a EndRequestLogRequest instance.
-      rpc: Optional RPC instance to use for the call.
-      callback: Optional final callback. Will be called as
-          callback(rpc, result) when the rpc completes. If None, the
-          call is synchronous.
-      response: Optional ProtocolMessage to be filled in with response.
-
-    Returns:
-      The google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto if callback is None. Otherwise, returns None.
-    """
-
-    if response is None:
-      response = google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto
-    return self._MakeCall(rpc,
-                          self._full_name_EndRequestLog,
-                          'EndRequestLog',
-                          request,
-                          response,
-                          callback,
-                          self._protorpc_EndRequestLog,
-                          package_name='apphosting')
-
-  def StartRequestLog(self, request, rpc=None, callback=None, response=None):
-    """Make a StartRequestLog RPC call.
-
-    Args:
-      request: a StartRequestLogRequest instance.
-      rpc: Optional RPC instance to use for the call.
-      callback: Optional final callback. Will be called as
-          callback(rpc, result) when the rpc completes. If None, the
-          call is synchronous.
-      response: Optional ProtocolMessage to be filled in with response.
-
-    Returns:
-      The google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto if callback is None. Otherwise, returns None.
-    """
-
-    if response is None:
-      response = google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto
-    return self._MakeCall(rpc,
-                          self._full_name_StartRequestLog,
-                          'StartRequestLog',
-                          request,
-                          response,
-                          callback,
-                          self._protorpc_StartRequestLog,
-                          package_name='apphosting')
-
-
-class _LogStubService_ClientStub(_LogStubService_ClientBaseStub):
-  __slots__ = ('_params',)
-  def __init__(self, rpc_stub_parameters, service_name, rpc_factory=None):
-    if service_name is None:
-      service_name = 'LogStubService'
-    stub = pywraprpc.RPC_GenericStub(service_name, rpc_stub_parameters)
-    super(_LogStubService_ClientStub, self).__init__(stub, rpc_factory=rpc_factory)
-    self._params = rpc_stub_parameters
-
-
-class _LogStubService_RPC2ClientStub(_LogStubService_ClientBaseStub):
-  __slots__ = ()
-  def __init__(self, server, channel, service_name, rpc_factory=None):
-    if service_name is None:
-      service_name = 'LogStubService'
-    if channel is None:
-      if server is None:
-        raise RuntimeError('Invalid argument combination to create a stub')
-      channel = pywraprpc.NewClientChannel(server)
-    elif channel.version() == 1:
-      raise RuntimeError('Expecting an RPC2 channel to create the stub')
-    stub = pywraprpc.RPC_GenericStub(service_name, channel)
-    super(_LogStubService_RPC2ClientStub, self).__init__(stub, rpc_factory=rpc_factory)
-
-
-class LogStubService(_server_stub_base_class):
-  """Base class for LogStubService Stubby servers."""
-
-  @classmethod
-  def _MethodSignatures(cls):
-    """Returns a dict of {<method-name>: (<request-type>, <response-type>)}."""
-    return {
-      'AddRequestInfo': (AddRequestInfoRequest, google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto),
-      'AddAppLogLine': (AddAppLogLineRequest, google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto),
-      'EndRequestLog': (EndRequestLogRequest, google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto),
-      'StartRequestLog': (StartRequestLogRequest, google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto),
-      }
-
-  @classmethod
-  def _StreamMethodSignatures(cls):
-    """Returns a dict of {<method-name>: (<request-type>, <stream-type>, <response-type>)}."""
-    return {
-      }
-
-  def __init__(self, *args, **kwargs):
-    """Creates a Stubby RPC server.
-
-    The arguments to this constructor are the same as the arguments to
-    BaseRpcServer.__init__ in rpcserver.py *MINUS* export_name. This
-    constructor passes its own value for export_name to
-    BaseRpcServer.__init__, so callers of this constructor should only
-    pass to this constructor values corresponding to
-    BaseRpcServer.__init__'s remaining arguments.
-    """
-    if _server_stub_base_class is object:
-      raise NotImplementedError('Add //net/rpc/python:rpcserver as a '
-                                'dependency for Stubby server support.')
-    _server_stub_base_class.__init__(self, 'apphosting.LogStubService', *args, **kwargs)
-
-  @staticmethod
-  def NewStub(rpc_stub_parameters, service_name=None, rpc_factory=None):
-    """USE NewRPC2Stub INSTEAD."""
-    if _client_stub_base_class is object:
-      raise RuntimeError('Add //net/rpc/python as a dependency to use Stubby')
-    return _LogStubService_ClientStub(
-        rpc_stub_parameters, service_name, rpc_factory=rpc_factory)
-
-  @staticmethod
-  def NewRPC2Stub(
-      server=None, channel=None, service_name=None, rpc_factory=None):
-    """Creates a new LogStubService Stubby2 client stub.
-
-    Args:
-      server: host:port or bns address (favor passing a channel instead).
-      channel: directly use a channel to create a stub. Will ignore server
-          argument if this is specified.
-      service_name: the service name used by the Stubby server.
-      rpc_factory: the rpc factory to use if no rpc argument is specified.
-
-    Returns:
-     A LogStubServiceStub to be used to invoke RPCs.
-    """
-
-    if _client_stub_base_class is object:
-      raise RuntimeError('Add //net/rpc/python:proto_python_api_2_stub (or maybe //net/rpc/python:proto_python_api_1_stub, but eww and b/67959631) as a dependency to create Stubby stubs')
-    return _LogStubService_RPC2ClientStub(
-        server, channel, service_name, rpc_factory=rpc_factory)
-
-  def AddRequestInfo(self, rpc, request, response):
-    """Handles a AddRequestInfo RPC call. You should override this.
-
-    Args:
-      rpc: a Stubby RPC object
-      request: a AddRequestInfoRequest that contains the client request
-      response: a google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto that should be modified to send the response
-    """
-    raise NotImplementedError()
-
-
-  def AddAppLogLine(self, rpc, request, response):
-    """Handles a AddAppLogLine RPC call. You should override this.
-
-    Args:
-      rpc: a Stubby RPC object
-      request: a AddAppLogLineRequest that contains the client request
-      response: a google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto that should be modified to send the response
-    """
-    raise NotImplementedError()
-
-
-  def EndRequestLog(self, rpc, request, response):
-    """Handles a EndRequestLog RPC call. You should override this.
-
-    Args:
-      rpc: a Stubby RPC object
-      request: a EndRequestLogRequest that contains the client request
-      response: a google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto that should be modified to send the response
-    """
-    raise NotImplementedError()
-
-
-  def StartRequestLog(self, rpc, request, response):
-    """Handles a StartRequestLog RPC call. You should override this.
-
-    Args:
-      rpc: a Stubby RPC object
-      request: a StartRequestLogRequest that contains the client request
-      response: a google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto that should be modified to send the response
-    """
-    raise NotImplementedError()
-
-  def _AddMethodAttributes(self):
-    """Sets attributes on Python RPC handlers.
-
-    See BaseRpcServer in rpcserver.py for details.
-    """
-    rpcserver._GetHandlerDecorator(
-        getattr(self.AddRequestInfo, '__func__'),
-        AddRequestInfoRequest,
-        google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto,
-        None,
-        'INTEGRITY')
-    rpcserver._GetHandlerDecorator(
-        getattr(self.AddAppLogLine, '__func__'),
-        AddAppLogLineRequest,
-        google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto,
-        None,
-        'INTEGRITY')
-    rpcserver._GetHandlerDecorator(
-        getattr(self.EndRequestLog, '__func__'),
-        EndRequestLogRequest,
-        google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto,
-        None,
-        'INTEGRITY')
-    rpcserver._GetHandlerDecorator(
-        getattr(self.StartRequestLog, '__func__'),
-        StartRequestLogRequest,
-        google_dot_apphosting_dot_api_dot_api__base__pb.VoidProto,
-        None,
-        'INTEGRITY')
 
 if _extension_runtime:
   pass
 
-__all__ = ['AddRequestInfoRequest','AddAppLogLineRequest','StartRequestLogRequest','EndRequestLogRequest','LogStubService']
+__all__ = ['AddRequestInfoRequest','AddAppLogLineRequest','StartRequestLogRequest','EndRequestLogRequest']

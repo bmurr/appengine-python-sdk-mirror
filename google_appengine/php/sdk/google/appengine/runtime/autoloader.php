@@ -494,7 +494,6 @@ if (!defined('GOOGLE_APPENGINE_CLASSLOADER')) {
         'google\appengine\userapplogline' => 'google/appengine/api/logservice/log_service_pb.php',
         'google\appengine\userapploggroup' => 'google/appengine/api/logservice/log_service_pb.php',
         'google\appengine\flushrequest' => 'google/appengine/api/logservice/log_service_pb.php',
-        'google\appengine\setstatusrequest' => 'google/appengine/api/logservice/log_service_pb.php',
         'google\appengine\logoffset' => 'google/appengine/api/logservice/log_service_pb.php',
         'google\appengine\logline' => 'google/appengine/api/logservice/log_service_pb.php',
         'google\appengine\requestlog' => 'google/appengine/api/logservice/log_service_pb.php',

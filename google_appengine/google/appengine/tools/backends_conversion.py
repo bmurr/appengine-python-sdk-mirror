@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -115,13 +115,13 @@ def _MaybeWriteConfigToFile(appinfo_config, application_root,
       converts it to a YAML string. Defaults to _ToYAMLDefault which just calls
       ToYAML() on the object.
   """
-  filename = '%s.yaml' % (appinfo_config.module.encode('ascii'),)
+  filename = '%s.yaml' % (appinfo_config.module,)
   filepath = os.path.join(application_root, filename)
 
   contents = _to_yaml_method(appinfo_config)
   if os.path.exists(filepath):
     prompt = 'File %s exists. Overwrite? [y/N] ' % (filename,)
-    result = raw_input(prompt).strip()
+    result = input(prompt).strip()
     if result != 'y':
       print('File %s not written.' % (filename,))
       print('Contents:')
@@ -228,7 +228,7 @@ def _MaybeSetNotPublic(target, backend_entry):
 
   prompt = ('Backend %s is marked private.\nWould you like to make all '
             'handlers \'login: admin\'? [y/N] ' % (backend_entry.name,))
-  result = raw_input(prompt).strip()
+  result = input(prompt).strip()
   if result == 'y':
     for handler in target.handlers:
       handler.login = LOGIN_ADMIN
@@ -355,7 +355,7 @@ def _GetInstances(name):
       not a positive integer.
   """
   prompt = DYNAMIC_PROMPT_TEXT % (name,)
-  result = raw_input(prompt).strip()
+  result = input(prompt).strip()
   if result == '':
     return 1
 

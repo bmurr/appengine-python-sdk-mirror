@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Associates request state, derived from a WSGI environ, with a unique id."""
 
 from __future__ import absolute_import
@@ -89,15 +88,16 @@ class WSGIRequestInfo(request_info.RequestInfo):
     with self._lock:
       request_id = _choose_request_id()
       self._request_wsgi_environ[request_id] = environ
-      self._request_id_to_module_configuration[
-          request_id] = module_configuration
+      if module_configuration:
+        self._request_id_to_module_configuration[request_id] = module_configuration
       return request_id
 
   def end_request(self, request_id):
     """Removes the information associated with given request_id."""
     with self._lock:
       del self._request_wsgi_environ[request_id]
-      del self._request_id_to_module_configuration[request_id]
+      if request_id in self._request_id_to_module_configuration:
+        del self._request_id_to_module_configuration[request_id]
       if request_id in self._request_id_to_instance:
         del self._request_id_to_instance[request_id]
       # TODO: Remove after the Files API is really gone.
@@ -203,3 +203,34 @@ class WSGIRequestInfo(request_info.RequestInfo):
     """
     with self._lock:
       return request_id in self._request_id_used_filesapi
+
+  def get_app_engine_apis(self, request_id):
+    """Returns the app_engine_apis value for the module serving this request.
+
+    Args:
+      request_id: The string id of the request making the API call.
+
+    Raises:
+      KeyError: If request_id does not match an active request.
+
+    Returns:
+      The requested app_engine_apis value.
+    """
+    with self._lock:
+      return self._request_id_to_module_configuration[
+          request_id].app_engine_apis
+
+  def get_runtime(self, request_id):
+    """Returns the runtime name of the module serving this request.
+
+    Args:
+      request_id: The string id of the request making the API call.
+
+    Raises:
+      KeyError: If request_id does not match an active request.
+
+    Returns:
+      A str containing the runtime name.
+    """
+    with self._lock:
+      return self._request_id_to_module_configuration[request_id].runtime

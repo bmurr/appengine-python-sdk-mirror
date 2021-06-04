@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,7 +81,7 @@ def ReadManifest(jar_file_name):
   """
   with zipfile.ZipFile(jar_file_name) as jar:
     try:
-      manifest_string = jar.read(_MANIFEST_NAME)
+      manifest_string = jar.read(_MANIFEST_NAME).decode('ascii')
     except KeyError:
       return None
     return _ParseManifest(manifest_string, jar_file_name)

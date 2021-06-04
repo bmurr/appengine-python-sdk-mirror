@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,11 +22,9 @@ Usage:
 If the -s HOSTNAME flag is not specified, the APPID must be specified.
 """
 
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
-
-
-
-from google.appengine.tools import os_compat
 
 import getpass
 import logging
@@ -36,7 +34,14 @@ import sys
 
 from google.appengine.ext.appstats import loader
 from google.appengine.ext.remote_api import remote_api_stub
+from six.moves import input
+
 from google.appengine.tools import appengine_rpc
+from google.appengine.tools import os_compat
+
+
+
+
 
 
 
@@ -46,7 +51,7 @@ DEFAULT_FILE = 'appstats.pkl'
 
 
 def auth_func():
-  return (raw_input('Email: '), getpass.getpass('Password: '))
+  return (input('Email: '), getpass.getpass('Password: '))
 
 
 def download_appstats(servername, appid, path, secure,

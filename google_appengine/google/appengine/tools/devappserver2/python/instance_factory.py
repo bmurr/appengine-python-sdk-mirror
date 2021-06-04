@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,6 +40,8 @@ _DEFAULT_REQUIREMENT_FILE_NAME = 'requirements.txt'
 _RECREATE_MODERN_INSTANCE_FACTORY_CONFIG_CHANGES = set([
     application_configuration.ENTRYPOINT_ADDED,
     application_configuration.ENTRYPOINT_REMOVED])
+
+_MODERN_REQUEST_ID_HEADER_NAME = 'X-Appengine-Api-Ticket'
 
 
 # TODO: Refactor this factory class for modern runtimes.
@@ -82,7 +84,6 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
   SUPPORTS_INTERACTIVE_REQUESTS = True
   FILE_CHANGE_INSTANCE_RESTART_POLICY = instance.AFTER_FIRST_REQUEST
 
-  _python27_executable_path = sys.executable
   _python27_runtime_path = os.path.abspath(
       os.path.join(os.path.dirname(sys.argv[0]), '_python_runtime.py'))
   _python27_runtime_is_executable = False
@@ -92,37 +93,83 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
     """Sets if the Python27Runtime is executable."""
     PythonRuntimeInstanceFactory._python27_runtime_is_executable = value
 
+  _runtime_python_path = {}
+
   @classmethod
-  def SetPython27ExecutablePath(cls, path):
-    """Set path to the Python27Executable for python27 instances."""
-    PythonRuntimeInstanceFactory._python27_executable_path = path
+  def SetRuntimePythonPath(cls, runtime_python_path):
+    """Set the per runtime path to the Python interpreter."""
+    PythonRuntimeInstanceFactory._runtime_python_path = runtime_python_path
 
   @classmethod
   def SetPython27RuntimePath(cls, path):
     """Set path to the python 27 runtime."""
     PythonRuntimeInstanceFactory._python27_runtime_path = path
 
-  @classmethod
-  def GetPython27RuntimeArgs(cls):
+  def GetPython27RuntimeArgs(self):
     """Get subprocess args for a python27 instance."""
     if PythonRuntimeInstanceFactory._python27_runtime_is_executable:
       return [PythonRuntimeInstanceFactory._python27_runtime_path]
     else:
       return [
-          PythonRuntimeInstanceFactory._python27_executable_path,
-          PythonRuntimeInstanceFactory._python27_runtime_path]
+          self._GetPythonInterpreterPath(),
+          PythonRuntimeInstanceFactory._python27_runtime_path
+      ]
 
   def _is_modern(self):
     return self._module_configuration.runtime.startswith('python3')
 
+  def _GetPythonInterpreterPath(self):
+    """Returns the python interpreter path for the current runtime."""
+    runtime = self._module_configuration.runtime
+    runtime_python_path = PythonRuntimeInstanceFactory._runtime_python_path
+    if runtime_python_path and isinstance(runtime_python_path, str):
+      return runtime_python_path
+    elif runtime_python_path and runtime in runtime_python_path:
+      return runtime_python_path[runtime]
+    elif self._is_modern():
+      return 'python3'
+    else:
+      return sys.executable
+
   def _CheckPythonExecutable(self):
+    python_interpreter_path = self._GetPythonInterpreterPath()
     try:
-      version_str = subprocess.check_output(['python3', '--version'])
-      logging.info('Detected %s', version_str)
-    except OSError:  # If python3 is not found, an OSError would be raised.
+      version_str = subprocess.check_output(
+          [python_interpreter_path, '--version'])
+      logging.info(
+          'Detected python version "%s" for runtime "%s" at "%s".',
+          version_str,
+          self._module_configuration.runtime,
+          python_interpreter_path)
+    except OSError:  # If python is not found, an OSError would be raised.
       raise errors.Python3NotFoundError(
-          'Could not find python3 executable. Check to make sure that Python 3 '
-          'is installed, and that python3 is on your PATH.')
+          'Could not a python executable at "%s". Please verify that your '
+          'python installation, PATH and --runtime_python_path are correct.'
+          % python_interpreter_path)
+
+  def _IsPythonExecutableBefore36(self):
+    try:
+      python_version_str = subprocess.check_output(
+          [self._GetPythonInterpreterPath(), '--version'])
+    except OSError:  # If python3 is not found, an OSError would be raised.
+      logging.warning(
+          'Failed getting python3 version assuming pre 3.6 version.')
+      return True
+
+    # TODO: Use 'from packaging import version' under python3.
+    # See https://stackoverflow.com/questions/11887762
+    strip_prefix = 'Python '
+    if python_version_str.startswith(strip_prefix):
+      python_version_str = python_version_str[len(strip_prefix):]
+    python_version_str = python_version_str.strip()
+
+    # Note, 'from distutils import version as version_util' causes
+    # import errors in tests.
+    before_prefixes = ['2.', '3.0.', '3.1.', '3.2.', '3.3.' '3.4.', '3.5.']
+    for before_prefix in before_prefixes:
+      if python_version_str.startswith(before_prefix):
+        return True
+    return False
 
   def __init__(self, request_data, runtime_config_getter, module_configuration):
     """Initializer for PythonRuntimeInstanceFactory.
@@ -150,8 +197,7 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
   def __del__(self):
     self._CleanUpVenv(self._venv_dir)
 
-  @classmethod
-  def _CleanUpVenv(cls, venv_dir):
+  def _CleanUpVenv(self, venv_dir):
     if os.path.exists(venv_dir):
       shutil.rmtree(venv_dir)
 
@@ -227,7 +273,7 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
     if self._is_modern():
       return (self._entrypoint or _MODERN_DEFAULT_ENTRYPOINT).split()
     else:
-      return PythonRuntimeInstanceFactory.GetPython27RuntimeArgs()
+      return self.GetPython27RuntimeArgs()
 
   @classmethod
   def _WaitForProcWithLastLineStreamed(cls, proc, proc_stdout):
@@ -245,37 +291,60 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
     sys.stdout.write('\n')
     return proc.poll()
 
-  @classmethod
-  def _RunPipInstall(cls, venv_dir, requirements_file_name):
+  def _RunPipInstall(self, venv_dir, requirements_file_name):
     """Run pip install inside a virtualenv, with decent stdout."""
     # Run pip install based on user supplied requirements.txt.
     pip_out = tempfile.NamedTemporaryFile(delete=False)
     logging.info(
         'Using pip to install dependency libraries; pip stdout is redirected '
         'to %s', pip_out.name)
+
     with open(pip_out.name, 'r') as pip_out_r:
       pip_path = os.path.join(venv_dir, 'bin', 'pip')
-      for pip_cmd in [[pip_path, 'install', '--upgrade', 'pip'],
+      pip_env = os.environ.copy()
+      pip_env.update(
+          {
+              'VIRTUAL_ENV': venv_dir,
+              'PATH': ':'.join(
+                  [os.path.join(venv_dir, 'bin'), os.environ['PATH']])
+          }
+      )
+
+      pip_requirement = 'pip'
+      if self._IsPythonExecutableBefore36():
+        # Because pip 21.0.0 drops support for python 3.5
+        # as per https://pip.pypa.io/en/stable/news/
+        pip_requirement = 'pip<21'
+
+      for pip_cmd in [[pip_path, 'install', '--upgrade', pip_requirement],
                       [pip_path, 'install', '-r', requirements_file_name]]:
         cmd_str = ' '.join(pip_cmd)
         logging.info('Running %s', cmd_str)
-        pip_proc = subprocess.Popen(pip_cmd, stdout=pip_out)
-        if cls._WaitForProcWithLastLineStreamed(pip_proc, pip_out_r) != 0:
+        pip_proc = subprocess.Popen(pip_cmd, stdout=pip_out, env=pip_env)
+        if PythonRuntimeInstanceFactory._WaitForProcWithLastLineStreamed(
+            pip_proc, pip_out_r) != 0:
           sys.exit('Failed to run "{}"'.format(cmd_str))
 
-  @classmethod
-  def _SetupVirtualenv(cls, venv_dir, requirements_file_name):
+  def _SetupVirtualenv(self, venv_dir, requirements_file_name):
     """Create virtualenv for py3 instances and run pip install."""
     # Create a clean virtualenv
-    call_res = subprocess.call(['python3', '-m', 'venv', venv_dir])
+    # TODO: Return this to python3, maybe use a flag for python3
+    args = [self._GetPythonInterpreterPath(), '-m', 'venv', venv_dir]
+    call_res = subprocess.call(args)
     if call_res:
       # `python3 -m venv` Failed.
       # Clean up venv_dir and try 'virtualenv' command instead.
-      cls._CleanUpVenv(venv_dir)
-      call_res = subprocess.call(['virtualenv', venv_dir])
+      self._CleanUpVenv(venv_dir)
+      fallback_args = ['virtualenv', venv_dir]
+      logging.warning(
+          'Failed creating virtualenv with "%s", \n'
+          'trying "%s"', ' '.join(args), ' '.join(fallback_args))
+      call_res = subprocess.call(fallback_args)
       if call_res:
         raise IOError('Cannot create virtualenv {}'.format(venv_dir))
-    cls._RunPipInstall(venv_dir, requirements_file_name)
+      logging.warning(
+          'Runtime python interpreter will be selected by virtualenv')
+    self._RunPipInstall(venv_dir, requirements_file_name)
 
     # These env vars are used in subprocess to have the same effect as running
     # `source ${venv_dir}/bin/activate`
@@ -286,14 +355,18 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
     }
 
   def _GetRuntimeEnvironmentVariables(self, instance_id=None):
+    my_runtime_config = self._runtime_config_getter()
     if self._is_modern():
       res = {'PYTHONHASHSEED': 'random'}
       res.update(self.get_modern_env_vars(instance_id))
       res.update(self.venv_env_vars)
+      res['API_HOST'] = my_runtime_config.api_host
+      res['API_PORT'] = str(my_runtime_config.api_port)
+      res['GAE_APPLICATION'] = my_runtime_config.app_id
     else:
       # TODO: Do not pass os.environ to local python27 runtime.
       res = dict(os.environ, PYTHONHASHSEED='random')
-    for kv in self._runtime_config_getter().environ:
+    for kv in my_runtime_config.environ:
       res[kv.key] = kv.value
     return res
 
@@ -318,12 +391,16 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
       runtime_config = self._runtime_config_getter()
       runtime_config.instance_id = str(instance_id)
       return runtime_config
+
+    request_id_hdr_name = (
+        _MODERN_REQUEST_ID_HEADER_NAME if self._is_modern() else None)
     proxy = http_runtime.HttpRuntimeProxy(
         self._GetRuntimeArgs(),
         instance_config_getter,
         self._module_configuration,
         env=self._GetRuntimeEnvironmentVariables(instance_id),
-        start_process_flavor=self._get_process_flavor())
+        start_process_flavor=self._get_process_flavor(),
+        request_id_header_name=request_id_hdr_name)
     return instance.Instance(self.request_data,
                              instance_id,
                              proxy,

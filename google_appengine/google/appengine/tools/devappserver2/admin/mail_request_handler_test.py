@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,8 +20,7 @@ import email.message
 import unittest
 
 import google
-
-import mox
+import mock
 import webapp2
 
 from google.appengine.tools.devappserver2 import dispatcher
@@ -30,12 +29,6 @@ from google.appengine.tools.devappserver2.admin import mail_request_handler
 
 
 class MailRequestHandlerTest(unittest.TestCase):
-
-  def setUp(self):
-    self.mox = mox.Mox()
-
-  def tearDown(self):
-    self.mox.UnsetStubs()
 
   def test_generate_email(self):
     message = mail_request_handler.MailRequestHandler._generate_email(
@@ -63,60 +56,72 @@ class MailRequestHandlerTest(unittest.TestCase):
     response = webapp2.Response()
     handler = mail_request_handler.MailRequestHandler(None, response)
     message = object()
-    self.mox.StubOutWithMock(handler, '_send')
-    self.mox.StubOutWithMock(handler, '_generate_email')
-    handler._generate_email('to', 'from', 'cc', 'subject', 'body').AndReturn(
-        message)
-    handler._send('/_ah/mail/to', message).AndReturn(
-        dispatcher.ResponseTuple('500 Internal Server Error', [], 'Response'))
-    self.mox.ReplayAll()
-    handler._send_email('to', 'from', 'cc', 'subject', 'body')
-    self.mox.VerifyAll()
+    with mock.patch.object(
+        handler,
+        '_send',
+        return_value=dispatcher.ResponseTuple('500 Internal Server Error', [],
+                                              'Response')) as mock_send:
+      with mock.patch.object(
+          handler, '_generate_email',
+          return_value=message) as mock_generate_email:
+        handler._send_email('to', 'from', 'cc', 'subject', 'body')
+
+    mock_generate_email.assert_called_with('to', 'from', 'cc', 'subject',
+                                           'body')
+    mock_send.assert_called_with('/_ah/mail/to', message)
     self.assertEqual(500, response.status_int)
 
   def test_send(self):
-    self.mox.StubOutWithMock(mail_request_handler.MailRequestHandler,
-                             'dispatcher')
-    handler = mail_request_handler.MailRequestHandler(None, None)
-    handler.dispatcher = self.mox.CreateMock(dispatcher.Dispatcher)
-    handler.dispatcher.add_request(
+    with mock.patch.object(
+        mail_request_handler.MailRequestHandler,
+        'dispatcher',
+        spec=dispatcher.Dispatcher) as mock_dispatcher:
+      handler = mail_request_handler.MailRequestHandler(None, None)
+      message = mock.Mock(spec=email.message.Message)
+      message.as_string.return_value = 'mail message'
+
+      handler._send('URL', message)
+
+    mock_dispatcher.add_request.assert_called_with(
         method='POST',
         relative_url='URL',
         headers=[('Content-Type', 'message/rfc822')],
         body='mail message',
         source_ip='0.1.0.20')
-    message = self.mox.CreateMock(email.message.Message)
-    message.as_string().AndReturn('mail message')
-    self.mox.ReplayAll()
-    handler._send('URL', message)
-    self.mox.VerifyAll()
 
   def test_get(self):
     request = webapp2.Request.blank('/mail')
     response = webapp2.Response()
     handler = mail_request_handler.MailRequestHandler(request, response)
-    self.mox.StubOutWithMock(admin_request_handler.AdminRequestHandler, 'get')
-    self.mox.StubOutWithMock(admin_request_handler.AdminRequestHandler,
-                             'render')
-    admin_request_handler.AdminRequestHandler(handler).get()
-    handler.render('mail.html', {})
-    self.mox.ReplayAll()
-    handler.get()
-    self.mox.VerifyAll()
+    with mock.patch.object(admin_request_handler.AdminRequestHandler,
+                           'get') as mock_get:
+      with mock.patch.object(admin_request_handler.AdminRequestHandler,
+                             'render') as mock_render:
+        handler.get()
+
+    mock_get.assert_called()
+    mock_render.assert_called_with('mail.html', {})
 
   def test_post(self):
-    request = webapp2.Request.blank('/mail', POST={
-        'to': 'to', 'from': 'from', 'cc': 'cc', 'subject': 'subject',
-        'body': 'body'})
+    request = webapp2.Request.blank(
+        '/mail',
+        POST={
+            'to': 'to',
+            'from': 'from',
+            'cc': 'cc',
+            'subject': 'subject',
+            'body': 'body'
+        })
     response = webapp2.Response()
     handler = mail_request_handler.MailRequestHandler(request, response)
-    self.mox.StubOutWithMock(handler, '_send_email')
-    self.mox.StubOutWithMock(admin_request_handler.AdminRequestHandler, 'post')
-    admin_request_handler.AdminRequestHandler(handler).post()
-    handler._send_email('to', 'from', 'cc', 'subject', 'body')
-    self.mox.ReplayAll()
-    handler.post()
-    self.mox.VerifyAll()
+
+    with mock.patch.object(handler, '_send_email') as mock_send:
+      with mock.patch.object(admin_request_handler.AdminRequestHandler,
+                             'post') as mock_post:
+        handler.post()
+
+    mock_send.assert_called_with('to', 'from', 'cc', 'subject', 'body')
+    mock_post.assert_called()
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ def get_headers_from_environ(environ):
     headers found in environ.
   """
   headers = wsgiref.headers.Headers([])
-  for header, value in environ.iteritems():
+  for header, value in environ.items():
     if header.startswith('HTTP_'):
       headers[header[5:].replace('_', '-')] = value
   # Content-Type is special; it does not start with 'HTTP_'.

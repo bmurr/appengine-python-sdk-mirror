@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@
 
 import argparse
 import os
-import platform
 import unittest
 
 import google
@@ -206,26 +205,6 @@ class _DatastoreEmulatorDepManagerTest(unittest.TestCase):
                      dep_manager.grpc_import_report['ImportError'])
     self.assertFalse(dep_manager.satisfied)
     self.assertIn('grpcio is incompatible', dep_manager.error_hint)
-
-
-class PlatformSupportCheckTest(unittest.TestCase):
-
-  def test_succeed_non_python3_windows(self):
-    with mock.patch.object(platform, 'system', return_value='Windows'):
-      devappserver2.DevelopmentServer._check_platform_support({'python2'})
-      platform.system.assert_not_called()
-
-  def test_succeed_python3_non_windows(self):
-    with mock.patch.object(platform, 'system', return_value='Linux'):
-      devappserver2.DevelopmentServer._check_platform_support({'python3'})
-      platform.system.assert_called_once_with()
-
-  def test_fail_python3_windows(self):
-    with mock.patch.object(platform, 'system', return_value='Windows'):
-      with self.assertRaises(OSError):
-        devappserver2.DevelopmentServer._check_platform_support(
-            {'python3', 'python2'})
-      platform.system.assert_called_once_with()
 
 
 if __name__ == '__main__':

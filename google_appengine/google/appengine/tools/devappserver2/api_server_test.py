@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
 # limitations under the License.
 #
 """Tests for google.apphosting.tools.devappserver2.api_server."""
-
-
 
 import argparse
 import cStringIO
@@ -35,8 +33,6 @@ import google
 import mock
 import mox
 
-from google.net.rpc.python.testing import rpc_test_harness
-
 from google.appengine.api import apiproxy_stub
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import mail_stub
@@ -51,6 +47,7 @@ from google.appengine.datastore import datastore_pb
 from google.appengine.datastore import datastore_sqlite_stub
 from google.appengine.datastore import datastore_stub_util
 from google.appengine.datastore import datastore_v4_pb
+from google.appengine.datastore import datastore_v4_pb2
 from google.appengine.ext.remote_api import remote_api_pb
 from google.appengine.runtime import apiproxy_errors
 from google.appengine.tools.devappserver2 import api_server
@@ -80,12 +77,18 @@ TASKQUEUE_DEFAULT_HTTP_SERVER = 'localhost:8080'
 USER_LOGIN_URL = 'https://localhost/Login?continue=%s'
 USER_LOGOUT_URL = 'https://localhost/Logout?continue=%s'
 
+_DATASTORE_V4_SERVICE_METHOD_NAMES = frozenset(
+    datastore_v4_pb2.DESCRIPTOR.services_by_name['DatastoreV4Service']
+    .methods_by_name)
+
 request_data = wsgi_request_info.WSGIRequestInfo(None)
 
 
 class FakeURLFetchServiceStub(apiproxy_stub.APIProxyStub):
-  def __init__(self):
-    super(FakeURLFetchServiceStub, self).__init__('urlfetch')
+
+  def __init__(self, my_request_data):
+    super(FakeURLFetchServiceStub, self).__init__(
+        'urlfetch', request_data=my_request_data)
 
   def _Dynamic_Fetch(self, request, unused_response):
     if request.url() == 'exception':
@@ -95,8 +98,10 @@ class FakeURLFetchServiceStub(apiproxy_stub.APIProxyStub):
 
 
 class FakeDatastoreV4ServiceStub(apiproxy_stub.APIProxyStub):
-  def __init__(self):
-    super(FakeDatastoreV4ServiceStub, self).__init__('datastore_v4')
+
+  def __init__(self, my_request_data=None):
+    super(FakeDatastoreV4ServiceStub, self).__init__(
+        'datastore_v4', request_data=my_request_data)
 
   def _Dynamic_BeginTransaction(self, request, response):
     response.set_transaction('whatever')
@@ -126,15 +131,16 @@ def setup_stubs():
       user_login_url=USER_LOGIN_URL,
       user_logout_url=USER_LOGOUT_URL)
   apiproxy_stub_map.apiproxy.ReplaceStub(
-      'urlfetch', FakeURLFetchServiceStub())
+      'urlfetch', FakeURLFetchServiceStub(my_request_data=request_data))
   apiproxy_stub_map.apiproxy.ReplaceStub(
-      'datastore_v4', FakeDatastoreV4ServiceStub())
+      'datastore_v4', FakeDatastoreV4ServiceStub(my_request_data=request_data))
 
 
 class APIServerTestBase(wsgi_test_utils.WSGITestCase):
   """Tests for api_server.APIServer."""
 
   def setUp(self):
+    super(APIServerTestBase, self).setUp()
     setup_stubs()
     self.server = api_server.APIServer('localhost',
                                        0,
@@ -142,6 +148,7 @@ class APIServerTestBase(wsgi_test_utils.WSGITestCase):
 
   def tearDown(self):
     stub_util.cleanup_stubs()
+    super(APIServerTestBase, self).tearDown()
 
   def _assert_remote_call(
       self, expected_remote_response, stub_request, service, method):
@@ -207,14 +214,12 @@ class TestAPIServer(APIServerTestBase):
         'datastore_v4', 'BeginTransaction')
 
   def test_datastore_v4_api_calls_handled(self):
-    # We are only using RpcTestHarness as a clean way to get the list of
-    # service methods.
-    harness = rpc_test_harness.RpcTestHarness(
-        datastore_v4_pb.DatastoreV4Service)
     deprecated = ['Get', 'Write']
-    methods = set([k for k in harness.__dict__.keys()
-                   if k not in deprecated and not k.startswith('_')])
-    self.assertEqual(methods, set(stub_util.DATASTORE_V4_METHODS.keys()))
+    methods = {
+        method_name for method_name in _DATASTORE_V4_SERVICE_METHOD_NAMES
+        if method_name not in deprecated
+    }
+    self.assertSetEqual(methods, frozenset(stub_util.DATASTORE_V4_METHODS))
 
   def test_GET(self):
     environ = {'REQUEST_METHOD': 'GET',
@@ -314,14 +319,151 @@ class TestApiServerMain(unittest.TestCase):
     mock_stop.assert_called_once()
 
 
+class GetRuntimeOnlyRequestInfo:
+  """A request_info that implements get_runtime."""
+
+  def get_runtime(self):
+    return 'runtime1'
+
+
+class WormholeTestRequestInfo:
+  """A fake request_info with methods for testing varify_wormhole_usage."""
+
+  KEY_ERROR = 'KeY ErrOr'
+
+  def __init__(self, runtime, app_engine_apis):
+    self._runtime = runtime
+    self._app_engine_apis = app_engine_apis
+
+  def get_runtime(self, request_id):
+    del request_id  # Unused
+    if self._runtime == WormholeTestRequestInfo.KEY_ERROR:
+      raise KeyError('Expected Key Error')
+    return self._runtime
+
+  def get_app_engine_apis(self, request_id):
+    del request_id  # Unused
+    if self._app_engine_apis == WormholeTestRequestInfo.KEY_ERROR:
+      raise KeyError('Expected Key Error')
+    return self._app_engine_apis
+
+  def get_module(self, request_id):
+    del request_id  # Unused
+    return 'module1'
+
+
+class VerifyWormholeUsageTest(unittest.TestCase):
+  """Tests for api_server._verify_wormhole_usage."""
+
+  def setUp(self):
+    super(VerifyWormholeUsageTest, self).setUp()
+    self._service = 'service1'
+    self._method = 'method1'
+    self._request_id = 'request_id_1'
+
+  def _create_request(self, request_id=None, service=None):
+    remote_request = remote_api_pb.Request()
+    if service is None:
+      service = self._service
+
+    remote_request.set_service_name(service)
+    remote_request.set_method(self._method)
+    if request_id:
+      remote_request.set_request_id(request_id)
+
+    return remote_request
+
+  def _verify_wormhole_usage(self, request_info, request=None):
+    """Call api_server._verify_wormhole_usage."""
+    if not request:
+      request = self._create_request(self._request_id)
+    api_server._verify_wormhole_usage(request_info, request)
+
+  def test_request_with_no_request_id_passes(self):
+    request_info = object()
+    self._verify_wormhole_usage(request_info, self._create_request())
+
+  def test_request_with_no_request_info_passes(self):
+    request_info = None
+    self._verify_wormhole_usage(request_info)
+
+  def test_request_data_with_no_getruntime_pasess(self):
+    request_info = object()
+    self._verify_wormhole_usage(request_info)
+
+  def test_request_data_with_no_get_app_engine_apis_pasess(self):
+    request_info = GetRuntimeOnlyRequestInfo()
+    self._verify_wormhole_usage(
+        request_info, self._create_request(self._request_id))
+
+  def test_request_data_with_get_runtime_key_error_passes(self):
+    request_info = WormholeTestRequestInfo(
+        WormholeTestRequestInfo.KEY_ERROR, True)
+    self._verify_wormhole_usage(request_info)
+
+  def test_request_data_with__get_app_engine_apis_key_error__pasess(self):
+    request_info = WormholeTestRequestInfo(
+        'go114', WormholeTestRequestInfo.KEY_ERROR)
+    self._verify_wormhole_usage(request_info)
+
+  def test_request_for_wormhole_optional_runtime_passes(self):
+    request_info = WormholeTestRequestInfo('python27', True)
+    self._verify_wormhole_usage(request_info)
+
+  def test_request_missing_needed_app_engine_apis_fails(self):
+    request_info = WormholeTestRequestInfo('go114', False)
+    self.assertRaises(
+        apiproxy_errors.FeatureNotEnabledError,
+        self._verify_wormhole_usage,
+        request_info)
+
+  def test_wormhole_request_for_unsupported_servce_fails(self):
+    request_info = WormholeTestRequestInfo('go114', True)
+    # Note In created request, service=service1
+    self.assertRaises(
+        apiproxy_errors.CallNotFoundError,
+        self._verify_wormhole_usage,
+        request_info)
+
+  def test_happy_wormhole_request_passes(self):
+    request_info = WormholeTestRequestInfo('go114', True)
+    service = api_server.WORMHOLE_SERVICES[0]
+    self._verify_wormhole_usage(request_info, self._create_request(
+        self._request_id, service=service))
+
+
+class MustEnableWormholeForRuntimeTest(unittest.TestCase):
+  """Tests for api_server._must_enable_wormhole_for_runtime."""
+
+  def test_go115_returns_yes(self):
+    self.assertTrue(api_server._must_enable_wormhole_for_runtime('go115'))
+
+  def test_go111_returns_no(self):
+    self.assertFalse(api_server._must_enable_wormhole_for_runtime('go111'))
+
+  def test_python39_returns_yes(self):
+    self.assertTrue(api_server._must_enable_wormhole_for_runtime('python39'))
+
+  def test_python27_returns_no(self):
+    self.assertFalse(api_server._must_enable_wormhole_for_runtime('python27'))
+
+  def test_php72_returns_yes(self):
+    self.assertTrue(api_server._must_enable_wormhole_for_runtime('php72'))
+
+  def test_php55_returns_no(self):
+    self.assertFalse(api_server._must_enable_wormhole_for_runtime('php55'))
+
+
 class GetStoragePathTest(unittest.TestCase):
   """Tests for api_server.get_storage_path."""
 
   def setUp(self):
+    super(GetStoragePathTest, self).setUp()
     self.mox = mox.Mox()
     self.mox.StubOutWithMock(api_server, '_generate_storage_paths')
 
   def tearDown(self):
+    super(GetStoragePathTest, self).tearDown()
     self.mox.UnsetStubs()
 
   def test_no_path_given_directory_does_not_exist(self):
@@ -378,11 +520,13 @@ class GenerateStoragePathsTest(unittest.TestCase):
   """Tests for api_server._generate_storage_paths."""
 
   def setUp(self):
+    super(GenerateStoragePathsTest, self).setUp()
     self.mox = mox.Mox()
     self.mox.StubOutWithMock(getpass, 'getuser')
     self.mox.StubOutWithMock(tempfile, 'gettempdir')
 
   def tearDown(self):
+    super(GenerateStoragePathsTest, self).tearDown()
     self.mox.UnsetStubs()
 
   @unittest.skipUnless(sys.platform.startswith('win'), 'Windows only')
@@ -428,6 +572,7 @@ class ClearApiServer(unittest.TestCase):
   """Tests for api_server._handle_CLEAR."""
 
   def setUp(self):
+    super(ClearApiServer, self).setUp()
     self.server = api_server.APIServer('localhost', 0, '')
 
     self.app_identity_stub = mock.create_autospec(
@@ -488,9 +633,11 @@ class LocalJavaAppDispatcherTest(unittest.TestCase):
   """Tests for request_info._LocalJavaAppDispatcher."""
 
   def setUp(self):
+    super(LocalJavaAppDispatcherTest, self).setUp()
     self.mox = mox.Mox()
 
   def tearDown(self):
+    super(LocalJavaAppDispatcherTest, self).tearDown()
     self.mox.UnsetStubs()
 
   def testAddRequest(self):

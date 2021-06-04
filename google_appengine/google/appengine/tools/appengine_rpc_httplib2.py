@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -87,7 +87,7 @@ class MemoryCache(object):
 def RaiseHttpError(url, response_info, response_body, extra_msg=''):
   """Raise a urllib2.HTTPError based on an httplib2 response tuple."""
   if response_body is not None:
-    stream = io.BytesIO()
+    stream = io.StringIO()
     stream.write(response_body)
     stream.seek(0)
   else:
@@ -167,6 +167,9 @@ class HttpRpcServerHttpLib2(object):
           os.path.dirname(__file__), '..', '..', '..', 'lib', 'cacerts',
           'cacerts.txt'))
       self.cert_file_available = os.path.exists(self.certpath)
+
+      if not self.cert_file_available:
+        self.certpath = None
 
     self.memory_cache = MemoryCache()
 

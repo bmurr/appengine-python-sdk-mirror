@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -108,7 +108,7 @@ class ApiConfigManager(object):
             self._convert_https_to_http(config)
             self._configs[lookup_key] = config
 
-        for config in self._configs.itervalues():
+        for config in self._configs.values():
           name = config.get('name', '')
           version = config.get('version', '')
           sorted_methods = self._get_sorted_methods(config.get('methods', {}))
@@ -208,7 +208,7 @@ class ApiConfigManager(object):
       A dictionary containing the variable names converted from base64.
     """
     result = {}
-    for var_name, value in match.groupdict().iteritems():
+    for var_name, value in match.groupdict().items():
       actual_var_name = ApiConfigManager._from_safe_path_param_name(var_name)
       result[actual_var_name] = value
     return result

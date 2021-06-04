@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,9 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-
-
 """Convenience wrapper for starting an appengine tool."""
 
 
@@ -34,11 +31,13 @@ try:
 finally:
   sys.path = sys_path
 
+PY2 = sys.version_info[0] == 2
+
 wrapper_util.reject_old_python_versions((2, 5))
 if sys.version_info < (2, 6):
   sys.stderr.write(
-      'WARNING: In an upcoming release the SDK will no longer support Python'
-      ' 2.5. Users should upgrade to Python 2.6 or higher.\n')
+      b'WARNING: In an upcoming release the SDK will no longer support Python'
+      b' 2.5. Users should upgrade to Python 2.6 or higher.\n')
   time.sleep(1)
 
 
@@ -104,6 +103,13 @@ def fix_sys_path(extra_extra_paths=()):
   sys.path = EXTRA_PATHS + list(extra_extra_paths) + sys.path
 
 
+def _execfile(fn, scope):
+  if PY2:
+    execfile(fn, scope)
+  else:
+    exec(open(fn).read(), scope)
+
+
 def run_file(file_path, globals_):
   """Execute the given script with the passed-in globals.
 
@@ -126,7 +132,7 @@ def run_file(file_path, globals_):
   if 'google' in sys.modules:
     del sys.modules['google']
 
-  execfile(_PATHS.script_file(script_name), globals_)
+  _execfile(_PATHS.script_file(script_name), globals_)
 
 
 if __name__ == '__main__':

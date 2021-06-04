@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -90,8 +90,8 @@ class GaeGoApplication(object):
     if self._enable_debugging:
       args.extend(['-gcflags', '"all=-N -l"'])
     args.extend(['-o', exe_name, self._main_executable_path])
+    cwd = os.getcwd()
     try:
-      cwd = os.getcwd()
       os.chdir(app_root)
       logging.debug('Working from dir %s', os.getcwd())
       stdout, stderr = _run_tool('go', args)

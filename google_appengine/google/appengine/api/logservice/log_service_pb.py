@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -150,10 +150,11 @@ class LogServiceError(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogServiceError'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChphcHBob3N0aW5nLkxvZ1NlcnZpY2VFcnJvcnN6CUVycm9yQ29kZYsBkgECT0uYAQCMAYsBkgEPSU5WQUxJRF9SRVFVRVNUmAEBjAGLAZIBDVNUT1JBR0VfRVJST1KYAQKMAXS6AbUYCithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvEgphcHBob3N0aW5nGhthcHBob3N0aW5nL2FwaS9zb3VyY2UucHJvdG8iTgoPTG9nU2VydmljZUVycm9yIjsKCUVycm9yQ29kZRIGCgJPSxAAEhMKD0lOVkFMSURfUkVRVUVTVBABEhEKDVNUT1JBR0VfRVJST1IQAiJ9Cg5Vc2VyQXBwTG9nTGluZRIWCg50aW1lc3RhbXBfdXNlYxgBIAIoAxINCgVsZXZlbBgCIAIoAxIPCgdtZXNzYWdlGAMgAigJEjMKD3NvdXJjZV9sb2NhdGlvbhgEIAEoCzIaLmFwcGhvc3RpbmcuU291cmNlTG9jYXRpb24iPwoPVXNlckFwcExvZ0dyb3VwEiwKCGxvZ19saW5lGAIgAygLMhouYXBwaG9zdGluZy5Vc2VyQXBwTG9nTGluZSIcCgxGbHVzaFJlcXVlc3QSDAoEbG9ncxgBIAEoDCIiChBTZXRTdGF0dXNSZXF1ZXN0Eg4KBnN0YXR1cxgBIAIoCSJCCglMb2dPZmZzZXQSEgoKcmVxdWVzdF9pZBgBIAEoDBIhChlkZXByZWNhdGVkX3JlcXVlc3RfaWRfc2V0GGUgASgIInAKB0xvZ0xpbmUSDAoEdGltZRgBIAIoAxINCgVsZXZlbBgCIAIoBRITCgtsb2dfbWVzc2FnZRgDIAIoCRIzCg9zb3VyY2VfbG9jYXRpb24YBCABKAsyGi5hcHBob3N0aW5nLlNvdXJjZUxvY2F0aW9uIuIGCgpSZXF1ZXN0TG9nEg4KBmFwcF9pZBgBIAIoCRIaCgltb2R1bGVfaWQYJSABKAk6B2RlZmF1bHQSEgoKdmVyc2lvbl9pZBgCIAIoCRISCgpyZXF1ZXN0X2lkGAMgAigMEiUKBm9mZnNldBgjIAEoCzIVLmFwcGhvc3RpbmcuTG9nT2Zmc2V0EgoKAmlwGAQgAigJEhAKCG5pY2tuYW1lGAUgASgJEhIKCnN0YXJ0X3RpbWUYBiACKAMSEAoIZW5kX3RpbWUYByACKAMSDwoHbGF0ZW5jeRgIIAIoAxIPCgdtY3ljbGVzGAkgAigDEg4KBm1ldGhvZBgKIAIoCRIQCghyZXNvdXJjZRgLIAIoCRIUCgxodHRwX3ZlcnNpb24YDCACKAkSDgoGc3RhdHVzGA0gAigFEhUKDXJlc3BvbnNlX3NpemUYDiACKAMSEAoIcmVmZXJyZXIYDyABKAkSEgoKdXNlcl9hZ2VudBgQIAEoCRIVCg11cmxfbWFwX2VudHJ5GBEgAigJEhAKCGNvbWJpbmVkGBIgAigJEhMKC2FwaV9tY3ljbGVzGBMgASgDEgwKBGhvc3QYFCABKAkSDAoEY29zdBgVIAEoARIXCg90YXNrX3F1ZXVlX25hbWUYFiABKAkSEQoJdGFza19uYW1lGBcgASgJEhsKE3dhc19sb2FkaW5nX3JlcXVlc3QYGCABKAgSFAoMcGVuZGluZ190aW1lGBkgASgDEhkKDXJlcGxpY2FfaW5kZXgYGiABKAU6Ai0xEhYKCGZpbmlzaGVkGBsgASgIOgR0cnVlEhEKCWNsb25lX2tleRgcIAEoDBIhCgRsaW5lGB0gAygLMhMuYXBwaG9zdGluZy5Mb2dMaW5lEhgKEGxpbmVzX2luY29tcGxldGUYJCABKAgSGgoSYXBwX2VuZ2luZV9yZWxlYXNlGCYgASgMEhAKCHRyYWNlX2lkGCcgASgJEhMKC2V4aXRfcmVhc29uGB4gASgFEh4KFndhc190aHJvdHRsZWRfZm9yX3RpbWUYHyABKAgSIgoad2FzX3Rocm90dGxlZF9mb3JfcmVxdWVzdHMYICABKAgSFgoOdGhyb3R0bGVkX3RpbWUYISABKAMSEwoLc2VydmVyX25hbWUYIiABKAwihwEKEExvZ01vZHVsZVZlcnNpb24SGgoJbW9kdWxlX2lkGAEgASgJOgdkZWZhdWx0EhIKCnZlcnNpb25faWQYAiABKAkSIAoYZGVwcmVjYXRlZF9tb2R1bGVfaWRfc2V0GGUgASgIEiEKGWRlcHJlY2F0ZWRfdmVyc2lvbl9pZF9zZXQYZiABKAgitwYKDkxvZ1JlYWRSZXF1ZXN0Eg4KBmFwcF9pZBgBIAIoCRISCgp2ZXJzaW9uX2lkGAIgAygJEjQKDm1vZHVsZV92ZXJzaW9uGBMgAygLMhwuYXBwaG9zdGluZy5Mb2dNb2R1bGVWZXJzaW9uEhIKCnN0YXJ0X3RpbWUYAyABKAMSEAoIZW5kX3RpbWUYBCABKAMSJQoGb2Zmc2V0GAUgASgLMhUuYXBwaG9zdGluZy5Mb2dPZmZzZXQSEgoKcmVxdWVzdF9pZBgGIAMoDBIZChFtaW5pbXVtX2xvZ19sZXZlbBgHIAEoBRIaChJpbmNsdWRlX2luY29tcGxldGUYCCABKAgSDQoFY291bnQYCSABKAMSGgoSY29tYmluZWRfbG9nX3JlZ2V4GA4gASgJEhIKCmhvc3RfcmVnZXgYDyABKAkSFQoNcmVwbGljYV9pbmRleBgQIAEoBRIYChBpbmNsdWRlX2FwcF9sb2dzGAogASgIEhwKFGFwcF9sb2dzX3Blcl9yZXF1ZXN0GBEgASgFEhQKDGluY2x1ZGVfaG9zdBgLIAEoCBITCgtpbmNsdWRlX2FsbBgMIAEoCBIWCg5jYWNoZV9pdGVyYXRvchgNIAEoCBISCgpudW1fc2hhcmRzGBIgASgFEiEKGWRlcHJlY2F0ZWRfc3RhcnRfdGltZV9zZXQYZyABKAgSHwoXZGVwcmVjYXRlZF9lbmRfdGltZV9zZXQYaCABKAgSKAogZGVwcmVjYXRlZF9taW5pbXVtX2xvZ19sZXZlbF9zZXQYayABKAgSHAoUZGVwcmVjYXRlZF9jb3VudF9zZXQYbSABKAgSKQohZGVwcmVjYXRlZF9jb21iaW5lZF9sb2dfcmVnZXhfc2V0GHIgASgIEiEKGWRlcHJlY2F0ZWRfaG9zdF9yZWdleF9zZXQYcyABKAgSJAocZGVwcmVjYXRlZF9yZXBsaWNhX2luZGV4X3NldBh0IAEoCBIrCiNkZXByZWNhdGVkX2FwcF9sb2dzX3Blcl9yZXF1ZXN0X3NldBh1IAEoCBIhChlkZXByZWNhdGVkX251bV9zaGFyZHNfc2V0GHYgASgIInQKD0xvZ1JlYWRSZXNwb25zZRIjCgNsb2cYASADKAsyFi5hcHBob3N0aW5nLlJlcXVlc3RMb2cSJQoGb2Zmc2V0GAIgASgLMhUuYXBwaG9zdGluZy5Mb2dPZmZzZXQSFQoNbGFzdF9lbmRfdGltZRgDIAEoAyJ+Cg5Mb2dVc2FnZVJlY29yZBISCgp2ZXJzaW9uX2lkGAEgASgJEhIKCnN0YXJ0X3RpbWUYAiABKAUSEAoIZW5kX3RpbWUYAyABKAUSDQoFY291bnQYBCABKAMSEgoKdG90YWxfc2l6ZRgFIAEoAxIPCgdyZWNvcmRzGAYgASgFIo8CCg9Mb2dVc2FnZVJlcXVlc3QSDgoGYXBwX2lkGAEgAigJEhIKCnZlcnNpb25faWQYAiADKAkSEgoKc3RhcnRfdGltZRgDIAEoBRIQCghlbmRfdGltZRgEIAEoBRIbChByZXNvbHV0aW9uX2hvdXJzGAUgASgNOgExEhgKEGNvbWJpbmVfdmVyc2lvbnMYBiABKAgSFQoNdXNhZ2VfdmVyc2lvbhgHIAEoBRIVCg12ZXJzaW9uc19vbmx5GAggASgIEicKH2RlcHJlY2F0ZWRfcmVzb2x1dGlvbl9ob3Vyc19zZXQYaSABKAgSJAocZGVwcmVjYXRlZF91c2FnZV92ZXJzaW9uX3NldBhrIAEoCCJqChBMb2dVc2FnZVJlc3BvbnNlEikKBXVzYWdlGAEgAygLMhouYXBwaG9zdGluZy5Mb2dVc2FnZVJlY29yZBIrCgdzdW1tYXJ5GAIgASgLMhouYXBwaG9zdGluZy5Mb2dVc2FnZVJlY29yZEI4CiRjb20uZ29vZ2xlLmFwcGhvc3RpbmcuYXBpLmxvZ3NlcnZpY2UQAigBQgxMb2dTZXJ2aWNlUGI="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChphcHBob3N0aW5nLkxvZ1NlcnZpY2VFcnJvcnN6CUVycm9yQ29kZYsBkgECT0uYAQCMAYsBkgEPSU5WQUxJRF9SRVFVRVNUmAEBjAGLAZIBDVNUT1JBR0VfRVJST1KYAQKMAXQ="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class UserAppLogLine(ProtocolBuffer.ProtocolMessage):
   has_timestamp_usec_ = 0
@@ -411,10 +412,11 @@ class UserAppLogLine(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.UserAppLogLine'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChlhcHBob3N0aW5nLlVzZXJBcHBMb2dMaW5lExoOdGltZXN0YW1wX3VzZWMgASgAMAM4AhQTGgVsZXZlbCACKAAwAzgCFBMaB21lc3NhZ2UgAygCMAk4AhQTGg9zb3VyY2VfbG9jYXRpb24gBCgCMAs4AUoZYXBwaG9zdGluZy5Tb3VyY2VMb2NhdGlvbqMBqgEFY3R5cGWyAQZwcm90bzKkARTCARphcHBob3N0aW5nLkxvZ1NlcnZpY2VFcnJvcg=="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChlhcHBob3N0aW5nLlVzZXJBcHBMb2dMaW5lExoOdGltZXN0YW1wX3VzZWMgASgAMAM4AhQTGgVsZXZlbCACKAAwAzgCFBMaB21lc3NhZ2UgAygCMAk4AhQTGg9zb3VyY2VfbG9jYXRpb24gBCgCMAs4AUoZYXBwaG9zdGluZy5Tb3VyY2VMb2NhdGlvbqMBqgEFY3R5cGWyAQZwcm90bzKkARQ="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class UserAppLogGroup(ProtocolBuffer.ProtocolMessage):
 
@@ -558,10 +560,11 @@ class UserAppLogGroup(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.UserAppLogGroup'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChphcHBob3N0aW5nLlVzZXJBcHBMb2dHcm91cBMaCGxvZ19saW5lIAIoAjALOANKGWFwcGhvc3RpbmcuVXNlckFwcExvZ0xpbmWjAaoBBWN0eXBlsgEGcHJvdG8ypAEUwgEaYXBwaG9zdGluZy5Mb2dTZXJ2aWNlRXJyb3I="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChphcHBob3N0aW5nLlVzZXJBcHBMb2dHcm91cBMaCGxvZ19saW5lIAIoAjALOANKGWFwcGhvc3RpbmcuVXNlckFwcExvZ0xpbmWjAaoBBWN0eXBlsgEGcHJvdG8ypAEU"))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class FlushRequest(ProtocolBuffer.ProtocolMessage):
   has_logs_ = 0
@@ -686,143 +689,11 @@ class FlushRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.FlushRequest'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChdhcHBob3N0aW5nLkZsdXNoUmVxdWVzdBMaBGxvZ3MgASgCMAk4ARTCARphcHBob3N0aW5nLkxvZ1NlcnZpY2VFcnJvcg=="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChdhcHBob3N0aW5nLkZsdXNoUmVxdWVzdBMaBGxvZ3MgASgCMAk4ARQ="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
 
-class SetStatusRequest(ProtocolBuffer.ProtocolMessage):
-  has_status_ = 0
-  status_ = ""
-
-  def __init__(self, contents=None):
-    if contents is not None: self.MergeFromString(contents)
-
-  def status(self): return self.status_
-
-  def set_status(self, x):
-    self.has_status_ = 1
-    self.status_ = x
-
-  def clear_status(self):
-    if self.has_status_:
-      self.has_status_ = 0
-      self.status_ = ""
-
-  def has_status(self): return self.has_status_
-
-
-  def MergeFrom(self, x):
-    assert x is not self
-    if (x.has_status()): self.set_status(x.status())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.SetStatusRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.SetStatusRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.SetStatusRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.SetStatusRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.SetStatusRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.SetStatusRequest', s)
-
-
-  def Equals(self, x):
-    if x is self: return 1
-    if self.has_status_ != x.has_status_: return 0
-    if self.has_status_ and self.status_ != x.status_: return 0
-    return 1
-
-  def IsInitialized(self, debug_strs=None):
-    initialized = 1
-    if (not self.has_status_):
-      initialized = 0
-      if debug_strs is not None:
-        debug_strs.append('Required field: status not set.')
-    return initialized
-
-  def ByteSize(self):
-    n = 0
-    n += self.lengthString(len(self.status_))
-    return n + 1
-
-  def ByteSizePartial(self):
-    n = 0
-    if (self.has_status_):
-      n += 1
-      n += self.lengthString(len(self.status_))
-    return n
-
-  def Clear(self):
-    self.clear_status()
-
-  def OutputUnchecked(self, out):
-    out.putVarInt32(10)
-    out.putPrefixedString(self.status_)
-
-  def OutputPartial(self, out):
-    if (self.has_status_):
-      out.putVarInt32(10)
-      out.putPrefixedString(self.status_)
-
-  def TryMerge(self, d):
-    while d.avail() > 0:
-      tt = d.getVarInt32()
-      if tt == 10:
-        self.set_status(d.getPrefixedString())
-        continue
-
-
-      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
-      d.skipData(tt)
-
-
-  def __str__(self, prefix="", printElemNumber=0):
-    res=""
-    if self.has_status_: res+=prefix+("status: %s\n" % self.DebugFormatString(self.status_))
-    return res
-
-
-  def _BuildTagLookupTable(sparse, maxtag, default=None):
-    return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
-
-  kstatus = 1
-
-  _TEXT = _BuildTagLookupTable({
-    0: "ErrorCode",
-    1: "status",
-  }, 1)
-
-  _TYPES = _BuildTagLookupTable({
-    0: ProtocolBuffer.Encoder.NUMERIC,
-    1: ProtocolBuffer.Encoder.STRING,
-  }, 1, ProtocolBuffer.Encoder.MAX_TYPE)
-
-
-  _STYLE = """"""
-  _STYLE_CONTENT_TYPE = """"""
-  _PROTO_DESCRIPTOR_NAME = 'apphosting.SetStatusRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChthcHBob3N0aW5nLlNldFN0YXR1c1JlcXVlc3QTGgZzdGF0dXMgASgCMAk4AhTCARphcHBob3N0aW5nLkxvZ1NlcnZpY2VFcnJvcg=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
 
 class LogOffset(ProtocolBuffer.ProtocolMessage):
   has_request_id_ = 0
@@ -981,10 +852,11 @@ class LogOffset(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogOffset'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChRhcHBob3N0aW5nLkxvZ09mZnNldBMaCnJlcXVlc3RfaWQgASgCMAk4ARQTGhlkZXByZWNhdGVkX3JlcXVlc3RfaWRfc2V0IGUoADAIOAEUwgEaYXBwaG9zdGluZy5Mb2dTZXJ2aWNlRXJyb3I="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChRhcHBob3N0aW5nLkxvZ09mZnNldBMaCnJlcXVlc3RfaWQgASgCMAk4ARQTGhlkZXByZWNhdGVkX3JlcXVlc3RfaWRfc2V0IGUoADAIOAEU"))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class LogLine(ProtocolBuffer.ProtocolMessage):
   has_time_ = 0
@@ -1242,10 +1114,11 @@ class LogLine(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogLine'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChJhcHBob3N0aW5nLkxvZ0xpbmUTGgR0aW1lIAEoADADOAIUExoFbGV2ZWwgAigAMAU4AhQTGgtsb2dfbWVzc2FnZSADKAIwCTgCFBMaD3NvdXJjZV9sb2NhdGlvbiAEKAIwCzgBShlhcHBob3N0aW5nLlNvdXJjZUxvY2F0aW9uowGqAQVjdHlwZbIBBnByb3RvMqQBFMIBGmFwcGhvc3RpbmcuTG9nU2VydmljZUVycm9y"))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChJhcHBob3N0aW5nLkxvZ0xpbmUTGgR0aW1lIAEoADADOAIUExoFbGV2ZWwgAigAMAU4AhQTGgtsb2dfbWVzc2FnZSADKAIwCTgCFBMaD3NvdXJjZV9sb2NhdGlvbiAEKAIwCzgBShlhcHBob3N0aW5nLlNvdXJjZUxvY2F0aW9uowGqAQVjdHlwZbIBBnByb3RvMqQBFA=="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class RequestLog(ProtocolBuffer.ProtocolMessage):
   has_app_id_ = 0
@@ -2772,10 +2645,11 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.RequestLog'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChVhcHBob3N0aW5nLlJlcXVlc3RMb2cTGgZhcHBfaWQgASgCMAk4AhQTGgltb2R1bGVfaWQgJSgCMAk4AUIHZGVmYXVsdKMBqgEHZGVmYXVsdLIBCSJkZWZhdWx0IqQBFBMaCnZlcnNpb25faWQgAigCMAk4AhQTGgpyZXF1ZXN0X2lkIAMoAjAJOAIUExoGb2Zmc2V0ICMoAjALOAFKFGFwcGhvc3RpbmcuTG9nT2Zmc2V0owGqAQVjdHlwZbIBBnByb3RvMqQBFBMaAmlwIAQoAjAJOAIUExoIbmlja25hbWUgBSgCMAk4ARQTGgpzdGFydF90aW1lIAYoADADOAIUExoIZW5kX3RpbWUgBygAMAM4AhQTGgdsYXRlbmN5IAgoADADOAIUExoHbWN5Y2xlcyAJKAAwAzgCFBMaBm1ldGhvZCAKKAIwCTgCFBMaCHJlc291cmNlIAsoAjAJOAIUExoMaHR0cF92ZXJzaW9uIAwoAjAJOAIUExoGc3RhdHVzIA0oADAFOAIUExoNcmVzcG9uc2Vfc2l6ZSAOKAAwAzgCFBMaCHJlZmVycmVyIA8oAjAJOAEUExoKdXNlcl9hZ2VudCAQKAIwCTgBFBMaDXVybF9tYXBfZW50cnkgESgCMAk4AhQTGghjb21iaW5lZCASKAIwCTgCFBMaC2FwaV9tY3ljbGVzIBMoADADOAEUExoEaG9zdCAUKAIwCTgBFBMaBGNvc3QgFSgBMAE4ARQTGg90YXNrX3F1ZXVlX25hbWUgFigCMAk4ARQTGgl0YXNrX25hbWUgFygCMAk4ARQTGhN3YXNfbG9hZGluZ19yZXF1ZXN0IBgoADAIOAEUExoMcGVuZGluZ190aW1lIBkoADADOAEUExoNcmVwbGljYV9pbmRleCAaKAAwBTgBQgItMaMBqgEHZGVmYXVsdLIBAi0xpAEUExoIZmluaXNoZWQgGygAMAg4AUIEdHJ1ZaMBqgEHZGVmYXVsdLIBBHRydWWkARQTGgljbG9uZV9rZXkgHCgCMAk4ARQTGgRsaW5lIB0oAjALOANKEmFwcGhvc3RpbmcuTG9nTGluZaMBqgEFY3R5cGWyAQZwcm90bzKkARQTGhBsaW5lc19pbmNvbXBsZXRlICQoADAIOAEUExoSYXBwX2VuZ2luZV9yZWxlYXNlICYoAjAJOAEUExoIdHJhY2VfaWQgJygCMAk4ARQTGgtleGl0X3JlYXNvbiAeKAAwBTgBFBMaFndhc190aHJvdHRsZWRfZm9yX3RpbWUgHygAMAg4ARQTGhp3YXNfdGhyb3R0bGVkX2Zvcl9yZXF1ZXN0cyAgKAAwCDgBFBMaDnRocm90dGxlZF90aW1lICEoADADOAEUExoLc2VydmVyX25hbWUgIigCMAk4ARTCARphcHBob3N0aW5nLkxvZ1NlcnZpY2VFcnJvcg=="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChVhcHBob3N0aW5nLlJlcXVlc3RMb2cTGgZhcHBfaWQgASgCMAk4AhQTGgltb2R1bGVfaWQgJSgCMAk4AUIHZGVmYXVsdKMBqgEHZGVmYXVsdLIBCSJkZWZhdWx0IqQBFBMaCnZlcnNpb25faWQgAigCMAk4AhQTGgpyZXF1ZXN0X2lkIAMoAjAJOAIUExoGb2Zmc2V0ICMoAjALOAFKFGFwcGhvc3RpbmcuTG9nT2Zmc2V0owGqAQVjdHlwZbIBBnByb3RvMqQBFBMaAmlwIAQoAjAJOAIUExoIbmlja25hbWUgBSgCMAk4ARQTGgpzdGFydF90aW1lIAYoADADOAIUExoIZW5kX3RpbWUgBygAMAM4AhQTGgdsYXRlbmN5IAgoADADOAIUExoHbWN5Y2xlcyAJKAAwAzgCFBMaBm1ldGhvZCAKKAIwCTgCFBMaCHJlc291cmNlIAsoAjAJOAIUExoMaHR0cF92ZXJzaW9uIAwoAjAJOAIUExoGc3RhdHVzIA0oADAFOAIUExoNcmVzcG9uc2Vfc2l6ZSAOKAAwAzgCFBMaCHJlZmVycmVyIA8oAjAJOAEUExoKdXNlcl9hZ2VudCAQKAIwCTgBFBMaDXVybF9tYXBfZW50cnkgESgCMAk4AhQTGghjb21iaW5lZCASKAIwCTgCFBMaC2FwaV9tY3ljbGVzIBMoADADOAEUExoEaG9zdCAUKAIwCTgBFBMaBGNvc3QgFSgBMAE4ARQTGg90YXNrX3F1ZXVlX25hbWUgFigCMAk4ARQTGgl0YXNrX25hbWUgFygCMAk4ARQTGhN3YXNfbG9hZGluZ19yZXF1ZXN0IBgoADAIOAEUExoMcGVuZGluZ190aW1lIBkoADADOAEUExoNcmVwbGljYV9pbmRleCAaKAAwBTgBQgItMaMBqgEHZGVmYXVsdLIBAi0xpAEUExoIZmluaXNoZWQgGygAMAg4AUIEdHJ1ZaMBqgEHZGVmYXVsdLIBBHRydWWkARQTGgljbG9uZV9rZXkgHCgCMAk4ARQTGgRsaW5lIB0oAjALOANKEmFwcGhvc3RpbmcuTG9nTGluZaMBqgEFY3R5cGWyAQZwcm90bzKkARQTGhBsaW5lc19pbmNvbXBsZXRlICQoADAIOAEUExoSYXBwX2VuZ2luZV9yZWxlYXNlICYoAjAJOAEUExoIdHJhY2VfaWQgJygCMAk4ARQTGgtleGl0X3JlYXNvbiAeKAAwBTgBFBMaFndhc190aHJvdHRsZWRfZm9yX3RpbWUgHygAMAg4ARQTGhp3YXNfdGhyb3R0bGVkX2Zvcl9yZXF1ZXN0cyAgKAAwCDgBFBMaDnRocm90dGxlZF90aW1lICEoADADOAEUExoLc2VydmVyX25hbWUgIigCMAk4ARQ="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class LogModuleVersion(ProtocolBuffer.ProtocolMessage):
   has_module_id_ = 0
@@ -3002,10 +2876,11 @@ class LogModuleVersion(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogModuleVersion'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChthcHBob3N0aW5nLkxvZ01vZHVsZVZlcnNpb24TGgltb2R1bGVfaWQgASgCMAk4AUIHZGVmYXVsdKMBqgEHZGVmYXVsdLIBCSJkZWZhdWx0IqQBFBMaCnZlcnNpb25faWQgAigCMAk4ARQTGhhkZXByZWNhdGVkX21vZHVsZV9pZF9zZXQgZSgAMAg4ARQTGhlkZXByZWNhdGVkX3ZlcnNpb25faWRfc2V0IGYoADAIOAEUwgEaYXBwaG9zdGluZy5Mb2dTZXJ2aWNlRXJyb3I="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChthcHBob3N0aW5nLkxvZ01vZHVsZVZlcnNpb24TGgltb2R1bGVfaWQgASgCMAk4AUIHZGVmYXVsdKMBqgEHZGVmYXVsdLIBCSJkZWZhdWx0IqQBFBMaCnZlcnNpb25faWQgAigCMAk4ARQTGhhkZXByZWNhdGVkX21vZHVsZV9pZF9zZXQgZSgAMAg4ARQTGhlkZXByZWNhdGVkX3ZlcnNpb25faWRfc2V0IGYoADAIOAEU"))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class LogReadRequest(ProtocolBuffer.ProtocolMessage):
   has_app_id_ = 0
@@ -4106,10 +3981,11 @@ class LogReadRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogReadRequest'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChlhcHBob3N0aW5nLkxvZ1JlYWRSZXF1ZXN0ExoGYXBwX2lkIAEoAjAJOAIUExoKdmVyc2lvbl9pZCACKAIwCTgDFBMaDm1vZHVsZV92ZXJzaW9uIBMoAjALOANKG2FwcGhvc3RpbmcuTG9nTW9kdWxlVmVyc2lvbqMBqgEFY3R5cGWyAQZwcm90bzKkARQTGgpzdGFydF90aW1lIAMoADADOAEUExoIZW5kX3RpbWUgBCgAMAM4ARQTGgZvZmZzZXQgBSgCMAs4AUoUYXBwaG9zdGluZy5Mb2dPZmZzZXSjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoKcmVxdWVzdF9pZCAGKAIwCTgDFBMaEW1pbmltdW1fbG9nX2xldmVsIAcoADAFOAEUExoSaW5jbHVkZV9pbmNvbXBsZXRlIAgoADAIOAEUExoFY291bnQgCSgAMAM4ARQTGhJjb21iaW5lZF9sb2dfcmVnZXggDigCMAk4ARQTGgpob3N0X3JlZ2V4IA8oAjAJOAEUExoNcmVwbGljYV9pbmRleCAQKAAwBTgBFBMaEGluY2x1ZGVfYXBwX2xvZ3MgCigAMAg4ARQTGhRhcHBfbG9nc19wZXJfcmVxdWVzdCARKAAwBTgBFBMaDGluY2x1ZGVfaG9zdCALKAAwCDgBFBMaC2luY2x1ZGVfYWxsIAwoADAIOAEUExoOY2FjaGVfaXRlcmF0b3IgDSgAMAg4ARQTGgpudW1fc2hhcmRzIBIoADAFOAEUExoZZGVwcmVjYXRlZF9zdGFydF90aW1lX3NldCBnKAAwCDgBFBMaF2RlcHJlY2F0ZWRfZW5kX3RpbWVfc2V0IGgoADAIOAEUExogZGVwcmVjYXRlZF9taW5pbXVtX2xvZ19sZXZlbF9zZXQgaygAMAg4ARQTGhRkZXByZWNhdGVkX2NvdW50X3NldCBtKAAwCDgBFBMaIWRlcHJlY2F0ZWRfY29tYmluZWRfbG9nX3JlZ2V4X3NldCByKAAwCDgBFBMaGWRlcHJlY2F0ZWRfaG9zdF9yZWdleF9zZXQgcygAMAg4ARQTGhxkZXByZWNhdGVkX3JlcGxpY2FfaW5kZXhfc2V0IHQoADAIOAEUExojZGVwcmVjYXRlZF9hcHBfbG9nc19wZXJfcmVxdWVzdF9zZXQgdSgAMAg4ARQTGhlkZXByZWNhdGVkX251bV9zaGFyZHNfc2V0IHYoADAIOAEUwgEaYXBwaG9zdGluZy5Mb2dTZXJ2aWNlRXJyb3I="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChlhcHBob3N0aW5nLkxvZ1JlYWRSZXF1ZXN0ExoGYXBwX2lkIAEoAjAJOAIUExoKdmVyc2lvbl9pZCACKAIwCTgDFBMaDm1vZHVsZV92ZXJzaW9uIBMoAjALOANKG2FwcGhvc3RpbmcuTG9nTW9kdWxlVmVyc2lvbqMBqgEFY3R5cGWyAQZwcm90bzKkARQTGgpzdGFydF90aW1lIAMoADADOAEUExoIZW5kX3RpbWUgBCgAMAM4ARQTGgZvZmZzZXQgBSgCMAs4AUoUYXBwaG9zdGluZy5Mb2dPZmZzZXSjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoKcmVxdWVzdF9pZCAGKAIwCTgDFBMaEW1pbmltdW1fbG9nX2xldmVsIAcoADAFOAEUExoSaW5jbHVkZV9pbmNvbXBsZXRlIAgoADAIOAEUExoFY291bnQgCSgAMAM4ARQTGhJjb21iaW5lZF9sb2dfcmVnZXggDigCMAk4ARQTGgpob3N0X3JlZ2V4IA8oAjAJOAEUExoNcmVwbGljYV9pbmRleCAQKAAwBTgBFBMaEGluY2x1ZGVfYXBwX2xvZ3MgCigAMAg4ARQTGhRhcHBfbG9nc19wZXJfcmVxdWVzdCARKAAwBTgBFBMaDGluY2x1ZGVfaG9zdCALKAAwCDgBFBMaC2luY2x1ZGVfYWxsIAwoADAIOAEUExoOY2FjaGVfaXRlcmF0b3IgDSgAMAg4ARQTGgpudW1fc2hhcmRzIBIoADAFOAEUExoZZGVwcmVjYXRlZF9zdGFydF90aW1lX3NldCBnKAAwCDgBFBMaF2RlcHJlY2F0ZWRfZW5kX3RpbWVfc2V0IGgoADAIOAEUExogZGVwcmVjYXRlZF9taW5pbXVtX2xvZ19sZXZlbF9zZXQgaygAMAg4ARQTGhRkZXByZWNhdGVkX2NvdW50X3NldCBtKAAwCDgBFBMaIWRlcHJlY2F0ZWRfY29tYmluZWRfbG9nX3JlZ2V4X3NldCByKAAwCDgBFBMaGWRlcHJlY2F0ZWRfaG9zdF9yZWdleF9zZXQgcygAMAg4ARQTGhxkZXByZWNhdGVkX3JlcGxpY2FfaW5kZXhfc2V0IHQoADAIOAEUExojZGVwcmVjYXRlZF9hcHBfbG9nc19wZXJfcmVxdWVzdF9zZXQgdSgAMAg4ARQTGhlkZXByZWNhdGVkX251bV9zaGFyZHNfc2V0IHYoADAIOAEU"))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class LogReadResponse(ProtocolBuffer.ProtocolMessage):
   has_offset_ = 0
@@ -4337,10 +4213,11 @@ class LogReadResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogReadResponse'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChphcHBob3N0aW5nLkxvZ1JlYWRSZXNwb25zZRMaA2xvZyABKAIwCzgDShVhcHBob3N0aW5nLlJlcXVlc3RMb2ejAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoGb2Zmc2V0IAIoAjALOAFKFGFwcGhvc3RpbmcuTG9nT2Zmc2V0owGqAQVjdHlwZbIBBnByb3RvMqQBFBMaDWxhc3RfZW5kX3RpbWUgAygAMAM4ARTCARphcHBob3N0aW5nLkxvZ1NlcnZpY2VFcnJvcg=="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChphcHBob3N0aW5nLkxvZ1JlYWRSZXNwb25zZRMaA2xvZyABKAIwCzgDShVhcHBob3N0aW5nLlJlcXVlc3RMb2ejAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoGb2Zmc2V0IAIoAjALOAFKFGFwcGhvc3RpbmcuTG9nT2Zmc2V0owGqAQVjdHlwZbIBBnByb3RvMqQBFBMaDWxhc3RfZW5kX3RpbWUgAygAMAM4ARQ="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class LogUsageRecord(ProtocolBuffer.ProtocolMessage):
   has_version_id_ = 0
@@ -4635,10 +4512,11 @@ class LogUsageRecord(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogUsageRecord'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChlhcHBob3N0aW5nLkxvZ1VzYWdlUmVjb3JkExoKdmVyc2lvbl9pZCABKAIwCTgBFBMaCnN0YXJ0X3RpbWUgAigAMAU4ARQTGghlbmRfdGltZSADKAAwBTgBFBMaBWNvdW50IAQoADADOAEUExoKdG90YWxfc2l6ZSAFKAAwAzgBFBMaB3JlY29yZHMgBigAMAU4ARTCARphcHBob3N0aW5nLkxvZ1NlcnZpY2VFcnJvcg=="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChlhcHBob3N0aW5nLkxvZ1VzYWdlUmVjb3JkExoKdmVyc2lvbl9pZCABKAIwCTgBFBMaCnN0YXJ0X3RpbWUgAigAMAU4ARQTGghlbmRfdGltZSADKAAwBTgBFBMaBWNvdW50IAQoADADOAEUExoKdG90YWxfc2l6ZSAFKAAwAzgBFBMaB3JlY29yZHMgBigAMAU4ARQ="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class LogUsageRequest(ProtocolBuffer.ProtocolMessage):
   has_app_id_ = 0
@@ -5083,10 +4961,11 @@ class LogUsageRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogUsageRequest'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChphcHBob3N0aW5nLkxvZ1VzYWdlUmVxdWVzdBMaBmFwcF9pZCABKAIwCTgCFBMaCnZlcnNpb25faWQgAigCMAk4AxQTGgpzdGFydF90aW1lIAMoADAFOAEUExoIZW5kX3RpbWUgBCgAMAU4ARQTGhByZXNvbHV0aW9uX2hvdXJzIAUoADAEOAFCATGjAaoBB2RlZmF1bHSyAQExpAEUExoQY29tYmluZV92ZXJzaW9ucyAGKAAwCDgBFBMaDXVzYWdlX3ZlcnNpb24gBygAMAU4ARQTGg12ZXJzaW9uc19vbmx5IAgoADAIOAEUExofZGVwcmVjYXRlZF9yZXNvbHV0aW9uX2hvdXJzX3NldCBpKAAwCDgBFBMaHGRlcHJlY2F0ZWRfdXNhZ2VfdmVyc2lvbl9zZXQgaygAMAg4ARTCARphcHBob3N0aW5nLkxvZ1NlcnZpY2VFcnJvcg=="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChphcHBob3N0aW5nLkxvZ1VzYWdlUmVxdWVzdBMaBmFwcF9pZCABKAIwCTgCFBMaCnZlcnNpb25faWQgAigCMAk4AxQTGgpzdGFydF90aW1lIAMoADAFOAEUExoIZW5kX3RpbWUgBCgAMAU4ARQTGhByZXNvbHV0aW9uX2hvdXJzIAUoADAEOAFCATGjAaoBB2RlZmF1bHSyAQExpAEUExoQY29tYmluZV92ZXJzaW9ucyAGKAAwCDgBFBMaDXVzYWdlX3ZlcnNpb24gBygAMAU4ARQTGg12ZXJzaW9uc19vbmx5IAgoADAIOAEUExofZGVwcmVjYXRlZF9yZXNvbHV0aW9uX2hvdXJzX3NldCBpKAAwCDgBFBMaHGRlcHJlY2F0ZWRfdXNhZ2VfdmVyc2lvbl9zZXQgaygAMAg4ARQ="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class LogUsageResponse(ProtocolBuffer.ProtocolMessage):
   has_summary_ = 0
@@ -5280,12 +5159,13 @@ class LogUsageResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogUsageResponse'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChthcHBob3N0aW5nLkxvZ1VzYWdlUmVzcG9uc2UTGgV1c2FnZSABKAIwCzgDShlhcHBob3N0aW5nLkxvZ1VzYWdlUmVjb3JkowGqAQVjdHlwZbIBBnByb3RvMqQBFBMaB3N1bW1hcnkgAigCMAs4AUoZYXBwaG9zdGluZy5Mb2dVc2FnZVJlY29yZKMBqgEFY3R5cGWyAQZwcm90bzKkARTCARphcHBob3N0aW5nLkxvZ1NlcnZpY2VFcnJvcg=="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChthcHBob3N0aW5nLkxvZ1VzYWdlUmVzcG9uc2UTGgV1c2FnZSABKAIwCzgDShlhcHBob3N0aW5nLkxvZ1VzYWdlUmVjb3JkowGqAQVjdHlwZbIBBnByb3RvMqQBFBMaB3N1bW1hcnkgAigCMAs4AUoZYXBwaG9zdGluZy5Mb2dVc2FnZVJlY29yZKMBqgEFY3R5cGWyAQZwcm90bzKkARQ="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
 
+
 if _extension_runtime:
   pass
 
-__all__ = ['LogServiceError','UserAppLogLine','UserAppLogGroup','FlushRequest','SetStatusRequest','LogOffset','LogLine','RequestLog','LogModuleVersion','LogReadRequest','LogReadResponse','LogUsageRecord','LogUsageRequest','LogUsageResponse']
+__all__ = ['LogServiceError','UserAppLogLine','UserAppLogGroup','FlushRequest','LogOffset','LogLine','RequestLog','LogModuleVersion','LogReadRequest','LogReadResponse','LogUsageRecord','LogUsageRequest','LogUsageResponse']

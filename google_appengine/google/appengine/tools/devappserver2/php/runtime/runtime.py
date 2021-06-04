@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -141,8 +141,13 @@ class PHPRuntime(object):
     if 'SYSTEMROOT' in os.environ:
       user_environ['SYSTEMROOT'] = os.environ['SYSTEMROOT']
 
+    ld_library_path = []
+    if self.config.php_config.php_library_path:
+      ld_library_path.append(self.config.php_config.php_library_path)
     if 'LD_LIBRARY_PATH' in os.environ:
-      user_environ['LD_LIBRARY_PATH'] = os.environ['LD_LIBRARY_PATH']
+      ld_library_path.append(os.environ['LD_LIBRARY_PATH'])
+    if ld_library_path:
+      user_environ['LD_LIBRARY_PATH'] = ':'.join(ld_library_path)
 
     # On Windows, TMP & TEMP environmental variables are used by GetTempPath
     # http://msdn.microsoft.com/library/windows/desktop/aa364992(v=vs.85).aspx

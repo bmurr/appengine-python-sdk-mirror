@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import httplib
 import unittest
 
 import google
-import mox
+import mock
 
 from google.appengine.ext.cloudstorage import stub_dispatcher
 from google.appengine.tools.devappserver2 import gcs_server
@@ -29,6 +29,7 @@ from google.appengine.tools.devappserver2 import wsgi_test_utils
 
 
 class FakeResult(object):
+
   def __init__(self, status, headers, content):
     self.status_code = status
     self.headers = headers
@@ -39,16 +40,12 @@ class GCSTest(wsgi_test_utils.WSGITestCase):
   """Tests GCS url handler."""
 
   def setUp(self):
-    self.mox = mox.Mox()
+    super(GCSTest, self).setUp()
     self.app = gcs_server.Application()
-    self.mox.StubOutWithMock(stub_dispatcher, 'dispatch')
     self._host = 'localhost'
 
-  def tearDown(self):
-    self.mox.UnsetStubs()
-
-  def run_request(self, method, headers, path, query, body,
-                  expected_status, expected_headers, expected_content):
+  def run_request(self, method, headers, path, query, body, expected_status,
+                  expected_headers, expected_content):
     environ = {
         'HTTP_HOST': self._host,
         'REQUEST_METHOD': method,
@@ -58,19 +55,13 @@ class GCSTest(wsgi_test_utils.WSGITestCase):
         'wsgi.input': cStringIO.StringIO(body),
     }
 
-    for k, v in headers.iteritems():
+    for k, v in headers.items():
       environ['HTTP_%s' % k.upper()] = v
 
-    self.mox.ReplayAll()
-    self.assertResponse(
-        expected_status,
-        expected_headers,
-        expected_content,
-        self.app,
-        environ)
-    self.mox.VerifyAll()
+    self.assertResponse(expected_status, expected_headers, expected_content,
+                        self.app, environ)
 
-  def expect_dispatch(self, method, headers, path, body, result):
+  def expect_dispatch_args(self, method, headers, path, body):
     """Setup a mox expectation to gcs_dispatch.dispatch."""
 
     # webob always adds Host header and optionally adds Content-Length header
@@ -81,41 +72,39 @@ class GCSTest(wsgi_test_utils.WSGITestCase):
       new_headers['Content-Length'] = str(len(body))
 
     url = 'http://%s%s' % (self._host, path)
-    stub_dispatcher.dispatch(method, new_headers, url, body).AndReturn(result)
+    return (method, new_headers, url, body)
 
   def test_dispatch(self):
     """Tests that dispatch stub is called with the correct parameters."""
     result = FakeResult(404, {'a': 'b'}, 'blah')
-    self.expect_dispatch('POST',
-                         {'Foo': 'bar'},
-                         '/_ah/gcs/some_bucket?param=1',
-                         'body', result)
+    with mock.patch.object(
+        stub_dispatcher, 'dispatch', return_value=result) as dispatch_mock:
+      self.run_request('POST', {'Foo': 'bar'}, '/_ah/gcs/some_bucket',
+                       'param=1', 'body', '404 Not Found', [('a', 'b')], 'blah')
 
-    self.run_request('POST',
-                     {'Foo': 'bar'},
-                     '/_ah/gcs/some_bucket',
-                     'param=1',
-                     'body',
-                     '404 Not Found',
-                     [('a', 'b')],
-                     'blah')
+    dispatch_mock.assert_called_with(*self.expect_dispatch_args(
+        'POST', {'Foo': 'bar'}, '/_ah/gcs/some_bucket?param=1', 'body'))
 
   def test_http_308(self):
     """Tests that the non-standard HTTP 308 status code is handled properly."""
     result = FakeResult(308, {}, '')
-    self.expect_dispatch('GET', {}, '/_ah/gcs/some_bucket', '', result)
+    with mock.patch.object(
+        stub_dispatcher, 'dispatch', return_value=result) as dispatch_mock:
+      self.run_request('GET', {}, '/_ah/gcs/some_bucket', '', '',
+                       '308 Resume Incomplete', [], '')
 
-    self.run_request('GET', {}, '/_ah/gcs/some_bucket', '', '',
-                     '308 Resume Incomplete', [], '')
+    dispatch_mock.assert_called_with(
+        *self.expect_dispatch_args('GET', {}, '/_ah/gcs/some_bucket', ''))
 
   def test_dispatch_value_error(self):
     """Tests that ValueError raised by dispatch stub is handled properly."""
     error = ValueError('Invalid Token', httplib.BAD_REQUEST)
-    stub_dispatcher.dispatch(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
-                             mox.IgnoreArg()).AndRaise(error)
+    with mock.patch.object(
+        stub_dispatcher, 'dispatch', side_effect=error) as dispatch_mock:
+      self.run_request('GET', {}, '/_ah/some_bucket', '', '', '400 Bad Request',
+                       [], 'Invalid Token')
 
-    self.run_request('GET', {}, '/_ah/some_bucket', '', '',
-                     '400 Bad Request', [], 'Invalid Token')
+    dispatch_mock.assert_called_once()
 
 
 if __name__ == '__main__':

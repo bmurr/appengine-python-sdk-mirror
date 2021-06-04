@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,17 +33,24 @@ except ImportError:
 # TODO - b/34669624, automatically get Version of python runtime in prod.
 PYTHON27_PROD_VERSION = (2, 7, 12)
 
-
-MODERN_RUNTIMES = set(['python37', 'go111'])
-
+MODERN_RUNTIMES = set([
+    'python37', 'python38', 'python39', 'go111', 'go112', 'go113', 'go114',
+    'go115'
+])
 
 FACTORIES = {
     'go': go_factory.GoRuntimeInstanceFactory,
     'go111': go_factory.GoRuntimeInstanceFactory,
+    'go112': go_factory.GoRuntimeInstanceFactory,
+    'go113': go_factory.GoRuntimeInstanceFactory,
+    'go114': go_factory.GoRuntimeInstanceFactory,
+    'go115': go_factory.GoRuntimeInstanceFactory,
     'php55': php_factory.PHPRuntimeInstanceFactory,
     'php72': php_factory.PHPRuntimeInstanceFactory,
     'python': python_factory.PythonRuntimeInstanceFactory,
     'python37': python_factory.PythonRuntimeInstanceFactory,
+    'python38': python_factory.PythonRuntimeInstanceFactory,
+    'python39': python_factory.PythonRuntimeInstanceFactory,
     'python27': python_factory.PythonRuntimeInstanceFactory,
     'python-compat': python_factory.PythonRuntimeInstanceFactory,
     'custom': custom_factory.CustomRuntimeInstanceFactory,

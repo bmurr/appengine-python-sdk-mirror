@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,8 +40,9 @@ try:
 except ImportError:
   readline = None
 
-from google.appengine.ext.remote_api import remote_api_stub
 from google.appengine.tools import appengine_rpc
+
+from google.appengine.ext.remote_api import remote_api_stub
 
 
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ def _property_name_to_values(entities):
   """
   property_name_to_values = {}
   for entity in entities:
-    for property_name, value in entity.iteritems():
+    for property_name, value in entity.items():
       property_name_to_values.setdefault(property_name, []).append(value)
 
   return property_name_to_values
@@ -100,7 +100,7 @@ def _property_name_to_value(entities):
     entities.
   """
   return {key: values[0]
-          for (key, values) in _property_name_to_values(entities).iteritems()}
+          for (key, values) in _property_name_to_values(entities).items()}
 
 
 def _get_entities(kind, namespace, order, start, count):
@@ -737,7 +737,7 @@ class DatastoreEditRequestHandler(admin_request_handler.AdminRequestHandler):
 
     property_name_to_values = _property_name_to_values(entities)
     fields = []
-    for property_name, values in sorted(property_name_to_values.iteritems()):
+    for property_name, values in sorted(property_name_to_values.items()):
       data_type = DataType.get(values[0])
       field = data_type.input_field('%s|%s' % (data_type.name(), property_name),
                                     values[0] if entity_key else None,

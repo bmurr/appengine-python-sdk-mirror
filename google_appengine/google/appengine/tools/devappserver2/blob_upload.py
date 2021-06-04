@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -431,7 +431,7 @@ class Application(object):
           gs_filename = '%s/fake-%s' % (bucket_name, random_key)
           headers[blobstore.CLOUD_STORAGE_OBJECT_HEADER] = (
               blobstore.GS_PREFIX + gs_filename)
-        for key, value in headers.iteritems():
+        for key, value in headers.items():
           external.add_header(key, value)
         # Add disposition parameters (a clone of the outer message's field).
         if not external.get('Content-Disposition'):

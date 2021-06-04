@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,10 +18,11 @@
 
 
 
+import re
 import unittest
 
 import google
-import mox
+import mock
 
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api.taskqueue import taskqueue_service_pb
@@ -31,13 +32,6 @@ from google.appengine.tools.devappserver2.admin import taskqueue_utils
 
 class TestQueueInfo(unittest.TestCase):
   """Tests for taskqueue_queues_handler._QueueInfo."""
-
-  def setUp(self):
-    self.mox = mox.Mox()
-    self.mox.StubOutWithMock(apiproxy_stub_map, 'MakeSyncCall')
-
-  def tearDown(self):
-    self.mox.UnsetStubs()
 
   def test_construction(self):
     queue = taskqueue_service_pb.TaskQueueFetchQueuesResponse_Queue()
@@ -49,19 +43,19 @@ class TestQueueInfo(unittest.TestCase):
     queue_stats = (
         taskqueue_service_pb.TaskQueueFetchQueueStatsResponse_QueueStats())
     queue_stats.set_num_tasks(25)
-    queue_stats.set_oldest_eta_usec(123*10**6)
+    queue_stats.set_oldest_eta_usec(123 * 10**6)
 
-    info = taskqueue_utils.QueueInfo._from_queue_and_stats(
-        queue, queue_stats)
+    info = taskqueue_utils.QueueInfo._from_queue_and_stats(queue, queue_stats)
     self.assertEqual('queue1', info.name)
     self.assertEqual(taskqueue_service_pb.TaskQueueMode.PUSH, info.mode)
     self.assertEqual('20/s', info.rate)
     self.assertEqual(10, info.bucket_size)
     self.assertEqual(25, info.tasks_in_queue)
-    self.assertEqual(123*10**6, info.oldest_eta_usec)
+    self.assertEqual(123 * 10**6, info.oldest_eta_usec)
     self.assertEqual('1970/01/01 00:02:03', info.human_readable_oldest_task_eta)
-    self.assertEqual(mox.Regex(r'\d+ days, \d{1,2}:\d{1,2}:\d{1,2} ago'),
-                     info.human_readable_oldest_task_eta_delta)
+    self.assertIsNotNone(
+        re.match(r'\d+ days, \d{1,2}:\d{1,2}:\d{1,2} ago',
+                 info.human_readable_oldest_task_eta_delta))
 
   def test_get(self):
     fetch_queue_request = taskqueue_service_pb.TaskQueueFetchQueuesRequest()
@@ -78,13 +72,6 @@ class TestQueueInfo(unittest.TestCase):
     queue2.set_user_specified_rate('20/s')
     queue2.set_bucket_capacity(10)
 
-    apiproxy_stub_map.MakeSyncCall(
-        'taskqueue',
-        'FetchQueues',
-        fetch_queue_request,
-        mox.IgnoreArg()).WithSideEffects(
-            lambda _, _1, _2, response: response.CopyFrom(fetch_queue_response))
-
     queue_stats_request = taskqueue_service_pb.TaskQueueFetchQueueStatsRequest()
     queue_stats_request.add_queue_name('queue1')
     queue_stats_request.add_queue_name('queue2')
@@ -97,18 +84,24 @@ class TestQueueInfo(unittest.TestCase):
     queue_stats2.set_num_tasks(50)
     queue_stats2.set_oldest_eta_usec(1234567890)
 
-    apiproxy_stub_map.MakeSyncCall(
-        'taskqueue',
-        'FetchQueueStats',
-        queue_stats_request,
-        mox.IgnoreArg()).WithSideEffects(
-            lambda _, _1, _2, response: response.CopyFrom(queue_stats_response))
+    def fake_make_sync_call(_, request_name, unused_2, response):
+      responses = {
+          'FetchQueues': fetch_queue_response,
+          'FetchQueueStats': queue_stats_response
+      }
+      response.CopyFrom(responses[request_name])
 
-    self.mox.ReplayAll()
-    queues = list(taskqueue_utils.QueueInfo.get())
-    self.mox.VerifyAll()
+    with mock.patch.object(
+        apiproxy_stub_map, 'MakeSyncCall',
+        side_effect=fake_make_sync_call) as mock_make_sync_call:
+      queues = list(taskqueue_utils.QueueInfo.get())
+
     self.assertEqual('queue1', queues[0].name)
     self.assertEqual('queue2', queues[1].name)
+    mock_make_sync_call.assert_any_call('taskqueue', 'FetchQueues',
+                                        fetch_queue_request, mock.ANY)
+    mock_make_sync_call.assert_any_call('taskqueue', 'FetchQueueStats',
+                                        queue_stats_request, mock.ANY)
 
   def test_get_with_queue_name(self):
     fetch_queue_request = taskqueue_service_pb.TaskQueueFetchQueuesRequest()
@@ -125,13 +118,6 @@ class TestQueueInfo(unittest.TestCase):
     queue2.set_user_specified_rate('20/s')
     queue2.set_bucket_capacity(10)
 
-    apiproxy_stub_map.MakeSyncCall(
-        'taskqueue',
-        'FetchQueues',
-        fetch_queue_request,
-        mox.IgnoreArg()).WithSideEffects(
-            lambda _, _1, _2, response: response.CopyFrom(fetch_queue_response))
-
     queue_stats_request = taskqueue_service_pb.TaskQueueFetchQueueStatsRequest()
     queue_stats_request.add_queue_name('queue1')
     queue_stats_request.add_queue_name('queue2')
@@ -144,18 +130,25 @@ class TestQueueInfo(unittest.TestCase):
     queue_stats2.set_num_tasks(50)
     queue_stats2.set_oldest_eta_usec(1234567890)
 
-    apiproxy_stub_map.MakeSyncCall(
-        'taskqueue',
-        'FetchQueueStats',
-        queue_stats_request,
-        mox.IgnoreArg()).WithSideEffects(
-            lambda _, _1, _2, response: response.CopyFrom(queue_stats_response))
+    def fake_make_sync_call(_, request_name, unused_2, response):
+      responses = {
+          'FetchQueues': fetch_queue_response,
+          'FetchQueueStats': queue_stats_response
+      }
+      response.CopyFrom(responses[request_name])
 
-    self.mox.ReplayAll()
-    queues = list(taskqueue_utils.QueueInfo.get(frozenset(['queue1'])))
-    self.mox.VerifyAll()
+    with mock.patch.object(
+        apiproxy_stub_map, 'MakeSyncCall',
+        side_effect=fake_make_sync_call) as mock_make_sync_call:
+      queues = list(taskqueue_utils.QueueInfo.get(frozenset(['queue1'])))
+
     self.assertEqual('queue1', queues[0].name)
     self.assertEqual(1, len(queues))
+    mock_make_sync_call.assert_any_call('taskqueue', 'FetchQueues',
+                                        fetch_queue_request, mock.ANY)
+    mock_make_sync_call.assert_any_call('taskqueue', 'FetchQueueStats',
+                                        queue_stats_request, mock.ANY)
+
 
 if __name__ == '__main__':
   unittest.main()

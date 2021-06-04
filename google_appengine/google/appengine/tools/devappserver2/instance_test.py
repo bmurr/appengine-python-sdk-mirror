@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -91,7 +91,7 @@ class TestInstance(unittest.TestCase):
                          instance.NORMAL_REQUEST)))
     self.mox.VerifyAll()
 
-    self.assertLen(inst._request_history, 1)
+    self.assertEqual(len(inst._request_history), 1)
     self.assertEqual(1, inst.total_requests)
     self.assertEqual(5, inst.remaining_request_capacity)
     self.assertEqual(0, inst.num_outstanding_requests)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -223,7 +223,7 @@ class FakeForm(dict):
     super(FakeForm, self).__init__()
     self.update(subforms or {})
     self.headers = headers or email.Message.Message()
-    for key, value in kwds.iteritems():
+    for key, value in kwds.items():
       setattr(self, key, value)
 
 
