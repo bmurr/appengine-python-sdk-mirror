@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import re
 import string
 import thread
 import threading
+import traceback
 import time
 import urllib
 import urlparse
@@ -46,7 +47,6 @@ from google.appengine.api.logservice import log_service_pb
 from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import blob_image
 from google.appengine.tools.devappserver2 import blob_upload
-from google.appengine.tools.devappserver2 import channel
 from google.appengine.tools.devappserver2 import constants
 from google.appengine.tools.devappserver2 import endpoints
 from google.appengine.tools.devappserver2 import errors
@@ -260,10 +260,6 @@ class Module(object):
     url_pattern = '/%s' % blob_image.BLOBIMAGE_URL_PATTERN
     handlers.append(
         wsgi_handler.WSGIHandler(blob_image.Application(), url_pattern))
-
-    url_pattern = '/%s' % channel.CHANNEL_URL_PATTERN
-    handlers.append(
-        wsgi_handler.WSGIHandler(channel.application, url_pattern))
 
     url_pattern = '/%s' % gcs_server.GCS_URL_PATTERN
     handlers.append(
@@ -1653,7 +1649,7 @@ class AutoScalingModule(Module):
         try:
           self._adjust_instances()
         except Exception as e:  # pylint: disable=broad-except
-          logging.error(e.message)
+          logging.error('%s\n%s', e.message, traceback.format_exc())
           # thread.interrupt_main() throws a KeyboardInterrupt error in the main
           # thread, which triggers devappserver.stop() and shuts down all other
           # processes.

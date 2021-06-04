@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -205,7 +205,7 @@ class _MetricsLogger(object):
       total_run_time = int((Now() - self._start_time).total_seconds())
       self.LogOnceOnStop(
           self._category, STOP_ACTION, value=total_run_time, **kwargs)
-      self.LogBatch(self._log_once_on_stop_events.itervalues())
+      self.LogBatch(self._log_once_on_stop_events.values())
 
   def Log(self, category, action, label=None, value=None, **kwargs):
     """Logs a single event to Google Analytics via HTTPS.

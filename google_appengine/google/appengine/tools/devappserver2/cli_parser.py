@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -216,6 +216,89 @@ def parse_threadsafe_override(value):
       'Expected "module:threadsafe_override": %r',
       None,
       'Duplicate threadsafe override value for module %s')
+
+
+def validate_runtime_python_path_python_path(python_path):
+  """Validates a single python path from --runtime_python_path.
+
+  Args:
+    python_path: The path to validate.
+
+  Returns:
+    The passed in python_path value with leading and trailing
+    whitespace stripped.
+
+  Raises:
+    argparse.ArgumentTypeError: If python_path is not the path to a
+    python interpreter.
+  """
+  try:
+    python_path = python_path.strip()
+    version_str = subprocess.check_output(
+        [python_path, '-c', 'import sys;print(sys.version_info[0])'])
+    if int(version_str.strip()):
+      return python_path
+  except (OSError, subprocess.CalledProcessError, ValueError):
+    pass
+  raise argparse.ArgumentTypeError(
+      'Invalid --runtime_python_path python path value: "%s"' % python_path)
+
+
+def validate_runtime_python_path_runtime(runtime_name):
+  """Validates a single runtime from --runtime_python_path.
+
+  Args:
+    runtime_name: The runtime name to validate.
+
+  Returns:
+    The passed in runtime_name with leading and trailing whitespace
+    stripped.
+
+  Raises:
+    argparse.ArgumentTypeError: If runtime_name is invalid.
+  """
+  runtime_name = runtime_name.strip()
+  if not runtime_name.startswith('python'):
+    raise argparse.ArgumentTypeError(
+        'Invalid --runtime_python_path runtime name value: "%s"' % runtime_name)
+  return runtime_name
+
+
+def parse_runtime_python_path(value):
+  """Returns a parsed value for the --runtime_python_path flag.
+
+  Two formats are supported.
+  1. A universal value for all python runtimes (e.g. '/usr/bin/python3')
+  2. A comma separated list of one or more runtime_name=path values. (e.g
+     'python37=/usr/bin/python37,python38=/usr/bin/python38'.
+
+  Args:
+    value: A str containing the flag value to parse.
+
+  Returns:
+    Either a single path for universal values or a dict of
+    runtime-name->python_interpreter_path values.
+
+  Raises:
+    argparse.ArgumentTypeError: the value is invalid.
+  """
+  if '=' not in value:
+    return validate_runtime_python_path_python_path(value)
+  else:
+    runtime_to_python_path = {}
+    for runtime_equals_path in value.split(','):
+      try:
+        runtime_name, python_path = runtime_equals_path.split('=')
+      except ValueError:
+        raise argparse.ArgumentTypeError('Expected "runtime:python_path": %s' %
+                                         runtime_equals_path)
+      runtime_name = validate_runtime_python_path_runtime(runtime_name)
+      if runtime_name in runtime_to_python_path:
+        raise argparse.ArgumentTypeError(
+            'Duplicate python path value for runtime "%s"' % runtime_name)
+      python_path = validate_runtime_python_path_python_path(python_path)
+      runtime_to_python_path[runtime_name] = python_path
+    return runtime_to_python_path
 
 
 def parse_python27_executable_path(value):
@@ -531,6 +614,10 @@ def create_command_line_parser(configuration=None):
                          type=parse_path,
                          restrict_configuration=[DEV_APPSERVER_CONFIGURATION],
                          help='path to the PHP executable')
+  php_group.add_argument('--php_library_path', metavar='PATH',
+                         type=parse_path,
+                         restrict_configuration=[DEV_APPSERVER_CONFIGURATION],
+                         help='path to add to LD_LIBRARY_PATH for PHP')
   php_group.add_argument('--php_remote_debugging',
                          action=boolean_action.BooleanAction,
                          const=True,
@@ -584,6 +671,15 @@ def create_command_line_parser(configuration=None):
       restrict_configuration=[DEV_APPSERVER_CONFIGURATION],
       help='the path to the python27 executable for python27 runtime '
       'instances.')
+
+  python_group.add_argument(
+      '--runtime_python_path',
+      type=parse_runtime_python_path,
+      restrict_configuration=[DEV_APPSERVER_CONFIGURATION],
+      help='path to the python interpreter for running user python '
+      'services. Can be a single path that applies to all user python '
+      'services or a comma=separated list of one or more per runtime '
+      'values e.g. "python27=/user/bin/python2.7,python3=/usr/bin/python3". ')
 
   # Java
   java_group = parser.add_argument_group('Java')

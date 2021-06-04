@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -202,7 +202,8 @@ class PHPRuntimeInstanceFactory(instance.InstanceFactory):
       raise _PHPEnvironmentError(check_process_stdout)
 
   @classmethod
-  def _check_binaries(cls, php_executable_path, gae_extension_path):
+  def _check_binaries(cls, php_executable_path, php_library_path,
+                      gae_extension_path):
     """Perform sanity check on php-cgi & gae extension."""
     if not php_executable_path:
       raise _PHPBinaryError('The development server must be started with the '
@@ -223,8 +224,13 @@ class PHPRuntimeInstanceFactory(instance.InstanceFactory):
     if 'SYSTEMROOT' in os.environ:
       env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
 
+    ld_library_path = []
+    if php_library_path:
+      ld_library_path.append(php_library_path)
     if 'LD_LIBRARY_PATH' in os.environ:
-      env['LD_LIBRARY_PATH'] = os.environ['LD_LIBRARY_PATH']
+      ld_library_path.append(os.environ['LD_LIBRARY_PATH'])
+    if ld_library_path:
+      env['LD_LIBRARY_PATH'] = ':'.join(ld_library_path)
 
     cls._check_php_version(php_executable_path, env)
     cls._check_environment(php_executable_path, env)
@@ -252,8 +258,12 @@ class PHPRuntimeInstanceFactory(instance.InstanceFactory):
                      _get_php_executable_path(runtime))
 
     setattr_if_empty(runtime_config.php_config,
+                     'php_library_path', '')
+
+    setattr_if_empty(runtime_config.php_config,
                      'gae_extension_path',
                      _get_php_extension_path('gae_runtime_module', runtime))
+
     setattr_if_empty(runtime_config.php_config,
                      'xdebug_extension_path',
                      _get_php_extension_path('xdebug', runtime))
@@ -282,10 +292,14 @@ class PHPRuntimeInstanceFactory(instance.InstanceFactory):
     php_executable_path = (
         self._GenerateConfigForRuntime().php_config.php_executable_path)
 
+    php_library_path = (
+        self._GenerateConfigForRuntime().php_config.php_library_path)
+
     gae_extension_path = (
         self._GenerateConfigForRuntime().php_config.gae_extension_path)
 
-    self._check_binaries(php_executable_path, gae_extension_path)
+    self._check_binaries(php_executable_path, php_library_path,
+                         gae_extension_path)
     proxy = http_runtime.HttpRuntimeProxy(
         _RUNTIME_ARGS, instance_config_getter, self._module_configuration)
 

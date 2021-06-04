@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -133,7 +133,7 @@ class DiscoveryService(object):
       A string containing the response body.
     """
     api_configs = []
-    for api_config in self._config_manager.configs.itervalues():
+    for api_config in self._config_manager.configs.values():
       if not api_config == self.API_CONFIG:
         api_configs.append(json.dumps(api_config))
     directory = self._discovery_proxy.generate_directory(api_configs)

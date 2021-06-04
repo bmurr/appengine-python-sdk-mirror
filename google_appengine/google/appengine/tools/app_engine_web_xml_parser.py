@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -123,6 +123,12 @@ class AppEngineWebXmlParser(object):
       prop_name = xml_parser_utils.GetAttribute(sub_node, 'name')
       prop_value = xml_parser_utils.GetAttribute(sub_node, 'value')
       self.app_engine_web_xml.env_variables[prop_name] = prop_value
+
+  def ProcessBuildEnvVariablesNode(self, node):
+    for sub_node in xml_parser_utils.GetNodes(node, 'build-env-var'):
+      prop_name = xml_parser_utils.GetAttribute(sub_node, 'name')
+      prop_value = xml_parser_utils.GetAttribute(sub_node, 'value')
+      self.app_engine_web_xml.build_env_variables[prop_name] = prop_value
 
   def ProcessApplicationNode(self, node):
     self.app_engine_web_xml.app_id = node.text
@@ -303,6 +309,9 @@ class AppEngineWebXmlParser(object):
 
   def ProcessRuntimeChannelNode(self, node):
     self.app_engine_web_xml.runtime_channel = node.text
+
+  def ProcessAppEngineApisNode(self, node):
+    self.app_engine_web_xml.app_engine_apis = node.text
 
   def ProcessApiConfigNode(self, node):
     servlet = xml_parser_utils.GetAttribute(node, 'servlet-class').strip()
@@ -533,6 +542,7 @@ class AppEngineWebXml(ValueMixin):
     self.network = None
     self.staging = None
     self.env_variables = {}
+    self.build_env_variables = {}
     self.instance_class = None
     self.vpc_access_connector = None
     self.automatic_scaling = None
@@ -555,6 +565,7 @@ class AppEngineWebXml(ValueMixin):
     self.vm = False
     self.env = '1'
     self.api_config = None
+    self.app_engine_apis = False
     self.api_endpoint_ids = []
     self.class_loader_config = []
     self.url_stream_handler_type = None

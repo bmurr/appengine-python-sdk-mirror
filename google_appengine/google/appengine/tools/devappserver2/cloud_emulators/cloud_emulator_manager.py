@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 #
 """Methods for managing cloud emulators.
 
-This module is the gate between App Engine local story and gogole cloud
+This module is the gate between App Engine local story and Google cloud
 emulators. It wires flags from app engine world into cloud emulators' flags,
 perform misc checks and exposes process management logics for emulators.
 """
@@ -90,7 +90,7 @@ class DatastoreEmulatorManager(object):
       require_indexes: A bool passing the flag 'require_indexes' to
         the emulator.
       storage_file: A string indicating emulator's storage file fullname.
-      auto_id_policy: A string specifying how the emualtor assigns auto id.
+      auto_id_policy: A string specifying how the emulator assigns auto id.
     """
     options = [
         '--regenerate_indexes=false',

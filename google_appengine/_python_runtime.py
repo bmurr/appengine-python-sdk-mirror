@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,6 +33,8 @@ try:
 finally:
   sys.path = sys_path
 
+PY2 = sys.version_info[0] == 2
+
 wrapper_util.reject_old_python_versions((2, 7))
 
 _DIR_PATH = wrapper_util.get_dir_path(__file__, os.path.join('lib', 'ipaddr'))
@@ -45,11 +47,15 @@ _PATHS = wrapper_util.Paths(_DIR_PATH)
 EXTRA_PATHS = _PATHS.v2_extra_paths
 
 
-def fix_google_path():
-
-
+def fix_google_path(script_name=None):
+  """Add SDK to 'google' module when preloaded (by setuptools .pth files)."""
   if 'google' in sys.modules:
-    google_path = os.path.join(os.path.dirname(__file__), 'google')
+    if script_name == '_python_runtime.py':
+      google_path = os.path.join(
+          os.path.dirname(__file__), 'python27', 'sdk', 'google')
+    else:
+      google_path = os.path.join(os.path.dirname(__file__), 'google')
+
     google_module = sys.modules['google']
     google_module.__path__.append(google_path)
 
@@ -72,6 +78,13 @@ def fix_sys_path(extra_extra_paths=()):
   fix_google_path()
 
 
+def _execfile(fn, scope):
+  if PY2:
+    execfile(fn, scope)
+  else:
+    exec(open(fn).read(), scope)
+
+
 def _run_file(file_path, globals_):
   """Execute the given script with the passed-in globals.
 
@@ -85,9 +98,9 @@ def _run_file(file_path, globals_):
   sys.path = (_PATHS.script_paths(script_name) +
               _PATHS.scrub_path(script_name, sys.path))
 
-  fix_google_path()
+  fix_google_path(script_name)
 
-  execfile(_PATHS.script_file(script_name), globals_)
+  _execfile(_PATHS.script_file(script_name), globals_)
 
 
 if __name__ == '__main__':

@@ -54,7 +54,26 @@ namespace google\appengine\TaskQueueServiceError {
     const QUEUE_PAUSED = 26;
     const INVALID_TAG = 27;
     const INVALID_LOGGING_CONFIG = 28;
+    const INVALID_DISPATCH_DEADLINE = 29;
     const DATASTORE_ERROR = 10000;
+    const DATASTORE_BAD_REQUEST = 10001;
+    const DATASTORE_CONCURRENT_TRANSACTION = 10002;
+    const DATASTORE_INTERNAL_ERROR = 10003;
+    const DATASTORE_NEED_INDEX = 10004;
+    const DATASTORE_TIMEOUT = 10005;
+    const DATASTORE_PERMISSION_DENIED = 10006;
+    const DATASTORE_BIGTABLE_ERROR = 10007;
+    const DATASTORE_COMMITTED_BUT_STILL_APPLYING = 10008;
+    const DATASTORE_CAPABILITY_DISABLED = 10009;
+    const DATASTORE_TRY_ALTERNATE_BACKEND = 10010;
+    const DATASTORE_SAFE_TIME_TOO_OLD = 10011;
+    const DATASTORE_RESOURCE_EXHAUSTED = 10012;
+    const DATASTORE_NOT_FOUND = 10013;
+    const DATASTORE_ALREADY_EXISTS = 10014;
+    const DATASTORE_FAILED_PRECONDITION = 10015;
+    const DATASTORE_UNAUTHENTICATED = 10016;
+    const DATASTORE_ABORTED = 10017;
+    const DATASTORE_SNAPSHOT_VERSION_TOO_OLD = 10018;
   }
 }
 namespace google\appengine {
@@ -1234,6 +1253,27 @@ namespace google\appengine {
     public function hasDatastoreTransaction() {
       return isset($this->datastore_transaction);
     }
+    public function getDispatchDeadlineUsec() {
+      if (!isset($this->dispatch_deadline_usec)) {
+        return "0";
+      }
+      return $this->dispatch_deadline_usec;
+    }
+    public function setDispatchDeadlineUsec($val) {
+      if (is_double($val)) {
+        $this->dispatch_deadline_usec = sprintf('%0.0F', $val);
+      } else {
+        $this->dispatch_deadline_usec = $val;
+      }
+      return $this;
+    }
+    public function clearDispatchDeadlineUsec() {
+      unset($this->dispatch_deadline_usec);
+      return $this;
+    }
+    public function hasDispatchDeadlineUsec() {
+      return isset($this->dispatch_deadline_usec);
+    }
     public function clear() {
       $this->clearQueueName();
       $this->clearTaskName();
@@ -1252,6 +1292,7 @@ namespace google\appengine {
       $this->clearTag();
       $this->clearCronRetryParameters();
       $this->clearDatastoreTransaction();
+      $this->clearDispatchDeadlineUsec();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -1323,6 +1364,10 @@ namespace google\appengine {
       if (isset($this->datastore_transaction)) {
         $res += 2;
         $res += $this->lengthString(strlen($this->datastore_transaction));
+      }
+      if (isset($this->dispatch_deadline_usec)) {
+        $res += 2;
+        $res += $this->lengthVarInt64($this->dispatch_deadline_usec);
       }
       return $res;
     }
@@ -1401,6 +1446,10 @@ namespace google\appengine {
       if (isset($this->datastore_transaction)) {
         $out->putVarInt32(170);
         $out->putPrefixedString($this->datastore_transaction);
+      }
+      if (isset($this->dispatch_deadline_usec)) {
+        $out->putVarInt32(176);
+        $out->putVarInt64($this->dispatch_deadline_usec);
       }
     }
     public function tryMerge($d) {
@@ -1486,6 +1535,9 @@ namespace google\appengine {
             $this->setDatastoreTransaction(substr($d->buffer(), $d->pos(), $length));
             $d->skip($length);
             break;
+          case 176:
+            $this->setDispatchDeadlineUsec($d->getVarInt64());
+            break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
             break;
@@ -1561,6 +1613,9 @@ namespace google\appengine {
       if ($x->hasDatastoreTransaction()) {
         $this->setDatastoreTransaction($x->getDatastoreTransaction());
       }
+      if ($x->hasDispatchDeadlineUsec()) {
+        $this->setDispatchDeadlineUsec($x->getDispatchDeadlineUsec());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -1600,6 +1655,8 @@ namespace google\appengine {
       if (isset($this->cron_retry_parameters) && !$this->cron_retry_parameters->equals($x->cron_retry_parameters)) return false;
       if (isset($this->datastore_transaction) !== isset($x->datastore_transaction)) return false;
       if (isset($this->datastore_transaction) && $this->datastore_transaction !== $x->datastore_transaction) return false;
+      if (isset($this->dispatch_deadline_usec) !== isset($x->dispatch_deadline_usec)) return false;
+      if (isset($this->dispatch_deadline_usec) && !$this->integerEquals($this->dispatch_deadline_usec, $x->dispatch_deadline_usec)) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -1654,6 +1711,9 @@ namespace google\appengine {
       }
       if (isset($this->datastore_transaction)) {
         $res .= $prefix . "datastore_transaction: " . $this->debugFormatString($this->datastore_transaction) . "\n";
+      }
+      if (isset($this->dispatch_deadline_usec)) {
+        $res .= $prefix . "dispatch_deadline_usec: " . $this->debugFormatInt64($this->dispatch_deadline_usec) . "\n";
       }
       return $res;
     }
@@ -6123,6 +6183,27 @@ namespace google\appengine\TaskQueueQueryTasksResponse {
     public function hasExecutionCount() {
       return isset($this->execution_count);
     }
+    public function getDispatchDeadlineUsec() {
+      if (!isset($this->dispatch_deadline_usec)) {
+        return "0";
+      }
+      return $this->dispatch_deadline_usec;
+    }
+    public function setDispatchDeadlineUsec($val) {
+      if (is_double($val)) {
+        $this->dispatch_deadline_usec = sprintf('%0.0F', $val);
+      } else {
+        $this->dispatch_deadline_usec = $val;
+      }
+      return $this;
+    }
+    public function clearDispatchDeadlineUsec() {
+      unset($this->dispatch_deadline_usec);
+      return $this;
+    }
+    public function hasDispatchDeadlineUsec() {
+      return isset($this->dispatch_deadline_usec);
+    }
     public function clear() {
       $this->clearTaskName();
       $this->clearEtaUsec();
@@ -6141,6 +6222,7 @@ namespace google\appengine\TaskQueueQueryTasksResponse {
       $this->clearFirstTryUsec();
       $this->clearTag();
       $this->clearExecutionCount();
+      $this->clearDispatchDeadlineUsec();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -6212,6 +6294,10 @@ namespace google\appengine\TaskQueueQueryTasksResponse {
       if (isset($this->execution_count)) {
         $res += 2;
         $res += $this->lengthVarInt64($this->execution_count);
+      }
+      if (isset($this->dispatch_deadline_usec)) {
+        $res += 2;
+        $res += $this->lengthVarInt64($this->dispatch_deadline_usec);
       }
       return $res;
     }
@@ -6290,6 +6376,10 @@ namespace google\appengine\TaskQueueQueryTasksResponse {
         $out->putVarInt32(208);
         $out->putVarInt32($this->execution_count);
       }
+      if (isset($this->dispatch_deadline_usec)) {
+        $out->putVarInt32(224);
+        $out->putVarInt64($this->dispatch_deadline_usec);
+      }
     }
     public function tryMerge($d) {
       while($d->avail() > 0) {
@@ -6362,6 +6452,9 @@ namespace google\appengine\TaskQueueQueryTasksResponse {
             break;
           case 208:
             $this->setExecutionCount($d->getVarInt32());
+            break;
+          case 224:
+            $this->setDispatchDeadlineUsec($d->getVarInt64());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -6437,6 +6530,9 @@ namespace google\appengine\TaskQueueQueryTasksResponse {
       if ($x->hasExecutionCount()) {
         $this->setExecutionCount($x->getExecutionCount());
       }
+      if ($x->hasDispatchDeadlineUsec()) {
+        $this->setDispatchDeadlineUsec($x->getDispatchDeadlineUsec());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -6476,6 +6572,8 @@ namespace google\appengine\TaskQueueQueryTasksResponse {
       if (isset($this->tag) && $this->tag !== $x->tag) return false;
       if (isset($this->execution_count) !== isset($x->execution_count)) return false;
       if (isset($this->execution_count) && !$this->integerEquals($this->execution_count, $x->execution_count)) return false;
+      if (isset($this->dispatch_deadline_usec) !== isset($x->dispatch_deadline_usec)) return false;
+      if (isset($this->dispatch_deadline_usec) && !$this->integerEquals($this->dispatch_deadline_usec, $x->dispatch_deadline_usec)) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -6530,6 +6628,9 @@ namespace google\appengine\TaskQueueQueryTasksResponse {
       }
       if (isset($this->execution_count)) {
         $res .= $prefix . "execution_count: " . $this->debugFormatInt32($this->execution_count) . "\n";
+      }
+      if (isset($this->dispatch_deadline_usec)) {
+        $res .= $prefix . "dispatch_deadline_usec: " . $this->debugFormatInt64($this->dispatch_deadline_usec) . "\n";
       }
       return $res;
     }

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -149,10 +149,11 @@ class SystemServiceError(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.SystemServiceError'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KHWFwcGhvc3RpbmcuU3lzdGVtU2VydmljZUVycm9yc3oJRXJyb3JDb2RliwGSAQJPS5gBAIwBiwGSAQ5JTlRFUk5BTF9FUlJPUpgBAYwBiwGSARBCQUNLRU5EX1JFUVVJUkVEmAECjAGLAZIBDUxJTUlUX1JFQUNIRUSYAQOMAXS6AaUECiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8SCmFwcGhvc3RpbmciZgoSU3lzdGVtU2VydmljZUVycm9yIlAKCUVycm9yQ29kZRIGCgJPSxAAEhIKDklOVEVSTkFMX0VSUk9SEAESFAoQQkFDS0VORF9SRVFVSVJFRBACEhEKDUxJTUlUX1JFQUNIRUQQAyJ0CgpTeXN0ZW1TdGF0Eg8KB2N1cnJlbnQYASABKAESEQoJYXZlcmFnZTFtGAMgASgBEhIKCmF2ZXJhZ2UxMG0YBCABKAESDQoFdG90YWwYAiABKAESDgoGcmF0ZTFtGAUgASgBEg8KB3JhdGUxMG0YBiABKAEiFwoVR2V0U3lzdGVtU3RhdHNSZXF1ZXN0ImUKFkdldFN5c3RlbVN0YXRzUmVzcG9uc2USIwoDY3B1GAEgASgLMhYuYXBwaG9zdGluZy5TeXN0ZW1TdGF0EiYKBm1lbW9yeRgCIAEoCzIWLmFwcGhvc3RpbmcuU3lzdGVtU3RhdCIfCh1TdGFydEJhY2tncm91bmRSZXF1ZXN0UmVxdWVzdCI0Ch5TdGFydEJhY2tncm91bmRSZXF1ZXN0UmVzcG9uc2USEgoKcmVxdWVzdF9pZBgBIAEoCUI2Ch9jb20uZ29vZ2xlLmFwcGVuZ2luZS5hcGkuc3lzdGVtEAIoAkIPU3lzdGVtU2VydmljZVBi"))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KHWFwcGhvc3RpbmcuU3lzdGVtU2VydmljZUVycm9yc3oJRXJyb3JDb2RliwGSAQJPS5gBAIwBiwGSAQ5JTlRFUk5BTF9FUlJPUpgBAYwBiwGSARBCQUNLRU5EX1JFUVVJUkVEmAECjAGLAZIBDUxJTUlUX1JFQUNIRUSYAQOMAXQ="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class SystemStat(ProtocolBuffer.ProtocolMessage):
   has_current_ = 0
@@ -447,10 +448,11 @@ class SystemStat(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.SystemStat'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KFWFwcGhvc3RpbmcuU3lzdGVtU3RhdBMaB2N1cnJlbnQgASgBMAE4ARQTGglhdmVyYWdlMW0gAygBMAE4ARQTGgphdmVyYWdlMTBtIAQoATABOAEUExoFdG90YWwgAigBMAE4ARQTGgZyYXRlMW0gBSgBMAE4ARQTGgdyYXRlMTBtIAYoATABOAEUwgEdYXBwaG9zdGluZy5TeXN0ZW1TZXJ2aWNlRXJyb3I="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KFWFwcGhvc3RpbmcuU3lzdGVtU3RhdBMaB2N1cnJlbnQgASgBMAE4ARQTGglhdmVyYWdlMW0gAygBMAE4ARQTGgphdmVyYWdlMTBtIAQoATABOAEUExoFdG90YWwgAigBMAE4ARQTGgZyYXRlMW0gBSgBMAE4ARQTGgdyYXRlMTBtIAYoATABOAEU"))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class GetSystemStatsRequest(ProtocolBuffer.ProtocolMessage):
 
@@ -545,10 +547,11 @@ class GetSystemStatsRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.GetSystemStatsRequest'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KIGFwcGhvc3RpbmcuR2V0U3lzdGVtU3RhdHNSZXF1ZXN0wgEdYXBwaG9zdGluZy5TeXN0ZW1TZXJ2aWNlRXJyb3I="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KIGFwcGhvc3RpbmcuR2V0U3lzdGVtU3RhdHNSZXF1ZXN0"))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class GetSystemStatsResponse(ProtocolBuffer.ProtocolMessage):
   has_cpu_ = 0
@@ -738,10 +741,11 @@ class GetSystemStatsResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.GetSystemStatsResponse'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KIWFwcGhvc3RpbmcuR2V0U3lzdGVtU3RhdHNSZXNwb25zZRMaA2NwdSABKAIwCzgBShVhcHBob3N0aW5nLlN5c3RlbVN0YXSjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoGbWVtb3J5IAIoAjALOAFKFWFwcGhvc3RpbmcuU3lzdGVtU3RhdKMBqgEFY3R5cGWyAQZwcm90bzKkARTCAR1hcHBob3N0aW5nLlN5c3RlbVNlcnZpY2VFcnJvcg=="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KIWFwcGhvc3RpbmcuR2V0U3lzdGVtU3RhdHNSZXNwb25zZRMaA2NwdSABKAIwCzgBShVhcHBob3N0aW5nLlN5c3RlbVN0YXSjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoGbWVtb3J5IAIoAjALOAFKFWFwcGhvc3RpbmcuU3lzdGVtU3RhdKMBqgEFY3R5cGWyAQZwcm90bzKkARQ="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class StartBackgroundRequestRequest(ProtocolBuffer.ProtocolMessage):
 
@@ -836,10 +840,11 @@ class StartBackgroundRequestRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.StartBackgroundRequestRequest'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KKGFwcGhvc3RpbmcuU3RhcnRCYWNrZ3JvdW5kUmVxdWVzdFJlcXVlc3TCAR1hcHBob3N0aW5nLlN5c3RlbVNlcnZpY2VFcnJvcg=="))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KKGFwcGhvc3RpbmcuU3RhcnRCYWNrZ3JvdW5kUmVxdWVzdFJlcXVlc3Q="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 class StartBackgroundRequestResponse(ProtocolBuffer.ProtocolMessage):
   has_request_id_ = 0
@@ -964,10 +969,11 @@ class StartBackgroundRequestResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.StartBackgroundRequestResponse'
   _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KKWFwcGhvc3RpbmcuU3RhcnRCYWNrZ3JvdW5kUmVxdWVzdFJlc3BvbnNlExoKcmVxdWVzdF9pZCABKAIwCTgBFMIBHWFwcGhvc3RpbmcuU3lzdGVtU2VydmljZUVycm9y"))
+  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KKWFwcGhvc3RpbmcuU3RhcnRCYWNrZ3JvdW5kUmVxdWVzdFJlc3BvbnNlExoKcmVxdWVzdF9pZCABKAIwCTgBFA=="))
   if _net_proto___parse__python is not None:
     _net_proto___parse__python.RegisterType(
         _SERIALIZED_DESCRIPTOR.tostring())
+
 
 if _extension_runtime:
   pass

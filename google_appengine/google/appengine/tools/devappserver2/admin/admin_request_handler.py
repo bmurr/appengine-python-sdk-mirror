@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,19 +44,18 @@ def _byte_size_format(value):
     return '1 Byte'
   elif byte_count < 1024:
     return '%d Bytes' % byte_count
-  elif byte_count < 1024 ** 2:
-    return '%.1f KiB (%d Bytes)' % (byte_count/1024.0, byte_count)
-  elif byte_count < 1024 ** 3:
-    return '%.1f MiB (%d Bytes)' % (byte_count/1024.0 ** 2, byte_count)
+  elif byte_count < 1024**2:
+    return '%.1f KiB (%d Bytes)' % (byte_count / 1024.0, byte_count)
+  elif byte_count < 1024**3:
+    return '%.1f MiB (%d Bytes)' % (byte_count / 1024.0**2, byte_count)
   else:
-    return '%.1f GiB (%d Bytes)' % (byte_count/1024.0 ** 3, byte_count)
+    return '%.1f GiB (%d Bytes)' % (byte_count / 1024.0**3, byte_count)
 
 
 _TEMPLATE_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), 'templates'))
 admin_template_environment = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(_TEMPLATE_PATH),
-    autoescape=True)
+    loader=jinja2.FileSystemLoader(_TEMPLATE_PATH), autoescape=True)
 admin_template_environment.filters['urlencode'] = _urlencode_filter
 admin_template_environment.filters['bytesizeformat'] = _byte_size_format
 
@@ -73,14 +72,15 @@ class AdminRequestHandler(webapp2.RequestHandler):
       with open(xsrf_path, 'r') as token_file:
         cls.xsrf_token = token_file.read().strip()
     else:
-      cls.xsrf_token = ''.join(random.choice(string.ascii_letters)
-                               for _ in range(10))
+      cls.xsrf_token = ''.join(
+          random.choice(string.ascii_letters) for _ in range(10))
       with open(xsrf_path, 'w') as token_file:
         token_file.write(cls.xsrf_token)
 
   def dispatch(self):
-    if self.request.method in ['PATCH', 'POST', 'PUT', 'DELETE'] and (
-        self.request.get('xsrf_token') != self.xsrf_token):
+    if self.request.method in [
+        'PATCH', 'POST', 'PUT', 'DELETE'
+    ] and (self.request.get('xsrf_token') != self.xsrf_token):
       self.response.set_status(403, 'Invalid XSRF token')
       self.response.out.write('<h1>Invalid XSRF token</h1>')
     else:
@@ -91,7 +91,7 @@ class AdminRequestHandler(webapp2.RequestHandler):
 
     Args:
       template: The file name of the template file to use e.g.
-          "memcache_viewer.html".
+        "memcache_viewer.html".
       context: A dict of values to use when rendering the template.
 
     Returns:
@@ -136,8 +136,8 @@ class AdminRequestHandler(webapp2.RequestHandler):
         del params[arg]
 
     params.update(add)
-    return str('%s?%s' % (self.request.path,
-                          urllib.urlencode(sorted(params.iteritems()))))
+    return str('%s?%s' %
+               (self.request.path, urllib.urlencode(sorted(params.items()))))
 
   @property
   def dispatcher(self):
@@ -157,8 +157,8 @@ class AdminRequestHandler(webapp2.RequestHandler):
     self.response.headers.add('X-Frame-Options', 'SAMEORIGIN')
     self.response.headers.add('X-XSS-Protection', '1; mode=block')
     self.response.headers.add('Content-Security-Policy', "default-src 'self'")
-    self.response.headers.add(
-        'Content-Security-Policy', "frame-ancestors 'none'")
+    self.response.headers.add('Content-Security-Policy',
+                              "frame-ancestors 'none'")
 
   @metrics.LogHandlerRequest(metrics.ADMIN_CONSOLE_CATEGORY)
   def post(self, *args, **kwargs):

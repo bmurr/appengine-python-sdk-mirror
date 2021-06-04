@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -120,7 +120,8 @@ class _DatastoreEmulatorDepManager(object):
     self._java_major_version = util.get_java_major_version()
 
     self._error_hint = None
-    if self._java_major_version < _CLOUD_DATASTORE_EMULATOR_JAVA_VERSION:
+    if (self._java_major_version is None or
+        self._java_major_version < _CLOUD_DATASTORE_EMULATOR_JAVA_VERSION):
       self._error_hint = (
           'Cannot use the Cloud Datastore Emulator because Java is absent. '
           'Please make sure Java %s+ is installed, and added to your system '
@@ -241,10 +242,32 @@ class DevelopmentServer(object):
           'https://issuetracker.google.com/issues/new?component=187272\n')
 
   @classmethod
-  def _check_platform_support(cls, all_module_runtimes):
-    if (any(runtime.startswith('python3') for runtime in all_module_runtimes)
-        and util.is_windows()):
-      raise OSError('Dev_appserver does not support python3 apps on Windows.')
+  def _handle_runtime_python_path(cls, options):
+    """Handles the runtime_python_path option.
+
+    Args:
+      options: An argparse.Namespace containing the command line arguments.
+
+    Raises:
+      ValueError: If the caller both --runtime_python_path and
+       --python27_executable_path are set.
+    """
+    if options.python27_executable_path and options.runtime_python_path:
+      raise ValueError(
+          '', 'argument --python27_executable_path not allowed with '
+          'argument --runtime_python_path')
+
+    runtime_python_path = None
+    if options.python27_executable_path:
+      runtime_python_path = {
+          'python': options.python27_executable_path,
+          'python-compat': options.python27_executable_path,
+          'python27': options.python27_executable_path,
+      }
+    if options.runtime_python_path:
+      runtime_python_path = options.runtime_python_path
+    instance_factory.PythonRuntimeInstanceFactory.SetRuntimePythonPath(
+        runtime_python_path)
 
   def start(self, options):
     """Start devappserver2 servers based on the provided command line arguments.
@@ -267,16 +290,13 @@ class DevelopmentServer(object):
         constants.LOG_LEVEL_TO_PYTHON_CONSTANT[options.dev_appserver_log_level])
 
     parsed_env_variables = dict(options.env_variables or [])
-    if options.python27_executable_path:
-      instance_factory.PythonRuntimeInstanceFactory.SetPython27ExecutablePath(
-          options.python27_executable_path)
+    DevelopmentServer._handle_runtime_python_path(options)
     configuration = application_configuration.ApplicationConfiguration(
         config_paths=options.config_paths,
         app_id=options.app_id,
         runtime=options.runtime,
         env_variables=parsed_env_variables)
     all_module_runtimes = {module.runtime for module in configuration.modules}
-    self._check_platform_support(all_module_runtimes)
 
     storage_path = api_server.get_storage_path(
         options.storage_path, configuration.app_id)
@@ -462,6 +482,8 @@ class DevelopmentServer(object):
     if options.php_executable_path:
       php_config.php_executable_path = os.path.abspath(
           options.php_executable_path)
+    if options.php_library_path:
+      php_config.php_library_path = options.php_library_path
     php_config.enable_debugger = options.php_remote_debugging
     if options.php_gae_extension_path:
       php_config.gae_extension_path = os.path.abspath(

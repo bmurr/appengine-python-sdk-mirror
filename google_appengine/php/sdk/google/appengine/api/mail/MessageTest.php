@@ -45,7 +45,7 @@ class MessageTest extends ApiProxyTestBase {
   public function testAddAttachmentError() {
     $message = new Message();
     $this->setExpectedException(
-        "InvalidArgumentException", "'exe' is a blacklisted file extension.");
+        'InvalidArgumentException', "'exe' is a denied file extension.");
     $message->addAttachment("file.exe", "data");
   }
 
@@ -79,7 +79,7 @@ class MessageTest extends ApiProxyTestBase {
                         "data.exe" => "data");
     $this->assertEquals(
         $this->setupAttachmentTest($attach_arr),
-        "'exe' is a blacklisted file extension.");
+        "'exe' is a denied file extension.");
   }
 
   private function setupValidEmailTest($email_input) {
@@ -121,11 +121,11 @@ class MessageTest extends ApiProxyTestBase {
     }
   }
 
-  public function testAddHeaderNonWhitelisted() {
+  public function testAddHeaderNonAllowlisted() {
     $message = new Message();
     $this->setExpectedException(
         "InvalidArgumentException",
-        "Input header 'invalid-header: data' is not whitelisted for use with" .
+        "Input header 'invalid-header: data' is not allowlisted for use with" .
         " the Google App Engine Mail Service.");
     $message->addHeader("invalid-header", "data");
   }

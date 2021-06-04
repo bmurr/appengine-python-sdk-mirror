@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,8 +34,8 @@ def reject_old_python_versions(minimum_version):
     sys.exit(1)
   if sys.version_info < minimum_version:
     sys.stderr.write(
-        'Error: Python %d.%d is not supported. Please use version %s.\n' % (
-            sys.version_info[0], sys.version_info[1], minimum_version_string))
+        'Error: Python %d.%d is not supported. Please use version %s.\n' %
+        (sys.version_info[0], sys.version_info[1], minimum_version_string))
     sys.exit(1)
 
 
@@ -51,8 +51,8 @@ def get_dir_path(script_file, sibling):
 
   Args:
     script_file: The script file whose directory is wanted.
-    sibling: Relative path to a sibling of script_file. Choose a sibling
-    that is potentially symlinked into the parent directory.
+    sibling: Relative path to a sibling of script_file. Choose a sibling that is
+      potentially symlinked into the parent directory.
 
   Returns:
     A directory name.
@@ -66,16 +66,20 @@ def get_dir_path(script_file, sibling):
 
 
     os.environ['GAE_SDK_ROOT'] = gae_sdk_root
-    for dir_path in [gae_sdk_root,
-                     os.path.join(gae_sdk_root, 'google_appengine')]:
+    for dir_path in [
+        gae_sdk_root,
+        os.path.join(gae_sdk_root, 'google_appengine')
+    ]:
       if os.path.exists(os.path.join(dir_path, sibling)):
         return dir_path
     raise ValueError('GAE_SDK_ROOT %r does not refer to a valid SDK '
                      'directory' % gae_sdk_root)
   else:
     py_file = script_file.replace('.pyc', '.py')
-    dir_paths = [os.path.abspath(os.path.dirname(os.path.realpath(py_file))),
-                 os.path.abspath(os.path.dirname(py_file))]
+    dir_paths = [
+        os.path.abspath(os.path.dirname(os.path.realpath(py_file))),
+        os.path.abspath(os.path.dirname(py_file))
+    ]
     for dir_path in dir_paths:
       sibling_path = os.path.join(dir_path, sibling)
       if os.path.exists(sibling_path):
@@ -105,8 +109,8 @@ class Paths(object):
     """Make a new Paths object.
 
     Args:
-      dir_path: the directory path where the calling script is to be found.
-        This directory should have a lib subdirectory.
+      dir_path: the directory path where the calling script is to be found. This
+        directory should have a lib subdirectory.
     """
     self.dir_path = dir_path
 
@@ -123,7 +127,8 @@ class Paths(object):
 
       grpc_importable = not subprocess.call(
           [sys.executable, '-c', 'import grpc'],
-          cwd=grpc_path, stderr=subprocess.PIPE)
+          cwd=grpc_path,
+          stderr=subprocess.PIPE)
 
 
     self.v1_extra_paths = [
@@ -148,7 +153,7 @@ class Paths(object):
       self.v1_extra_paths.extend([
           os.path.join(dir_path, 'lib', 'httplib2'),
           os.path.join(dir_path, 'lib', 'oauth2client'),
-          os.path.join(dir_path, 'lib', 'six-1.9.0'),
+          os.path.join(dir_path, 'lib', 'six-1.12.0'),
       ])
 
     self.api_server_extra_paths = [
@@ -181,13 +186,12 @@ class Paths(object):
       self.oauth_client_extra_paths.extend([
           os.path.join(dir_path, 'lib', 'apiclient'),
           os.path.join(dir_path, 'lib', 'oauth2client'),
-          os.path.join(dir_path, 'lib', 'six-1.9.0'),
+          os.path.join(dir_path, 'lib', 'six-1.12.0'),
           os.path.join(dir_path, 'lib', 'uritemplate'),
       ])
     else:
       self.oauth_client_extra_paths.append(
-          os.path.join(dir_path, 'lib', 'google-api-python-client')
-      )
+          os.path.join(dir_path, 'lib', 'google-api-python-client'))
 
 
     self.google_sql_extra_paths = self.oauth_client_extra_paths + [
@@ -198,11 +202,14 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'sqlcmd'),
     ]
 
-    devappserver2_dir = os.path.join(
-        dir_path, 'google', 'appengine', 'tools', 'devappserver2')
+    devappserver2_dir = os.path.join(dir_path, 'google', 'appengine', 'tools',
+                                     'devappserver2')
+
+    python27_sdk_dir = os.path.join(dir_path, 'python27', 'sdk', 'google',
+                                    'appengine', 'tools', 'devappserver2')
 
     php_runtime_dir = os.path.join(devappserver2_dir, 'php', 'runtime')
-    python_runtime_dir = os.path.join(devappserver2_dir, 'python', 'runtime')
+    python_runtime_dir = os.path.join(python27_sdk_dir, 'python', 'runtime')
 
     stub_paths = [
         os.path.join(dir_path, 'lib', 'antlr3'),
@@ -216,7 +223,7 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'pyasn1_modules'),
         os.path.join(dir_path, 'lib', 'httplib2'),
         os.path.join(dir_path, 'lib', 'oauth2client_devserver'),
-        os.path.join(dir_path, 'lib', 'six-1.9.0'),
+        os.path.join(dir_path, 'lib', 'six-1.12.0'),
     ]
 
 
@@ -225,7 +232,6 @@ class Paths(object):
 
     self.v2_extra_paths = stub_paths + [
         dir_path,
-
         os.path.join(dir_path, 'lib', 'simplejson'),
 
 
@@ -263,7 +269,7 @@ class Paths(object):
     ]
 
     python_runtime_paths = [
-        dir_path,
+        os.path.join(dir_path, 'python27', 'sdk'),
         os.path.join(dir_path, 'lib', 'concurrent'),
         os.path.join(dir_path, 'lib', 'cherrypy'),
         os.path.join(dir_path, 'lib', 'fancy_urllib'),
@@ -275,10 +281,7 @@ class Paths(object):
 
     self._script_to_paths = {
         'api_server.py': self.v1_extra_paths + self.api_server_extra_paths,
-        'appcfg.py': self.v1_extra_paths + self.oauth_client_extra_paths,
         'backends_conversion.py': self.v1_extra_paths,
-        'bulkload_client.py': self.v1_extra_paths,
-        'bulkloader.py': self.v1_extra_paths + self.oauth_client_extra_paths,
         'dev_appserver.py': devappserver2_paths,
         'download_appstats.py': self.v1_extra_paths,
         'endpointscfg.py': self.v1_extra_paths + self.endpointscfg_extra_paths,
@@ -297,11 +300,11 @@ class Paths(object):
         '_python_runtime.py': 'runtime.py',
     }
 
-    self.default_script_dir = os.path.join(
-        dir_path, 'google', 'appengine', 'tools')
+    self.default_script_dir = os.path.join(dir_path, 'google', 'appengine',
+                                           'tools')
 
-    self.google_sql_dir = os.path.join(
-        dir_path, 'google', 'storage', 'speckle', 'python', 'tool')
+    self.google_sql_dir = os.path.join(dir_path, 'google', 'storage', 'speckle',
+                                       'python', 'tool')
 
     self._script_to_dir = {
         'api_server.py': devappserver2_dir,
@@ -324,8 +327,9 @@ class Paths(object):
 
 
     self._sys_paths_to_scrub = {
-        'dev_appserver.py':
-            [os.path.normcase(os.path.join(dir_path, 'launcher'))],
+        'dev_appserver.py': [
+            os.path.normcase(os.path.join(dir_path, 'launcher'))
+        ],
     }
 
   def script_paths(self, script_name):
@@ -362,5 +366,7 @@ class Paths(object):
     sys_paths_to_scrub = self._sys_paths_to_scrub.get(script_name, [])
 
 
-    return [path for path in paths
-            if os.path.normcase(path) not in sys_paths_to_scrub]
+    return [
+        path for path in paths
+        if os.path.normcase(path) not in sys_paths_to_scrub
+    ]

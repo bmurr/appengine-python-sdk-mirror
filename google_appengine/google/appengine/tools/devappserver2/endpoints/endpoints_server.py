@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -522,7 +522,7 @@ class EndpointsDispatcher(object):
         path and query parameters in a request.
       source: A dictionary parsed from the body of the request.
     """
-    for key, value in source.iteritems():
+    for key, value in source.items():
       destination_value = destination.get(key)
       if isinstance(value, dict) and isinstance(destination_value, dict):
         self._update_from_body(destination_value, value)
@@ -574,7 +574,7 @@ class EndpointsDispatcher(object):
     body_json = {}
 
     # Handle parameters from the URL path.
-    for key, value in params.iteritems():
+    for key, value in params.items():
       # Values need to be in a list to interact with query parameter values
       # and to account for case of repeated parameters
       body_json[key] = [value]
@@ -582,14 +582,14 @@ class EndpointsDispatcher(object):
     # Add in parameters from the query string.
     if request.parameters:
       # For repeated elements, query and path work together
-      for key, value in request.parameters.iteritems():
+      for key, value in request.parameters.items():
         if key in body_json:
           body_json[key] = value + body_json[key]
         else:
           body_json[key] = value
 
     # Validate all parameters we've merged so far and convert any '.' delimited
-    # parameters to nested parameters.  We don't use iteritems since we may
+    # parameters to nested parameters.  We don't use items since we may
     # modify body_json within the loop.  For instance, 'a.b' is not a valid key
     # and would be replaced with 'a'.
     for key, value in body_json.items():

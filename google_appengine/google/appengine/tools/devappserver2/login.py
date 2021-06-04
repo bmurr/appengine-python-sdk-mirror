@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ def get_user_info(http_cookie, cookie_name=_COOKIE_NAME):
   except Cookie.CookieError:
     return '', False, ''
 
-  cookie_dict = dict((k, v.value) for k, v in cookie.iteritems())
+  cookie_dict = dict((k, v.value) for k, v in cookie.items())
   return _get_user_info_from_dict(cookie_dict, cookie_name)
 
 

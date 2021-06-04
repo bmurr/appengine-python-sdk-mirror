@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,6 +59,7 @@ ENTRYPOINT_ADDED = 8
 ENTRYPOINT_CHANGED = 9  # changes from a non-empty value to non-empty value
 ENTRYPOINT_REMOVED = 10
 
+APP_ENGINE_APIS_CHANGED = 11
 
 
 
@@ -379,6 +380,10 @@ class ModuleConfiguration(object):
     return self._app_info_external.env_variables
 
   @property
+  def app_engine_apis(self):
+    return self._app_info_external.app_engine_apis
+
+  @property
   def is_backend(self):
     return False
 
@@ -463,6 +468,9 @@ class ModuleConfiguration(object):
         changes.add(ENTRYPOINT_ADDED)
       else:
         changes.add(ENTRYPOINT_REMOVED)
+
+    if app_info_external.app_engine_apis != self.app_engine_apis:
+      changes.add(APP_ENGINE_APIS_CHANGED)
 
     self._app_info_external = app_info_external
     if changes:
@@ -582,7 +590,7 @@ def _set_health_check_defaults(health_check):
   """
   if not health_check:
     health_check = appinfo.HealthCheck()
-  for k, v in _HEALTH_CHECK_DEFAULTS.iteritems():
+  for k, v in _HEALTH_CHECK_DEFAULTS.items():
     if getattr(health_check, k) is None:
       setattr(health_check, k, v)
   return health_check
@@ -813,6 +821,10 @@ class BackendConfiguration(object):
   @property
   def env_variables(self):
     return self._module_configuration.env_variables
+
+  @property
+  def app_engine_apis(self):
+    return self._module_configuration.app_engine_apis
 
   @property
   def is_backend(self):

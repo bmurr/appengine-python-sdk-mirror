@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ class ConsoleRequestHandler(admin_request_handler.AdminRequestHandler):
   @classmethod
   def quit(cls):
     with cls._modulename_to_shell_module_lock:
-      for shell_module in cls._modulename_to_shell_module.itervalues():
+      for shell_module in cls._modulename_to_shell_module.values():
         shell_module.quit()
 
   @classmethod

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -213,7 +213,7 @@ class StaticContentHandler(url_handler.UserConfiguredURLHandler):
       if user_headers.Get('Cache-Control') is None:
         headers.append(('Cache-Control', 'public'))
 
-      for name, value in user_headers.iteritems():
+      for name, value in user_headers.items():
         # "name" will always be unicode due to the way that ValidatedDict works.
         headers.append((str(name), value))
 

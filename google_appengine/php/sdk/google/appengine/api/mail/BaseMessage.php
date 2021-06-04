@@ -40,16 +40,16 @@ abstract class BaseMessage {
   // Container for the MailMessage protobuf.
   protected $message = null;
 
-  // Whitelisted headers.
+  // Allowlisted headers.
   protected static $allowed_headers = array(
       'auto-submitted', 'in-reply-to', 'list-id', 'list-unsubscribe',
       'on-behalf-of', 'references', 'resent-date', 'resent-from', 'resent-to');
 
-  // Blacklisted extension types.
-  protected static $extension_blacklist = array(
+  // Denied extension types.
+  protected static $extension_denylist = [
       'ade', 'adp', 'bat', 'chm', 'cmd', 'com', 'cpl', 'exe', 'hta', 'ins',
       'isp', 'jse', 'lib', 'mde', 'msc', 'msp', 'mst', 'pif', 'scr', 'sct',
-      'shb', 'sys', 'vb', 'vbe', 'vbs', 'vxd', 'wsc', 'wsf', 'wsh');
+      'shb', 'sys', 'vb', 'vbe', 'vbs', 'vxd', 'wsc', 'wsf', 'wsh'];
 
   // Setter functions for constructor.
   protected static $set_functions = array('sender' => 'setSender',
@@ -108,7 +108,7 @@ abstract class BaseMessage {
    * attachment. Must be enclosed by angle brackets (<>).
    * @throws \InvalidArgumentException If the input is not an array or if the
    * attachment type is invalid (i.e. the filename is not a string, or the
-   * file extension is blacklisted).
+   * file extension is denied).
    */
   public function addAttachment($filename, $data, $content_id = null) {
     $this->addAttachmentsArray([["name" => $filename,
@@ -123,7 +123,7 @@ abstract class BaseMessage {
    *    Example: array("filename.txt" => "This is the file contents.");
    * @throws \InvalidArgumentException If the input is not an array or if the
    * attachment type is invalid (i.e. the filename is not a string, or the
-   * file extension is blacklisted).
+   * file extension is denied).
    * @deprecated
    */
   public function addAttachmentArray($attach_array) {
@@ -158,7 +158,7 @@ abstract class BaseMessage {
    * [['name' => 'foo.jpg', 'data' => 'data', 'content_id' => '<foo>']]
    * @throws \InvalidArgumentException If the input is not an array or if the
    * attachment type is invalid (i.e. the filename is not a string, or the
-   * file extension is blacklisted).
+   * file extension is denied).
    */
   public function addAttachmentsArray($attach_array) {
     if (!is_array($attach_array)) {
@@ -190,9 +190,9 @@ abstract class BaseMessage {
   /**
    * Adds a header pair to the mail object.
    *
-   * @param string $key Header name (from the whitelist) to be added.
+   * @param string $key Header name (from the allowlist) to be added.
    * @param string $value Header value to be added.
-   * @throws \InvalidArgumentException If the header is not on the whitelist, or
+   * @throws \InvalidArgumentException If the header is not on the allowlist, or
    * if the header is invalid (i.e. not a string).
    */
   public function addHeader($key, $value) {
@@ -209,7 +209,7 @@ abstract class BaseMessage {
    *
    * @param array An array of headers.
    * @throws \InvalidArgumentException If the input is not an array, or if
-   * headers are not on the whitelist, or if a header is invalid
+   * headers are not on the allowlist, or if a header is invalid
    * (i.e. not a string).
    */
   public function addHeaderArray($header_array) {
@@ -249,8 +249,8 @@ abstract class BaseMessage {
 
     $path_parts = pathinfo($filename);
     if (isset($path_parts['extension'])) {
-      if (in_array($path_parts['extension'], self::$extension_blacklist)) {
-        $error = sprintf("'%s' is a blacklisted file extension.",
+      if (in_array($path_parts['extension'], self::$extension_denylist)) {
+        $error = sprintf("'%s' is a denied file extension.",
                          $path_parts['extension']);
         return false;
       }
@@ -292,7 +292,7 @@ abstract class BaseMessage {
       return false;
     } else if (!in_array(strtolower($key), self::$allowed_headers)) {
       // Array keys don't have consistent case.
-      $error = sprintf("Input header '%s: %s' is not whitelisted for use with" .
+      $error = sprintf("Input header '%s: %s' is not allowlisted for use with" .
                        " the Google App Engine Mail Service.",
                        htmlspecialchars($key),
                        htmlspecialchars($value));

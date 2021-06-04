@@ -1,14 +1,24 @@
 release: "0.0.0"
-timestamp: 1588748477
+timestamp: 0
 api_versions: ['1']
 supported_api_versions:
   python:
     api_versions: ['1']
   python27:
     api_versions: ['1']
-  go:
-    api_versions: ['go1', 'go1.9']
+  python37:
+    api_versions: [null, '1']
+  python38:
+    api_versions: [null, '1']
   java7:
     api_versions: ['1.0']
   go111:
     api_versions: [null]
+  go112:
+    api_versions: [null]
+  go113:
+    api_versions: [null]
+  go114:
+    api_versions: [null, '1']
+  go115:
+    api_versions: [null, '1']

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,7 +35,6 @@ from google.appengine.tools.devappserver2 import http_runtime
 from google.appengine.tools.devappserver2 import instance
 from google.appengine.tools.devappserver2 import metrics
 from google.appengine.tools.devappserver2 import util
-from google.appengine.tools.devappserver2.go import application as go_application
 from google.appengine.tools.devappserver2.go import errors as go_errors
 from google.appengine.tools.devappserver2.go import gaego
 from google.appengine.tools.devappserver2.go import managedvm as go_managedvm
@@ -111,6 +110,8 @@ class GoRuntimeInstanceFactory(instance.InstanceFactory):
       module_configuration: An application_configuration.ModuleConfiguration
           instance respresenting the configuration of the module that owns the
           runtime.
+    Raises:
+      RuntimeError: an invalid runtime name is given
     """
     super(GoRuntimeInstanceFactory, self).__init__(request_data, 8, 10)
     self._runtime_config_getter = runtime_config_getter
@@ -129,12 +130,7 @@ class GoRuntimeInstanceFactory(instance.InstanceFactory):
           go_config.work_dir,
           go_config.enable_debugging)
     else:
-      self._start_process_flavor = http_runtime.START_PROCESS
-      go_config = runtime_config_getter().go_config
-      self._go_application = go_application.GoApplication(
-          self._module_configuration,
-          go_config.work_dir,
-          go_config.enable_debugging)
+      raise RuntimeError('Unknown runtime %s' % module_configuration.runtime)
     self._modified_since_last_build = False
     self._last_build_error = None
 

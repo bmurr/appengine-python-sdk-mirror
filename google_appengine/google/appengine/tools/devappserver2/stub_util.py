@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Utility methods for operating on appengine service local stubs."""
 
 from __future__ import absolute_import
@@ -45,9 +44,6 @@ PY2 = sys.version_info[0] == 2
 
 # pylint: disable=g-import-not-at-top
 if PY2:
-  from google.appengine.api.channel import channel_service_stub  # deprecated
-  from google.appengine.api.remote_socket import _remote_socket_stub  # deprecated pylint: disable=g-line-too-long
-  from google.appengine.datastore import datastore_sqlite_stub
   from google.appengine.datastore import datastore_v4_pb
 
   # We don't want to support datastore_v4 everywhere, because users are supposed
@@ -198,11 +194,6 @@ def setup_stubs(
       'capability_service',
       capability_stub.CapabilityServiceStub())
 
-  if PY2:
-    apiproxy_stub_map.apiproxy.RegisterStub(
-        'channel',
-        channel_service_stub.ChannelServiceStub(request_data=request_data))
-
   if datastore_grpc_stub_class:
     apiproxy_stub_map.apiproxy.ReplaceStub(
         'datastore_v3',
@@ -210,6 +201,7 @@ def setup_stubs(
   else:
     if datastore_local_stub_class is None:
       if PY2:
+        from google.appengine.datastore import datastore_sqlite_stub
         datastore_local_stub_class = datastore_sqlite_stub.DatastoreSqliteStub
       else:
         datastore_local_stub_class = datastore_file_stub.DatastoreFileStub
@@ -269,10 +261,6 @@ def setup_stubs(
   apiproxy_stub_map.apiproxy.RegisterStub(
       'modules',
       modules_stub.ModulesServiceStub(request_data))
-
-  if PY2:
-    apiproxy_stub_map.apiproxy.RegisterStub(
-        'remote_socket', _remote_socket_stub.RemoteSocketServiceStub())
 
   apiproxy_stub_map.apiproxy.RegisterStub(
       'search',

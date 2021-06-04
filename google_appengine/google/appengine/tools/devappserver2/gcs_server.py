@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ class Application(object):
 
     # The metadata headers must be convereted from unicode to string.
     headers = []
-    for k, v in result.headers.iteritems():
+    for k, v in result.headers.items():
       headers.append((str(k), str(v)))
 
     # GCS uses non-standard HTTP 308 status code.

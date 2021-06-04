@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@
 
 import os
 import re
+
+import six
 
 from google.appengine.tools import app_engine_web_xml_parser as aewxp
 from google.appengine.tools import handler_generator
@@ -131,10 +133,12 @@ class AppYamlTranslator(object):
     for entry_name, field in [
         ('runtime', self.GetRuntime()),
         ('vm', self.app_engine_web_xml.vm),
+        ('app_engine_apis', self.app_engine_web_xml.app_engine_apis),
         ('threadsafe', self.app_engine_web_xml.threadsafe),
         ('instance_class', self.app_engine_web_xml.instance_class),
         ('auto_id_policy', self.app_engine_web_xml.auto_id_policy),
-        ('code_lock', self.app_engine_web_xml.codelock)]:
+        ('code_lock', self.app_engine_web_xml.codelock),
+    ]:
       if field:
         basic_statements.append('%s: %s' % (entry_name, field))
     if self.app_engine_web_xml.env != '1':
@@ -216,7 +220,7 @@ class AppYamlTranslator(object):
 
     variables = self.app_engine_web_xml.env_variables
     statements = ['env_variables:']
-    for name, value in sorted(variables.iteritems()):
+    for name, value in sorted(six.iteritems(variables)):
       statements.append(
           '  %s: %s' % (
               self.SanitizeForYaml(name), self.SanitizeForYaml(value)))
