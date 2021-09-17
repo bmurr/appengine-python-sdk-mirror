@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """One place for all runtime instance factories."""
 
 
@@ -35,7 +36,7 @@ PYTHON27_PROD_VERSION = (2, 7, 12)
 
 MODERN_RUNTIMES = set([
     'python37', 'python38', 'python39', 'go111', 'go112', 'go113', 'go114',
-    'go115'
+    'go115', 'php72',
 ])
 
 FACTORIES = {
@@ -64,4 +65,4 @@ if java_factory:
 
 
 def valid_runtimes():
-  return FACTORIES.keys()
+  return list(FACTORIES.keys())

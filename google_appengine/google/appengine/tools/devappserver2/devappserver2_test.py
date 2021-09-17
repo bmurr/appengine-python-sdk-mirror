@@ -24,6 +24,14 @@ import unittest
 
 import google
 import mock
+import six
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  builtins = __builtins__
+else:
+  import builtins
+
 from google.appengine.tools.devappserver2 import devappserver2
 
 
@@ -91,7 +99,7 @@ class CheckDatastoreEmulatorBinaryExistenceTest(unittest.TestCase):
     with self.assertRaises(devappserver2.MissingDatastoreEmulatorError) as ctx:
       self.dev_server._options = self.options
       self.dev_server._fail_for_using_datastore_emulator_from_legacy_sdk()
-    self.assertIn('Cannot find Cloud Datastore Emulator', ctx.exception.message)
+    self.assertIn('Cannot find Cloud Datastore Emulator', str(ctx.exception))
 
   def test_succeed_not_using_emulator(self):
     self.options.support_datastore_emulator = False
@@ -174,7 +182,7 @@ class DecideUseDatastoreEmulatorTest(unittest.TestCase):
 class _DatastoreEmulatorDepManagerTest(unittest.TestCase):
   """Tests generating grpc import report."""
 
-  @mock.patch('__builtin__.__import__', side_effect=mock.Mock())
+  @mock.patch.object(builtins, '__import__', side_effect=mock.Mock())
   @mock.patch(
       'google.appengine.tools.devappserver2.util.get_java_major_version',
       return_value=8)
@@ -184,7 +192,7 @@ class _DatastoreEmulatorDepManagerTest(unittest.TestCase):
     self.assertTrue(dep_manager.satisfied)
     self.assertIsNone(dep_manager.error_hint)
 
-  @mock.patch('__builtin__.__import__', side_effect=mock.Mock())
+  @mock.patch.object(builtins, '__import__', side_effect=mock.Mock())
   @mock.patch(
       'google.appengine.tools.devappserver2.util.get_java_major_version',
       return_value=7)
@@ -194,8 +202,8 @@ class _DatastoreEmulatorDepManagerTest(unittest.TestCase):
     self.assertFalse(dep_manager.satisfied)
     self.assertIn('make sure Java 8+ is installed', dep_manager.error_hint)
 
-  @mock.patch('__builtin__.__import__',
-              side_effect=ImportError('Cannot import cygrpc'))
+  @mock.patch.object(
+      builtins, '__import__', side_effect=ImportError('Cannot import cygrpc'))
   @mock.patch(
       'google.appengine.tools.devappserver2.util.get_java_major_version',
       return_value=8)

@@ -142,16 +142,14 @@ class APIServerTestBase(wsgi_test_utils.WSGITestCase):
   def setUp(self):
     super(APIServerTestBase, self).setUp()
     setup_stubs()
-    self.server = api_server.APIServer('localhost',
-                                       0,
-                                       APP_ID)
+    self.server = api_server.APIServer('localhost', 0, APP_ID)
 
   def tearDown(self):
     stub_util.cleanup_stubs()
     super(APIServerTestBase, self).tearDown()
 
-  def _assert_remote_call(
-      self, expected_remote_response, stub_request, service, method):
+  def _assert_remote_call(self, expected_remote_response, stub_request, service,
+                          method):
     """Test a call across the remote API to the API server.
 
     Args:
@@ -171,15 +169,15 @@ class APIServerTestBase(wsgi_test_utils.WSGITestCase):
       remote_request.set_request_id(request_id)
       remote_payload = remote_request.Encode()
 
-      environ = {'CONTENT_LENGTH': len(remote_payload),
-                 'REQUEST_METHOD': 'POST',
-                 'wsgi.input': cStringIO.StringIO(remote_payload)}
+      environ = {
+          'CONTENT_LENGTH': len(remote_payload),
+          'REQUEST_METHOD': 'POST',
+          'wsgi.input': cStringIO.StringIO(remote_payload)
+      }
 
       expected_headers = {'Content-Type': 'application/octet-stream'}
-      self.assertResponse('200 OK',
-                          expected_headers,
-                          expected_remote_response.Encode(),
-                          self.server,
+      self.assertResponse('200 OK', expected_headers,
+                          expected_remote_response.Encode(), self.server,
                           environ)
 
 
@@ -196,22 +194,21 @@ class TestAPIServer(APIServerTestBase):
     logout_request = user_service_pb.CreateLogoutURLRequest()
     logout_request.set_destination_url('/crazy_logout')
 
-    self._assert_remote_call(
-        expected_remote_response, logout_request, 'user', 'CreateLogoutURL')
+    self._assert_remote_call(expected_remote_response, logout_request, 'user',
+                             'CreateLogoutURL')
 
   def test_datastore_v4_api_call(self):
     begin_transaction_response = datastore_v4_pb.BeginTransactionResponse()
     begin_transaction_response.set_transaction('whatever')
 
     expected_remote_response = remote_api_pb.Response()
-    expected_remote_response.set_response(
-        begin_transaction_response.Encode())
+    expected_remote_response.set_response(begin_transaction_response.Encode())
 
     begin_transaction_request = datastore_v4_pb.BeginTransactionRequest()
 
-    self._assert_remote_call(
-        expected_remote_response, begin_transaction_request,
-        'datastore_v4', 'BeginTransaction')
+    self._assert_remote_call(expected_remote_response,
+                             begin_transaction_request, 'datastore_v4',
+                             'BeginTransaction')
 
   def test_datastore_v4_api_calls_handled(self):
     deprecated = ['Get', 'Write']
@@ -222,22 +219,13 @@ class TestAPIServer(APIServerTestBase):
     self.assertSetEqual(methods, frozenset(stub_util.DATASTORE_V4_METHODS))
 
   def test_GET(self):
-    environ = {'REQUEST_METHOD': 'GET',
-               'QUERY_STRING': 'rtok=23'}
-    self.assertResponse('200 OK',
-                        {'Content-Type': 'text/plain'},
-                        "{app_id: test, rtok: '23'}\n",
-                        self.server,
-                        environ)
+    environ = {'REQUEST_METHOD': 'GET', 'QUERY_STRING': 'rtok=23'}
+    self.assertResponse('200 OK', {'Content-Type': 'text/plain'},
+                        "{app_id: test, rtok: '23'}\n", self.server, environ)
 
   def test_unsupported_method(self):
-    environ = {'REQUEST_METHOD': 'HEAD',
-               'QUERY_STRING': 'rtok=23'}
-    self.assertResponse('405 Method Not Allowed',
-                        {},
-                        '',
-                        self.server,
-                        environ)
+    environ = {'REQUEST_METHOD': 'HEAD', 'QUERY_STRING': 'rtok=23'}
+    self.assertResponse('405 Method Not Allowed', {}, '', self.server, environ)
 
   def test_exception(self):
     urlfetch_request = urlfetch_service_pb.URLFetchRequest()
@@ -245,11 +233,11 @@ class TestAPIServer(APIServerTestBase):
     urlfetch_request.set_method(urlfetch_service_pb.URLFetchRequest.GET)
 
     expected_remote_response = remote_api_pb.Response()
-    expected_remote_response.set_exception(pickle.dumps(
-        RuntimeError(repr(IOError('the remote error')))))
+    expected_remote_response.set_exception(
+        pickle.dumps(RuntimeError(repr(IOError('the remote error')))))
 
-    self._assert_remote_call(
-        expected_remote_response, urlfetch_request, 'urlfetch', 'Fetch')
+    self._assert_remote_call(expected_remote_response, urlfetch_request,
+                             'urlfetch', 'Fetch')
 
   def test_application_error(self):
     urlfetch_request = urlfetch_service_pb.URLFetchRequest()
@@ -259,11 +247,11 @@ class TestAPIServer(APIServerTestBase):
     expected_remote_response = remote_api_pb.Response()
     expected_remote_response.mutable_application_error().set_code(23)
     expected_remote_response.mutable_application_error().set_detail('details')
-    expected_remote_response.set_exception(pickle.dumps(
-        apiproxy_errors.ApplicationError(23, 'details')))
+    expected_remote_response.set_exception(
+        pickle.dumps(apiproxy_errors.ApplicationError(23, 'details')))
 
-    self._assert_remote_call(
-        expected_remote_response, urlfetch_request, 'urlfetch', 'Fetch')
+    self._assert_remote_call(expected_remote_response, urlfetch_request,
+                             'urlfetch', 'Fetch')
 
 
 class TestAPIServerWithEmulator(APIServerTestBase):
@@ -279,10 +267,11 @@ class TestAPIServerWithEmulator(APIServerTestBase):
     fake_put_request.Encode = lambda: 'x' * (apiproxy_stub.MAX_REQUEST_SIZE + 1)
 
     expected_remote_response = remote_api_pb.Response()
-    expected_remote_response.set_exception(pickle.dumps(
-        apiproxy_errors.RequestTooLargeError(
-            apiproxy_stub.REQ_SIZE_EXCEEDS_LIMIT_MSG_TEMPLATE % (
-                'datastore_v3', 'Put'))))
+    expected_remote_response.set_exception(
+        pickle.dumps(
+            apiproxy_errors.RequestTooLargeError(
+                apiproxy_stub.REQ_SIZE_EXCEEDS_LIMIT_MSG_TEMPLATE %
+                ('datastore_v3', 'Put'))))
     self._assert_remote_call(expected_remote_response, fake_put_request,
                              'datastore_v3', 'Put')
 
@@ -293,28 +282,28 @@ class TestApiServerMain(unittest.TestCase):
   @mock.patch.object(shutdown, 'wait_until_shutdown')
   @mock.patch.object(metrics._MetricsLogger, 'Start')
   @mock.patch.object(metrics._MetricsLogger, 'Stop')
-  @mock.patch.object(argparse.ArgumentParser, 'parse_args',
-                     return_value=argparse.Namespace(
-                         google_analytics_client_id='myid',
-                         google_analytics_user_agent='myagent',
-                         support_datastore_emulator=True,
-                         storage_path='/tmp',
-                         app_id='',
-                         dev_appserver_log_level='info',
-                         config_paths=None,
-                         java_app_base_url=None))
-  def testMetrics(self,
-                  unused_mock_parse,
-                  mock_stop,
-                  mock_start,
-                  mock_wait_until_shutdown,
-                  mock_create_api_server):
+  @mock.patch.object(
+      argparse.ArgumentParser,
+      'parse_args',
+      return_value=argparse.Namespace(
+          google_analytics_client_id='myid',
+          google_analytics_user_agent='myagent',
+          support_datastore_emulator=True,
+          storage_path='/tmp',
+          app_id='',
+          dev_appserver_log_level='info',
+          config_paths=None,
+          java_app_base_url=None))
+  def testMetrics(self, unused_mock_parse, mock_stop, mock_start,
+                  mock_wait_until_shutdown, mock_create_api_server):
     """Tests metrics logging flow is triggered by api_server main()."""
     api_server.main()
     mock_create_api_server.assert_called_once()
     mock_wait_until_shutdown.assert_called_once()
     mock_start.assert_called_once_with(
-        'myid', user_agent='myagent', support_datastore_emulator=True,
+        'myid',
+        user_agent='myagent',
+        support_datastore_emulator=True,
         category=metrics.API_SERVER_CATEGORY)
     mock_stop.assert_called_once()
 
@@ -393,17 +382,17 @@ class VerifyWormholeUsageTest(unittest.TestCase):
 
   def test_request_data_with_no_get_app_engine_apis_pasess(self):
     request_info = GetRuntimeOnlyRequestInfo()
-    self._verify_wormhole_usage(
-        request_info, self._create_request(self._request_id))
+    self._verify_wormhole_usage(request_info,
+                                self._create_request(self._request_id))
 
   def test_request_data_with_get_runtime_key_error_passes(self):
-    request_info = WormholeTestRequestInfo(
-        WormholeTestRequestInfo.KEY_ERROR, True)
+    request_info = WormholeTestRequestInfo(WormholeTestRequestInfo.KEY_ERROR,
+                                           True)
     self._verify_wormhole_usage(request_info)
 
   def test_request_data_with__get_app_engine_apis_key_error__pasess(self):
-    request_info = WormholeTestRequestInfo(
-        'go114', WormholeTestRequestInfo.KEY_ERROR)
+    request_info = WormholeTestRequestInfo('go114',
+                                           WormholeTestRequestInfo.KEY_ERROR)
     self._verify_wormhole_usage(request_info)
 
   def test_request_for_wormhole_optional_runtime_passes(self):
@@ -412,24 +401,20 @@ class VerifyWormholeUsageTest(unittest.TestCase):
 
   def test_request_missing_needed_app_engine_apis_fails(self):
     request_info = WormholeTestRequestInfo('go114', False)
-    self.assertRaises(
-        apiproxy_errors.FeatureNotEnabledError,
-        self._verify_wormhole_usage,
-        request_info)
+    self.assertRaises(apiproxy_errors.FeatureNotEnabledError,
+                      self._verify_wormhole_usage, request_info)
 
   def test_wormhole_request_for_unsupported_servce_fails(self):
     request_info = WormholeTestRequestInfo('go114', True)
     # Note In created request, service=service1
-    self.assertRaises(
-        apiproxy_errors.CallNotFoundError,
-        self._verify_wormhole_usage,
-        request_info)
+    self.assertRaises(apiproxy_errors.CallNotFoundError,
+                      self._verify_wormhole_usage, request_info)
 
   def test_happy_wormhole_request_passes(self):
     request_info = WormholeTestRequestInfo('go114', True)
     service = api_server.WORMHOLE_SERVICES[0]
-    self._verify_wormhole_usage(request_info, self._create_request(
-        self._request_id, service=service))
+    self._verify_wormhole_usage(
+        request_info, self._create_request(self._request_id, service=service))
 
 
 class MustEnableWormholeForRuntimeTest(unittest.TestCase):
@@ -472,8 +457,8 @@ class GetStoragePathTest(unittest.TestCase):
     api_server._generate_storage_paths('example.com_myapp').AndReturn([path])
 
     self.mox.ReplayAll()
-    self.assertEqual(
-        path, api_server.get_storage_path(None, 'dev~example.com:myapp'))
+    self.assertEqual(path,
+                     api_server.get_storage_path(None, 'dev~example.com:myapp'))
     self.mox.VerifyAll()
     self.assertTrue(os.path.isdir(path))
 
@@ -490,30 +475,29 @@ class GetStoragePathTest(unittest.TestCase):
       expected_path = path1
     else:
       expected_path = path2
-    self.assertEqual(
-        expected_path,
-        api_server.get_storage_path(None, 'dev~example.com:myapp'))
+    self.assertEqual(expected_path,
+                     api_server.get_storage_path(None, 'dev~example.com:myapp'))
     self.mox.VerifyAll()
 
   def test_path_given_does_not_exist(self):
     path = tempfile.mkdtemp()
     os.rmdir(path)
 
-    self.assertEqual(
-        path, api_server.get_storage_path(path, 'dev~example.com:myapp'))
+    self.assertEqual(path,
+                     api_server.get_storage_path(path, 'dev~example.com:myapp'))
     self.assertTrue(os.path.isdir(path))
 
   def test_path_given_not_directory(self):
     _, path = tempfile.mkstemp()
 
-    self.assertRaises(
-        IOError, api_server.get_storage_path, path, 'dev~example.com:myapp')
+    self.assertRaises(IOError, api_server.get_storage_path, path,
+                      'dev~example.com:myapp')
 
   def test_path_given_exists(self):
     path = tempfile.mkdtemp()
 
-    self.assertEqual(
-        path, api_server.get_storage_path(path, 'dev~example.com:myapp'))
+    self.assertEqual(path,
+                     api_server.get_storage_path(path, 'dev~example.com:myapp'))
 
 
 class GenerateStoragePathsTest(unittest.TestCase):
@@ -534,11 +518,11 @@ class GenerateStoragePathsTest(unittest.TestCase):
     tempfile.gettempdir().AndReturn('/tmp')
 
     self.mox.ReplayAll()
-    self.assertEqual(
-        [os.path.join('/tmp', 'appengine.myapp'),
-         os.path.join('/tmp', 'appengine.myapp.1'),
-         os.path.join('/tmp', 'appengine.myapp.2')],
-        list(itertools.islice(api_server._generate_storage_paths('myapp'), 3)))
+    self.assertEqual([
+        os.path.join('/tmp', 'appengine.myapp'),
+        os.path.join('/tmp', 'appengine.myapp.1'),
+        os.path.join('/tmp', 'appengine.myapp.2')
+    ], list(itertools.islice(api_server._generate_storage_paths('myapp'), 3)))
     self.mox.VerifyAll()
 
   @unittest.skipIf(sys.platform.startswith('win'), 'not on Windows')
@@ -547,11 +531,11 @@ class GenerateStoragePathsTest(unittest.TestCase):
     tempfile.gettempdir().AndReturn('/tmp')
 
     self.mox.ReplayAll()
-    self.assertEqual(
-        [os.path.join('/tmp', 'appengine.myapp.johndoe'),
-         os.path.join('/tmp', 'appengine.myapp.johndoe.1'),
-         os.path.join('/tmp', 'appengine.myapp.johndoe.2')],
-        list(itertools.islice(api_server._generate_storage_paths('myapp'), 3)))
+    self.assertEqual([
+        os.path.join('/tmp', 'appengine.myapp.johndoe'),
+        os.path.join('/tmp', 'appengine.myapp.johndoe.1'),
+        os.path.join('/tmp', 'appengine.myapp.johndoe.2')
+    ], list(itertools.islice(api_server._generate_storage_paths('myapp'), 3)))
     self.mox.VerifyAll()
 
   @unittest.skipIf(sys.platform.startswith('win'), 'not on Windows')
@@ -560,11 +544,11 @@ class GenerateStoragePathsTest(unittest.TestCase):
     tempfile.gettempdir().AndReturn('/tmp')
 
     self.mox.ReplayAll()
-    self.assertEqual(
-        [os.path.join('/tmp', 'appengine.myapp'),
-         os.path.join('/tmp', 'appengine.myapp.1'),
-         os.path.join('/tmp', 'appengine.myapp.2')],
-        list(itertools.islice(api_server._generate_storage_paths('myapp'), 3)))
+    self.assertEqual([
+        os.path.join('/tmp', 'appengine.myapp'),
+        os.path.join('/tmp', 'appengine.myapp.1'),
+        os.path.join('/tmp', 'appengine.myapp.2')
+    ], list(itertools.islice(api_server._generate_storage_paths('myapp'), 3)))
     self.mox.VerifyAll()
 
 
@@ -596,8 +580,8 @@ class ClearApiServer(unittest.TestCase):
                                            self.app_identity_stub)
     apiproxy_stub_map.apiproxy.ReplaceStub('capability_service',
                                            self.capability_stub)
-    apiproxy_stub_map.apiproxy.ReplaceStub(
-        'datastore_v3', self.datastore_v3_stub)
+    apiproxy_stub_map.apiproxy.ReplaceStub('datastore_v3',
+                                           self.datastore_v3_stub)
     apiproxy_stub_map.apiproxy.ReplaceStub('logservice', self.logservice_stub)
     apiproxy_stub_map.apiproxy.ReplaceStub('mail', self.mail_stub)
     apiproxy_stub_map.apiproxy.ReplaceStub('memcache', self.memcache_stub)

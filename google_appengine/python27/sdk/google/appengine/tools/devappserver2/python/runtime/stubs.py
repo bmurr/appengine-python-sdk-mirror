@@ -61,7 +61,7 @@ def fake_urandom(n):
   """Fake version of os.urandom."""
   # On Mac OS X, os.urandom reads /dev/urandom from Python code, which is
   # disallowed by the sandbox.
-  return ''.join(chr(random.randint(0, 255)) for _ in xrange(n))
+  return ''.join(chr(random.randint(0, 255)) for _ in range(n))
 
 
 def fake_access(path, mode, _os_access=os.access):
@@ -268,6 +268,14 @@ class FakeFile(file):
       # Checking write access: Allow only _writeable_dirs
       if not _is_path_in_directories(fixed_filename, FakeFile._writeable_dirs):
         visibility = FakeFile.Visibility.WRITE_BLOCK
+    elif sys.platform == 'darwin' and fixed_filename.endswith('.plist'):
+
+
+
+
+
+
+      visibility = FakeFile.Visibility.OK
     else:
       # Checking read access: Allow only whitelisted files and dirs
       if not (
@@ -363,4 +371,3 @@ def make_fake_listdir(real_listdir):
               FakeFile.Visibility.OK)
     return [f for f in real_listdir(path) if visible(f)]
   return fake_listdir
-

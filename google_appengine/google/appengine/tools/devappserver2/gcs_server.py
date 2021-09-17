@@ -14,20 +14,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Handles requests GCS API requests.
 
-Includes a WSGI application that forwards Google Cloud Stroage API requests
+Includes a WSGI application that forwards Google Cloud Storage API requests
 to the local emulation layer.
 """
 
-
-
-import httplib
 import logging
+
+import google
+
+import six
+import six.moves.http_client
 import webob
 
-from google.appengine.ext.cloudstorage import stub_dispatcher
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.ext.cloudstorage import stub_dispatcher
+else:
+  from cloudstorage import stub_dispatcher
+
 from google.appengine.tools.devappserver2 import wsgi_server
+
 
 # Regex for all requests routed through this module.
 GCS_URL_PATTERN = '_ah/gcs/(.+)'
@@ -54,7 +63,7 @@ class Application(object):
       result = stub_dispatcher.dispatch(request.method, request.headers,
                                         request.url, request.body)
     except ValueError as e:
-      status_message = httplib.responses.get(e.args[1], '')
+      status_message = six.moves.http_client.responses.get(e.args[1], '')
       start_response('%d %s' % (e.args[1], status_message), [])
       return [e.args[0]]
 
@@ -68,7 +77,7 @@ class Application(object):
     if status_code == 308:
       status_message = HTTP_308_STATUS_MESSAGE
     else:
-      status_message = httplib.responses.get(status_code, '')
+      status_message = six.moves.http_client.responses.get(status_code, '')
 
     start_response('%d %s' % (status_code, status_message), headers)
 

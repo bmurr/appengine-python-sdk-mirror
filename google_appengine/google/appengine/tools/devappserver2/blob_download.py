@@ -14,18 +14,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Rewrites blob download headers in the response with full blob contents."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 
 
 import logging
 
-from google.appengine.api import apiproxy_stub_map
-from google.appengine.api import datastore
-from google.appengine.api import datastore_errors
-from google.appengine.api.blobstore import blobstore_stub
-from google.appengine.ext import blobstore
+from google.appengine._internal import six_subset
 
+# pylint: disable=g-import-not-at-top
+if six_subset.PY2:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import datastore
+  from google.appengine.api import datastore_errors
+  from google.appengine.api.blobstore import blobstore_stub
+  from google.appengine.ext import blobstore
+else:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import datastore
+  from google.appengine.api import datastore_errors
+  from google.appengine.api.blobstore import blobstore_stub
+  from google.appengine.ext import blobstore
 
 # The MIME type from apps to tell Blobstore to select the mime type.
 _AUTO_MIME_TYPE = 'application/vnd.google.appengine.auto'
@@ -144,8 +158,9 @@ def blobstore_download_rewriter(state):
   del state.headers[blobstore.BLOB_KEY_HEADER]
 
   blob_size, blob_content_type, blob_open_key = _get_blob_metadata(blob_key)
-  if isinstance(blob_content_type, unicode):
-    blob_content_type = blob_content_type.encode('ascii')
+  if blob_content_type is not None:
+    blob_content_type = six_subset.ensure_binary(
+        blob_content_type, encoding='ascii')
 
   range_header = state.headers.get(blobstore.BLOB_RANGE_HEADER)
   if range_header is not None:
@@ -191,7 +206,7 @@ def blobstore_download_rewriter(state):
 
     content_type = state.headers.get('Content-Type')
     if not content_type or content_type == _AUTO_MIME_TYPE:
-      state.headers['Content-Type'] = blob_content_type
+      state.headers['Content-Type'] = six_subset.ensure_str(blob_content_type)
     # Allow responses beyond the maximum dynamic response size
     state.allow_large_response = True
 

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Monitors a directory tree for changes using mtime polling."""
 
 import os
@@ -98,7 +99,7 @@ class MtimeFileWatcher(object):
     try:
       self._refresh()
       diff_items = set(self._filename_to_mtime.items()).symmetric_difference(
-          old_filename_to_mtime.items())
+          list(old_filename_to_mtime.items()))
       # os.path.getmtime() updates parent directory timestamps. E.g: There's a
       # directory structure 'root/foo/bar.txt', if you only touched 'bar.txt',
       # getmtime() would return a new timestamp for both 'bar.txt' and 'foo/'.

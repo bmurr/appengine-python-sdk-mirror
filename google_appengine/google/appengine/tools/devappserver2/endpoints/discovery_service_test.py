@@ -22,6 +22,7 @@
 
 
 
+
 import json
 import os
 import unittest
@@ -29,6 +30,7 @@ import unittest
 import google
 
 import mox
+import six
 
 from google.appengine.tools.devappserver2.endpoints import api_config_manager
 from google.appengine.tools.devappserver2.endpoints import discovery_api_proxy
@@ -47,8 +49,8 @@ class DiscoveryServiceTest(test_utils.TestsWithStartResponse):
     self.mox.UnsetStubs()
 
   def _common_setup(self):
-    api_config_file = os.path.join(os.path.dirname(__file__),
-                                   'testdata/tictactoe-v1.api')
+    api_config_file = os.path.join(
+        os.path.dirname(__file__), 'testdata/tictactoe-v1.api')
     with open(api_config_file, 'r') as api_file:
       api_config = api_file.read()
     api_config_dict = {'items': [api_config]}
@@ -56,12 +58,12 @@ class DiscoveryServiceTest(test_utils.TestsWithStartResponse):
     self.api_config_manager.parse_api_config_response(
         json.dumps(api_config_dict))
     self.api_request = test_utils.build_request(
-        '/_ah/api/foo', '{"api": "tictactoe", "version": "v1"}')
+        '/_ah/api/foo',
+        six.ensure_binary('{"api": "tictactoe", "version": "v1"}'))
 
   def prepare_discovery_request(self, response_body):
     self._response = test_utils.MockConnectionResponse(200, response_body)
-    discovery = discovery_service.DiscoveryService(
-        self.api_config_manager)
+    discovery = discovery_service.DiscoveryService(self.api_config_manager)
     discovery._discovery_proxy = self.mox.CreateMock(
         discovery_api_proxy.DiscoveryApiProxy)
     return discovery
@@ -70,8 +72,8 @@ class DiscoveryServiceTest(test_utils.TestsWithStartResponse):
     body = json.dumps(
         {'baseUrl': 'https://tictactoe.appspot.com/_ah/api/tictactoe/v1/'})
     discovery = self.prepare_discovery_request(body)
-    discovery._discovery_proxy.generate_discovery_doc(
-        mox.IsA(object), 'rest').AndReturn(body)
+    discovery._discovery_proxy.generate_discovery_doc(mox.IsA(object),
+                                                      'rest').AndReturn(body)
 
     self.mox.ReplayAll()
     response = discovery.handle_discovery_request(
@@ -81,14 +83,13 @@ class DiscoveryServiceTest(test_utils.TestsWithStartResponse):
 
     self.assert_http_match(response, 200,
                            [('Content-Type', 'application/json; charset=UTF-8'),
-                            ('Content-Length', '%d' % len(body))],
-                           body)
+                            ('Content-Length', '%d' % len(body))], body)
 
   def test_generate_discovery_doc_rpc(self):
     body = json.dumps({'rpcUrl': 'https://tictactoe.appspot.com/_ah/api/rpc'})
     discovery = self.prepare_discovery_request(body)
-    discovery._discovery_proxy.generate_discovery_doc(
-        mox.IsA(object), 'rpc').AndReturn(body)
+    discovery._discovery_proxy.generate_discovery_doc(mox.IsA(object),
+                                                      'rpc').AndReturn(body)
 
     self.mox.ReplayAll()
     response = discovery.handle_discovery_request(
@@ -98,14 +99,12 @@ class DiscoveryServiceTest(test_utils.TestsWithStartResponse):
 
     self.assert_http_match(response, 200,
                            [('Content-Type', 'application/json; charset=UTF-8'),
-                            ('Content-Length', '%d' % len(body))],
-                           body)
+                            ('Content-Length', '%d' % len(body))], body)
 
   def test_generate_discovery_doc_rest_unknown_api(self):
-    request = test_utils.build_request('/_ah/api/foo',
-                                       '{"api": "blah", "version": "v1"}')
-    discovery_api = discovery_service.DiscoveryService(
-        self.api_config_manager)
+    request = test_utils.build_request(
+        '/_ah/api/foo', six.ensure_binary('{"api": "blah", "version": "v1"}'))
+    discovery_api = discovery_service.DiscoveryService(self.api_config_manager)
     discovery_api.handle_discovery_request(
         discovery_service.DiscoveryService._GET_REST_API, request,
         self.start_response)
@@ -114,8 +113,7 @@ class DiscoveryServiceTest(test_utils.TestsWithStartResponse):
   def test_generate_directory(self):
     body = json.dumps({'kind': 'discovery#directoryItem'})
     discovery = self.prepare_discovery_request(body)
-    discovery._discovery_proxy.generate_directory(
-        mox.IsA(list)).AndReturn(body)
+    discovery._discovery_proxy.generate_directory(mox.IsA(list)).AndReturn(body)
 
     self.mox.ReplayAll()
     response = discovery.handle_discovery_request(
@@ -125,8 +123,8 @@ class DiscoveryServiceTest(test_utils.TestsWithStartResponse):
 
     self.assert_http_match(response, 200,
                            [('Content-Type', 'application/json; charset=UTF-8'),
-                            ('Content-Length', '%d' % len(body))],
-                           body)
+                            ('Content-Length', '%d' % len(body))], body)
+
 
 if __name__ == '__main__':
   unittest.main()

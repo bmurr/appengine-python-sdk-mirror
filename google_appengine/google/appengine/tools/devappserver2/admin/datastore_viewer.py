@@ -23,15 +23,29 @@ import datetime
 import math
 import time
 import types
-import urllib
 
-from google.appengine.api import apiproxy_stub_map
-from google.appengine.api import datastore
-from google.appengine.api import datastore_types
-from google.appengine.api import memcache
-from google.appengine.api import users
-from google.appengine.ext import db
-from google.appengine.ext.db import metadata
+import google
+import six
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import datastore
+  from google.appengine.api import datastore_types
+  from google.appengine.api import memcache
+  from google.appengine.api import users
+  from google.appengine.ext import db
+  from google.appengine.ext.db import metadata
+else:
+  import html
+
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import datastore
+  from google.appengine.api import datastore_types
+  from google.appengine.api import memcache
+  from google.appengine.api import users
+  from google.appengine.ext import db
+  from google.appengine.ext.db import metadata
 
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 
@@ -169,7 +183,7 @@ class DataType(object):
       return ''
 
   def format(self, value):
-    if isinstance(value, types.StringTypes):
+    if isinstance(value, str):
       return value
     else:
       return str(value)
@@ -383,6 +397,9 @@ class UserType(DataType):
     return 15
 
 
+_ESCAPE_FUNC = cgi.escape if six.PY2 else html.escape
+
+
 # This is incomplete, but enough to make the system still work.
 class ReferenceType(DataType):
   def name(self):
@@ -395,16 +412,17 @@ class ReferenceType(DataType):
     return datastore_types.Key(value)
 
   def input_field(self, name, value, sample_values, back_uri):
+    # pylint: disable=deprecated-method
     string_value = self.format(value) if value else ''
-    html = '<input class="%s" name="%s" type="text" size="%d" value="%s"/>' % (
-        cgi.escape(self.name()), cgi.escape(name), self.input_field_size(),
-        cgi.escape(string_value, True))
+    html_text = '<input class="%s" name="%s" type="text" size="%d" value="%s"/>' % (
+        _ESCAPE_FUNC(self.name()), _ESCAPE_FUNC(name), self.input_field_size(),
+        _ESCAPE_FUNC(string_value))
     if value:
-      html += '<br><a href="/datastore/edit/%s?next=%s">%s</a>' % (
-          cgi.escape(string_value, True),
-          urllib.quote_plus(back_uri),
-          cgi.escape(_format_datastore_key(value), True))
-    return html
+      html_text += '<br><a href="/datastore/edit/%s?next=%s">%s</a>' % (
+          _ESCAPE_FUNC(string_value),
+          six.moves.urllib.parse.quote_plus(back_uri),
+          _ESCAPE_FUNC(_format_datastore_key(value), True))
+    return html_text
 
   def input_field_size(self):
     return 85
@@ -508,21 +526,21 @@ class BlobKeyType(StringType):
 
 # Maps Pyathon/datatstore types to DataType instances
 _DATA_TYPES = {
-    types.NoneType: NoneType(),
-    types.StringType: StringType(),
-    types.UnicodeType: StringType(),
+    types.NoneType if six.PY2 else type(None): NoneType(),
+    types.StringType if six.PY2 else bytes: StringType(),
+    types.UnicodeType if six.PY2 else str: StringType(),
     datastore_types.Text: TextType(),
     datastore_types.Blob: BlobType(),
     datastore_types.EmbeddedEntity: EmbeddedEntityType(),
-    types.BooleanType: BoolType(),
-    types.IntType: IntType(),
-    types.LongType: IntType(),
-    types.FloatType: FloatType(),
+    types.BooleanType if six.PY2 else bool: BoolType(),
+    types.IntType if six.PY2 else int: IntType(),
+    types.LongType if six.PY2 else int: IntType(),
+    types.FloatType if six.PY2 else float: FloatType(),
     datetime.datetime: TimeType(),
     datastore_types._OverflowDateTime: OverflowTimeType(),
     users.User: UserType(),
     datastore_types.Key: ReferenceType(),
-    types.ListType: ListType(),
+    types.ListType if six.PY2 else list: ListType(),
     datastore_types.Email: EmailType(),
     datastore_types.Category: CategoryType(),
     datastore_types.Link: LinkType(),
@@ -603,7 +621,7 @@ class DatastoreRequestHandler(admin_request_handler.AdminRequestHandler):
                            'short_value': short_value,
                           })
       edit_uri = '/datastore/edit/%s?next=%s' % (
-          entity.key(), urllib.quote(request_uri))
+          entity.key(), six.moves.urllib.parse.quote(request_uri))
       template_entities.append(
           {'attributes': attributes,
            'edit_uri': edit_uri,
@@ -726,13 +744,12 @@ class DatastoreEditRequestHandler(admin_request_handler.AdminRequestHandler):
       parent_key_string = None
 
       if not entities:
-        self.redirect('/datastore?%s' % (
-            urllib.urlencode(
-                [('kind', kind),
-                 ('message',
-                  'Cannot create the kind "%s" in the "%s" namespace because '
-                  'no template entity exists.' % (kind, namespace)),
-                 ('namespace', namespace)])))
+        self.redirect('/datastore?%s' % (six.moves.urllib.parse.urlencode(
+            [('kind', kind),
+             ('message',
+              'Cannot create the kind "%s" in the "%s" namespace because '
+              'no template entity exists.' % (kind, namespace)),
+             ('namespace', namespace)])))
         return
 
     property_name_to_values = _property_name_to_values(entities)

@@ -16,6 +16,8 @@
 #
 """Tests for google.apphosting.tools.devappserver2.inotify_file_watcher."""
 
+from __future__ import division
+
 
 
 import logging
@@ -68,7 +70,7 @@ class TestInotifyFileWatcher(unittest.TestCase):
     # Divide the remaining number of directories to create among 4
     # subdirectories in an approximate even fashion.
     for i in range(4, 0, -1):
-      sub_dir_size = num_directories / i
+      sub_dir_size = num_directories // i
       self._create_directory_tree(os.path.join(path, 'dir%d' % i), sub_dir_size)
       num_directories -= sub_dir_size
 

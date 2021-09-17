@@ -22,15 +22,14 @@ module is the sandboxed version.
 
 
 
-import cStringIO
 import os
 import sys
 import traceback
 import urllib
-import urlparse
 
 import google
 
+from google.appengine._internal import six_subset
 from google.appengine.api import api_base_pb
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import appinfo
@@ -61,7 +60,6 @@ from google.appengine.tools.devappserver2.python.runtime import request_state
 httplib_responses = {
     100: 'Continue',
     101: 'Switching Protocols',
-
     200: 'OK',
     201: 'Created',
     202: 'Accepted',
@@ -69,7 +67,6 @@ httplib_responses = {
     204: 'No Content',
     205: 'Reset Content',
     206: 'Partial Content',
-
     300: 'Multiple Choices',
     301: 'Moved Permanently',
     302: 'Found',
@@ -78,7 +75,6 @@ httplib_responses = {
     305: 'Use Proxy',
     306: '(Unused)',
     307: 'Temporary Redirect',
-
     400: 'Bad Request',
     401: 'Unauthorized',
     402: 'Payment Required',
@@ -97,7 +93,6 @@ httplib_responses = {
     415: 'Unsupported Media Type',
     416: 'Requested Range Not Satisfiable',
     417: 'Expectation Failed',
-
     500: 'Internal Server Error',
     501: 'Not Implemented',
     502: 'Bad Gateway',
@@ -165,8 +160,9 @@ class RequestHandler(object):
     self._flush_logs(response.get('logs', []))
     if error == 0:
       response_code = response.get('response_code', 200)
-      status = '%d %s' % (response_code, httplib_responses.get(
-          response_code, 'Unknown Status Code'))
+      status = '%d %s' % (response_code,
+                          httplib_responses.get(response_code,
+                                                'Unknown Status Code'))
       start_response(status, response.get('headers', []))
       return [response.get('body', '')]
     elif error == 2:
@@ -218,13 +214,13 @@ class RequestHandler(object):
                                  urllib.quote(environ['PATH_INFO']),
                                  environ['QUERY_STRING'])
 
-    results_io = cStringIO.StringIO()
+    results_io = six_subset.StringIO()
     old_sys_stdout = sys.stdout
 
     try:
       error = logservice.LogsBuffer()
       request_environment.current_request.Init(error, user_environ)
-      url = urlparse.urlsplit(url)
+      url = six_subset.urlsplit_fn(url)
       environ.update(runtime.CgiDictFromParsedUrl(url))
       sys.stdout = results_io
       try:

@@ -790,14 +790,16 @@ class _Group(object):
     now = datetime.datetime.utcfromtimestamp(self.gettime())
 
 
+    task_index = 0
     for add_request in request.add_request_list():
+      task_index += 1
       task_result = response.add_taskresult()
       result = self._VerifyTaskQueueAddRequest(add_request, now)
       if result == taskqueue_service_pb.TaskQueueServiceError.OK:
         if not add_request.task_name():
           chosen_name = self._ChooseTaskName()
           add_request.set_task_name(chosen_name)
-          task_results_with_chosen_names.add(id(task_result))
+          task_results_with_chosen_names.add(task_index)
 
 
 
@@ -818,12 +820,14 @@ class _Group(object):
       self._NonTransactionalBulkAdd(request, response, now)
 
 
+    task_index = 0
     for add_request, task_result in zip(request.add_request_list(),
                                         response.taskresult_list()):
+      task_index += 1
       if (task_result.result() ==
           taskqueue_service_pb.TaskQueueServiceError.SKIPPED):
         task_result.set_result(taskqueue_service_pb.TaskQueueServiceError.OK)
-      if id(task_result) in task_results_with_chosen_names:
+      if task_index in task_results_with_chosen_names:
         task_result.set_chosen_task_name(add_request.task_name())
 
   def _TransactionalBulkAdd(self, request):

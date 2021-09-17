@@ -22,14 +22,16 @@
 
 
 
-import cStringIO
+import json
 import unittest
-import urlparse
+
+import six
+import six.moves.urllib.parse
 
 from google.appengine.tools.devappserver2.endpoints import api_request
 
 
-def build_request(path, body='', http_headers=None):
+def build_request(path, body=six.b(''), http_headers=None):
   """Build an ApiRequest for the given path and body.
 
   Args:
@@ -41,10 +43,15 @@ def build_request(path, body='', http_headers=None):
     An ApiRequest object built based on the incoming parameters.
   """
   (unused_scheme, unused_netloc, path, query,
-   unused_fragment) = urlparse.urlsplit(path)
-  env = {'SERVER_PORT': 42, 'REQUEST_METHOD': 'GET',
-         'SERVER_NAME': 'localhost', 'HTTP_CONTENT_TYPE': 'application/json',
-         'PATH_INFO': path, 'wsgi.input': cStringIO.StringIO(body)}
+   unused_fragment) = six.moves.urllib.parse.urlsplit(path)
+  env = {
+      'SERVER_PORT': 42,
+      'REQUEST_METHOD': 'GET',
+      'SERVER_NAME': 'localhost',
+      'HTTP_CONTENT_TYPE': 'application/json',
+      'PATH_INFO': path,
+      'wsgi.input': six.BytesIO(six.ensure_binary(body))
+  }
   if query:
     env['QUERY_STRING'] = query
 
@@ -84,6 +91,22 @@ class TestsWithStartResponse(unittest.TestCase):
     # Convert the body from an iterator to a string.
     body = ''.join(response)
     self.assertEqual(expected_body, body)
+
+  def assert_http_json_match(self, response, expected_status, expected_headers,
+                             expected_body_json):
+    """Test that the headers and body json match."""
+    self.assertEqual(str(expected_status), self.response_status)
+
+    # Verify that headers match.  Order shouldn't matter.
+    self.assertEqual(len(self.response_headers), len(expected_headers))
+    self.assertEqual(set(self.response_headers), set(expected_headers))
+    # Make sure there are no duplicate headers in the response.
+    self.assertEqual(len(self.response_headers),
+                     len(set(header for header, _ in self.response_headers)))
+
+    # Convert the body from an iterator to a string.
+    body = ''.join(response)
+    self.assertEqual(expected_body_json, json.loads(body))
 
 
 class MockConnectionResponse(object):

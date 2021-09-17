@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+
 """Directly processes text of appengine-web.xml.
 
 AppEngineWebXmlParser is called with XML string to produce an AppEngineWebXml
@@ -313,6 +315,9 @@ class AppEngineWebXmlParser(object):
   def ProcessAppEngineApisNode(self, node):
     self.app_engine_web_xml.app_engine_apis = node.text
 
+  def ProcessServiceAccountNode(self, node):
+    self.app_engine_web_xml.service_account = node.text
+
   def ProcessApiConfigNode(self, node):
     servlet = xml_parser_utils.GetAttribute(node, 'servlet-class').strip()
     url = xml_parser_utils.GetAttribute(node, 'url-pattern').strip()
@@ -580,6 +585,7 @@ class AppEngineWebXml(ValueMixin):
     self.static_exclude_pattern = None
     self.resource_include_pattern = None
     self.resource_exclude_pattern = None
+    self.service_account = None
 
   def SpecifierEnteredAlready(self, filename):
     return filename in (entry.filename for entry in self.class_loader_config)
@@ -660,8 +666,10 @@ class AppEngineWebXml(ValueMixin):
                         for pat in patterns]
 
     app_root_regex = self._CreateFileNameRegex(self._UrlifyPath(self.app_root))
-    regexed_patterns = ['^%s\\/%s$' % (app_root_regex, pattern_regex)
-                        for pattern_regex in regexed_patterns]
+    regexed_patterns = [
+        '^%s/%s$' % (app_root_regex, pattern_regex)
+        for pattern_regex in regexed_patterns
+    ]
     return re.compile('(%s)' % '|'.join(regexed_patterns))
 
   def _CreateFileNameRegex(self, filename):

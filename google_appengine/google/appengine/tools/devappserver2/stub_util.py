@@ -59,120 +59,114 @@ if PY2:
                       datastore_v4_pb.AllocateIdsResponse),
       'BeginTransaction': (datastore_v4_pb.BeginTransactionRequest,
                            datastore_v4_pb.BeginTransactionResponse),
-      'Commit': (datastore_v4_pb.CommitRequest,
-                 datastore_v4_pb.CommitResponse),
+      'Commit': (datastore_v4_pb.CommitRequest, datastore_v4_pb.CommitResponse),
       'ContinueQuery': (datastore_v4_pb.ContinueQueryRequest,
                         datastore_v4_pb.ContinueQueryResponse),
-      'Lookup': (datastore_v4_pb.LookupRequest,
-                 datastore_v4_pb.LookupResponse),
-      'Rollback': (datastore_v4_pb.RollbackRequest,
-                   datastore_v4_pb.RollbackResponse),
-      'RunQuery': (datastore_v4_pb.RunQueryRequest,
-                   datastore_v4_pb.RunQueryResponse),
+      'Lookup': (datastore_v4_pb.LookupRequest, datastore_v4_pb.LookupResponse),
+      'Rollback':
+          (datastore_v4_pb.RollbackRequest, datastore_v4_pb.RollbackResponse),
+      'RunQuery':
+          (datastore_v4_pb.RunQueryRequest, datastore_v4_pb.RunQueryResponse),
   }
-else:
-  from google.appengine.api import datastore_file_stub
 # pylint: enable=import-not-at-top
 
 
-def setup_stubs(
-    request_data,
-    app_id,
-    application_root,
-    trusted,
-    appidentity_email_address,
-    appidentity_private_key_path,
-    blobstore_path,
-    datastore_consistency,
-    datastore_path,
-    datastore_require_indexes,
-    datastore_auto_id_policy,
-    images_host_prefix,
-    logs_path,
-    mail_smtp_host,
-    mail_smtp_port,
-    mail_smtp_user,
-    mail_smtp_password,
-    mail_enable_sendmail,
-    mail_show_mail_body,
-    mail_allow_tls,
-    search_index_path,
-    taskqueue_auto_run_tasks,
-    taskqueue_default_http_server,
-    user_login_url,
-    user_logout_url,
-    default_gcs_bucket_name,
-    appidentity_oauth_url=None,
-    datastore_grpc_stub_class=None,
-    datastore_local_stub_class=None):
+def setup_stubs(request_data,
+                app_id,
+                application_root,
+                trusted,
+                appidentity_email_address,
+                appidentity_private_key_path,
+                blobstore_path,
+                datastore_consistency,
+                datastore_path,
+                datastore_require_indexes,
+                datastore_auto_id_policy,
+                images_host_prefix,
+                logs_path,
+                mail_smtp_host,
+                mail_smtp_port,
+                mail_smtp_user,
+                mail_smtp_password,
+                mail_enable_sendmail,
+                mail_show_mail_body,
+                mail_allow_tls,
+                search_index_path,
+                taskqueue_auto_run_tasks,
+                taskqueue_default_http_server,
+                user_login_url,
+                user_logout_url,
+                default_gcs_bucket_name,
+                appidentity_oauth_url=None,
+                datastore_grpc_stub_class=None,
+                datastore_local_stub_class=None):
   """Configures the APIs hosted by this server.
 
   Args:
-    request_data: An apiproxy_stub.RequestInformation instance used by the
-        stubs to lookup information about the request associated with an API
-        call.
+    request_data: An apiproxy_stub.RequestInformation instance used by the stubs
+      to lookup information about the request associated with an API call.
     app_id: The str application id e.g. "guestbook".
     application_root: The path to the directory containing the user's
-        application e.g. "/home/joe/myapp".
+      application e.g. "/home/joe/myapp".
     trusted: A bool indicating if privileged APIs should be made available.
     appidentity_email_address: Email address associated with a service account
-        that has a downloadable key. May be None for no local application
-        identity.
+      that has a downloadable key. May be None for no local application
+      identity.
     appidentity_private_key_path: Path to private key file associated with
-        service account (.pem format). Must be set if appidentity_email_address
-        is set.
+      service account (.pem format). Must be set if appidentity_email_address is
+      set.
     blobstore_path: The path to the file that should be used for blobstore
-        storage.
-    datastore_consistency: The datastore_stub_util.BaseConsistencyPolicy to
-        use as the datastore consistency policy.
+      storage.
+    datastore_consistency: The datastore_stub_util.BaseConsistencyPolicy to use
+      as the datastore consistency policy.
     datastore_path: The path to the file that should be used for datastore
-        storage.
+      storage.
     datastore_require_indexes: A bool indicating if the same production
-        datastore indexes requirements should be enforced i.e. if True then
-        a google.appengine.ext.db.NeedIndexError will be be raised if a query
-        is executed without the required indexes.
-    datastore_auto_id_policy: The type of sequence from which the datastore
-        stub assigns auto IDs, either datastore_stub_util.SEQUENTIAL or
-        datastore_stub_util.SCATTERED.
+      datastore indexes requirements should be enforced i.e. if True then a
+      google.appengine.ext.db.NeedIndexError will be be raised if a query is
+      executed without the required indexes.
+    datastore_auto_id_policy: The type of sequence from which the datastore stub
+      assigns auto IDs, either datastore_stub_util.SEQUENTIAL or
+      datastore_stub_util.SCATTERED.
     images_host_prefix: The URL prefix (protocol://host:port) to prepend to
-        image urls on calls to images.GetUrlBase.
+      image urls on calls to images.GetUrlBase.
     logs_path: Path to the file to store the logs data in.
     mail_smtp_host: The SMTP hostname that should be used when sending e-mails.
-        If None then the mail_enable_sendmail argument is considered.
+      If None then the mail_enable_sendmail argument is considered.
     mail_smtp_port: The SMTP port number that should be used when sending
-        e-mails. If this value is None then mail_smtp_host must also be None.
-    mail_smtp_user: The username to use when authenticating with the
-        SMTP server. This value may be None if mail_smtp_host is also None or if
-        the SMTP server does not require authentication.
-    mail_smtp_password: The password to use when authenticating with the
-        SMTP server. This value may be None if mail_smtp_host or mail_smtp_user
-        is also None.
+      e-mails. If this value is None then mail_smtp_host must also be None.
+    mail_smtp_user: The username to use when authenticating with the SMTP
+      server. This value may be None if mail_smtp_host is also None or if the
+      SMTP server does not require authentication.
+    mail_smtp_password: The password to use when authenticating with the SMTP
+      server. This value may be None if mail_smtp_host or mail_smtp_user is also
+      None.
     mail_enable_sendmail: A bool indicating if sendmail should be used when
-        sending e-mails. This argument is ignored if mail_smtp_host is not None.
+      sending e-mails. This argument is ignored if mail_smtp_host is not None.
     mail_show_mail_body: A bool indicating whether the body of sent e-mails
-        should be written to the logs.
+      should be written to the logs.
     mail_allow_tls: A bool indicating whether TLS should be allowed when
-        communicating with an SMTP server. This argument is ignored if
-        mail_smtp_host is None.
+      communicating with an SMTP server. This argument is ignored if
+      mail_smtp_host is None.
     search_index_path: The path to the file that should be used for search index
-        storage.
+      storage.
     taskqueue_auto_run_tasks: A bool indicating whether taskqueue tasks should
-        be run automatically or it the must be manually triggered.
+      be run automatically or it the must be manually triggered.
     taskqueue_default_http_server: A str containing the address of the http
-        server that should be used to execute tasks.
+      server that should be used to execute tasks.
     user_login_url: A str containing the url that should be used for user login.
     user_logout_url: A str containing the url that should be used for user
-        logout.
+      logout.
     default_gcs_bucket_name: A str, overriding the default bucket behavior.
     appidentity_oauth_url: A str containing the url to the oauth2 server to use
-        to authenticate the private key. If set to None, then the standard
-        google oauth2 server is used.
+      to authenticate the private key. If set to None, then the standard google
+      oauth2 server is used.
     datastore_grpc_stub_class: A type object which could be the class
-        datastore_grpc_stub.DatastoreGrpcStub.
+      datastore_grpc_stub.DatastoreGrpcStub.
     datastore_local_stub_class: A type object which could be the class
-        datastore_file_stub.DatastoreFileStub (by default for python 3 and
-        titanoboa) or datastore_sqlite_stub.DatastoreSqliteStub (by default
-        for python 2). Has no effect if datastore_grpc_stub_class is set.
+      datastore_file_stub.DatastoreFileStub (by default for python 3 and
+      titanoboa) or datastore_sqlite_stub.DatastoreSqliteStub (by default for
+      python 2). Has no effect if datastore_grpc_stub_class is set.
   """
   identity_stub = app_identity_stub.AppIdentityServiceStub.Create(
       email_address=appidentity_email_address,
@@ -185,14 +179,14 @@ def setup_stubs(
   blob_storage = file_blob_storage.FileBlobStorage(blobstore_path, app_id)
   apiproxy_stub_map.apiproxy.RegisterStub(
       'blobstore',
-      blobstore_stub.BlobstoreServiceStub(blob_storage,
-                                          request_data=request_data,
-                                          storage_dir=blobstore_path,
-                                          app_id=app_id))
+      blobstore_stub.BlobstoreServiceStub(
+          blob_storage,
+          request_data=request_data,
+          storage_dir=blobstore_path,
+          app_id=app_id))
 
   apiproxy_stub_map.apiproxy.RegisterStub(
-      'capability_service',
-      capability_stub.CapabilityServiceStub())
+      'capability_service', capability_stub.CapabilityServiceStub())
 
   if datastore_grpc_stub_class:
     apiproxy_stub_map.apiproxy.ReplaceStub(
@@ -200,11 +194,8 @@ def setup_stubs(
         datastore_grpc_stub_class(os.environ['DATASTORE_EMULATOR_HOST']))
   else:
     if datastore_local_stub_class is None:
-      if PY2:
-        from google.appengine.datastore import datastore_sqlite_stub
-        datastore_local_stub_class = datastore_sqlite_stub.DatastoreSqliteStub
-      else:
-        datastore_local_stub_class = datastore_file_stub.DatastoreFileStub
+      from google.appengine.datastore import datastore_sqlite_stub
+      datastore_local_stub_class = datastore_sqlite_stub.DatastoreSqliteStub
     apiproxy_stub_map.apiproxy.ReplaceStub(
         'datastore_v3',
         datastore_local_stub_class(
@@ -217,8 +208,7 @@ def setup_stubs(
             consistency_policy=datastore_consistency))
 
   apiproxy_stub_map.apiproxy.RegisterStub(
-      'datastore_v4',
-      datastore_v4_stub.DatastoreV4Stub(app_id))
+      'datastore_v4', datastore_v4_stub.DatastoreV4Stub(app_id))
 
   # pylint: disable=import-not-at-top
   try:
@@ -237,38 +227,34 @@ def setup_stubs(
   # pylint: enable=import-not-at-top
   else:
     apiproxy_stub_map.apiproxy.RegisterStub(
-        'images',
-        images_stub.ImagesServiceStub(host_prefix=images_host_prefix))
+        'images', images_stub.ImagesServiceStub(host_prefix=images_host_prefix))
 
   apiproxy_stub_map.apiproxy.RegisterStub(
-      'logservice',
-      logservice_stub.LogServiceStub(logs_path=logs_path))
+      'logservice', logservice_stub.LogServiceStub(logs_path=logs_path))
 
   apiproxy_stub_map.apiproxy.RegisterStub(
       'mail',
-      mail_stub.MailServiceStub(mail_smtp_host,
-                                mail_smtp_port,
-                                mail_smtp_user,
-                                mail_smtp_password,
-                                enable_sendmail=mail_enable_sendmail,
-                                show_mail_body=mail_show_mail_body,
-                                allow_tls=mail_allow_tls))
+      mail_stub.MailServiceStub(
+          mail_smtp_host,
+          mail_smtp_port,
+          mail_smtp_user,
+          mail_smtp_password,
+          enable_sendmail=mail_enable_sendmail,
+          show_mail_body=mail_show_mail_body,
+          allow_tls=mail_allow_tls))
+
+  apiproxy_stub_map.apiproxy.RegisterStub('memcache',
+                                          memcache_stub.MemcacheServiceStub())
 
   apiproxy_stub_map.apiproxy.RegisterStub(
-      'memcache',
-      memcache_stub.MemcacheServiceStub())
-
-  apiproxy_stub_map.apiproxy.RegisterStub(
-      'modules',
-      modules_stub.ModulesServiceStub(request_data))
+      'modules', modules_stub.ModulesServiceStub(request_data))
 
   apiproxy_stub_map.apiproxy.RegisterStub(
       'search',
       simple_search_stub.SearchServiceStub(index_file=search_index_path))
 
   apiproxy_stub_map.apiproxy.RegisterStub(
-      'system',
-      system_stub.SystemServiceStub(request_data=request_data))
+      'system', system_stub.SystemServiceStub(request_data=request_data))
 
   apiproxy_stub_map.apiproxy.RegisterStub(
       'taskqueue',
@@ -279,15 +265,15 @@ def setup_stubs(
           request_data=request_data))
   apiproxy_stub_map.apiproxy.GetStub('taskqueue').StartBackgroundExecution()
 
-  apiproxy_stub_map.apiproxy.RegisterStub(
-      'urlfetch',
-      urlfetch_stub.URLFetchServiceStub())
+  apiproxy_stub_map.apiproxy.RegisterStub('urlfetch',
+                                          urlfetch_stub.URLFetchServiceStub())
 
   apiproxy_stub_map.apiproxy.RegisterStub(
       'user',
-      user_service_stub.UserServiceStub(login_url=user_login_url,
-                                        logout_url=user_logout_url,
-                                        request_data=request_data))
+      user_service_stub.UserServiceStub(
+          login_url=user_login_url,
+          logout_url=user_logout_url,
+          request_data=request_data))
 
 
 def setup_test_stubs(
@@ -330,32 +316,15 @@ def setup_test_stubs(
     datastore_consistency = (
         datastore_stub_util.PseudoRandomHRConsistencyPolicy())
 
-  setup_stubs(request_data,
-              app_id,
-              application_root,
-              trusted,
-              appidentity_email_address,
-              appidentity_private_key_path,
-              blobstore_path,
-              datastore_consistency,
-              datastore_path,
-              datastore_require_indexes,
-              datastore_auto_id_policy,
-              images_host_prefix,
-              logs_path,
-              mail_smtp_host,
-              mail_smtp_port,
-              mail_smtp_user,
-              mail_smtp_password,
-              mail_enable_sendmail,
-              mail_show_mail_body,
-              mail_allow_tls,
-              search_index_path,
-              taskqueue_auto_run_tasks,
-              taskqueue_default_http_server,
-              user_login_url,
-              user_logout_url,
-              default_gcs_bucket_name,
+  setup_stubs(request_data, app_id, application_root, trusted,
+              appidentity_email_address, appidentity_private_key_path,
+              blobstore_path, datastore_consistency, datastore_path,
+              datastore_require_indexes, datastore_auto_id_policy,
+              images_host_prefix, logs_path, mail_smtp_host, mail_smtp_port,
+              mail_smtp_user, mail_smtp_password, mail_enable_sendmail,
+              mail_show_mail_body, mail_allow_tls, search_index_path,
+              taskqueue_auto_run_tasks, taskqueue_default_http_server,
+              user_login_url, user_logout_url, default_gcs_bucket_name,
               appidentity_oauth_url)
 
 

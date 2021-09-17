@@ -14,18 +14,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """HTTP utils for devappserver."""
 
 import contextlib
-import httplib
 import socket
 import time
+
+import six.moves.http_client
 
 
 class Error(Exception):
   """Base class for errors in this module."""
 
 
+# pylint: disable=g-bad-exception-name
 class HostNotReachable(Error):
   """Raised if host can't be reached at given port."""
 
@@ -45,12 +48,13 @@ def wait_for_connection(host, port, process, retries=1):
       HostNotReachable: if host:port can't be reached after given number of
         retries.
   """
+
   def ping():
-    connection = httplib.HTTPConnection(host, port)
+    connection = six.moves.http_client.HTTPConnection(host, port)
     with contextlib.closing(connection):
       try:
         connection.connect()
-      except (socket.error, httplib.HTTPException):
+      except (socket.error, six.moves.http_client.HTTPException):
         return False
       else:
         return True

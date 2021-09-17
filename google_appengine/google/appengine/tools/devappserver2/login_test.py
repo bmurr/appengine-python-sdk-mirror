@@ -18,10 +18,17 @@
 
 
 
-import Cookie
+# pylint: disable=g-import-not-at-top
 import unittest
-import urllib
 import wsgiref.util
+
+import google
+try:
+  import http.cookies as cookies
+except ImportError:
+  import Cookie as cookies
+import six
+import six.moves.urllib
 
 from google.appengine.tools.devappserver2 import login
 
@@ -138,7 +145,10 @@ class CookieTest(unittest.TestCase):
 
   def test_clear_user_info_cookie(self):
     """Tests the clear_user_info_cookie function."""
-    expected_result = '%s=; Max-Age=0; Path=/' % COOKIE_NAME
+    if six.PY3:
+      expected_result = '%s=""; Max-Age=0; Path=/' % COOKIE_NAME
+    else:
+      expected_result = '%s=; Max-Age=0; Path=/' % COOKIE_NAME
 
     result = login._clear_user_info_cookie(cookie_name=COOKIE_NAME)
 
@@ -187,7 +197,10 @@ class LoginPageTest(unittest.TestCase):
     self.assertEqual(200, status)
     self.assertFalse(location)
     self.assertFalse(set_cookie)
-    self.assertEqual('text/html', content_type)
+    expected_content_type = 'text/html'
+    if six.PY3:
+      expected_content_type += '; charset=utf-8'
+    self.assertEqual(expected_content_type, content_type)
 
   def test_login(self):
     """Tests when setting the user info with and without continue URL."""
@@ -342,7 +355,7 @@ class LoginPageTest(unittest.TestCase):
     environ['PATH_INFO'] = path_info
     environ['REQUEST_METHOD'] = method
     if cookie_dict:
-      cookie = Cookie.SimpleCookie(cookie_dict)
+      cookie = cookies.SimpleCookie(cookie_dict)
       cookie_value = ';'.join(m.OutputString() for m in cookie.values())
       environ['HTTP_COOKIE'] = cookie_value
     query_dict = {}
@@ -355,7 +368,7 @@ class LoginPageTest(unittest.TestCase):
     if continue_url:
       query_dict['continue'] = continue_url
     if query_dict:
-      environ['QUERY_STRING'] = urllib.urlencode(query_dict)
+      environ['QUERY_STRING'] = six.moves.urllib.parse.urlencode(query_dict)
 
     response_dict = {}
 

@@ -14,20 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """General utility functions for devappserver2."""
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-
-
-import BaseHTTPServer
 import os
 import platform
 import re
 import socket
 import subprocess
-import urllib
 import wsgiref.headers
+
+import six
+from six.moves import urllib
+import six.moves.BaseHTTPServer
+
 from google.appengine.tools import sdk_update_checker
+
+
+
 
 
 # The SDK version returned when there is no available VERSION file.
@@ -82,15 +90,15 @@ def construct_url_from_environ(environ, secure, include_query_params, port):
   url_result = 'https' if secure else 'http'
   url_result += '://'
   if environ.get('HTTP_HOST'):
-    url_result += environ['HTTP_HOST'].split(':')[0]
+    url_result += six.ensure_text(environ['HTTP_HOST']).split(':')[0]
   else:
     url_result += environ['SERVER_NAME']
   url_result += ':' + str(port)
-  url_result += urllib.quote(environ.get('SCRIPT_NAME', ''))
-  url_result += urllib.quote(environ.get('PATH_INFO', ''))
+  url_result += urllib.parse.quote(environ.get('SCRIPT_NAME', ''))
+  url_result += urllib.parse.quote(environ.get('PATH_INFO', ''))
   if include_query_params and environ.get('QUERY_STRING'):
-    url_result += '?' + environ['QUERY_STRING']
-  return url_result
+    url_result += '?' + six.ensure_text(environ['QUERY_STRING'])
+  return six.ensure_str(url_result)
 
 
 def put_headers_in_environ(headers, environ):
@@ -105,14 +113,14 @@ def put_headers_in_environ(headers, environ):
     environ: An environ dict for the request as defined in PEP-333.
   """
   for key, value in headers:
-    environ['HTTP_%s' % key.upper().replace('-', '_')] = value
+    environ['HTTP_%s' % six.ensure_text(key.upper()).replace('-', '_')] = value
 
 
 def is_env_flex(env):
   return env in ['2', 'flex', 'flexible']
 
 
-class HTTPServerIPv6(BaseHTTPServer.HTTPServer):
+class HTTPServerIPv6(six.moves.BaseHTTPServer.HTTPServer):
   """An HTTPServer that supports IPv6 connections.
 
   The standard HTTPServer has address_family hardcoded to socket.AF_INET.
@@ -196,18 +204,18 @@ def get_java_major_version():
     # Cannot find executable java on $PATH.
     return None
   # Find java major version.
-  match = re.search(r'version "1\.', output)
+  match = re.search(r'version "1\.', six.ensure_text(output))
   if match:
     # We are in a pre http://openjdk.java.net/jeps/223 world,
     # this is the 1.6.xx, 1.7.xx, 1.8.xxx world.
-    match = re.search(r'version "(\d+)\.(\d+)\.', output)
+    match = re.search(r'version "(\d+)\.(\d+)\.', six.ensure_text(output))
     if not match:
       # illegal version string. The java executable is unusable.
       return None
     return int(match.group(2))
   else:
     # We are in a post http://openjdk.java.net/jeps/223 world
-    match = re.search(r'version "([1-9][0-9]*)', output)
+    match = re.search(r'version "([1-9][0-9]*)', six.ensure_text(output))
     if not match:
       # illegal version string. The java executable is unusable.
       return None

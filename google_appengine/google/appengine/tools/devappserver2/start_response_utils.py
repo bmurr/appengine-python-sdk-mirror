@@ -18,7 +18,7 @@
 
 
 
-import cStringIO
+import six
 
 
 class CapturingStartResponse(object):
@@ -28,7 +28,7 @@ class CapturingStartResponse(object):
     self.status = None
     self.response_headers = None
     self.exc_info = None
-    self.response_stream = cStringIO.StringIO()
+    self.response_stream = six.BytesIO()
 
   def __call__(self, status, response_headers, exc_info=None):
     assert exc_info is not None or self.status is None, (
@@ -40,8 +40,11 @@ class CapturingStartResponse(object):
 
   def merged_response(self, response):
     """Merge the response stream and the values returned by the WSGI app."""
-    return self.response_stream.getvalue() + ''.join(response)
+    return self.response_stream.getvalue() + six.b('').join(
+        six.ensure_binary(part) for part in response)
 
 
-def null_start_response(status, response_headers, exc_info=None):
-  return cStringIO.StringIO()
+def null_start_response(unused_status,
+                        unused_response_headers,
+                        unused_exc_info=None):
+  return six.StringIO()

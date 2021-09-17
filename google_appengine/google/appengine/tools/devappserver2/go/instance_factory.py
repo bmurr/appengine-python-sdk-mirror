@@ -14,12 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Provides a GoRuntimeInstanceFactory for Go runtime instances.
 
 The instances serve content for "script" handlers. In the case that an errant
 application is provided, a _GoBuildFailureRuntimeProxy is provided which serves
 500s with the application stack trace as the response body.
 """
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 
 
@@ -28,9 +33,15 @@ import os
 import sys
 import threading
 
-from google.appengine.api import appinfo
-from google.appengine.tools.devappserver2 import application_configuration
+import six
 
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import appinfo
+else:
+  from google.appengine.api import appinfo
+
+from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import http_runtime
 from google.appengine.tools.devappserver2 import instance
 from google.appengine.tools.devappserver2 import metrics
@@ -122,7 +133,7 @@ class GoRuntimeInstanceFactory(instance.InstanceFactory):
       self._start_process_flavor = http_runtime.START_PROCESS_REVERSE
       self._go_application = go_managedvm.GoManagedVMApp(
           self._module_configuration)
-    elif module_configuration.runtime.startswith('go1'):
+    elif six.ensure_str(module_configuration.runtime).startswith('go1'):
       self._start_process_flavor = http_runtime.START_PROCESS_REVERSE
       go_config = runtime_config_getter().go_config
       self._go_application = gaego.GaeGoApplication(

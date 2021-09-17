@@ -23,13 +23,21 @@ import unittest
 import google
 
 import mox
+import six
 import webapp2
 
-from google.appengine.api import croninfo
-from google.appengine.api import yaml_errors
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import croninfo
+  from google.appengine.api import yaml_errors
+else:
+  from google.appengine.api import croninfo
+  from google.appengine.api import yaml_errors
+
 from google.appengine.tools.devappserver2 import dispatcher
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 from google.appengine.tools.devappserver2.admin import cron_handler
+
 
 CRON_INFO_EXTERNAL = croninfo.CronInfoExternal(cron=[
     croninfo.CronEntry(
@@ -94,7 +102,7 @@ class CronHandlerTest(unittest.TestCase):
     self.mox.ReplayAll()
     handler.get()
     self.mox.VerifyAll()
-    self.assertEqual('template', response.body)
+    self.assertEqual(six.b('template'), response.body)
 
   def test_get_without_pytz(self):
     self.test_get_with_pytz(pytz=None)
@@ -116,7 +124,7 @@ class CronHandlerTest(unittest.TestCase):
     self.mox.ReplayAll()
     handler.get()
     self.mox.VerifyAll()
-    self.assertEqual('template', response.body)
+    self.assertEqual(six.ensure_binary('template'), response.body)
 
   @unittest.skipIf(cron_handler.pytz is None, 'requires pytz')
   def test_get_cron_jobs_with_pytz(self):

@@ -14,12 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Common functionality for file watchers."""
 
 
-
 import os
-
 # A prefix for files and directories that we should not watch at all.
 _IGNORED_PREFIX = '.'
 # File suffixes that should be ignored.
@@ -63,7 +62,7 @@ def _remove_pred(lst, pred):
 
   # Walk the list in reverse because once an item is deleted,
   # the indexes of any subsequent items change.
-  for idx in reversed(xrange(len(lst))):
+  for idx in reversed(range(len(lst))):
     if pred(lst[idx]):
       del lst[idx]
 

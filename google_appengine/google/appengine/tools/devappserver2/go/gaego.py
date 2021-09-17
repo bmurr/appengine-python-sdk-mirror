@@ -14,7 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """An abstraction around the source and executable for a stock Go app."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import atexit
 import logging
@@ -23,6 +28,7 @@ import os.path
 import tempfile
 
 import google
+import six
 from google.appengine.tools.devappserver2.go import errors as go_errors
 from google.appengine.tools.devappserver2.go.managedvm import _file_is_executable
 from google.appengine.tools.devappserver2.go.managedvm import _rmtree
@@ -48,11 +54,12 @@ class GaeGoApplication(object):
         getattr(self._module_configuration, 'main', ''))
     dotslash = '.' + os.path.sep
     if (self._main_executable_path != '.' and
-        not self._main_executable_path.startswith(dotslash) and
+        not six.ensure_str(self._main_executable_path).startswith(dotslash) and
         os.path.exists(
             os.path.join(self._module_configuration.application_root,
                          self._main_executable_path))):
-      self._main_executable_path = dotslash + self._main_executable_path
+      self._main_executable_path = dotslash + six.ensure_str(
+          self._main_executable_path)
     if work_dir:
       # Multiple modules might be running within the same server.
       # These must not share a single workdir, as otherwise the build fails

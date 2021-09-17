@@ -22,13 +22,15 @@
 
 
 
-import httplib
+
 import json
 import os
 import unittest
 
 import google
 import mox
+import six
+import six.moves.http_client
 
 from google.appengine.tools.devappserver2.endpoints import discovery_api_proxy
 from google.appengine.tools.devappserver2.endpoints import test_utils
@@ -37,11 +39,13 @@ from google.appengine.tools.devappserver2.endpoints import test_utils
 class DiscoveryApiProxyTest(unittest.TestCase):
 
   def setUp(self):
+    super(DiscoveryApiProxyTest, self).setUp()
     self._common_setup()
     self.mox = mox.Mox()
 
   def tearDown(self):
     self.mox.UnsetStubs()
+    super(DiscoveryApiProxyTest, self).tearDown()
 
   def _common_setup(self):
     self.discovery_api = discovery_api_proxy.DiscoveryApiProxy()
@@ -51,19 +55,17 @@ class DiscoveryApiProxyTest(unittest.TestCase):
       api_config = api_file.read()
     self.api_config_dict = json.loads(api_config)
 
-  def connection_response(self):
-    return self._response
-
   def prepare_discovery_request(self, status_code, body):
-    self.mox.StubOutWithMock(httplib.HTTPSConnection, 'request')
-    self.mox.StubOutWithMock(httplib.HTTPSConnection, 'getresponse')
-    self.mox.StubOutWithMock(httplib.HTTPSConnection, 'close')
+    self.mox.StubOutWithMock(six.moves.http_client.HTTPSConnection, 'request')
+    self.mox.StubOutWithMock(six.moves.http_client.HTTPSConnection,
+                             'getresponse')
+    self.mox.StubOutWithMock(six.moves.http_client.HTTPSConnection, 'close')
 
-    httplib.HTTPSConnection.request(mox.IsA(basestring), mox.IsA(basestring),
-                                    mox.IgnoreArg(), mox.IsA(dict))
-    httplib.HTTPSConnection.getresponse().AndReturn(
+    six.moves.http_client.HTTPSConnection.request(
+        mox.IsA(str), mox.IsA(str), mox.IgnoreArg(), mox.IsA(dict))
+    six.moves.http_client.HTTPSConnection.getresponse().AndReturn(
         test_utils.MockConnectionResponse(status_code, body))
-    httplib.HTTPSConnection.close()
+    six.moves.http_client.HTTPSConnection.close()
 
   def test_generate_discovery_doc_rest(self):
     body = {'baseUrl': 'https://tictactoe.appspot.com/_ah/api/tictactoe/v1/'}
@@ -76,8 +78,8 @@ class DiscoveryApiProxyTest(unittest.TestCase):
 
     self.assertTrue(doc)
     api_config = json.loads(doc)
-    self.assertEquals('https://tictactoe.appspot.com/_ah/api/tictactoe/v1/',
-                      api_config['baseUrl'])
+    self.assertEqual('https://tictactoe.appspot.com/_ah/api/tictactoe/v1/',
+                     api_config['baseUrl'])
 
   def test_generate_discovery_doc_rpc(self):
     body = {'rpcUrl': 'https://tictactoe.appspot.com/_ah/api/rpc'}
@@ -90,8 +92,8 @@ class DiscoveryApiProxyTest(unittest.TestCase):
 
     self.assertTrue(doc)
     api_config = json.loads(doc)
-    self.assertEquals('https://tictactoe.appspot.com/_ah/api/rpc',
-                      api_config['rpcUrl'])
+    self.assertEqual('https://tictactoe.appspot.com/_ah/api/rpc',
+                     api_config['rpcUrl'])
 
   def test_generate_discovery_doc_invalid_format(self):
     self._response = test_utils.MockConnectionResponse(400, 'Error')

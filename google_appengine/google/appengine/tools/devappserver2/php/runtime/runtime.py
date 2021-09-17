@@ -19,19 +19,23 @@
 from __future__ import print_function
 
 
+
 import base64
-import cStringIO
-import httplib
 import logging
 import os
 import subprocess
 import sys
 import time
-import urllib
 
 import google
+import six
 
-from google.appengine.api import appinfo
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import appinfo
+else:
+  from google.appengine.api import appinfo
+
 from google.appengine.tools.devappserver2 import environ_utils
 from google.appengine.tools.devappserver2 import http_runtime_constants
 from google.appengine.tools.devappserver2 import request_rewriter
@@ -56,11 +60,27 @@ os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), 'php/sdk'))
 
 
 if not os.path.exists(SDK_PATH):
-  SDK_PATH = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]),
-                                          'php/sdk'))
+  SDK_PATH = os.path.abspath(
+      os.path.join(os.path.dirname(sys.argv[0]), 'php/sdk'))
 
 SETUP_PHP_PATH = os.path.join(
     os.path.dirname(php_runtime_package.__file__), 'setup.php')
+
+
+
+
+
+
+
+
+
+
+def _parse_message_headers(buf):
+  """Parse the headers of a http message encoded in a byte buffer."""
+  if six.PY2:
+    return six.moves.http_client.HTTPMessage(buf)
+  else:
+    return six.moves.http_client.parse_headers(buf)
 
 
 class PHPRuntime(object):
@@ -69,30 +89,31 @@ class PHPRuntime(object):
   def __init__(self, config):
     logging.debug('Initializing runtime with %s', config)
     self.config = config
-    if appinfo.MODULE_SEPARATOR not in config.version_id:
+    if six.ensure_binary(appinfo.MODULE_SEPARATOR) not in config.version_id:
       module_id = appinfo.DEFAULT_MODULE
       version_id = config.version_id
     else:
-      module_id, version_id = config.version_id.split(appinfo.MODULE_SEPARATOR)
+      module_id, version_id = config.version_id.split(
+          six.ensure_binary(appinfo.MODULE_SEPARATOR))
     self.environ_template = {
-        'APPLICATION_ID': str(config.app_id),
+        'APPLICATION_ID': six.ensure_text(config.app_id),
         'CURRENT_MODULE_ID': module_id,
         'CURRENT_VERSION_ID': version_id,
-        'DATACENTER': str(config.datacenter),
-        'INSTANCE_ID': str(config.instance_id),
+        'DATACENTER': six.ensure_text(config.datacenter),
+        'INSTANCE_ID': six.ensure_text(config.instance_id),
         'APPENGINE_RUNTIME': 'php',
-        'AUTH_DOMAIN': str(config.auth_domain),
+        'AUTH_DOMAIN': six.ensure_text(config.auth_domain),
         'HTTPS': 'off',
         # By default php-cgi does not allow .php files to be run directly so
         # REDIRECT_STATUS must be set. See:
         # http://php.net/manual/en/security.cgi-bin.force-redirect.php
         'REDIRECT_STATUS': '1',
-        'REMOTE_API_HOST': str(config.api_host),
+        'REMOTE_API_HOST': six.ensure_text(config.api_host),
         'REMOTE_API_PORT': str(config.api_port),
         'SERVER_SOFTWARE': http_runtime_constants.SERVER_SOFTWARE,
         'STDERR_LOG_LEVEL': str(config.stderr_log_level),
         'TZ': 'UTC',
-        }
+    }
     if config.php_config.php_version == 'php72':
       self.environ_template['GAE_APPLICATION'] = str(config.app_id)
     self.environ_template.update((env.key, env.value) for env in config.environ)
@@ -111,15 +132,17 @@ class PHPRuntime(object):
     # (http://php.net/manual/en/reserved.variables.server.php) using part of
     # the process described in PEP-333
     # (http://www.python.org/dev/peps/pep-0333/#url-reconstruction).
-    user_environ['REQUEST_URI'] = urllib.quote(user_environ['PATH_INFO'])
+    user_environ['REQUEST_URI'] = six.moves.urllib.parse.quote(
+        user_environ['PATH_INFO'])
     if user_environ['QUERY_STRING']:
       user_environ['REQUEST_URI'] += '?' + user_environ['QUERY_STRING']
 
     # Modify the SCRIPT_FILENAME to specify the setup script that readies the
     # PHP environment. Put the user script in REAL_SCRIPT_FILENAME.
     user_environ['REAL_SCRIPT_FILENAME'] = os.path.normpath(
-        os.path.join(self.config.application_root,
-                     environ[http_runtime_constants.SCRIPT_HEADER].lstrip('/')))
+        os.path.join(
+            six.ensure_text(self.config.application_root),
+            environ[http_runtime_constants.SCRIPT_HEADER].lstrip('/')))
     user_environ['SCRIPT_FILENAME'] = SETUP_PHP_PATH
     user_environ['REMOTE_REQUEST_ID'] = environ[
         http_runtime_constants.REQUEST_ID_ENVIRON]
@@ -147,7 +170,8 @@ class PHPRuntime(object):
     if 'LD_LIBRARY_PATH' in os.environ:
       ld_library_path.append(os.environ['LD_LIBRARY_PATH'])
     if ld_library_path:
-      user_environ['LD_LIBRARY_PATH'] = ':'.join(ld_library_path)
+      user_environ['LD_LIBRARY_PATH'] = ':'.join(
+          six.ensure_text(path) for path in ld_library_path)
 
     # On Windows, TMP & TEMP environmental variables are used by GetTempPath
     # http://msdn.microsoft.com/library/windows/desktop/aa364992(v=vs.85).aspx
@@ -159,7 +183,8 @@ class PHPRuntime(object):
     if self.config.php_config.enable_debugger:
       user_environ['XDEBUG_CONFIG'] = environ.get('XDEBUG_CONFIG', '')
 
-    return user_environ
+    return dict((six.ensure_text(key), six.ensure_text(value))
+                for key, value in user_environ.items())
 
   def make_php_cgi_args(self):
     """Returns an array of args for php-cgi based on self.config."""
@@ -168,14 +193,19 @@ class PHPRuntime(object):
     include_paths = ['.', self.config.application_root, SDK_PATH]
     if sys.platform == 'win32':
       # See https://bugs.php.net/bug.php?id=46034 for quoting requirements.
-      include_path = 'include_path="%s"' % ';'.join(include_paths)
+      include_path = 'include_path="%s"' % ';'.join(
+          six.ensure_text(path) for path in include_paths)
     else:
-      include_path = 'include_path=%s' % ':'.join(include_paths)
+      include_path = 'include_path=%s' % ':'.join(
+          six.ensure_text(path) for path in include_paths)
 
-    args = [self.config.php_config.php_executable_path, '-d', include_path]
+    args = [
+        six.ensure_text(self.config.php_config.php_executable_path), '-d',
+        include_path
+    ]
 
     # Load php.ini from application's root.
-    args.extend(['-c', self.config.application_root])
+    args.extend(['-c', six.ensure_text(self.config.application_root)])
 
     if self.config.php_config.enable_debugger:
       args.extend(['-d', 'xdebug.default_enable="1"'])
@@ -183,14 +213,23 @@ class PHPRuntime(object):
       args.extend(['-d', 'xdebug.remote_enable="1"'])
 
     if self.config.php_config.xdebug_extension_path:
-      args.extend(['-d', 'zend_extension="%s"' %
-                   self.config.php_config.xdebug_extension_path])
+      args.extend([
+          '-d',
+          'zend_extension="%s"' %
+          six.ensure_text(self.config.php_config.xdebug_extension_path)
+      ])
 
     if self.config.php_config.gae_extension_path:
-      args.extend(['-d', 'extension="%s"' % os.path.basename(
-          self.config.php_config.gae_extension_path)])
-      args.extend(['-d', 'extension_dir="%s"' % os.path.dirname(
-          self.config.php_config.gae_extension_path)])
+      args.extend([
+          '-d',
+          'extension="%s"' % os.path.basename(
+              six.ensure_text(self.config.php_config.gae_extension_path))
+      ])
+      args.extend([
+          '-d',
+          'extension_dir="%s"' % os.path.dirname(
+              six.ensure_text(self.config.php_config.gae_extension_path))
+      ])
 
     return args
 
@@ -211,7 +250,7 @@ class PHPRuntime(object):
     else:
       content = ''
 
-    args = self.make_php_cgi_args()
+    args = [six.ensure_str(arg) for arg in self.make_php_cgi_args()]
 
     # Handles interactive request.
     request_type = environ.pop(http_runtime_constants.REQUEST_TYPE_HEADER, None)
@@ -222,11 +261,12 @@ class PHPRuntime(object):
     try:
       # stderr is not captured here so that it propagates to the parent process
       # and gets printed out to consle.
-      p = safe_subprocess.start_process(args,
-                                        input_string=content,
-                                        env=user_environ,
-                                        cwd=self.config.application_root,
-                                        stdout=subprocess.PIPE)
+      p = safe_subprocess.start_process(
+          args,
+          input_string=content,
+          env=user_environ,
+          cwd=six.ensure_text(self.config.application_root),
+          stdout=subprocess.PIPE)
       stdout, _ = p.communicate()
     except Exception as e:
       logging.exception('Failure to start PHP with: %s', args)
@@ -237,17 +277,20 @@ class PHPRuntime(object):
     if p.returncode:
       if request_type == 'interactive':
         start_response('200 OK', [('Content-Type', 'text/plain')])
-        message = httplib.HTTPMessage(cStringIO.StringIO(stdout))
-        return [message.fp.read()]
+        buf = six.BytesIO(six.ensure_binary(stdout))
+        _parse_message_headers(buf)
+        return [buf.read()]
       else:
-        logging.error('php failure (%r) with:\nstdout:\n%s',
-                      p.returncode, stdout)
+        logging.error('php failure (%r) with:\nstdout:\n%s', p.returncode,
+                      stdout)
         start_response('500 Internal Server Error',
                        [(http_runtime_constants.ERROR_CODE_HEADER, '1')])
-        message = httplib.HTTPMessage(cStringIO.StringIO(stdout))
-        return [message.fp.read()]
+        buf = six.BytesIO(six.ensure_binary(stdout))
+        _parse_message_headers(buf)
+        return [buf.read()]
 
-    message = httplib.HTTPMessage(cStringIO.StringIO(stdout))
+    buf = six.BytesIO(six.ensure_binary(stdout))
+    message = _parse_message_headers(buf)
 
     if 'Status' in message:
       status = message['Status']
@@ -259,11 +302,17 @@ class PHPRuntime(object):
     # allowing use of multiple Set-Cookie headers.
     headers = []
     for name in message:
-      for value in message.getheaders(name):
-        headers.append((name, value))
+      if six.PY2:
+        unfiltered_headers = message.getheaders(name)
+      else:
+        unfiltered_headers = message.get_all(name)
+      for value in unfiltered_headers:
+        t = (name, value)
+        if t not in headers:
+          headers.append(t)
 
     start_response(status, headers)
-    return [message.fp.read()]
+    return [buf.read()]
 
 
 def main():

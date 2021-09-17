@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Serves content for "script" handlers using an HTTP runtime.
 
 http_runtime supports two ways to start the runtime instance.
@@ -51,6 +52,7 @@ import threading
 import time
 
 import portpicker
+import six
 
 from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import http_proxy
@@ -83,7 +85,9 @@ START_PROCESS_WITH_ENTRYPOINT = -5
 
 # Runtimes which need
 _RUNTIMES_NEED_VM_ENV_VARS = [
-    'go111', 'go114', 'go115',
+    'go111',
+    'go114',
+    'go115',
 ]
 
 
@@ -101,12 +105,12 @@ def _sleep_between_retries(attempt, max_attempts, sleep_base):
     max_attempts: The maximum number of attempts that will be made.
     sleep_base: How long in seconds to sleep between the first and second
       attempt (the time will be doubled between each successive attempt). The
-      value may be any numeric type that is convertible to float (complex
-      won't work but user types that are sufficiently numeric-like will).
+      value may be any numeric type that is convertible to float (complex won't
+      work but user types that are sufficiently numeric-like will).
   """
   # Don't sleep after the last attempt as we're about to give up.
   if attempt < (max_attempts - 1):
-    time.sleep((2 ** attempt) * sleep_base)
+    time.sleep((2**attempt) * sleep_base)
 
 
 def _remove_retry_sharing_violation(path, max_attempts=10, sleep_base=.125):
@@ -118,8 +122,8 @@ def _remove_retry_sharing_violation(path, max_attempts=10, sleep_base=.125):
       before giving up.
     sleep_base: How long in seconds to sleep between the first and second
       attempt (the time will be doubled between each successive attempt). The
-      value may be any numeric type that is convertible to float (complex
-      won't work but user types that are sufficiently numeric-like will).
+      value may be any numeric type that is convertible to float (complex won't
+      work but user types that are sufficiently numeric-like will).
 
   Raises:
     WindowsError: When an error other than a sharing violation occurs.
@@ -167,10 +171,10 @@ def get_vm_environment_variables(module_configuration, runtime_config):
 class HttpRuntimeProxy(instance.RuntimeProxy):
   """Manages a runtime subprocess used to handle dynamic content."""
 
-  _VALID_START_PROCESS_FLAVORS = [START_PROCESS, START_PROCESS_FILE,
-                                  START_PROCESS_REVERSE,
-                                  START_PROCESS_REVERSE_NO_FILE,
-                                  START_PROCESS_WITH_ENTRYPOINT]
+  _VALID_START_PROCESS_FLAVORS = [
+      START_PROCESS, START_PROCESS_FILE, START_PROCESS_REVERSE,
+      START_PROCESS_REVERSE_NO_FILE, START_PROCESS_WITH_ENTRYPOINT
+  ]
 
   # TODO: Determine if we can always use SIGTERM.
   # Set this to True to quit with SIGTERM rather than SIGKILL
@@ -206,22 +210,21 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
 
     Args:
       args: Arguments to use to start the runtime subprocess.
-      runtime_config_getter: A function that can be called without arguments
-          and returns the runtime_config_pb2.Config containing the configuration
-          for the runtime.
+      runtime_config_getter: A function that can be called without arguments and
+        returns the runtime_config_pb2.Config containing the configuration for
+        the runtime.
       module_configuration: An application_configuration.ModuleConfiguration
-          instance respresenting the configuration of the module that owns the
-          runtime.
+        instance respresenting the configuration of the module that owns the
+        runtime.
       env: A dict of environment variables to pass to the runtime subprocess.
-      start_process_flavor: Which version of start process to start your
-        runtime process. Supported flavors are START_PROCESS, START_PROCESS_FILE
+      start_process_flavor: Which version of start process to start your runtime
+        process. Supported flavors are START_PROCESS, START_PROCESS_FILE
         START_PROCESS_REVERSE and START_PROCESS_REVERSE_NO_FILE
       extra_args_getter: A function that can be called with a port number picked
-          by this http_runtime,
-          and returns the extra command line parameter that refers to the port
-          number.
+        by this http_runtime, and returns the extra command line parameter that
+        refers to the port number.
       request_id_header_name: Optional string name used to pass request ID to
-          API server.  Defaults to http_runtime_constants.REQUEST_ID_HEADER.
+        API server.  Defaults to http_runtime_constants.REQUEST_ID_HEADER.
 
     Raises:
       ValueError: An unknown value for start_process_flavor was used.
@@ -241,8 +244,9 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
     runtime_config = self._runtime_config_getter()
     if (runtime_config.vm or
         self._module_configuration.runtime in _RUNTIMES_NEED_VM_ENV_VARS):
-      self._env.update(get_vm_environment_variables(
-          self._module_configuration, runtime_config))
+      self._env.update(
+          get_vm_environment_variables(self._module_configuration,
+                                       runtime_config))
 
     if start_process_flavor not in self._VALID_START_PROCESS_FLAVORS:
       raise ValueError('Invalid start_process_flavor.')
@@ -271,11 +275,11 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
       environ: An environ dict for the request as defined in PEP-333.
       start_response: A function with semantics defined in PEP-333.
       url_map: An appinfo.URLMap instance containing the configuration for the
-          handler matching this request.
+        handler matching this request.
       match: A re.MatchObject containing the result of the matched URL pattern.
       request_id: A unique string id associated with the request.
       request_type: The type of the request. See instance.*_REQUEST module
-          constants.
+        constants.
 
     Yields:
       A sequence of strings containing the body of the HTTP response.
@@ -343,7 +347,7 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
             stderr=subprocess.PIPE,
             env=self._env,
             cwd=self._module_configuration.application_root)
-      port = self._process.stdout.readline()
+      port = six.ensure_text(self._process.stdout.readline())
       if '\t' in port:  # Split out the host if present.
         host, port = port.split('\t', 1)
     elif self._start_process_flavor == START_PROCESS_FILE:
@@ -402,10 +406,12 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
         # replace that substring with the selected port. This allows
         # a user-specified runtime to pass the port along to the subprocess
         # as a command-line argument.
-        args = [arg.replace('{port}', str(port))
-                .replace('{api_port}', str(runtime_config.api_port))
-                .replace('{api_host}', runtime_config.api_host)
-                for arg in self._args]
+        args = []
+        for arg in self._args:
+          args.append(
+              arg.replace('{port}', str(port)).replace(
+                  '{api_port}', str(runtime_config.api_port)).replace(
+                      '{api_host}', runtime_config.api_host))
 
         self._process = safe_subprocess.start_process(
             args=args,
@@ -417,14 +423,15 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
 
     # _stderr_tee may be pre-set by unit tests.
     if self._stderr_tee is None:
-      self._stderr_tee = tee.Tee(self._process.stderr, sys.stderr)
+      self._stderr_tee = tee.Tee(self._process.stderr,
+                                 sys.stderr if six.PY2 else sys.stderr.buffer)
       self._stderr_tee.start()
 
     error = None
     try:
       port = int(port)
     except ValueError:
-      error = 'bad runtime process port [%r]' % port
+      error = 'bad runtime process port [%r]' % six.ensure_str(port)
       logging.error(error)
     finally:
       self._proxy = http_proxy.HttpProxy(

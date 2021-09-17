@@ -14,7 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Serves content for "script" handlers using the Java runtime."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 
 
@@ -26,8 +31,14 @@ import tempfile
 import threading
 
 import google
+import six
 
-from google.appengine.api import appinfo
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import appinfo
+else:
+  from google.appengine.api import appinfo
+
 from google.appengine.tools.devappserver2 import http_runtime
 from google.appengine.tools.devappserver2 import instance
 from google.appengine.tools.devappserver2 import util
@@ -109,9 +120,11 @@ class JavaRuntimeInstanceFactory(instance.InstanceFactory):
     else:
       args = [
           java_bin,
-          '-cp', class_path,
+          '-cp',
+          class_path,
           '-Dappengine.sdk.root=' + java_dir.get_java_dir(),
-          '-Dappengine.runtime=' + self._module_configuration.runtime,
+          '-Dappengine.runtime=' +
+          six.ensure_str(self._module_configuration.runtime),
       ]
       if sys.platform == 'darwin':
         args.append('-XstartOnFirstThread')

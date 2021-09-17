@@ -59,6 +59,9 @@ else:
 _NAME_REGEX = r'^[A-Za-z0-9-]{0,499}$'
 _RATE_REGEX = r'^(0|[0-9]+(\.[0-9]*)?/[smhd])'
 _TOTAL_STORAGE_LIMIT_REGEX = r'^([0-9]+(\.[0-9]*)?[BKMGT]?)'
+
+
+_RESUME_PAUSED_QUEUES = r'(True)|(False)'
 _MODE_REGEX = r'(pull)|(push)'
 
 
@@ -80,6 +83,7 @@ MODE = 'mode'
 TARGET = 'target'
 MAX_CONCURRENT_REQUESTS = 'max_concurrent_requests'
 TOTAL_STORAGE_LIMIT = 'total_storage_limit'
+RESUME_PAUSED_QUEUES = 'resume_paused_queues'
 
 BYTE_SUFFIXES = 'BKMGT'
 
@@ -139,6 +143,7 @@ class QueueInfoExternal(validation.Validated):
   ATTRIBUTES = {
       appinfo.APPLICATION: validation.Optional(appinfo.APPLICATION_RE_STRING),
       TOTAL_STORAGE_LIMIT: validation.Optional(_TOTAL_STORAGE_LIMIT_REGEX),
+      RESUME_PAUSED_QUEUES: validation.Optional(_RESUME_PAUSED_QUEUES),
       QUEUE: validation.Optional(validation.Repeated(QueueEntry)),
   }
 

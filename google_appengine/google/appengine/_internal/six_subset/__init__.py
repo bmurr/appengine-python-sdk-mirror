@@ -49,11 +49,15 @@ if PY3:
 
   import urllib.parse  # pylint:disable=g-import-not-at-top
   urlparse_fn = urllib.parse.urlparse
+  urlsplit_fn = urllib.parse.urlsplit
 
   def is_basestring(t):
     """Return true if t is (referentially) the abstract basestring."""
     del t
     return False
+
+  import io
+  StringIO = io.StringIO
 
 else:
   string_types = basestring,
@@ -86,10 +90,14 @@ else:
 
   import urlparse  # pylint:disable=g-import-not-at-top
   urlparse_fn = urlparse.urlparse
+  urlsplit_fn = urlparse.urlsplit
 
   def is_basestring(t):
     """Return true if t is (referentially) the abstract basestring."""
     return t is basestring
+
+  import StringIO
+  StringIO = StringIO.StringIO
 
 
 def with_metaclass(meta, *bases):

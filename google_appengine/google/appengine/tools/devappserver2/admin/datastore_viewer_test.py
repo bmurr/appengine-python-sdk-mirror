@@ -25,11 +25,19 @@ import unittest
 import google
 
 import mox
+import six
 import webapp2
 
-from google.appengine.api import datastore
-from google.appengine.api import datastore_types
-from google.appengine.datastore import datastore_stub_util
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import datastore
+  from google.appengine.api import datastore_types
+  from google.appengine.datastore import datastore_stub_util
+else:
+  from google.appengine.api import datastore
+  from google.appengine.api import datastore_types
+  from google.appengine.datastore import datastore_stub_util
+
 from google.appengine.tools.devappserver2 import stub_util
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 from google.appengine.tools.devappserver2.admin import datastore_viewer

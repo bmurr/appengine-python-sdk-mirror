@@ -16,23 +16,33 @@
 #
 """Methods for converting GAE local datastore data into GCD Emulator data."""
 
-import httplib
 import logging
 import os
 import shutil
 
-from google.appengine.api import apiproxy_stub_map
-from google.appengine.api import datastore
-from google.appengine.api import datastore_file_stub
-from google.appengine.datastore import datastore_sqlite_stub
+import google
+import six
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import datastore
+  from google.appengine.api import datastore_file_stub
+  from google.appengine.datastore import datastore_sqlite_stub
+else:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import datastore
+  from google.appengine.api import datastore_file_stub
+  from google.appengine.datastore import datastore_sqlite_stub
+
 from google.appengine.tools.devappserver2 import datastore_grpc_stub
 
 
-SQLITE_HEADER = 'SQLite format 3\x00'
+SQLITE_HEADER = six.b('SQLite format 3\x00')
 
 # Java object stream always start with magic bytes AC ED. See:
 # docs.oracle.com/javase/7/docs/platform/serialization/spec/protocol.html
-JAVA_STREAM_MAGIC = '\xac\xed'
+JAVA_STREAM_MAGIC = six.b('\xac\xed')
 
 
 class PersistException(Exception):
@@ -105,11 +115,11 @@ def convert_sqlite_data_to_emulator(app_id, filename, gcd_emulator_host):
     datastore.Put(entities)
 
     # persist entities to disk in emulator's data format.
-    conn = httplib.HTTPConnection(gcd_emulator_host)
+    conn = six.moves.http_client.HTTPConnection(gcd_emulator_host)
     conn.request('POST', '/persist')
     response = conn.getresponse()
     msg = response.read()
-    if httplib.OK != response.status:
+    if six.moves.http_client.OK != response.status:
       raise PersistException(msg)
     logging.info('Datastore conversion complete')
   else:

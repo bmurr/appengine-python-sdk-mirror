@@ -19,7 +19,6 @@
 
 
 
-import httplib
 import logging
 import os
 import socket
@@ -30,6 +29,8 @@ import time
 
 import httplib2
 import portpicker
+import six.moves.http_client
+
 from google.appengine.tools.devappserver2 import constants
 
 
@@ -160,7 +161,7 @@ class DatastoreEmulator(object):
           logging.info(
               'Cloud Datastore emulator responded after %f seconds', Elapsed())
           return True
-      except (socket.error, httplib.ResponseNotReady):
+      except (socket.error, six.moves.http_client.ResponseNotReady):
         pass
       if Elapsed() >= deadline:
         # Out of time; give up.
@@ -192,7 +193,7 @@ class DatastoreEmulator(object):
         logging.warning(
             'failed to shut down Cloud Datastore emulator; response: %s',
             response)
-    except httplib.BadStatusLine as e:
+    except six.moves.http_client.BadStatusLine as e:
       logging.warning(
           'failed to shut down Cloud Datastore emulator; received error: %s', e)
     finally:

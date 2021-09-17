@@ -14,13 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """A thread-safe wrapper for the subprocess module."""
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import logging
 import subprocess
 import sys
 import tempfile
 import threading
+import six
 
 # Subprocess creation is not threadsafe in Python. See
 # http://bugs.python.org/issue1731717.
@@ -82,7 +87,7 @@ def start_process(args, input_string='', env=None, cwd=None, stdout=None,
       p.stdin.close()
       p.stdin = None
   if not _SUBPROCESS_STDIN_IS_THREAD_HOSTILE:
-    p.stdin.write(input_string)
+    p.stdin.write(six.ensure_binary(input_string))
     p.stdin.close()
     p.stdin = None
   return p
@@ -123,7 +128,7 @@ def start_process_file(args, input_string, env, cwd, stdin=None, stdout=None,
   child_in = tempfile.NamedTemporaryFile(mode='wb', delete=False)
   child_out = tempfile.NamedTemporaryFile(mode='rb', delete=False)
 
-  child_in.write(input_string)
+  child_in.write(six.ensure_binary(input_string))
   child_in.close()
 
   # pylint: disable=g-no-augmented-assignment

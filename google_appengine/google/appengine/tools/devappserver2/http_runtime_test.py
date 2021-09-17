@@ -31,8 +31,14 @@ import google
 
 import mox
 import portpicker
+import six
 
-from google.appengine.api import appinfo
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import appinfo
+else:
+  from google.appengine.api import appinfo
+
 from google.appengine.tools.devappserver2 import http_proxy
 from google.appengine.tools.devappserver2 import http_runtime
 from google.appengine.tools.devappserver2 import instance
@@ -110,10 +116,10 @@ class HttpRuntimeProxyTest(wsgi_test_utils.WSGITestCase):
             appinfo.ErrorHandlers(error_code='default', file='error.html'),
             ])
     self.runtime_config = runtime_config_pb2.Config()
-    self.runtime_config.app_id = 'app'
-    self.runtime_config.version_id = 'version'
+    self.runtime_config.app_id = six.b('app')
+    self.runtime_config.version_id = six.b('version')
     self.runtime_config.api_port = 12345
-    self.runtime_config.application_root = self.tmpdir
+    self.runtime_config.application_root = six.ensure_binary(self.tmpdir)
     self.runtime_config.datacenter = 'us1'
     self.runtime_config.instance_id = 'abc3dzac4'
     self.runtime_config.auth_domain = 'gmail.com'
@@ -237,10 +243,10 @@ class HttpRuntimeProxyFileFlavorTest(wsgi_test_utils.WSGITestCase):
     self.tmpdir = tempfile.mkdtemp()
     module_configuration = ModuleConfigurationStub(application_root=self.tmpdir)
     self.runtime_config = runtime_config_pb2.Config()
-    self.runtime_config.app_id = 'app'
-    self.runtime_config.version_id = 'version'
+    self.runtime_config.app_id = six.b('app')
+    self.runtime_config.version_id = six.b('version')
     self.runtime_config.api_port = 12345
-    self.runtime_config.application_root = self.tmpdir
+    self.runtime_config.application_root = six.ensure_binary(self.tmpdir)
     self.runtime_config.datacenter = 'us1'
     self.runtime_config.instance_id = 'abc3dzac4'
     self.runtime_config.auth_domain = 'gmail.com'
@@ -406,10 +412,10 @@ class HttpRuntimeProxyReverseFlavorTest(wsgi_test_utils.WSGITestCase):
     self.tmpdir = tempfile.mkdtemp()
     module_configuration = ModuleConfigurationStub(application_root=self.tmpdir)
     self.runtime_config = runtime_config_pb2.Config()
-    self.runtime_config.app_id = 'app'
-    self.runtime_config.version_id = 'version'
+    self.runtime_config.app_id = six.b('app')
+    self.runtime_config.version_id = six.b('version')
     self.runtime_config.api_port = 12345
-    self.runtime_config.application_root = self.tmpdir
+    self.runtime_config.application_root = six.ensure_binary(self.tmpdir)
     self.runtime_config.datacenter = 'us1'
     self.runtime_config.instance_id = 'abc3dzac4'
     self.runtime_config.auth_domain = 'gmail.com'

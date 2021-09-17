@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Helper for Cloud Endpoints API server in the development app server.
 
 This is a fake apiserver proxy that does simple transforms on requests that
@@ -25,17 +26,24 @@ In addition, the proxy loads api configs from
 configuration has changed.
 """
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 
 
 
 
 
-import httplib
+
+
 import json
 import logging
 import re
 import wsgiref
+
+import six
+import six.moves.http_client
 
 from google.appengine.tools.devappserver2.endpoints import api_config_manager
 from google.appengine.tools.devappserver2.endpoints import api_request
@@ -45,10 +53,7 @@ from google.appengine.tools.devappserver2.endpoints import errors
 from google.appengine.tools.devappserver2.endpoints import parameter_converter
 from google.appengine.tools.devappserver2.endpoints import util
 
-
-__all__ = ['API_SERVING_PATTERN',
-           'EndpointsDispatcher']
-
+__all__ = ['API_SERVING_PATTERN', 'EndpointsDispatcher']
 
 # Pattern for paths handled by this module.
 API_SERVING_PATTERN = '_ah/api/.*'
@@ -76,8 +81,8 @@ class EndpointsDispatcher(object):
 
     Args:
       dispatcher: A Dispatcher instance that can be used to make HTTP requests.
-      config_manager: An ApiConfigManager instance that allows a caller to
-        set up an existing configuration for testing.
+      config_manager: An ApiConfigManager instance that allows a caller to set
+        up an existing configuration for testing.
     """
     self._dispatcher = dispatcher
     if config_manager is None:
@@ -86,8 +91,7 @@ class EndpointsDispatcher(object):
     self._dispatchers = []
     self._add_dispatcher('/_ah/api/explorer/?$',
                          self.handle_api_explorer_request)
-    self._add_dispatcher('/_ah/api/static/.*$',
-                         self.handle_api_static_request)
+    self._add_dispatcher('/_ah/api/static/.*$', self.handle_api_static_request)
 
   def _add_dispatcher(self, path_regex, dispatch_function):
     """Add a request path and dispatch handler.
@@ -95,8 +99,8 @@ class EndpointsDispatcher(object):
     Args:
       path_regex: A string regex, the path to match against incoming requests.
       dispatch_function: The function to call for these requests.  The function
-        should take (request, start_response) as arguments and
-        return the contents of the response body.
+        should take (request, start_response) as arguments and return the
+        contents of the response body.
     """
     self._dispatchers.append((re.compile(path_regex), dispatch_function))
 
@@ -105,11 +109,11 @@ class EndpointsDispatcher(object):
 
     Args:
       environ: An environ dict for the request as defined in PEP-333.
-      start_response: A function used to begin the response to the caller.
-        This follows the semantics defined in PEP-333.  In particular, it's
-        called with (status, response_headers, exc_info=None), and it returns
-        an object with a write(body_data) function that can be used to write
-        the body of the response.
+      start_response: A function used to begin the response to the caller. This
+        follows the semantics defined in PEP-333.  In particular, it's called
+        with (status, response_headers, exc_info=None), and it returns an object
+        with a write(body_data) function that can be used to write the body of
+        the response.
 
     Yields:
       An iterable over strings containing the body of the HTTP response.
@@ -134,8 +138,8 @@ class EndpointsDispatcher(object):
       A string, the body of the response.
     """
     # Check if this matches any of our special handlers.
-    dispatched_response = self.dispatch_non_api_requests(request,
-                                                         start_response)
+    dispatched_response = self.dispatch_non_api_requests(
+        request, start_response)
     if dispatched_response is not None:
       return dispatched_response
 
@@ -217,10 +221,9 @@ class EndpointsDispatcher(object):
       # transfer-encoding: chunked, which doesn't apply to the response that
       # we're forwarding.  There may be other problematic headers, so we strip
       # off everything but Content-Type.
-      return util.send_wsgi_response(status_string,
-                                     [('Content-Type',
-                                       response.getheader('Content-Type'))],
-                                     body, start_response)
+      return util.send_wsgi_response(
+          status_string, [('Content-Type', response.getheader('Content-Type'))],
+          body, start_response)
     else:
       logging.error('Discovery API proxy failed on %s with %d. Details: %s',
                     request.relative_url, response.status, body)
@@ -237,8 +240,8 @@ class EndpointsDispatcher(object):
     headers = [('Content-Type', 'application/json')]
     request_body = '{}'
     response = self._dispatcher.add_request(
-        'POST', '/_ah/spi/BackendService.getApiConfigs',
-        headers, request_body, _SERVER_SOURCE_IP)
+        'POST', '/_ah/spi/BackendService.getApiConfigs', headers, request_body,
+        _SERVER_SOURCE_IP)
     return response
 
   @staticmethod
@@ -249,8 +252,8 @@ class EndpointsDispatcher(object):
       response: The ResponseTuple to be checked.
       status_code: An int, the HTTP status code to be compared with response
         status.
-      content_type: A string with the acceptable Content-Type header value.
-        None allows any content type.
+      content_type: A string with the acceptable Content-Type header value. None
+        allows any content type.
 
     Returns:
       True if both status_code and content_type match, else False.
@@ -276,8 +279,7 @@ class EndpointsDispatcher(object):
       True on success, False on failure
     """
     if self.verify_response(api_config_response, 200, 'application/json'):
-      self.config_manager.parse_api_config_response(
-          api_config_response.content)
+      self.config_manager.parse_api_config_response(api_config_response.content)
       return True
     else:
       return False
@@ -301,8 +303,8 @@ class EndpointsDispatcher(object):
       method_config, params = self.lookup_rest_method(orig_request)
     if not method_config:
       cors_handler = EndpointsDispatcher.__CheckCorsHeaders(orig_request)
-      return util.send_wsgi_not_found_response(start_response,
-                                               cors_handler=cors_handler)
+      return util.send_wsgi_not_found_response(
+          start_response, cors_handler=cors_handler)
 
     # Prepare the request for the back end.
     spi_request = self.transform_request(orig_request, params, method_config)
@@ -319,7 +321,7 @@ class EndpointsDispatcher(object):
     url = _SPI_ROOT_FORMAT % spi_request.path
     spi_request.headers['Content-Type'] = 'application/json'
     response = self._dispatcher.add_request('POST', url,
-                                            spi_request.headers.items(),
+                                            list(spi_request.headers.items()),
                                             spi_request.body,
                                             spi_request.source_ip)
     return self.handle_spi_response(orig_request, spi_request, response,
@@ -341,8 +343,7 @@ class EndpointsDispatcher(object):
       # Check for incoming CORS headers.
       self.origin = request.headers[_CORS_HEADER_ORIGIN]
       self.cors_request_method = request.headers[_CORS_HEADER_REQUEST_METHOD]
-      self.cors_request_headers = request.headers[
-          _CORS_HEADER_REQUEST_HEADERS]
+      self.cors_request_headers = request.headers[_CORS_HEADER_REQUEST_HEADERS]
 
       # Check if the request should get a CORS response.
       if (self.origin and
@@ -358,8 +359,8 @@ class EndpointsDispatcher(object):
       # Add CORS headers.
       headers = wsgiref.headers.Headers(headers_in)
       headers[_CORS_HEADER_ALLOW_ORIGIN] = self.origin
-      headers[_CORS_HEADER_ALLOW_METHODS] = ','.join(tuple(
-          _CORS_ALLOWED_METHODS))
+      headers[_CORS_HEADER_ALLOW_METHODS] = ','.join(
+          tuple(_CORS_ALLOWED_METHODS))
       if self.cors_request_headers is not None:
         headers[_CORS_HEADER_ALLOW_HEADERS] = self.cors_request_headers
 
@@ -406,8 +407,12 @@ class EndpointsDispatcher(object):
       body = self.transform_rest_response(response.content)
 
     cors_handler = EndpointsDispatcher.__CheckCorsHeaders(orig_request)
-    return util.send_wsgi_response(response.status, response.headers, body,
-                                   start_response, cors_handler=cors_handler)
+    return util.send_wsgi_response(
+        response.status,
+        response.headers,
+        body,
+        start_response,
+        cors_handler=cors_handler)
 
   def fail_request(self, orig_request, message, start_response):
     """Write an immediate failure response to outfile, no redirect.
@@ -423,8 +428,8 @@ class EndpointsDispatcher(object):
       A string containing the body of the error response.
     """
     cors_handler = EndpointsDispatcher.__CheckCorsHeaders(orig_request)
-    return util.send_wsgi_error_response(message, start_response,
-                                         cors_handler=cors_handler)
+    return util.send_wsgi_error_response(
+        message, start_response, cors_handler=cors_handler)
 
   def lookup_rest_method(self, orig_request):
     """Looks up and returns rest method for the currently-pending request.
@@ -467,8 +472,8 @@ class EndpointsDispatcher(object):
 
     Args:
       orig_request: An ApiRequest, the original request from the user.
-      params: A dictionary containing path parameters for rest requests, or
-        None for an RPC request.
+      params: A dictionary containing path parameters for rest requests, or None
+        for an RPC request.
       method_config: A dict, the API config of the method to be called.
 
     Returns:
@@ -485,7 +490,9 @@ class EndpointsDispatcher(object):
     return request
 
   def _add_message_field(self, field_name, value, params):
-    """Converts a . delimitied field name to a message field in parameters.
+    """Converts a .
+
+    delimitied field name to a message field in parameters.
 
     This adds the field to the params dict, broken out so that message
     parameters appear as sub-dicts within the outer param.
@@ -502,6 +509,7 @@ class EndpointsDispatcher(object):
       params: The dictionary holding all the parameters, where the value is
         eventually set.
     """
+    field_name = six.ensure_text(field_name)
     if '.' not in field_name:
       params[field_name] = value
       return
@@ -518,8 +526,8 @@ class EndpointsDispatcher(object):
     recursively.
 
     Args:
-      destination: A dictionary containing an API payload parsed from the
-        path and query parameters in a request.
+      destination: A dictionary containing an API payload parsed from the path
+        and query parameters in a request.
       source: A dictionary parsed from the body of the request.
     """
     for key, value in source.items():
@@ -592,8 +600,8 @@ class EndpointsDispatcher(object):
     # parameters to nested parameters.  We don't use items since we may
     # modify body_json within the loop.  For instance, 'a.b' is not a valid key
     # and would be replaced with 'a'.
-    for key, value in body_json.items():
-      current_parameter = method_parameters.get(key, {})
+    for key, value in list(body_json.items()):
+      current_parameter = method_parameters.get(six.ensure_text(key), {})
       repeated = current_parameter.get('repeated', False)
 
       if not repeated:
@@ -694,8 +702,8 @@ class EndpointsDispatcher(object):
     Args:
       spi_request: An ApiRequest, the transformed request that was sent to the
         SPI handler.
-      response_body: A string containing the backend response to transform
-        back to JsonRPC.
+      response_body: A string containing the backend response to transform back
+        to JsonRPC.
 
     Returns:
       A string with the updated, JsonRPC-formatted request body.
@@ -738,16 +746,20 @@ class EndpointsDispatcher(object):
       # JSON RPC errors are returned with status 200 OK and the
       # error details in the body.
       status_code = 200
-      body = self._finish_rpc_response(orig_request.body_json.get('id'),
-                                       orig_request.is_batch(),
-                                       error.rpc_error())
+      body = self._finish_rpc_response(
+          orig_request.body_json.get('id'), orig_request.is_batch(),
+          error.rpc_error())
     else:
       status_code = error.status_code()
       body = error.rest_error()
 
     response_status = '%d %s' % (status_code,
-                                 httplib.responses.get(status_code,
-                                                       'Unknown Error'))
+                                 six.moves.http_client.responses.get(
+                                     status_code, 'Unknown Error'))
     cors_handler = EndpointsDispatcher.__CheckCorsHeaders(orig_request)
-    return util.send_wsgi_response(response_status, headers, body,
-                                   start_response, cors_handler=cors_handler)
+    return util.send_wsgi_response(
+        response_status,
+        headers,
+        body,
+        start_response,
+        cors_handler=cors_handler)

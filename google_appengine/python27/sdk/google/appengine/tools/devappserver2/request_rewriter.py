@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Provides WSGI middleware for rewriting HTTP responses from the runtime.
 
 The rewriting is used for various sanitisation and processing of the response
@@ -29,15 +30,20 @@ The rewriter is runtime-agnostic. It can be applied to any WSGI application
 representing an App Engine runtime.
 """
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 
 
 import calendar
-import cStringIO
 import email
 import functools
 import logging
 import time
 import wsgiref.headers
+
+from google.appengine._internal import six_subset
 
 from google.appengine.tools.devappserver2 import blob_download
 from google.appengine.tools.devappserver2 import constants
@@ -139,10 +145,10 @@ def _ignore_response_headers_rewriter(ignored_response_headers, state):
       del state.headers[name]
     # Delete a header if its name or value contains non-allowed characters.
     try:
-      if isinstance(name, unicode):
-        name = name.encode('ascii')
-      if isinstance(value, unicode):
-        value = value.encode('ascii')
+      if isinstance(name, six_subset.text_type):
+        name = six_subset.ensure_str(name.encode('ascii'))
+      if isinstance(value, six_subset.text_type):
+        value = six_subset.ensure_str(value.encode('ascii'))
     except UnicodeEncodeError:
       # Contains non-ASCII Unicode characters.
       del state.headers[name]
@@ -157,7 +163,7 @@ def _default_content_type_rewriter(state):
   Args:
     state: A RewriterState to modify.
   """
-  if not 'Content-Type' in state.headers:
+  if 'Content-Type' not in state.headers:
     state.headers['Content-Type'] = 'text/html'
 
 
@@ -178,9 +184,9 @@ def _cache_rewriter(state):
   if state.status_code in constants.NO_BODY_RESPONSE_STATUSES:
     return
 
-  if not 'Cache-Control' in state.headers:
+  if 'Cache-Control' not in state.headers:
     state.headers['Cache-Control'] = 'no-cache'
-    if not 'Expires' in state.headers:
+    if 'Expires' not in state.headers:
       state.headers['Expires'] = 'Fri, 01 Jan 1990 00:00:00 GMT'
 
 
@@ -194,7 +200,7 @@ def _cache_rewriter(state):
     expires = state.headers.get('Expires')
     reset_expires = True
     if expires:
-      expires_time = email.Utils.parsedate(expires)
+      expires_time = email.utils.parsedate(expires)
       if expires_time:
         reset_expires = calendar.timegm(expires_time) >= current_date
     if reset_expires:
@@ -297,12 +303,12 @@ def _rewriter_middleware(request_rewriter_chain, response_rewriter_chain,
     An iterable of strings containing the body of an HTTP response.
   """
   response_dict = {'headers_sent': False}
-  write_body = cStringIO.StringIO()
+  write_body = six_subset.StringIO()
 
   def wrapped_start_response(status, response_headers, exc_info=None):
     if exc_info and response_dict['headers_sent']:
       # Headers have already been sent. PEP 333 mandates that this is an error.
-      raise exc_info[0], exc_info[1], exc_info[2]
+      six_subset.reraise(exc_info[0], exc_info[1], exc_info[2])
 
     response_dict['status'] = status
     response_dict['response_headers'] = response_headers
@@ -319,7 +325,7 @@ def _rewriter_middleware(request_rewriter_chain, response_rewriter_chain,
   first = write_body.getvalue()
   while not first:
     try:
-      first = response_body.next()
+      first = next(response_body)
     except StopIteration:
       break
 
@@ -343,7 +349,7 @@ def _rewriter_middleware(request_rewriter_chain, response_rewriter_chain,
   state = RewriterState(environ, status, response_headers, body)
   for rewriter in response_rewriter_chain:
     rewriter(state)
-  start_response(state.status, state.headers.items())
+  start_response(state.status, list(state.headers.items()))
   return state.body
 
 

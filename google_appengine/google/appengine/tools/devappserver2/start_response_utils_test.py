@@ -20,6 +20,9 @@
 
 import unittest
 
+import google
+import six
+
 from google.appengine.tools.devappserver2 import start_response_utils
 
 
@@ -29,11 +32,12 @@ class TestCapturingStartResponse(unittest.TestCase):
   def test_success(self):
     start_response = start_response_utils.CapturingStartResponse()
     stream = start_response('200 OK', [('header1', 'value1')])
-    stream.write('Hello World!')
+    stream.write(six.b('Hello World!'))
     self.assertEqual('200 OK', start_response.status)
-    self.assertEqual(None, start_response.exc_info)
+    self.assertIsNone(start_response.exc_info)
     self.assertEqual([('header1', 'value1')], start_response.response_headers)
-    self.assertEqual('Hello World!', start_response.response_stream.getvalue())
+    self.assertEqual(
+        six.b('Hello World!'), start_response.response_stream.getvalue())
 
   def test_exception(self):
     exc_info = (object(), object(), object())
@@ -49,9 +53,11 @@ class TestCapturingStartResponse(unittest.TestCase):
   def test_merged_response(self):
     start_response = start_response_utils.CapturingStartResponse()
     stream = start_response('200 OK', [('header1', 'value1')])
-    stream.write('Hello World!')
-    self.assertEqual('Hello World! Goodbye World!',
-                     start_response.merged_response([' Goodbye ', 'World!']))
+    stream.write(six.b('Hello World!'))
+    self.assertEqual(
+        six.b('Hello World! Goodbye World!'),
+        start_response.merged_response([' Goodbye ', 'World!']))
+
 
 if __name__ == '__main__':
   unittest.main()

@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 """Monitors a directory tree for changes using win32 APIs."""
+from __future__ import division
 
 import ctypes
 import logging
@@ -91,7 +92,7 @@ def _parse_file_notification_information(buff, offset):
       ctypes.POINTER(FileNotifyInformationShort)).contents
   # This is a variable length structure so we need to do a 2 steps parse to
   # create a perfectly matching result.
-  chr_len = notify_information_short.FileNameLength / _WCHAR_BYTESIZE
+  chr_len = notify_information_short.FileNameLength // _WCHAR_BYTESIZE
 
   class FileNotifyInformation(ctypes.Structure):
     _fields_ = (

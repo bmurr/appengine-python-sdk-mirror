@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Provides a logger for logging devappserver2 metrics to Google Analytics.
 
 The MetricsLogger is a singleton class which can be used directly in
@@ -46,18 +47,26 @@ metrics.GetMetricsLogger().Log('event_category', 'event_action')
 metrics.GetMetricsLogger().LogOnceAtStop('event_category', 'event_action')
 """
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import datetime
 import functools
-import httplib
 import json
 import logging
 import os
 import platform
 import sys
-import urllib
-from google.pyglib import singleton
+
+import six
+from six.moves import map
+from six.moves import urllib
+import six.moves.http_client
+
 from google.appengine.tools import sdk_update_checker
 from google.appengine.tools.devappserver2 import constants
+from google.pyglib import singleton
 
 
 # Google Analytics Config
@@ -272,8 +281,8 @@ class _MetricsLogger(object):
     # If anything goes wrong, we do not want to block the main devappserver
     # execution.
     try:
-      httplib.HTTPSConnection(_GOOGLE_ANALYTICS_HTTPS_HOST).request(
-          'POST', endpoint, body, headers)
+      six.moves.http_client.HTTPSConnection(
+          _GOOGLE_ANALYTICS_HTTPS_HOST).request('POST', endpoint, body, headers)
     except:  # pylint: disable=bare-except
       logging.debug(
           'Google Analytics request failed: \n %s', str(sys.exc_info()))
@@ -331,7 +340,7 @@ class _MetricsLogger(object):
       event['ev'] = value
     event.update(kwargs)
 
-    return urllib.urlencode(event)
+    return urllib.parse.urlencode(event)
 
 
 @singleton.Singleton

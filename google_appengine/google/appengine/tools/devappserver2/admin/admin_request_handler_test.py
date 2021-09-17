@@ -21,10 +21,10 @@
 import os.path
 import tempfile
 import unittest
-import urlparse
 
 import google
 import mox
+import six.moves.urllib
 import webapp2
 
 from google.appengine.tools.devappserver2 import metrics
@@ -91,10 +91,12 @@ class ConstructUrlTest(unittest.TestCase):
     response = webapp2.Response()
     handler = admin_request_handler.AdminRequestHandler(request, response)
     url = handler._construct_url()
-    parsed_url = urlparse.urlparse(url)
+    parsed_url = six.moves.urllib.parse.urlparse(url)
     self.assertEqual('/foo', parsed_url.path)
-    self.assertEqual({'arg1': ['value1'], 'arg2': ['value2']},
-                     urlparse.parse_qs(parsed_url.query))
+    self.assertEqual({
+        'arg1': ['value1'],
+        'arg2': ['value2']
+    }, six.moves.urllib.parse.parse_qs(parsed_url.query))
 
   def test_construct_url_remove(self):
     request = webapp2.Request.blank('/foo', POST={'arg1': 'value1',
@@ -102,10 +104,10 @@ class ConstructUrlTest(unittest.TestCase):
     response = webapp2.Response()
     handler = admin_request_handler.AdminRequestHandler(request, response)
     url = handler._construct_url(remove=['arg1'])
-    parsed_url = urlparse.urlparse(url)
+    parsed_url = six.moves.urllib.parse.urlparse(url)
     self.assertEqual('/foo', parsed_url.path)
     self.assertEqual({'arg2': ['value2']},
-                     urlparse.parse_qs(parsed_url.query))
+                     six.moves.urllib.parse.parse_qs(parsed_url.query))
 
   def test_construct_url_add(self):
     request = webapp2.Request.blank('/foo', POST={'arg1': 'value1',
@@ -113,10 +115,13 @@ class ConstructUrlTest(unittest.TestCase):
     response = webapp2.Response()
     handler = admin_request_handler.AdminRequestHandler(request, response)
     url = handler._construct_url(add={'arg2': 'new2', 'arg3': 'new3'})
-    parsed_url = urlparse.urlparse(url)
+    parsed_url = six.moves.urllib.parse.urlparse(url)
     self.assertEqual('/foo', parsed_url.path)
-    self.assertEqual({'arg1': ['value1'], 'arg2': ['new2'], 'arg3': ['new3']},
-                     urlparse.parse_qs(parsed_url.query))
+    self.assertEqual({
+        'arg1': ['value1'],
+        'arg2': ['new2'],
+        'arg3': ['new3']
+    }, six.moves.urllib.parse.parse_qs(parsed_url.query))
 
 
 class MyAdminServerHandler(admin_request_handler.AdminRequestHandler):

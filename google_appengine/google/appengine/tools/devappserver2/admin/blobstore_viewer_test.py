@@ -20,15 +20,20 @@ import unittest
 
 import google
 import mox
+import six
 import webapp2
 from webob import multidict
 
-from google.appengine.ext import blobstore
-from google.appengine.ext import db
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.ext import blobstore
+  from google.appengine.ext import db
+else:
+  from google.appengine.ext import blobstore
+  from google.appengine.ext import db
 
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 from google.appengine.tools.devappserver2.admin import blobstore_viewer
-
 
 BLOBS_PER_PAGE = blobstore_viewer.BlobstoreRequestHandler.BLOBS_PER_PAGE
 
@@ -44,14 +49,13 @@ class GetBlobsTest(unittest.TestCase):
     self.mox.UnsetStubs()
 
   def test_get_blobs(self):
-    query = db.Query(
-        model_class=blobstore.BlobInfo, namespace='')
+    query = db.Query(model_class=blobstore.BlobInfo, namespace='')
     query.order('-creation').AndReturn(query)
     query.fetch(10, offset=40).AndReturn(['some blob'])
 
     self.mox.ReplayAll()
-    self.assertEqual(['some blob'], blobstore_viewer._get_blobs(start=40,
-                                                                limit=10))
+    self.assertEqual(['some blob'],
+                     blobstore_viewer._get_blobs(start=40, limit=10))
     self.mox.VerifyAll()
 
 
@@ -60,8 +64,8 @@ class BlobstoreRequestHandlerTest(unittest.TestCase):
 
   def setUp(self):
     self.mox = mox.Mox()
-    self.mox.StubOutWithMock(
-        admin_request_handler.AdminRequestHandler, 'render')
+    self.mox.StubOutWithMock(admin_request_handler.AdminRequestHandler,
+                             'render')
     self.mox.StubOutWithMock(admin_request_handler.AdminRequestHandler, 'get')
     self.mox.StubOutWithMock(admin_request_handler.AdminRequestHandler, 'post')
     self.mox.StubOutWithMock(blobstore_viewer, '_get_blobs')
@@ -75,15 +79,16 @@ class BlobstoreRequestHandlerTest(unittest.TestCase):
     handler = blobstore_viewer.BlobstoreRequestHandler(request, response)
 
     blob_infos = [object() for _ in range(10)]
-    blobstore_viewer._get_blobs(0, BLOBS_PER_PAGE+1).AndReturn(blob_infos)
+    blobstore_viewer._get_blobs(0, BLOBS_PER_PAGE + 1).AndReturn(blob_infos)
     admin_request_handler.AdminRequestHandler(handler).get()
-    handler.render('blobstore_viewer.html',
-                   {'previous': None,
-                    'next': None,
-                    'blob_infos': blob_infos,
-                    'offset': 0,
-                    'return_to': 'http://localhost/blobstore',
-                   })
+    handler.render(
+        'blobstore_viewer.html', {
+            'previous': None,
+            'next': None,
+            'blob_infos': blob_infos,
+            'offset': 0,
+            'return_to': 'http://localhost/blobstore',
+        })
 
     self.mox.ReplayAll()
     handler.get()
@@ -95,15 +100,16 @@ class BlobstoreRequestHandlerTest(unittest.TestCase):
     handler = blobstore_viewer.BlobstoreRequestHandler(request, response)
 
     blob_infos = [object() for _ in range(10)]
-    blobstore_viewer._get_blobs(40, BLOBS_PER_PAGE+1).AndReturn(blob_infos)
+    blobstore_viewer._get_blobs(40, BLOBS_PER_PAGE + 1).AndReturn(blob_infos)
     admin_request_handler.AdminRequestHandler(handler).get()
-    handler.render('blobstore_viewer.html',
-                   {'previous': 20,
-                    'next': None,
-                    'blob_infos': blob_infos,
-                    'offset': 40,
-                    'return_to': 'http://localhost/blobstore?offset=40',
-                   })
+    handler.render(
+        'blobstore_viewer.html', {
+            'previous': 20,
+            'next': None,
+            'blob_infos': blob_infos,
+            'offset': 40,
+            'return_to': 'http://localhost/blobstore?offset=40',
+        })
 
     self.mox.ReplayAll()
     handler.get()
@@ -114,16 +120,17 @@ class BlobstoreRequestHandlerTest(unittest.TestCase):
     response = webapp2.Response()
     handler = blobstore_viewer.BlobstoreRequestHandler(request, response)
 
-    blob_infos = [object() for _ in range(BLOBS_PER_PAGE+1)]
-    blobstore_viewer._get_blobs(0, BLOBS_PER_PAGE+1).AndReturn(blob_infos)
+    blob_infos = [object() for _ in range(BLOBS_PER_PAGE + 1)]
+    blobstore_viewer._get_blobs(0, BLOBS_PER_PAGE + 1).AndReturn(blob_infos)
     admin_request_handler.AdminRequestHandler(handler).get()
-    handler.render('blobstore_viewer.html',
-                   {'previous': None,
-                    'next': 20,
-                    'blob_infos': blob_infos[:BLOBS_PER_PAGE],
-                    'offset': 0,
-                    'return_to': 'http://localhost/blobstore',
-                   })
+    handler.render(
+        'blobstore_viewer.html', {
+            'previous': None,
+            'next': 20,
+            'blob_infos': blob_infos[:BLOBS_PER_PAGE],
+            'offset': 0,
+            'return_to': 'http://localhost/blobstore',
+        })
 
     self.mox.ReplayAll()
     handler.get()
@@ -133,8 +140,7 @@ class BlobstoreRequestHandlerTest(unittest.TestCase):
     request = webapp2.Request.blank(
         '/blobstore',
         method='POST',
-        POST=multidict.MultiDict([('blob_key', 'a'),
-                                  ('blob_key', 'b')]))
+        POST=multidict.MultiDict([('blob_key', 'a'), ('blob_key', 'b')]))
     response = webapp2.Response()
     handler = blobstore_viewer.BlobstoreRequestHandler(request, response)
     admin_request_handler.AdminRequestHandler(handler).post()
@@ -154,8 +160,8 @@ class BlobRequestHandlerTest(unittest.TestCase):
 
   def setUp(self):
     self.mox = mox.Mox()
-    self.mox.StubOutWithMock(
-        admin_request_handler.AdminRequestHandler, 'render')
+    self.mox.StubOutWithMock(admin_request_handler.AdminRequestHandler,
+                             'render')
     self.mox.StubOutWithMock(blobstore.BlobInfo, 'get')
 
   def tearDown(self):
@@ -184,14 +190,15 @@ class BlobRequestHandlerTest(unittest.TestCase):
     blob.content_type = 'image/png'
 
     blobstore.BlobInfo.get('blobkey').AndReturn(blob)
-    handler.render('blob_viewer.html',
-                   {'blob_info': blob,
-                    'delete_uri': '/blobstore',
-                    'download_uri': request.path + '?display=attachment',
-                    'inline_uri': request.path + '?display=inline',
-                    'inlineable': True,
-                    'return_to': '/blobstore'
-                   })
+    handler.render(
+        'blob_viewer.html', {
+            'blob_info': blob,
+            'delete_uri': '/blobstore',
+            'download_uri': request.path + '?display=attachment',
+            'inline_uri': request.path + '?display=inline',
+            'inlineable': True,
+            'return_to': '/blobstore'
+        })
 
     self.mox.ReplayAll()
     handler.get('blobkey')
@@ -206,14 +213,15 @@ class BlobRequestHandlerTest(unittest.TestCase):
     blob.content_type = 'application/octet-stream'
 
     blobstore.BlobInfo.get('blobkey').AndReturn(blob)
-    handler.render('blob_viewer.html',
-                   {'blob_info': blob,
-                    'delete_uri': '/blobstore',
-                    'download_uri': request.path + '?display=attachment',
-                    'inline_uri': request.path + '?display=inline',
-                    'inlineable': False,
-                    'return_to': '/blobstore'
-                   })
+    handler.render(
+        'blob_viewer.html', {
+            'blob_info': blob,
+            'delete_uri': '/blobstore',
+            'download_uri': request.path + '?display=attachment',
+            'inline_uri': request.path + '?display=inline',
+            'inlineable': False,
+            'return_to': '/blobstore'
+        })
 
     self.mox.ReplayAll()
     handler.get('blobkey')
@@ -229,7 +237,7 @@ class BlobRequestHandlerTest(unittest.TestCase):
     blobstore.BlobInfo.get('blobkey').AndReturn(blob_info)
     reader = self.mox.CreateMockAnything()
     blob_info.open().AndReturn(reader)
-    reader.read().AndReturn('blob bytes')
+    reader.read().AndReturn(six.b('blob bytes'))
     reader.close()
 
     self.mox.ReplayAll()
@@ -238,7 +246,7 @@ class BlobRequestHandlerTest(unittest.TestCase):
 
     self.assertEqual('image/jpeg', response.headers.get('Content-Type'))
     self.assertEqual('inline', response.headers.get('Content-Disposition'))
-    self.assertEqual('blob bytes', response.body)
+    self.assertEqual(six.b('blob bytes'), response.body)
 
   def test_display_blob_inline_and_binary(self):
     request = webapp2.Request.blank('/blob/blobkey?display=inline')
@@ -250,7 +258,7 @@ class BlobRequestHandlerTest(unittest.TestCase):
     blobstore.BlobInfo.get('blobkey').AndReturn(blob_info)
     reader = self.mox.CreateMockAnything()
     blob_info.open().AndReturn(reader)
-    reader.read().AndReturn('blob bytes')
+    reader.read().AndReturn(six.b('blob bytes'))
     reader.close()
 
     self.mox.ReplayAll()
@@ -259,7 +267,7 @@ class BlobRequestHandlerTest(unittest.TestCase):
 
     self.assertEqual('text/plain', response.headers.get('Content-Type'))
     self.assertEqual('inline', response.headers.get('Content-Disposition'))
-    self.assertEqual('blob bytes', response.body)
+    self.assertEqual(six.b('blob bytes'), response.body)
 
   def test_display_blob_attachment(self):
     request = webapp2.Request.blank('/blob/blobkey?display=attachment')
@@ -272,7 +280,7 @@ class BlobRequestHandlerTest(unittest.TestCase):
     blobstore.BlobInfo.get('blobkey').AndReturn(blob_info)
     reader = self.mox.CreateMockAnything()
     blob_info.open().AndReturn(reader)
-    reader.read().AndReturn('blob bytes')
+    reader.read().AndReturn(six.b('blob bytes'))
     reader.close()
 
     self.mox.ReplayAll()
@@ -282,7 +290,7 @@ class BlobRequestHandlerTest(unittest.TestCase):
     self.assertEqual('image/png', response.headers.get('Content-Type'))
     self.assertEqual('attachment; filename=profile.png',
                      response.headers.get('Content-Disposition'))
-    self.assertEqual('blob bytes', response.body)
+    self.assertEqual(six.b('blob bytes'), response.body)
 
 
 if __name__ == '__main__':

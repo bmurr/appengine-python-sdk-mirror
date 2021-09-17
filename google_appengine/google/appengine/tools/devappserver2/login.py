@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Handles login/logout pages and dealing with user cookies.
 
 Includes a WSGI application that serves the login page and handles login and
@@ -28,16 +29,23 @@ To view the current user information and a form for logging in and out,
 supply no parameters.
 """
 
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import cgi
-import Cookie
 import hashlib
 import logging
-import urllib
 
 import google
+
+import six
+from six.moves import urllib
+import six.moves.http_cookies
 import webapp2
+
+
+
 
 # URL of the login/logout pages within the dev appserver.
 LOGIN_URL_RELATIVE = '_ah/login'
@@ -71,8 +79,8 @@ def get_user_info(http_cookie, cookie_name=_COOKIE_NAME):
       user_id: The user ID, if any.
   """
   try:
-    cookie = Cookie.SimpleCookie(http_cookie)
-  except Cookie.CookieError:
+    cookie = six.moves.http_cookies.SimpleCookie(http_cookie)
+  except six.moves.http_cookies.CookieError:
     return '', False, ''
 
   cookie_dict = dict((k, v.value) for k, v in cookie.items())
@@ -94,7 +102,8 @@ def _get_user_info_from_dict(cookie_dict, cookie_name=_COOKIE_NAME):
   """
   cookie_value = cookie_dict.get(cookie_name, '')
 
-  email, admin, user_id = (cookie_value.split(':') + ['', '', ''])[:3]
+  email, admin, user_id = (six.ensure_text(cookie_value).split(':') +
+                           ['', '', ''])[:3]
   if '@' not in email:
     if email:
       logging.warning('Ignoring invalid login cookie: %s', cookie_value)
@@ -113,8 +122,9 @@ def _create_cookie_data(email, admin):
     A string containing the cookie payload.
   """
   if email:
-    user_id_digest = hashlib.md5(email.lower()).digest()
-    user_id = '1' + ''.join(['%02d' % ord(x) for x in user_id_digest])[:20]
+    user_id_digest = hashlib.md5(six.ensure_binary(email.lower())).digest()
+    user_id = '1' + ''.join(
+        ['%02d' % (x if six.PY3 else ord(x)) for x in user_id_digest])[:20]
   else:
     user_id = ''
   return '%s:%s:%s' % (email, admin, user_id)
@@ -132,7 +142,7 @@ def _set_user_info_cookie(email, admin, cookie_name=_COOKIE_NAME):
     Set-Cookie value for setting the user info of the requestor.
   """
   cookie_value = _create_cookie_data(email, admin)
-  cookie = Cookie.SimpleCookie()
+  cookie = six.moves.http_cookies.SimpleCookie()
   cookie[cookie_name] = cookie_value
   cookie[cookie_name]['path'] = '/'
   return cookie[cookie_name].OutputString()
@@ -147,7 +157,7 @@ def _clear_user_info_cookie(cookie_name=_COOKIE_NAME):
   Returns:
     A Set-Cookie value for clearing the user info of the requestor.
   """
-  cookie = Cookie.SimpleCookie()
+  cookie = six.moves.http_cookies.SimpleCookie()
   cookie[cookie_name] = ''
   cookie[cookie_name]['path'] = '/'
   cookie[cookie_name]['max-age'] = '0'
@@ -242,10 +252,11 @@ def login_redirect(application_url, continue_url, start_response):
   Returns:
     An (empty) iterable over strings containing the body of the HTTP response.
   """
-  if not application_url.endswith('/'):
+  if not six.ensure_text(application_url).endswith('/'):
     application_url += '/'
-  redirect_url = '%s%s?%s=%s' % (application_url, LOGIN_URL_RELATIVE,
-                                 CONTINUE_PARAM, urllib.quote(continue_url))
+  redirect_url = '%s%s?%s=%s' % (application_url,
+                                 LOGIN_URL_RELATIVE, CONTINUE_PARAM,
+                                 urllib.parse.quote(continue_url))
   start_response('302 Requires login',
                  [('Location', redirect_url)])
   return []
@@ -265,7 +276,7 @@ class Handler(webapp2.RequestHandler):
 
   def get(self):
     action = self.request.get(ACTION_PARAM)
-    if self.request.path.startswith('/_ah/logout'):
+    if six.ensure_text(self.request.path).startswith('/_ah/logout'):
       action = LOGOUT_ACTION
 
     set_email = self.request.get(_EMAIL_PARAM)
@@ -288,8 +299,8 @@ class Handler(webapp2.RequestHandler):
                                                                   set_admin)
 
     # URLs should be ASCII-only byte strings.
-    if isinstance(redirect_url, unicode):
-      redirect_url = redirect_url.encode('ascii')
+    if isinstance(redirect_url, six.text_type):
+      redirect_url = six.ensure_str(redirect_url.encode('ascii'))
 
     self.response.status = 302
     self.response.status_message = 'Redirecting to continue URL'

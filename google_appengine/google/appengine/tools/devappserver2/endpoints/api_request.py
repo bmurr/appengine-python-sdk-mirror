@@ -14,8 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Cloud Endpoints API request-related data and functions."""
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from __future__ import with_statement
 
 
@@ -28,8 +32,10 @@ import cgi
 import copy
 import json
 import logging
-import urllib
 import zlib
+
+import six
+from six.moves import urllib
 
 from google.appengine.tools.devappserver2 import util
 
@@ -65,7 +71,7 @@ class ApiRequest(object):
     self.source_ip = environ.get('REMOTE_ADDR')
     self.relative_url = self._reconstruct_relative_url(environ)
 
-    if not self.path.startswith(self._API_PREFIX):
+    if not six.ensure_str(self.path).startswith(self._API_PREFIX):
       raise ValueError('Invalid request path: %s' % self.path)
     self.path = self.path[len(self._API_PREFIX):]
     if self.query:
@@ -106,10 +112,10 @@ class ApiRequest(object):
     Returns:
       The portion of the URL from the request after the server and port.
     """
-    url = urllib.quote(environ.get('SCRIPT_NAME', ''))
-    url += urllib.quote(environ.get('PATH_INFO', ''))
+    url = urllib.parse.quote(environ.get('SCRIPT_NAME', ''))
+    url += urllib.parse.quote(environ.get('PATH_INFO', ''))
     if environ.get('QUERY_STRING'):
-      url += '?' + environ['QUERY_STRING']
+      url += '?' + six.ensure_str(environ['QUERY_STRING'])
     return url
 
   def copy(self):

@@ -14,7 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Serves content for "script" handlers using the Python runtime."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 
 
@@ -27,7 +32,14 @@ import tempfile
 import time
 
 import google
-from google.appengine.api import appinfo
+import six
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import appinfo
+else:
+  from google.appengine.api import appinfo
+
 from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import errors
 from google.appengine.tools.devappserver2 import http_runtime
@@ -116,7 +128,8 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
       ]
 
   def _is_modern(self):
-    return self._module_configuration.runtime.startswith('python3')
+    return six.ensure_str(
+        self._module_configuration.runtime).startswith('python3')
 
   def _GetPythonInterpreterPath(self):
     """Returns the python interpreter path for the current runtime."""
@@ -226,12 +239,12 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
       with tempfile.NamedTemporaryFile() as requirements_file:
         # Make a copy of user requirements.txt, the copy is safe to modify.
         if os.path.exists(self._OrigRequirementsFile):
-          with open(self._OrigRequirementsFile, 'r') as orig_f:
+          with open(self._OrigRequirementsFile, 'rb') as orig_f:
             requirements_file.write(orig_f.read())
 
         # Similar to production, append gunicorn to requirements.txt
         # as default entrypoint needs it.
-        requirements_file.write('\ngunicorn')
+        requirements_file.write(six.b('\ngunicorn'))
 
         # flushing it because _SetupVirtualenv uses it in a separate process.
         requirements_file.flush()
@@ -263,8 +276,8 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
     dep_libs_changed = None
     if self._is_modern():
       dep_libs_changed = next(
-          (x for x in file_changes if x.endswith(
-              _DEFAULT_REQUIREMENT_FILE_NAME)), None)
+          (x for x in file_changes
+           if six.ensure_str(x).endswith(_DEFAULT_REQUIREMENT_FILE_NAME)), None)
       if dep_libs_changed:
         self._SetupVirtualenvFromConfiguration()
     return dep_libs_changed is not None
@@ -285,8 +298,8 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
         sys.stdout.write(lastline)
         sys.stdout.flush()
         # Erase previous lastline.
-        sys.stdout.write(
-            '\b'*len(lastline) + ' '*len(lastline) + '\b'*len(lastline))
+        w = len(lastline)
+        sys.stdout.write(six.ensure_str('\b' * w + ' ' * w + '\b' * w))
         time.sleep(0.2)
     sys.stdout.write('\n')
     return proc.poll()

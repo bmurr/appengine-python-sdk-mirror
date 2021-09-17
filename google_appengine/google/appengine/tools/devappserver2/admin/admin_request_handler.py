@@ -21,10 +21,11 @@
 import os.path
 import random
 import string
-import urllib
 
 import google
 import jinja2
+import six
+import six.moves.urllib
 import webapp2
 
 from google.appengine.tools.devappserver2 import metrics
@@ -32,10 +33,10 @@ from google.appengine.tools.devappserver2 import util
 
 
 def _urlencode_filter(value):
-  if isinstance(value, basestring):
-    return urllib.quote(value)
+  if isinstance(value, six.string_types):
+    return six.moves.urllib.quote(value)
   else:
-    return urllib.urlencode(value)
+    return six.moves.urllib.urlencode(value)
 
 
 def _byte_size_format(value):
@@ -137,7 +138,8 @@ class AdminRequestHandler(webapp2.RequestHandler):
 
     params.update(add)
     return str('%s?%s' %
-               (self.request.path, urllib.urlencode(sorted(params.items()))))
+               (self.request.path,
+                six.moves.urllib.parse.urlencode(sorted(params.items()))))
 
   @property
   def dispatcher(self):
