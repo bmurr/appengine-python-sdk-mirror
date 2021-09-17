@@ -14,7 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Stores application configuration taken from e.g. app.yaml, index.yaml."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 # TODO: Support more than just app.yaml.
 
@@ -27,12 +32,22 @@ import os
 import random
 import string
 import threading
-import types
 
-from google.appengine.api import appinfo
-from google.appengine.api import appinfo_includes
-from google.appengine.api import backendinfo
-from google.appengine.api import dispatchinfo
+import six
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import appinfo
+  from google.appengine.api import appinfo_includes
+  from google.appengine.api import backendinfo
+  from google.appengine.api import dispatchinfo
+else:
+  from google.appengine.api import appinfo
+  from google.appengine.api import appinfo_includes
+  from google.appengine.api import backendinfo
+  from google.appengine.api import dispatchinfo
+
+
 from google.appengine.tools import app_engine_web_xml_parser
 from google.appengine.tools import queue_xml_parser
 from google.appengine.tools import web_xml_parser
@@ -40,7 +55,6 @@ from google.appengine.tools import yaml_translator
 from google.appengine.tools.devappserver2 import constants
 from google.appengine.tools.devappserver2 import errors
 from google.appengine.tools.devappserver2.java import java_dir
-
 
 # Constants passed to functions registered with
 # ModuleConfiguration.add_change_callback.
@@ -92,29 +106,30 @@ class ModuleConfiguration(object):
   to be constant for the lifetime of the instance.
   """
 
-  _IMMUTABLE_PROPERTIES = [
-      ('application', 'application'),
-      ('version', 'major_version'),
-      ('runtime', 'runtime'),
-      ('threadsafe', 'threadsafe'),
-      ('module', 'module_name'),
-      ('basic_scaling', 'basic_scaling_config'),
-      ('manual_scaling', 'manual_scaling_config'),
-      ('automatic_scaling', 'automatic_scaling_config')]
+  _IMMUTABLE_PROPERTIES = [('application', 'application'),
+                           ('version', 'major_version'), ('runtime', 'runtime'),
+                           ('threadsafe', 'threadsafe'),
+                           ('module', 'module_name'),
+                           ('basic_scaling', 'basic_scaling_config'),
+                           ('manual_scaling', 'manual_scaling_config'),
+                           ('automatic_scaling', 'automatic_scaling_config')]
 
-  def __init__(self, config_path, app_id=None, runtime=None,
+  def __init__(self,
+               config_path,
+               app_id=None,
+               runtime=None,
                env_variables=None):
     """Initializer for ModuleConfiguration.
 
     Args:
       config_path: A string containing the full path of the yaml or xml file
-          containing the configuration for this module.
+        containing the configuration for this module.
       app_id: A string that is the application id, or None if the application id
-          from the yaml or xml file should be used.
-      runtime: A string that is the runtime to use, or None if the runtime
-          from the yaml or xml file should be used.
+        from the yaml or xml file should be used.
+      runtime: A string that is the runtime to use, or None if the runtime from
+        the yaml or xml file should be used.
       env_variables: A dictionary that is the environment variables passed by
-          flags.
+        flags.
 
     Raises:
       errors.DockerfileError: Raised if a user supplied a Dockerfile and a
@@ -125,8 +140,9 @@ class ModuleConfiguration(object):
     self._config_path = config_path
     self._forced_app_id = app_id
     root = os.path.dirname(config_path)
-    self._is_java = os.path.normpath(config_path).endswith(
-        os.sep + 'WEB-INF' + os.sep + 'appengine-web.xml')
+    self._is_java = os.path.normpath(config_path).endswith(os.sep + 'WEB-INF' +
+                                                           os.sep +
+                                                           'appengine-web.xml')
     if self._is_java:
       # We assume Java's XML-based config files only if config_path is
       # something like /foo/bar/WEB-INF/appengine-web.xml. In this case,
@@ -192,8 +208,8 @@ class ModuleConfiguration(object):
           'differences between the two can be found here:\n'
           'https://developers.google.com/appengine/docs/python/python25/diff27',
           self._config_path)
-    self._minor_version_id = ''.join(random.choice(string.digits) for _ in
-                                     range(18))
+    self._minor_version_id = ''.join(
+        random.choice(string.digits) for _ in range(18))
 
     self._forwarded_ports = {}
     if self.runtime == 'vm':
@@ -286,14 +302,10 @@ class ModuleConfiguration(object):
   @property
   def version_id(self):
     if self.module_name == appinfo.DEFAULT_MODULE:
-      return '%s.%s' % (
-          self.major_version,
-          self._minor_version_id)
+      return '%s.%s' % (self.major_version, self._minor_version_id)
     else:
-      return '%s:%s.%s' % (
-          self.module_name,
-          self.major_version,
-          self._minor_version_id)
+      return '%s:%s.%s' % (self.module_name, self.major_version,
+                           self._minor_version_id)
 
   @property
   def env(self):
@@ -406,7 +418,7 @@ class ModuleConfiguration(object):
       A set containing the changes that occurred. See the *_CHANGED module
       constants.
     """
-    new_mtimes = self._get_mtimes(self._mtimes.keys())
+    new_mtimes = self._get_mtimes(list(self._mtimes.keys()))
     if new_mtimes == self._mtimes:
       return set()
 
@@ -426,19 +438,16 @@ class ModuleConfiguration(object):
     for app_info_attribute, self_attribute in self._IMMUTABLE_PROPERTIES:
       app_info_value = getattr(app_info_external, app_info_attribute)
       self_value = getattr(self, self_attribute)
-      if (app_info_value == self_value or
-          app_info_value == getattr(self._app_info_external,
-                                    app_info_attribute)):
+      if (app_info_value == self_value or app_info_value == getattr(
+          self._app_info_external, app_info_attribute)):
         # Only generate a warning if the value is both different from the
         # immutable value *and* different from the last loaded value.
         continue
 
-      if isinstance(app_info_value, types.StringTypes):
-        logging.warning('Restart the development module to see updates to "%s" '
-                        '["%s" => "%s"]',
-                        app_info_attribute,
-                        self_value,
-                        app_info_value)
+      if isinstance(app_info_value, six.string_types):
+        logging.warning(
+            'Restart the development module to see updates to "%s" '
+            '["%s" => "%s"]', app_info_attribute, self_value, app_info_value)
       else:
         logging.warning('Restart the development module to see updates to "%s"',
                         app_info_attribute)
@@ -474,8 +483,8 @@ class ModuleConfiguration(object):
 
     self._app_info_external = app_info_external
     if changes:
-      self._minor_version_id = ''.join(random.choice(string.digits) for _ in
-                                       range(18))
+      self._minor_version_id = ''.join(
+          random.choice(string.digits) for _ in range(18))
     return changes
 
   @staticmethod
@@ -495,7 +504,7 @@ class ModuleConfiguration(object):
 
     Args:
       configuration_path: A string containing the full path of the yaml file
-          containing the configuration for this module.
+        containing the configuration for this module.
 
     Returns:
       A tuple where the first element is the parsed appinfo.AppInfoExternal
@@ -522,8 +531,8 @@ class ModuleConfiguration(object):
 
     Args:
       app_engine_web_xml_path: A string containing the full path of the
-          .../WEB-INF/appengine-web.xml file. The corresponding
-          .../WEB-INF/web.xml file must also be present.
+        .../WEB-INF/appengine-web.xml file. The corresponding
+        .../WEB-INF/web.xml file must also be present.
 
     Returns:
       A tuple where the first element is the parsed appinfo.AppInfoExternal
@@ -599,28 +608,30 @@ def _set_health_check_defaults(health_check):
 class BackendsConfiguration(object):
   """Stores configuration information for a backends.yaml file."""
 
-  def __init__(
-      self, app_config_path, backend_config_path, app_id=None, runtime=None,
-      env_variables=None):
+  def __init__(self,
+               app_config_path,
+               backend_config_path,
+               app_id=None,
+               runtime=None,
+               env_variables=None):
     """Initializer for BackendsConfiguration.
 
     Args:
       app_config_path: A string containing the full path of the yaml file
-          containing the configuration for this module.
+        containing the configuration for this module.
       backend_config_path: A string containing the full path of the
-          backends.yaml file containing the configuration for backends.
+        backends.yaml file containing the configuration for backends.
       app_id: A string that is the application id, or None if the application id
-          from the yaml or xml file should be used.
-      runtime: A string that is the runtime to use, or None if the runtime
-          from the yaml or xml file should be used.
+        from the yaml or xml file should be used.
+      runtime: A string that is the runtime to use, or None if the runtime from
+        the yaml or xml file should be used.
       env_variables: A dictionary that is the environment variables passed by
-          flags.
+        flags.
     """
     self._update_lock = threading.RLock()
     self._base_module_configuration = ModuleConfiguration(
         app_config_path, app_id, runtime, env_variables)
-    backend_info_external = self._parse_configuration(
-        backend_config_path)
+    backend_info_external = self._parse_configuration(backend_config_path)
 
     self._backends_name_to_backend_entry = {}
     for backend in backend_info_external.backends or []:
@@ -637,15 +648,17 @@ class BackendsConfiguration(object):
       return backendinfo.LoadBackendInfo(f)
 
   def get_backend_configurations(self):
-    return [BackendConfiguration(self._base_module_configuration, self, entry)
-            for entry in self._backends_name_to_backend_entry.values()]
+    return [
+        BackendConfiguration(self._base_module_configuration, self, entry)
+        for entry in self._backends_name_to_backend_entry.values()
+    ]
 
   def check_for_updates(self, backend_name):
     """Return any configuration changes since the last check_for_updates call.
 
     Args:
       backend_name: A str containing the name of the backend to be checked for
-          updates.
+        updates.
 
     Returns:
       A set containing the changes that occurred. See the *_CHANGED module
@@ -674,9 +687,9 @@ class BackendConfiguration(object):
     Args:
       module_configuration: A ModuleConfiguration to use.
       backends_configuration: The BackendsConfiguration that tracks updates for
-          this BackendConfiguration.
+        this BackendConfiguration.
       backend_entry: A backendinfo.BackendEntry containing the backend
-          configuration.
+        configuration.
     """
     self._module_configuration = module_configuration
     self._backends_configuration = backends_configuration
@@ -690,8 +703,8 @@ class BackendConfiguration(object):
       self._basic_scaling_config = None
       self._manual_scaling_config = appinfo.ManualScaling(
           instances=backend_entry.instances or 1)
-    self._minor_version_id = ''.join(random.choice(string.digits) for _ in
-                                     range(18))
+    self._minor_version_id = ''.join(
+        random.choice(string.digits) for _ in range(18))
 
   @property
   def application_root(self):
@@ -736,10 +749,8 @@ class BackendConfiguration(object):
 
   @property
   def version_id(self):
-    return '%s:%s.%s' % (
-        self.module_name,
-        self.major_version,
-        self._minor_version_id)
+    return '%s:%s.%s' % (self.module_name, self.major_version,
+                         self._minor_version_id)
 
   @property
   def env(self):
@@ -808,10 +819,10 @@ class BackendConfiguration(object):
   @property
   def handlers(self):
     if self._backend_entry.start:
-      return [appinfo.URLMap(
-          url='/_ah/start',
-          script=self._backend_entry.start,
-          login='admin')] + self._module_configuration.handlers
+      return [
+          appinfo.URLMap(
+              url='/_ah/start', script=self._backend_entry.start, login='admin')
+      ] + self._module_configuration.handlers
     return self._module_configuration.handlers
 
   @property
@@ -852,8 +863,8 @@ class BackendConfiguration(object):
     changes = self._backends_configuration.check_for_updates(
         self._backend_entry.name)
     if changes:
-      self._minor_version_id = ''.join(random.choice(string.digits) for _ in
-                                       range(18))
+      self._minor_version_id = ''.join(
+          random.choice(string.digits) for _ in range(18))
     return changes
 
 
@@ -908,19 +919,22 @@ class DispatchConfiguration(object):
 class ApplicationConfiguration(object):
   """Stores application configuration information."""
 
-  def __init__(self, config_paths, app_id=None, runtime=None,
+  def __init__(self,
+               config_paths,
+               app_id=None,
+               runtime=None,
                env_variables=None):
     """Initializer for ApplicationConfiguration.
 
     Args:
-      config_paths: A list of strings containing the paths to yaml files,
-          or to directories containing them.
+      config_paths: A list of strings containing the paths to yaml files, or to
+        directories containing them.
       app_id: A string that is the application id, or None if the application id
-          from the yaml or xml file should be used.
-      runtime: A string that is the runtime to use, or None if the runtime
-          from the yaml or xml file should be used.
+        from the yaml or xml file should be used.
+      runtime: A string that is the runtime to use, or None if the runtime from
+        the yaml or xml file should be used.
       env_variables: A dictionary that is the environment variables passed by
-          flags.
+        flags.
 
     Raises:
       InvalidAppConfigError: On invalid configuration.
@@ -929,7 +943,7 @@ class ApplicationConfiguration(object):
     self.dispatch = None
     # It's really easy to add a test case that passes in a string rather than
     # a list of strings, so guard against that.
-    assert not isinstance(config_paths, basestring)
+    assert not isinstance(config_paths, six.string_types)
     config_paths = self._config_files_from_paths(config_paths)
     for config_path in config_paths:
       # TODO: add support for backends.xml and dispatch.xml here
@@ -952,8 +966,7 @@ class ApplicationConfiguration(object):
                                                    env_variables)
 
         self.modules.append(module_configuration)
-    application_ids = set(module.application
-                          for module in self.modules)
+    application_ids = set(module.application for module in self.modules)
     if len(application_ids) > 1:
       raise errors.InvalidAppConfigError(
           'More than one application ID found: %s' %
@@ -1049,8 +1062,9 @@ class ApplicationConfiguration(object):
       A list of strings that are file paths.
     """
     required = ['appengine-web.xml', 'web.xml']
-    missing = [f for f in required
-               if not os.path.exists(os.path.join(web_inf, f))]
+    missing = [
+        f for f in required if not os.path.exists(os.path.join(web_inf, f))
+    ]
     if missing:
       raise errors.AppConfigNotFoundError(
           'The "%s" subdirectory exists but is missing %s' %
@@ -1077,8 +1091,8 @@ class ApplicationConfiguration(object):
     abs_names = [os.path.join(dir_path, name) for name in names]
     files = [f for f in abs_names if os.path.exists(f)]
     if len(files) > 1:
-      raise errors.InvalidAppConfigError(
-          'Directory "%s" contains %s' % (dir_path, ' and '.join(names)))
+      raise errors.InvalidAppConfigError('Directory "%s" contains %s' %
+                                         (dir_path, ' and '.join(names)))
     return files
 
   @property
@@ -1114,4 +1128,5 @@ def generate_version_id(datetime_getter=datetime.datetime.now):
   Returns:
     A version string based.
   """
-  return datetime_getter().isoformat().lower().translate(None, ':-')[:15]
+  return datetime_getter().isoformat().lower().replace(':',
+                                                       '').replace('-', '')[:15]

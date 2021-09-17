@@ -48,7 +48,7 @@ class _MultipleFileWatcher(object):
 
     Args:
       watcher_ignore_re: A RegexObject that optionally defines a pattern for the
-          file watcher to ignore.
+        file watcher to ignore.
     """
     for watcher in self._file_watchers:
       # TODO: b/33178251 - Add watcher_ignore_re  support for windows.
@@ -60,7 +60,7 @@ class _MultipleFileWatcher(object):
 
     Args:
       skip_files_re: The skip_files field of current ModuleConfiguration,
-          defined in app.yaml.
+        defined in app.yaml.
     """
     for watcher in self._file_watchers:
       # TODO: b/33178251 - Add skip_files_re support for windows.
@@ -82,7 +82,7 @@ class _MultipleFileWatcher(object):
 
     Args:
       timeout_ms: The maximum number of mulliseconds you allow this function to
-          wait for a filesystem change.
+        wait for a filesystem change.
 
     Returns:
        An iterable of changed directories/files.
@@ -140,12 +140,17 @@ def _create_linux_watcher(directories):
   # (for example, NFS does not) and also use MTimeFileWatcher in that case.
 
   try:
-    return _create_watcher(directories,
-                           inotify_file_watcher.InotifyFileWatcher)
+    return _create_watcher(directories, inotify_file_watcher.InotifyFileWatcher)
   except OSError as e:
-    logging.warning('Could not create InotifyFileWatcher;'
-                    ' falling back to MTimeFileWatcher: %s', e)
+    logging.warning(
+        'Could not create InotifyFileWatcher;'
+        ' falling back to MTimeFileWatcher: %s', e)
     return _create_watcher(directories, mtime_file_watcher.MtimeFileWatcher)
+
+
+# StringTypes goes away in python 3. Because all strings are unicode in
+# python 3, str is sufficient.
+_STR_TYPES = types.StringTypes if sys.version_info[0] == 2 else str
 
 
 def get_file_watcher(directories, use_mtime_file_watcher):
@@ -154,14 +159,14 @@ def get_file_watcher(directories, use_mtime_file_watcher):
   Args:
     directories: A list representing the paths of the directories to monitor.
     use_mtime_file_watcher: A bool containing whether to use mtime polling to
-        monitor file changes even if other options are available on the current
-        platform.
+      monitor file changes even if other options are available on the current
+      platform.
 
   Returns:
     A FileWatcher appropriate for the current platform. start() must be called
     before changes().
   """
-  assert not isinstance(directories, types.StringTypes), 'expected list got str'
+  assert not isinstance(directories, _STR_TYPES), 'expected list got str'
 
   if use_mtime_file_watcher:
     return _create_watcher(directories, mtime_file_watcher.MtimeFileWatcher)

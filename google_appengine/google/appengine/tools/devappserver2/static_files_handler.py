@@ -14,14 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Serves static content for "static_dir" and "static_files" handlers."""
 
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import base64
+import ctypes
 import datetime
 import errno
-import httplib
 import mimetypes
 import os
 import os.path
@@ -30,7 +33,15 @@ import time
 import wsgiref.handlers
 import zlib
 
-from google.appengine.api import appinfo
+import six
+import six.moves.http_client
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import appinfo
+else:
+  from google.appengine.api import appinfo
+
 from google.appengine.tools import augment_mimetypes
 from google.appengine.tools.devappserver2 import errors
 from google.appengine.tools.devappserver2 import url_handler
@@ -60,20 +71,23 @@ class StaticContentHandler(url_handler.UserConfiguredURLHandler):
   # reading it to generate a hash of its contents.
   _filename_to_mtime_and_etag = {}
 
-  def __init__(self, root_path, url_map, url_pattern,
+  def __init__(self,
+               root_path,
+               url_map,
+               url_pattern,
                app_info_default_expiration=None):
     """Initializer for StaticContentHandler.
 
     Args:
       root_path: A string containing the full path of the directory containing
-          the application's app.yaml file.
+        the application's app.yaml file.
       url_map: An appinfo.URLMap instance containing the configuration for this
-          handler.
+        handler.
       url_pattern: A re.RegexObject that matches URLs that should be handled by
-          this handler. It may also optionally bind groups.
+        this handler. It may also optionally bind groups.
       app_info_default_expiration: A string containing the value of the
-          default_expiration value from app info yaml. None if no
-          default_expiration is set.
+        default_expiration value from app info yaml. None if no
+        default_expiration is set.
     """
     super(StaticContentHandler, self).__init__(url_map, url_pattern)
     self._root_path = root_path
@@ -92,8 +106,8 @@ class StaticContentHandler(url_handler.UserConfiguredURLHandler):
 
     Args:
       start_response: A function with semantics defined in PEP-333. This
-          function will be called with a status appropriate to the given
-          exception.
+        function will be called with a status appropriate to the given
+        exception.
       e: An instance of OSError or IOError used to generate an HTTP status.
 
     Returns:
@@ -107,12 +121,13 @@ class StaticContentHandler(url_handler.UserConfiguredURLHandler):
 
   @staticmethod
   def _calculate_etag(data):
-    return base64.b64encode(str(zlib.crc32(data)))
+    crc = ctypes.c_int32(zlib.crc32(six.ensure_binary(data))).value
+    return six.ensure_text(base64.b64encode(six.ensure_binary(str(crc))))
 
   def _get_expires_header_value(self, expiration):
     expires_delta_seconds = appinfo.ParseExpiration(expiration)
-    expiration_datetime = (Now() +
-                           datetime.timedelta(seconds=expires_delta_seconds))
+    expiration_datetime = (
+        Now() + datetime.timedelta(seconds=expires_delta_seconds))
     return wsgiref.handlers.format_date_time(
         time.mktime(expiration_datetime.timetuple()))
 
@@ -168,19 +183,16 @@ class StaticContentHandler(url_handler.UserConfiguredURLHandler):
       etag = self._calculate_etag(data)
       self._filename_to_mtime_and_etag[full_path] = mtime, etag
 
-    if if_match and not self._check_etag_match(if_match,
-                                               etag,
-                                               allow_weak_match=False):
+    if if_match and not self._check_etag_match(
+        if_match, etag, allow_weak_match=False):
       # http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.24
-      start_response('412 Precondition Failed',
-                     [('ETag', '"%s"' % etag)])
+      start_response('412 Precondition Failed', [('ETag', '"%s"' % etag)])
       return []
-    elif if_none_match and self._check_etag_match(if_none_match,
-                                                  etag,
-                                                  allow_weak_match=True):
+    elif if_none_match and self._check_etag_match(
+        if_none_match, etag, allow_weak_match=True):
       # http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.26
       start_response('304 Not Modified',
-                     [('ETag', '"%s"' % etag)])
+                     [('ETag', six.ensure_str('"%s"' % etag))])
       return []
     else:
       if data is None:
@@ -198,7 +210,7 @@ class StaticContentHandler(url_handler.UserConfiguredURLHandler):
         headers.append(('Content-type', self._get_mime_type(full_path)))
 
       if user_headers.Get('ETag') is None:
-        headers.append(('ETag', '"%s"' % etag))
+        headers.append(('ETag', six.ensure_str('"%s"' % etag)))
 
       if user_headers.Get('Expires') is None:
         if self._url_map.expiration:
@@ -208,14 +220,14 @@ class StaticContentHandler(url_handler.UserConfiguredURLHandler):
               self._app_info_default_expiration)
         else:
           expires = 'Fri, 01 Jan 1990 00:00:00 GMT'
-        headers.append(('Expires', expires))
+        headers.append(('Expires', six.ensure_str(expires)))
 
       if user_headers.Get('Cache-Control') is None:
         headers.append(('Cache-Control', 'public'))
 
       for name, value in user_headers.items():
         # "name" will always be unicode due to the way that ValidatedDict works.
-        headers.append((str(name), value))
+        headers.append((six.ensure_str(name), six.ensure_str(value)))
 
       start_response('200 OK', headers)
       if environ['REQUEST_METHOD'] == 'HEAD':
@@ -233,10 +245,10 @@ class StaticContentHandler(url_handler.UserConfiguredURLHandler):
     """Checks if an etag header matches a given etag.
 
     Args:
-      etag_headers: A string representing an e-tag header value e.g.
-          '"xyzzy", "r2d2xxxx", W/"c3piozzzz"' or '*'.
+      etag_headers: A string representing an e-tag header value e.g. '"xyzzy",
+        "r2d2xxxx", W/"c3piozzzz"' or '*'.
       etag: The etag to match the header to. If None then only the '*' header
-          with match.
+        with match.
       allow_weak_match: If True then weak etags are allowed to match.
 
     Returns:
@@ -255,7 +267,7 @@ class StaticContentHandler(url_handler.UserConfiguredURLHandler):
     # This parsing is not actually correct since it assumes that commas cannot
     # appear in etags. But the generated etags do not contain commas so this
     # still works.
-    for etag_header in etag_headers.split(','):
+    for etag_header in six.ensure_str(etag_headers).split(','):
       if etag_header.startswith('W/'):
         if allow_weak_match:
           etag_header = etag_header[2:]
@@ -294,12 +306,12 @@ class StaticContentHandler(url_handler.UserConfiguredURLHandler):
 
     # Note: can't do something like path == os.path.normpath(path) as Windows
     # would normalize separators to backslashes.
-    return not os.path.isabs(path) and '' not in path.split('/')
+    return not os.path.isabs(path) and '' not in six.ensure_str(path).split('/')
 
   @staticmethod
   def _not_found_404(environ, start_response):
-    status = httplib.NOT_FOUND
-    start_response('%d %s' % (status, httplib.responses[status]),
+    status = six.moves.http_client.NOT_FOUND
+    start_response('%d %s' % (status, six.moves.http_client.responses[status]),
                    [('Content-Type', 'text/plain')])
     return ['%s not found' % environ['PATH_INFO']]
 
@@ -319,12 +331,12 @@ class StaticFilesHandler(StaticContentHandler):
 
     Args:
       root_path: A string containing the full path of the directory containing
-          the application's app.yaml file.
+        the application's app.yaml file.
       url_map: An appinfo.URLMap instance containing the configuration for this
-          handler.
+        handler.
       app_info_default_expiration: A string containing the value of the
-          default_expiration value from app info yaml. None if no
-          default_expiration is set.
+        default_expiration value from app info yaml. None if no
+        default_expiration is set.
     """
     try:
       url_pattern = re.compile('%s$' % url_map.url)
@@ -332,9 +344,7 @@ class StaticFilesHandler(StaticContentHandler):
       raise errors.InvalidAppConfigError(
           'invalid url %r in static_files handler: %s' % (url_map.url, e))
 
-    super(StaticFilesHandler, self).__init__(root_path,
-                                             url_map,
-                                             url_pattern,
+    super(StaticFilesHandler, self).__init__(root_path, url_map, url_pattern,
                                              app_info_default_expiration)
 
   def handle(self, match, environ, start_response):
@@ -373,12 +383,12 @@ class StaticDirHandler(StaticContentHandler):
 
     Args:
       root_path: A string containing the full path of the directory containing
-          the application's app.yaml file.
+        the application's app.yaml file.
       url_map: An appinfo.URLMap instance containing the configuration for this
-          handler.
+        handler.
       app_info_default_expiration: A string containing the value of the
-          default_expiration value from app info yaml. None if no
-          default_expiration is set.
+        default_expiration value from app info yaml. None if no
+        default_expiration is set.
     """
     url = url_map.url
     # Take a url pattern like "/css" and transform it into a match pattern like
@@ -392,9 +402,7 @@ class StaticDirHandler(StaticContentHandler):
       raise errors.InvalidAppConfigError(
           'invalid url %r in static_dir handler: %s' % (url, e))
 
-    super(StaticDirHandler, self).__init__(root_path,
-                                           url_map,
-                                           url_pattern,
+    super(StaticDirHandler, self).__init__(root_path, url_map, url_pattern,
                                            app_info_default_expiration)
 
   def handle(self, match, environ, start_response):
@@ -412,7 +420,6 @@ class StaticDirHandler(StaticContentHandler):
     relative_path = match.group('file')
     if not self._is_relative_path_valid(relative_path):
       return self._not_found_404(environ, start_response)
-    full_path = os.path.join(self._root_path,
-                             self._url_map.static_dir,
+    full_path = os.path.join(self._root_path, self._url_map.static_dir,
                              relative_path)
     return self._handle_path(full_path, environ, start_response)

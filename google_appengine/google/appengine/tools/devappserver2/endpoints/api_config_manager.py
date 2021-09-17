@@ -14,7 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Configuration manager to store API configurations."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 
 
 
@@ -23,12 +29,22 @@
 
 
 import base64
+import functools
 import json
 import logging
 import re
 import threading
 
+import six
+
 from google.appengine.tools.devappserver2.endpoints import discovery_service
+
+if not six.PY2:
+
+  # The cmp builtin function was deleted after python 2. Replicate the logic
+  # here.
+  def cmp(a, b):
+    return (a > b) - (a < b)
 
 
 # Internal constants
@@ -70,10 +86,13 @@ class ApiConfigManager(object):
     """
     if 'adapter' in config and 'bns' in config['adapter']:
       bns_adapter = config['adapter']['bns']
-      if bns_adapter.startswith('https://'):
-        config['adapter']['bns'] = bns_adapter.replace('https', 'http', 1)
-    if 'root' in config and config['root'].startswith('https://'):
-      config['root'] = config['root'].replace('https', 'http', 1)
+      if six.ensure_str(bns_adapter).startswith('https://'):
+        config['adapter']['bns'] = six.ensure_str(bns_adapter).replace(
+            'https', 'http', 1)
+    if 'root' in config and six.ensure_str(
+        config['root']).startswith('https://'):
+      config['root'] = six.ensure_str(config['root']).replace(
+          'https', 'http', 1)
 
   def parse_api_config_response(self, body):
     """Parses a json api config and registers methods for dispatch.
@@ -101,8 +120,7 @@ class ApiConfigManager(object):
           try:
             config = json.loads(api_config_json)
           except ValueError as unused_err:
-            logging.error('Can not parse API config: %s',
-                          api_config_json)
+            logging.error('Can not parse API config: %s', api_config_json)
           else:
             lookup_key = config.get('name', ''), config.get('version', '')
             self._convert_https_to_http(config)
@@ -166,7 +184,7 @@ class ApiConfigManager(object):
 
 
         score = 0
-        parts = path.split('/')
+        parts = six.ensure_str(path).split('/')
         for part in parts:
           score <<= 1
           if not part or part[0] != '{':
@@ -195,7 +213,8 @@ class ApiConfigManager(object):
                           method_info2[1].get('httpMethod', ''))
       return method_result
 
-    return sorted(methods.items(), _sorted_methods_comparison)
+    return sorted(
+        methods.items(), key=functools.cmp_to_key(_sorted_methods_comparison))
 
   @staticmethod
   def _get_path_params(match):
@@ -249,7 +268,7 @@ class ApiConfigManager(object):
     """
     with self._config_lock:
       for compiled_path_pattern, unused_path, methods in self._rest_methods:
-        match = compiled_path_pattern.match(path)
+        match = compiled_path_pattern.match(six.ensure_str(path))
         if match:
           params = self._get_path_params(match)
           method_key = http_method.lower()
@@ -291,7 +310,9 @@ class ApiConfigManager(object):
     Returns:
       A string that's safe to be used as a regex group name.
     """
-    return '_' + base64.b32encode(matched_parameter).rstrip('=')
+    return '_' + six.ensure_text(
+        base64.b32encode(six.ensure_binary(matched_parameter)).rstrip(
+            six.b('=')))
 
   @staticmethod
   def _from_safe_path_param_name(safe_parameter):
@@ -311,7 +332,7 @@ class ApiConfigManager(object):
     assert safe_parameter.startswith('_')
     safe_parameter_as_base32 = safe_parameter[1:]
 
-    padding_length = - len(safe_parameter_as_base32) % 8
+    padding_length = -len(safe_parameter_as_base32) % 8
     padding = '=' * padding_length
     return base64.b32decode(safe_parameter_as_base32 + padding)
 
@@ -347,8 +368,7 @@ class ApiConfigManager(object):
       """
       if match.lastindex > 1:
         var_name = ApiConfigManager._to_safe_path_param_name(match.group(2))
-        return '%s(?P<%s>%s)' % (match.group(1), var_name,
-                                 _PATH_VALUE_PATTERN)
+        return '%s(?P<%s>%s)' % (match.group(1), var_name, _PATH_VALUE_PATTERN)
       return match.group(0)
 
     pattern = re.sub('(/|^){(%s)}(?=/|$)' % _PATH_VARIABLE_PATTERN,
@@ -410,6 +430,6 @@ class ApiConfigManager(object):
         break
     else:
       self._rest_methods.append(
-          (self._compile_path_pattern(path_pattern),
-           path_pattern,
-           {http_method: (method_name, method)}))
+          (self._compile_path_pattern(path_pattern), path_pattern, {
+              http_method: (method_name, method)
+          }))

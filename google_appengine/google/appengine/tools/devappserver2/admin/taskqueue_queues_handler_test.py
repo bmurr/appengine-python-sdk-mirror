@@ -22,10 +22,16 @@ import unittest
 
 import google
 import mox
+import six
 import webapp2
 
-from google.appengine.api import apiproxy_stub_map
-from google.appengine.api.taskqueue import taskqueue_service_pb
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api.taskqueue import taskqueue_service_pb
+  tasks_service_proto = taskqueue_service_pb
+else:
+  from google.appengine.api.taskqueue import taskqueue_service_bytes_pb2
+  tasks_service_proto = taskqueue_service_bytes_pb2
 
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 from google.appengine.tools.devappserver2.admin import taskqueue_queues_handler
@@ -36,6 +42,7 @@ class TestTaskQueueQueuesHandler(unittest.TestCase):
   """Tests for taskqueue_queues_handler.TaskQueueQueuesHandler."""
 
   def setUp(self):
+    super(TestTaskQueueQueuesHandler, self).setUp()
     self.mox = mox.Mox()
     self.mox.StubOutWithMock(taskqueue_utils.QueueInfo, 'get')
     self.mox.StubOutWithMock(admin_request_handler.AdminRequestHandler,
@@ -44,25 +51,26 @@ class TestTaskQueueQueuesHandler(unittest.TestCase):
 
   def tearDown(self):
     self.mox.UnsetStubs()
+    super(TestTaskQueueQueuesHandler, self).tearDown()
 
   def test_get(self):
     queue1 = taskqueue_utils.QueueInfo(
         name='queue1',
-        mode=taskqueue_service_pb.TaskQueueMode.PUSH,
+        mode=tasks_service_proto.TaskQueueMode.PUSH,
         rate='10/s',
         bucket_size=20,
         tasks_in_queue=10,
         oldest_eta_usec=-1)
     queue2 = taskqueue_utils.QueueInfo(
         name='queue1',
-        mode=taskqueue_service_pb.TaskQueueMode.PUSH,
+        mode=tasks_service_proto.TaskQueueMode.PUSH,
         rate='20/s',
         bucket_size=20,
         tasks_in_queue=10,
         oldest_eta_usec=-1)
     queue3 = taskqueue_utils.QueueInfo(
         name='queue1',
-        mode=taskqueue_service_pb.TaskQueueMode.PULL,
+        mode=tasks_service_proto.TaskQueueMode.PULL,
         rate='20/s',
         bucket_size=20,
         tasks_in_queue=10,

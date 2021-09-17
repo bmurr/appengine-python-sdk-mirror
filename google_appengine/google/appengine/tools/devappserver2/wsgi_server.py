@@ -14,13 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """A WSGI server implementation using a shared thread pool."""
 
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import collections
 import errno
-import httplib
 import logging
 import os
 import re
@@ -33,6 +35,17 @@ import time
 import google
 import ipaddr
 
+from google.appengine._internal import six_subset
+from google.appengine.tools.devappserver2 import errors
+from google.appengine.tools.devappserver2 import http_runtime_constants
+from google.appengine.tools.devappserver2 import shutdown
+from google.appengine.tools.devappserver2 import thread_executor
+
+# pylint: disable=g-import-not-at-top
+if six_subset.PY2:
+  import httplib as http_client
+else:
+  import http.client as http_client
 
 
 
@@ -46,12 +59,6 @@ import ipaddr
 
 
 from cherrypy import wsgiserver
-
-
-from google.appengine.tools.devappserver2 import errors
-from google.appengine.tools.devappserver2 import http_runtime_constants
-from google.appengine.tools.devappserver2 import shutdown
-from google.appengine.tools.devappserver2 import thread_executor
 
 
 _HAS_POLL = hasattr(select, 'poll')
@@ -242,6 +249,7 @@ class _SingleAddressWsgiServer(wsgiserver.CherryPyWSGIServer):
         info = [(socket.AF_INET, socket.SOCK_STREAM, 0, '', self.bind_addr)]
 
     self.socket = None
+    saved_socket_error = None
     for res in info:
       af, socktype, proto, _, _ = res
       try:
@@ -250,10 +258,12 @@ class _SingleAddressWsgiServer(wsgiserver.CherryPyWSGIServer):
         if self.socket:
           self.socket.close()
         self.socket = None
+        saved_socket_error = socket_error
         continue
       break
     if not self.socket:
-      raise BindError('Unable to bind %s:%s' % self.bind_addr, socket_error)
+      raise BindError('Unable to bind %s:%s' % self.bind_addr,
+                      saved_socket_error)
 
     # Timeout so KeyboardInterrupt can be caught on Win32
     self.socket.settimeout(1)
@@ -291,7 +301,7 @@ class _SingleAddressWsgiServer(wsgiserver.CherryPyWSGIServer):
     if app:
       return app(environ, start_response)
     else:
-      start_response('%d %s' % (error, httplib.responses[error]), [])
+      start_response('%d %s' % (error, http_client.responses[error]), [])
       return []
 
 
@@ -303,9 +313,9 @@ class WsgiHostCheck(object):
     self.whitelisted_wildcard_hosts = set()
     self.whitelisted_deep_wildcard_hosts = set()
     for host in whitelisted_hosts:
-      if host.startswith('**.'):
+      if six_subset.ensure_str(host).startswith('**.'):
         self.whitelisted_deep_wildcard_hosts.add(self._get_base_host_name(host))
-      elif host.startswith('*.'):
+      elif six_subset.ensure_str(host).startswith('*.'):
         self.whitelisted_wildcard_hosts.add(self._get_base_host_name(host))
       else:
         self.whitelisted_hosts.add(host)
@@ -369,20 +379,22 @@ class WsgiHostCheck(object):
 
   def _is_whitelisted_deep_wildcard_host(self, host):
     """Checks the provided host for whitelisting through deep wildcarding."""
-    return any(host.endswith('.' + deep_wildcard_host) for
-               deep_wildcard_host in self.whitelisted_deep_wildcard_hosts)
+    return any(
+        host.endswith('.' + six_subset.ensure_str(deep_wildcard_host))
+        for deep_wildcard_host in self.whitelisted_deep_wildcard_hosts)
 
   def _get_canonical_host_name(self, host):
     """Returns just the host name from a HTTP_HOST header value."""
-    ipv6_match = _IPV6_HOST_RE.match(host)
+    ipv6_match = _IPV6_HOST_RE.match(six_subset.ensure_str(host))
     if ipv6_match:
       return ipv6_match.group(1)
     else:
-      return host.rsplit(':', 1)[0]
+      return six_subset.ensure_str(host).rsplit(':', 1)[0]
 
   def _get_base_host_name(self, host):
     """Returns the host name without the lowest level domain part."""
-    return host.split('.', 1)[-1] if '.' in host else None
+    return six_subset.ensure_str(host).split('.',
+                                             1)[-1] if '.' in host else None
 
 
 class WsgiServer(object):
@@ -529,7 +541,8 @@ class WsgiServer(object):
         if port == 0:
           port = server.port
       except BindError as bind_error:
-        if bind_error[1][0] == errno.EADDRINUSE:
+        err = bind_error[1][0] if six_subset.PY2 else bind_error.args[1][0]
+        if err == errno.EADDRINUSE:
           # The port picked at random for first interface was not available
           # on one of the other interfaces. Forget them and try again.
           for server in self._servers:

@@ -16,11 +16,13 @@
 #
 """Tests for devappserver2.admin.mail_request_handler."""
 
+import base64
 import email.message
 import unittest
 
 import google
 import mock
+import six
 import webapp2
 
 from google.appengine.tools.devappserver2 import dispatcher
@@ -42,15 +44,23 @@ class MailRequestHandlerTest(unittest.TestCase):
     self.assertEqual('utf-8', text.get_content_charset())
     content = text.get_payload()
     if text['content-transfer-encoding'] != '7bit':
-      content = content.decode(text['content-transfer-encoding'])
-    self.assertEqual('body', content)
+      if text['content-transfer-encoding'] == 'base64':
+        content = base64.b64decode(content)
+      else:
+        raise Exception('Unrecognized transfer encoding: ' +
+                        text['content-transfer-encoding'])
+    self.assertEqual(six.ensure_binary('body'), content)
 
     self.assertEqual('text/html', html.get_content_type())
     self.assertEqual('utf-8', html.get_content_charset())
     content = html.get_payload()
-    if html['content-transfer-encoding'] != '7bit':
-      content = content.decode(html['content-transfer-encoding'])
-    self.assertEqual('body', content)
+    if text['content-transfer-encoding'] != '7bit':
+      if text['content-transfer-encoding'] == 'base64':
+        content = base64.b64decode(content)
+      else:
+        raise Exception('Unexpected transfer encoding: ' +
+                        text['content-transfer-encoding'])
+    self.assertEqual(six.ensure_binary('body'), content)
 
   def test_send_email(self):
     response = webapp2.Response()

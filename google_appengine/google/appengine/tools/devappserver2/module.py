@@ -14,36 +14,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Manage the lifecycle of runtime processes and dispatch requests to them."""
 
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import cgi
 import collections
-import cStringIO
+from concurrent import futures
 import functools
-import httplib
 import logging
 import math
 import os.path
 import random
 import re
 import string
-import thread
 import threading
-import traceback
 import time
-import urllib
-import urlparse
 import wsgiref.headers
 
-from concurrent import futures
+import google
+import py27_urlquote
+import six
 
-from google.appengine.api import api_base_pb
-from google.appengine.api import apiproxy_stub_map
-from google.appengine.api import appinfo
-from google.appengine.api import request_info
-from google.appengine.api.logservice import log_service_pb
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import api_base_pb
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import appinfo
+  from google.appengine.api import request_info
+  from google.appengine.api.logservice import log_service_pb
+else:
+  from google.appengine.api import api_base_pb2
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import appinfo
+  from google.appengine.api import request_info
+  from google.appengine.api.logservice import log_service_pb2
+
 from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import blob_image
 from google.appengine.tools.devappserver2 import blob_upload
@@ -69,24 +78,24 @@ from google.appengine.tools.devappserver2 import util
 from google.appengine.tools.devappserver2 import wsgi_handler
 from google.appengine.tools.devappserver2 import wsgi_server
 
-
 _LOWER_HEX_DIGITS = string.hexdigits.lower()
 _UPPER_HEX_DIGITS = string.hexdigits.upper()
 _REQUEST_ID_HASH_LENGTH = 8
 
 _THREAD_POOL = thread_executor.ThreadExecutor()
-_RESTART_INSTANCES_CONFIG_CHANGES = frozenset(
-    [application_configuration.NORMALIZED_LIBRARIES_CHANGED,
-     application_configuration.SKIP_FILES_CHANGED,
-     application_configuration.NOBUILD_FILES_CHANGED,
-     # The server must be restarted when the handlers change because files
-     # appearing in static content handlers make them unavailable to the
-     # runtime.
-     application_configuration.HANDLERS_CHANGED,
-     application_configuration.ENV_VARIABLES_CHANGED,
-     application_configuration.ENTRYPOINT_ADDED,
-     application_configuration.ENTRYPOINT_CHANGED,
-     application_configuration.ENTRYPOINT_REMOVED])
+_RESTART_INSTANCES_CONFIG_CHANGES = frozenset([
+    application_configuration.NORMALIZED_LIBRARIES_CHANGED,
+    application_configuration.SKIP_FILES_CHANGED,
+    application_configuration.NOBUILD_FILES_CHANGED,
+    # The server must be restarted when the handlers change because files
+    # appearing in static content handlers make them unavailable to the
+    # runtime.
+    application_configuration.HANDLERS_CHANGED,
+    application_configuration.ENV_VARIABLES_CHANGED,
+    application_configuration.ENTRYPOINT_ADDED,
+    application_configuration.ENTRYPOINT_CHANGED,
+    application_configuration.ENTRYPOINT_REMOVED
+])
 
 _REQUEST_LOGGING_BLACKLIST_RE = re.compile(
     r'^/_ah/(?:channel/(?:dev|jsapi)|img|login|upload)')
@@ -101,13 +110,13 @@ _MAX_UPLOAD_MEGABYTES = 32
 _MAX_UPLOAD_BYTES = _MAX_UPLOAD_MEGABYTES * 1024 * 1024
 _MAX_UPLOAD_NO_TRIGGER_BAD_CLIENT_BYTES = 64 * 1024 * 1024
 
-_REDIRECT_HTML = '''\
+_REDIRECT_HTML = """\
 <HTML><HEAD><meta http-equiv="content-type" content="%(content-type)s">
 <TITLE>%(status)d Moved</TITLE></HEAD>
 <BODY><H1>%(status)d Moved</H1>
 The document has moved'
 <A HREF="%(correct-url)s">here</A>.
-</BODY></HTML>'''
+</BODY></HTML>"""
 
 _TIMEOUT_HTML = '<HTML><BODY>503 - This request has timed out.</BODY></HTML>'
 
@@ -128,8 +137,8 @@ _FILESAPI_DEPRECATION_WARNING = (
     'The Files API is deprecated and will soon be removed. Further information'
     ' is available here: https://cloud.google.com/appengine/docs/deprecations'
     '/files_api')
-_ALLOWED_RUNTIMES_ENV_FLEX = (
-    'python-compat', 'java', 'java7', 'go', 'custom')
+_ALLOWED_RUNTIMES_ENV_FLEX = ('python-compat', 'java', 'java7', 'go', 'custom')
+
 
 def _static_files_regex_from_handlers(handlers):
   patterns = []
@@ -140,8 +149,9 @@ def _static_files_regex_from_handlers(handlers):
     if handler_type == appinfo.STATIC_FILES:
       patterns.append(r'(%s)' % url_map.upload)
     elif handler_type == appinfo.STATIC_DIR:
-      patterns.append('(%s%s%s)' % (url_map.static_dir.rstrip(os.path.sep),
-                                    re.escape(os.path.sep), r'.*'))
+      stripped_dir = six.ensure_str(url_map.static_dir).rstrip(os.path.sep)
+      patterns.append('(%s%s%s)' %
+                      (stripped_dir, re.escape(os.path.sep), r'.*'))
   return r'^%s$' % '|'.join(patterns)
 
 
@@ -161,7 +171,7 @@ class _ScriptHandler(url_handler.UserConfiguredURLHandler):
 
     Args:
       url_map: An appinfo.URLMap instance containing the configuration for this
-          handler.
+        handler.
     """
     try:
       url_pattern = re.compile('%s$' % url_map.url)
@@ -190,13 +200,12 @@ class Module(object):
     """
     return self._MAX_REQUEST_WAIT_TIME
 
-  def _create_instance_factory(self,
-                               module_configuration):
+  def _create_instance_factory(self, module_configuration):
     """Create an instance.InstanceFactory.
 
     Args:
       module_configuration: An application_configuration.ModuleConfiguration
-          instance storing the configuration data for a module.
+        instance storing the configuration data for a module.
 
     Returns:
       A instance.InstanceFactory subclass that can be used to create instances
@@ -215,15 +224,14 @@ class Module(object):
         if runtime not in _ALLOWED_RUNTIMES_ENV_FLEX:
           raise errors.InvalidAppConfigError(
               'In env: {0}, only the following runtimes '
-              'are allowed: {1}'
-              .format(module_configuration.env, _ALLOWED_RUNTIMES_ENV_FLEX))
+              'are allowed: {1}'.format(module_configuration.env,
+                                        _ALLOWED_RUNTIMES_ENV_FLEX))
 
     if runtime not in runtime_factories.FACTORIES:
       raise RuntimeError(
           'Unknown runtime %r; supported runtimes are %s.' %
-          (runtime,
-           ', '.join(
-               sorted(repr(k) for k in runtime_factories.FACTORIES))))
+          (runtime, ', '.join(
+              sorted(repr(k) for k in runtime_factories.FACTORIES))))
     instance_factory = runtime_factories.FACTORIES[runtime]
     return instance_factory(
         request_data=self._request_data,
@@ -231,8 +239,8 @@ class Module(object):
         module_configuration=module_configuration)
 
   def _is_modern(self):
-    return (
-        self._module_configuration.runtime in runtime_factories.MODERN_RUNTIMES)
+    return (self._module_configuration.runtime
+            in runtime_factories.MODERN_RUNTIMES)
 
   def _create_url_handlers(self):
     """Constructs URLHandlers based on the module configuration.
@@ -245,17 +253,19 @@ class Module(object):
     # Add special URL handlers (taking precedence over user-defined handlers)
 
     # Login/logout handlers.
-    handlers.append(wsgi_handler.WSGIHandler(
-        login.application, '/%s$' % login.LOGIN_URL_RELATIVE))
-    handlers.append(wsgi_handler.WSGIHandler(
-        login.application, '/%s$' % login.LOGOUT_URL_RELATIVE))
+    handlers.append(
+        wsgi_handler.WSGIHandler(login.application,
+                                 '/%s$' % login.LOGIN_URL_RELATIVE))
+    handlers.append(
+        wsgi_handler.WSGIHandler(login.application,
+                                 '/%s$' % login.LOGOUT_URL_RELATIVE))
 
     url_pattern = '/%s' % blob_upload.UPLOAD_URL_PATH
     # The blobstore upload handler forwards successful requests to the
     # dispatcher.
     handlers.append(
-        wsgi_handler.WSGIHandler(blob_upload.Application(self._dispatcher),
-                                 url_pattern))
+        wsgi_handler.WSGIHandler(
+            blob_upload.Application(self._dispatcher), url_pattern))
 
     url_pattern = '/%s' % blob_image.BLOBIMAGE_URL_PATTERN
     handlers.append(
@@ -270,13 +280,14 @@ class Module(object):
     runtime_config = self._get_runtime_config()
     for library in runtime_config.libraries:
       if library.name == 'endpoints' and library.version == '1.0':
-        if [url_map for url_map in self._module_configuration.handlers
-            if url_map.url.startswith('/_ah/spi/')]:
+        if [
+            url_map for url_map in self._module_configuration.handlers
+            if six.ensure_str(url_map.url).startswith('/_ah/spi/')
+        ]:
           url_pattern = '/%s' % endpoints.API_SERVING_PATTERN
           handlers.append(
               wsgi_handler.WSGIHandler(
-                  endpoints.EndpointsDispatcher(self._dispatcher),
-                  url_pattern))
+                  endpoints.EndpointsDispatcher(self._dispatcher), url_pattern))
 
     found_start_handler = False
     found_warmup_handler = False
@@ -295,14 +306,12 @@ class Module(object):
       elif handler_type == appinfo.STATIC_FILES:
         handlers.append(
             static_files_handler.StaticFilesHandler(
-                self._module_configuration.application_root,
-                url_map,
+                self._module_configuration.application_root, url_map,
                 self._module_configuration.default_expiration))
       elif handler_type == appinfo.STATIC_DIR:
         handlers.append(
             static_files_handler.StaticDirHandler(
-                self._module_configuration.application_root,
-                url_map,
+                self._module_configuration.application_root, url_map,
                 self._module_configuration.default_expiration))
       else:
         assert 0, 'unexpected handler %r for %r' % (handler_type, url_map)
@@ -332,13 +341,15 @@ class Module(object):
       field, which must be populated elsewhere.
     """
     runtime_config = runtime_config_pb2.Config()
-    runtime_config.app_id = self._module_configuration.application
-    runtime_config.version_id = self._module_configuration.version_id
+    runtime_config.app_id = six.ensure_binary(
+        self._module_configuration.application)
+    runtime_config.version_id = six.ensure_binary(
+        self._module_configuration.version_id)
     if self._threadsafe_override is None:
       runtime_config.threadsafe = self._module_configuration.threadsafe or False
     else:
       runtime_config.threadsafe = self._threadsafe_override
-    runtime_config.application_root = (
+    runtime_config.application_root = six.ensure_binary(
         self._module_configuration.application_root)
     if not self._allow_skipped_files:
       runtime_config.skip_files = str(self._module_configuration.skip_files)
@@ -357,23 +368,25 @@ class Module(object):
       runtime_config.libraries.add(name=library.name, version=library.version)
 
     for key, value in (self._module_configuration.env_variables or {}).items():
-      runtime_config.environ.add(key=str(key), value=str(value))
+      runtime_config.environ.add(
+          key=six.ensure_binary(key), value=six.ensure_binary(value))
 
     if self._cloud_sql_config:
       runtime_config.cloud_sql_config.CopyFrom(self._cloud_sql_config)
 
     if (self._php_config and
-        self._module_configuration.runtime.startswith('php')):
+        six.ensure_str(self._module_configuration.runtime).startswith('php')):
       runtime_config.php_config.CopyFrom(self._php_config)
-    if (self._python_config and
-        self._module_configuration.runtime.startswith('python')):
+    if (self._python_config and six.ensure_str(
+        self._module_configuration.runtime).startswith('python')):
       runtime_config.python_config.CopyFrom(self._python_config)
     if (self._java_config and
-        (self._module_configuration.runtime.startswith('java') or
-         self._module_configuration.effective_runtime.startswith('java'))):
+        (six.ensure_str(self._module_configuration.runtime).startswith('java')
+         or six.ensure_str(
+             self._module_configuration.effective_runtime).startswith('java'))):
       runtime_config.java_config.CopyFrom(self._java_config)
     if (self._go_config and
-        self._module_configuration.runtime.startswith('go')):
+        six.ensure_str(self._module_configuration.runtime).startswith('go')):
       runtime_config.go_config.CopyFrom(self._go_config)
 
     if self._vm_config:
@@ -385,9 +398,13 @@ class Module(object):
 
     return runtime_config
 
-  def _maybe_restart_instances(self, config_changed, file_changed,
+  def _maybe_restart_instances(self,
+                               config_changed,
+                               file_changed,
                                modern_runtime_dep_libs_changed=False):
-    """Restarts instances. May avoid some restarts depending on policy.
+    """Restarts instances.
+
+    May avoid some restarts depending on policy.
 
     If neither config_changed or file_changed is True, returns immediately.
 
@@ -399,9 +416,8 @@ class Module(object):
     """
     policy = self._instance_factory.FILE_CHANGE_INSTANCE_RESTART_POLICY
     assert policy is not None, 'FILE_CHANGE_INSTANCE_RESTART_POLICY not set'
-    if policy == instance.NEVER or (
-        not config_changed and not file_changed
-        and not modern_runtime_dep_libs_changed):
+    if policy == instance.NEVER or (not config_changed and not file_changed and
+                                    not modern_runtime_dep_libs_changed):
       return
 
     logging.debug('Restarting instances.')
@@ -423,9 +439,8 @@ class Module(object):
     file_changes = self._get_file_changes(timeout)
 
     if file_changes:
-      logging.info(
-          '[%s] Detected file changes:\n  %s', self.name,
-          '\n  '.join(sorted(file_changes)))
+      logging.info('[%s] Detected file changes:\n  %s', self.name,
+                   '\n  '.join(sorted(file_changes)))
       self._instance_factory.files_changed()
 
     # Always check for config and file changes because checking also clears
@@ -483,67 +498,69 @@ class Module(object):
       ssl_certificate_paths=None,
       ssl_port=None):
     """Initializer for Module.
+
     Args:
       module_configuration: An application_configuration.ModuleConfiguration
-          instance storing the configuration data for a module.
+        instance storing the configuration data for a module.
       host: A string containing the host that any HTTP servers should bind to
-          e.g. "localhost".
+        e.g. "localhost".
       balanced_port: An int specifying the port where the balanced module for
-          the pool should listen.
+        the pool should listen.
       api_host: The host that APIModule listens for RPC requests on.
       api_port: The port that APIModule listens for RPC requests on.
       auth_domain: A string containing the auth domain to set in the environment
-          variables.
+        variables.
       runtime_stderr_loglevel: An int reprenting the minimum logging level at
-          which runtime log messages should be written to stderr. See
-          devappserver2.py for possible values.
+        which runtime log messages should be written to stderr. See
+        devappserver2.py for possible values.
       php_config: A runtime_config_pb2.PhpConfig instances containing PHP
-          runtime-specific configuration. If None then defaults are used.
+        runtime-specific configuration. If None then defaults are used.
       python_config: A runtime_config_pb2.PythonConfig instance containing
-          Python runtime-specific configuration. If None then defaults are used.
-      java_config: A runtime_config_pb2.JavaConfig instance containing
-          Java runtime-specific configuration. If None then defaults are used.
+        Python runtime-specific configuration. If None then defaults are used.
+      java_config: A runtime_config_pb2.JavaConfig instance containing Java
+        runtime-specific configuration. If None then defaults are used.
       go_config: A runtime_config_pb2.GoConfig instances containing Go
-          runtime-specific configuration. If None then defaults are used.
-      custom_config: A runtime_config_pb2.CustomConfig instance. If 'runtime'
-          is set then we switch to another runtime.  Otherwise, we use the
-          custom_entrypoint to start the app.  If neither or both are set,
-          then we will throw an error.
+        runtime-specific configuration. If None then defaults are used.
+      custom_config: A runtime_config_pb2.CustomConfig instance. If 'runtime' is
+        set then we switch to another runtime.  Otherwise, we use the
+        custom_entrypoint to start the app.  If neither or both are set, then we
+        will throw an error.
       cloud_sql_config: A runtime_config_pb2.CloudSQL instance containing the
-          required configuration for local Google Cloud SQL development. If None
-          then Cloud SQL will not be available.
-      vm_config: A runtime_config_pb2.VMConfig instance containing
-          VM runtime-specific configuration. If None all docker-related stuff
-          is disabled.
+        required configuration for local Google Cloud SQL development. If None
+        then Cloud SQL will not be available.
+      vm_config: A runtime_config_pb2.VMConfig instance containing VM
+        runtime-specific configuration. If None all docker-related stuff is
+        disabled.
       default_version_port: An int containing the port of the default version.
       port_registry: A dispatcher.PortRegistry used to provide the Dispatcher
-          with a mapping of port to Module and Instance.
+        with a mapping of port to Module and Instance.
       request_data: A wsgi_request_info.WSGIRequestInfo that will be provided
-          with request information for use by API stubs.
+        with request information for use by API stubs.
       dispatcher: A Dispatcher instance that can be used to make HTTP requests.
       max_instances: The maximum number of instances to create for this module.
-          If None then there is no limit on the number of created instances.
+        If None then there is no limit on the number of created instances.
       use_mtime_file_watcher: A bool containing whether to use mtime polling to
-          monitor file changes even if other options are available on the
-          current platform.
+        monitor file changes even if other options are available on the current
+        platform.
       watcher_ignore_re: A regex that optionally defines a pattern for the file
-          watcher to ignore.
-      automatic_restarts: If True then instances will be restarted when a
-          file or configuration change that effects them is detected.
+        watcher to ignore.
+      automatic_restarts: If True then instances will be restarted when a file
+        or configuration change that effects them is detected.
       allow_skipped_files: If True then all files in the application's directory
-          are readable, even if they appear in a static handler or "skip_files"
-          directive.
+        are readable, even if they appear in a static handler or "skip_files"
+        directive.
       threadsafe_override: If not None, ignore the YAML file value of threadsafe
-          and use this value instead.
+        and use this value instead.
       addn_host: A list whitelisting additional HTTP Hosts when
-          enable_host_checking is enabled
-      enable_host_checking: A bool indicating that HTTP Host checking should
-          be enforced for incoming requests.
-      ssl_certificate_paths: A ssl_utils.SSLCertificatePaths instance. If
-          not None, the module's wsgi server will be launched with SSL. Must
-          also specify ssl_port.
+        enable_host_checking is enabled
+      enable_host_checking: A bool indicating that HTTP Host checking should be
+        enforced for incoming requests.
+      ssl_certificate_paths: A ssl_utils.SSLCertificatePaths instance. If not
+        None, the module's wsgi server will be launched with SSL. Must also
+        specify ssl_port.
       ssl_port: An additional port to bind to for SSL connections. Must be
-          specified if ssl_certificate_paths is specified.
+        specified if ssl_certificate_paths is specified.
+
     Raises:
       errors.InvalidAppConfigError: For runtime: custom, either mistakenly set
         both --custom_entrypoint and --runtime or neither.
@@ -616,15 +633,16 @@ class Module(object):
       wsgi_module = self
 
     self._balanced_module = wsgi_server.WsgiServer(
-        (self._host, self._balanced_port), wsgi_module,
-        ssl_certificate_paths, self._ssl_port)
+        (self._host, self._balanced_port), wsgi_module, ssl_certificate_paths,
+        self._ssl_port)
 
     self._quit_event = threading.Event()  # Set when quit() has been called.
 
     # TODO: Remove after the Files API is really gone.
-    if (self._module_configuration.runtime.startswith('python') or
-        self._module_configuration.runtime.startswith('java') or
-        self._module_configuration.runtime.startswith('go')):
+    if (six.ensure_str(
+        self._module_configuration.runtime).startswith('python') or
+        six.ensure_str(self._module_configuration.runtime).startswith('java') or
+        six.ensure_str(self._module_configuration.runtime).startswith('go')):
       self._filesapi_warning_message = _FILESAPI_DEPRECATION_WARNING
     else:
       self._filesapi_warning_message = None
@@ -725,10 +743,10 @@ class Module(object):
       environ: An environ dict for the request as defined in PEP-333.
       start_response: A function with semantics defined in PEP-333.
       url_map: An appinfo.URLMap instance containing the configuration for the
-          handler that matched.
+        handler that matched.
       match: A re.MatchObject containing the result of the matched URL pattern.
       inst: The Instance to send the request to. If None then an appropriate
-          Instance will be chosen.
+        Instance will be chosen.
 
     Returns:
       An iterable over strings containing the body of the HTTP response.
@@ -748,14 +766,17 @@ class Module(object):
   def _error_response(self, environ, start_response, status, body=None):
     if body:
       start_response(
-          '%d %s' % (status, httplib.responses[status]),
-          [('Content-Type', 'text/html'),
-           ('Content-Length', str(len(body)))])
+          '%d %s' % (status, six.moves.http_client.responses[status]),
+          [('Content-Type', 'text/html'), ('Content-Length', str(len(body)))])
       return body
-    start_response('%d %s' % (status, httplib.responses[status]), [])
+    start_response('%d %s' % (status, six.moves.http_client.responses[status]),
+                   [])
     return []
 
-  def _handle_request(self, environ, start_response, inst=None,
+  def _handle_request(self,
+                      environ,
+                      start_response,
+                      inst=None,
                       request_type=instance.NORMAL_REQUEST):
     """Handles a HTTP request.
 
@@ -763,10 +784,10 @@ class Module(object):
       environ: An environ dict for the request as defined in PEP-333.
       start_response: A function with semantics defined in PEP-333.
       inst: The Instance to send the request to. If None then an appropriate
-          Instance will be chosen. Setting inst is not meaningful if the
-          request does not match a "script" handler.
+        Instance will be chosen. Setting inst is not meaningful if the request
+        does not match a "script" handler.
       request_type: The type of the request. See instance.*_REQUEST module
-          constants.
+        constants.
 
     Returns:
       An iterable over strings containing the body of the HTTP response.
@@ -780,8 +801,8 @@ class Module(object):
       environ['SERVER_PORT'] = str(self.balanced_port)
     if 'HTTP_HOST' in environ:
       environ['SERVER_NAME'] = environ['HTTP_HOST'].rsplit(':', 1)[0]
-    environ['DEFAULT_VERSION_HOSTNAME'] = '%s:%s' % (
-        environ['SERVER_NAME'], self._default_version_port)
+    environ['DEFAULT_VERSION_HOSTNAME'] = '%s:%s' % (environ['SERVER_NAME'],
+                                                     self._default_version_port)
 
     runtime_config = self._get_runtime_config()
     # Python monkey-patches out os.environ because some environment variables
@@ -790,14 +811,14 @@ class Module(object):
     # at startup, they must be passed in during each request.
     if (runtime_config.vm and
         self._module_configuration.effective_runtime == 'python27'):
-      environ.update(http_runtime.get_vm_environment_variables(
-          self._module_configuration, runtime_config))
+      environ.update(
+          http_runtime.get_vm_environment_variables(self._module_configuration,
+                                                    runtime_config))
 
-    with self._request_data.request(
-        environ,
-        self._module_configuration) as request_id:
+    with self._request_data.request(environ,
+                                    self._module_configuration) as request_id:
       should_log_request = not _REQUEST_LOGGING_BLACKLIST_RE.match(
-          environ['PATH_INFO'])
+          six.ensure_str(environ['PATH_INFO']))
       environ['REQUEST_ID_HASH'] = self.generate_request_id_hash()
       if should_log_request:
         environ['REQUEST_LOG_ID'] = self.generate_request_log_id()
@@ -809,10 +830,10 @@ class Module(object):
           hostname = '%s:%s' % (environ['SERVER_NAME'], environ['SERVER_PORT'])
 
         if environ.get('QUERY_STRING'):
-          resource = '%s?%s' % (urllib.quote(environ['PATH_INFO']),
-                                environ['QUERY_STRING'])
+          resource = '%s?%s' % (py27_urlquote.urlquote(
+              environ['PATH_INFO']), six.ensure_text(environ['QUERY_STRING']))
         else:
-          resource = urllib.quote(environ['PATH_INFO'])
+          resource = py27_urlquote.urlquote(environ['PATH_INFO'])
         email, _, _ = login.get_user_info(environ.get('HTTP_COOKIE', ''))
         method = environ.get('REQUEST_METHOD', 'GET')
         http_version = environ.get('SERVER_PROTOCOL', 'HTTP/1.0')
@@ -824,7 +845,7 @@ class Module(object):
             ip=environ.get('REMOTE_ADDR', ''),
             app_id=self._module_configuration.application,
             version_id=self._module_configuration.major_version,
-            nickname=email.split('@', 1)[0],
+            nickname=six.ensure_str(email).split('@', 1)[0],
             user_agent=environ.get('HTTP_USER_AGENT', ''),
             host=hostname,
             method=method,
@@ -833,32 +854,34 @@ class Module(object):
             module=self._module_configuration.module_name)
 
       def wrapped_start_response(status, response_headers, exc_info=None):
-        response_headers.append(('Server',
-                                 http_runtime_constants.SERVER_SOFTWARE))
+        response_headers.append(
+            ('Server', http_runtime_constants.SERVER_SOFTWARE))
         if should_log_request:
           headers = wsgiref.headers.Headers(response_headers)
           status_code = int(status.split(' ', 1)[0])
           content_length = int(headers.get('Content-Length', 0))
           # TODO: Remove after the Files API is really gone.
-          if (self._filesapi_warning_message is not None
-              and self._request_data.was_filesapi_used(request_id)):
+          if (self._filesapi_warning_message is not None and
+              self._request_data.was_filesapi_used(request_id)):
             logging.warning(self._filesapi_warning_message)
-            self._insert_log_message(self._filesapi_warning_message,
-                                     2, request_id)
+            self._insert_log_message(self._filesapi_warning_message, 2,
+                                     request_id)
           logservice.end_request(request_id, status_code, content_length)
           if any(resource.startswith(prefix) for prefix in _QUIETER_RESOURCES):
             level = logging.DEBUG
           else:
             level = logging.INFO
-          logging.log(level, '%(module_name)s: '
-                      '"%(method)s %(resource)s %(http_version)s" '
-                      '%(status)d %(content_length)s',
-                      {'module_name': self.name,
-                       'method': method,
-                       'resource': resource,
-                       'http_version': http_version,
-                       'status': status_code,
-                       'content_length': content_length or '-'})
+          logging.log(
+              level, '%(module_name)s: '
+              '"%(method)s %(resource)s %(http_version)s" '
+              '%(status)d %(content_length)s', {
+                  'module_name': self.name,
+                  'method': method,
+                  'resource': resource,
+                  'http_version': http_version,
+                  'status': status_code,
+                  'content_length': content_length or '-'
+              })
         return start_response(status, response_headers, exc_info)
 
       content_length = int(environ.get('CONTENT_LENGTH', '0'))
@@ -867,13 +890,15 @@ class Module(object):
           content_length != 0):
         # CONTENT_LENGTH may be empty or absent.
         wrapped_start_response('400 Bad Request', [])
-        return ['"%s" requests may not contain bodies.' %
-                environ['REQUEST_METHOD']]
+        return [
+            '"%s" requests may not contain bodies.' % environ['REQUEST_METHOD']
+        ]
 
       # Do not apply request limits to internal _ah handlers (known to break
       # blob uploads).
       # TODO: research if _ah handlers need limits.
-      if (not environ.get('REQUEST_URI', '/').startswith('/_ah/') and
+      if (not six.ensure_str(environ.get('REQUEST_URI',
+                                         '/')).startswith('/_ah/') and
           content_length > _MAX_UPLOAD_BYTES):
         # As allowed by the RFC, cherrypy closes the connection for 413 errors.
         # Most clients do not handle this correctly and treat the page as
@@ -889,8 +914,9 @@ class Module(object):
 
         if content_length <= _MAX_UPLOAD_NO_TRIGGER_BAD_CLIENT_BYTES:
           environ['wsgi.input'].read(content_length)
-        status = '%d %s' % (httplib.REQUEST_ENTITY_TOO_LARGE,
-                            httplib.responses[httplib.REQUEST_ENTITY_TOO_LARGE])
+        status = '%d %s' % (six.moves.http_client.REQUEST_ENTITY_TOO_LARGE,
+                            six.moves.http_client.responses[
+                                six.moves.http_client.REQUEST_ENTITY_TOO_LARGE])
         wrapped_start_response(status, [])
         return ['Upload limited to %d megabytes.' % _MAX_UPLOAD_MEGABYTES]
 
@@ -898,23 +924,23 @@ class Module(object):
         handlers = self._handlers
 
       try:
-        path_info = environ['PATH_INFO']
+        path_info = six.ensure_text(environ['PATH_INFO'])
         path_info_normal = self._normpath(path_info)
-        if path_info_normal != path_info:
+        if six.ensure_text(path_info_normal) != path_info:
           # While a 301 Moved Permanently makes more sense for non-normal
           # paths, prod issues a 302 so we do the same.
-          return self._redirect_302_path_info(path_info_normal,
-                                              environ,
+          return self._redirect_302_path_info(path_info_normal, environ,
                                               wrapped_start_response)
         if request_type in (instance.BACKGROUND_REQUEST,
                             instance.INTERACTIVE_REQUEST,
                             instance.SHUTDOWN_REQUEST):
-          app = functools.partial(self._handle_script_request,
-                                  url_map=_DUMMY_URLMAP,
-                                  match=_EMPTY_MATCH,
-                                  request_id=request_id,
-                                  inst=inst,
-                                  request_type=request_type)
+          app = functools.partial(
+              self._handle_script_request,
+              url_map=_DUMMY_URLMAP,
+              match=_EMPTY_MATCH,
+              request_id=request_id,
+              inst=inst,
+              request_type=request_type)
           return request_rewriter.frontend_rewriter_middleware(app)(
               environ, wrapped_start_response)
         for handler in handlers:
@@ -922,8 +948,8 @@ class Module(object):
           if match:
             # Only check secure: if module was configured to run with SSL
             if self._ssl_port:
-              handler_secure = getattr(getattr(handler, '_url_map', None),
-                                       'secure', None)
+              handler_secure = getattr(
+                  getattr(handler, '_url_map', None), 'secure', None)
               if (handler_secure == 'always' and
                   environ['wsgi.url_scheme'] != 'https'):
                 # Since secure: was set to 'always', redirect to the https
@@ -953,12 +979,13 @@ class Module(object):
               return auth_failure
 
             if isinstance(handler, _ScriptHandler):
-              app = functools.partial(self._handle_script_request,
-                                      url_map=handler.url_map,
-                                      match=match,
-                                      request_id=request_id,
-                                      inst=inst,
-                                      request_type=request_type)
+              app = functools.partial(
+                  self._handle_script_request,
+                  url_map=handler.url_map,
+                  match=match,
+                  request_id=request_id,
+                  inst=inst,
+                  request_type=request_type)
               return request_rewriter.frontend_rewriter_middleware(app)(
                   environ, wrapped_start_response)
             else:
@@ -967,7 +994,7 @@ class Module(object):
                 return ret
         return self._no_handler_for_request(environ, wrapped_start_response,
                                             request_id)
-      except StandardError as e:
+      except Exception as e:  # pylint: disable=broad-except
         if logging.getLogger('').isEnabledFor(logging.DEBUG):
           logging.exception('Request to %r failed', path_info)
         else:
@@ -983,10 +1010,11 @@ class Module(object):
     try:
       environ = self.build_request_environ(
           'GET', '/_ah/stop', [], '', '0.1.0.3', port, fake_login=True)
-      self._handle_request(environ,
-                           start_response_utils.null_start_response,
-                           inst=inst,
-                           request_type=instance.SHUTDOWN_REQUEST)
+      self._handle_request(
+          environ,
+          start_response_utils.null_start_response,
+          inst=inst,
+          request_type=instance.SHUTDOWN_REQUEST)
       logging.debug('Sent shutdown request: %s', inst)
     except:
       logging.exception('Internal error while handling shutdown request.')
@@ -999,15 +1027,15 @@ class Module(object):
   def _quote_querystring(qs):
     """Quote a query string to protect against XSS."""
 
-    parsed_qs = urlparse.parse_qs(qs, keep_blank_values=True)
-    # urlparse.parse returns a dictionary with values as lists while
-    # urllib.urlencode does not handle those. Expand to a list of
+    parsed_qs = six.moves.urllib.parse.parse_qs(qs, keep_blank_values=True)
+    # six.moves.urllib.parse.parse returns a dictionary with values as lists
+    # while urllib.urlencode does not handle those. Expand to a list of
     # key values.
     expanded_qs = []
     for key, multivalue in parsed_qs.items():
       for value in multivalue:
         expanded_qs.append((key, value))
-    return urllib.urlencode(expanded_qs)
+    return six.moves.urllib.parse.urlencode(expanded_qs)
 
   def _redirect_302_path_info(self, updated_path_info, environ, start_response):
     """Redirect to an updated path.
@@ -1027,29 +1055,31 @@ class Module(object):
     Returns:
       WSGI-compatible iterable object representing the body of the response.
     """
-    correct_url = urlparse.urlunsplit(
-        (environ['wsgi.url_scheme'],
-         environ['HTTP_HOST'],
-         urllib.quote(updated_path_info),
-         self._quote_querystring(environ['QUERY_STRING']),
-         None))
+    correct_url = six.moves.urllib.parse.urlunsplit(
+        (environ['wsgi.url_scheme'], environ['HTTP_HOST'],
+         six.moves.urllib.parse.quote(updated_path_info),
+         self._quote_querystring(environ['QUERY_STRING']), None))
 
     content_type = 'text/html; charset=utf-8'
     output = _REDIRECT_HTML % {
         'content-type': content_type,
-        'status': httplib.FOUND,
+        'status': six.moves.http_client.FOUND,
         'correct-url': correct_url
     }
 
-    start_response('%d %s' % (httplib.FOUND, httplib.responses[httplib.FOUND]),
-                   [('Content-Type', content_type),
-                    ('Location', correct_url),
-                    ('Content-Length', str(len(output)))])
+    start_response(
+        '%d %s' %
+        (six.moves.http_client.FOUND,
+         six.moves.http_client.responses[six.moves.http_client.FOUND]),
+        [('Content-Type', content_type), ('Location', correct_url),
+         ('Content-Length', str(len(output)))])
     return output
 
   @staticmethod
   def _normpath(path):
-    """Normalize the path by handling . and .. directory entries.
+    """Normalize the path by handling . and ..
+
+    directory entries.
 
     Normalizes the path. A directory entry of . is just dropped while a
     directory entry of .. removes the previous entry. Note that unlike
@@ -1062,7 +1092,7 @@ class Module(object):
       A normalized HTTP path.
     """
     normalized_path_entries = []
-    for entry in path.split('/'):
+    for entry in six.ensure_str(path).split('/'):
       if entry == '..':
         if normalized_path_entries:
           normalized_path_entries.pop()
@@ -1071,16 +1101,29 @@ class Module(object):
     return '/'.join(normalized_path_entries)
 
   def _insert_log_message(self, message, level, request_id):
-    logs_group = log_service_pb.UserAppLogGroup()
-    log_line = logs_group.add_log_line()
-    log_line.set_timestamp_usec(int(time.time() * 1e6))
-    log_line.set_level(level)
-    log_line.set_message(message)
-    request = log_service_pb.FlushRequest()
-    request.set_logs(logs_group.Encode())
-    response = api_base_pb.VoidProto()
-    logservice = apiproxy_stub_map.apiproxy.GetStub('logservice')
-    logservice._Dynamic_Flush(request, response, request_id)
+    # pylint: disable=protected-access
+    if six.PY2:
+      logs_group = log_service_pb.UserAppLogGroup()
+      log_line = logs_group.add_log_line()
+      log_line.set_timestamp_usec(int(time.time() * 1e6))
+      log_line.set_level(level)
+      log_line.set_message(message)
+      request = log_service_pb.FlushRequest()
+      request.set_logs(logs_group.Encode())
+      response = api_base_pb.VoidProto()
+      logservice = apiproxy_stub_map.apiproxy.GetStub('logservice')
+      logservice._Dynamic_Flush(request, response, request_id)
+    else:
+      logs_group = log_service_pb2.UserAppLogGroup()
+      log_line = logs_group.log_line.add()
+      log_line.timestamp_usec = int(time.time() * 1e6)
+      log_line.level = level
+      log_line.message = message
+      request = log_service_pb2.FlushRequest()
+      request.logs = logs_group.SerializeToString()
+      response = api_base_pb2.VoidProto()
+      logservice = apiproxy_stub_map.apiproxy.GetStub('logservice')
+      logservice._Dynamic_Flush(request, response, request_id)
 
   @staticmethod
   def generate_request_log_id():
@@ -1091,20 +1134,23 @@ class Module(object):
       variable length to emulate the production values, which encapsulate
       the application id, version and some log state.
     """
-    return ''.join(random.choice(_LOWER_HEX_DIGITS)
-                   for _ in range(random.randrange(30, 100)))
+    return ''.join(
+        random.choice(_LOWER_HEX_DIGITS)
+        for _ in range(random.randrange(30, 100)))
 
   @staticmethod
   def generate_request_id_hash():
     """Generate a random REQUEST_ID_HASH."""
-    return ''.join(random.choice(_UPPER_HEX_DIGITS)
-                   for _ in range(_REQUEST_ID_HASH_LENGTH))
+    return ''.join(
+        random.choice(_UPPER_HEX_DIGITS)
+        for _ in range(_REQUEST_ID_HASH_LENGTH))
 
   def set_num_instances(self, instances):
     """Sets the number of instances for this module to run.
 
     Args:
       instances: An int containing the number of instances to run.
+
     Raises:
       request_info.NotSupportedWithAutoScalingError: Always.
     """
@@ -1135,15 +1181,17 @@ class Module(object):
     raise request_info.NotSupportedWithAutoScalingError()
 
   def report_start_metrics(self):
-    metrics.GetMetricsLogger().Log(metrics.DEVAPPSERVER_SERVICE_CATEGORY,
-                                   'ServiceStart',
-                                   label=type(self).__name__)
+    metrics.GetMetricsLogger().Log(
+        metrics.DEVAPPSERVER_SERVICE_CATEGORY,
+        'ServiceStart',
+        label=type(self).__name__)
 
   def report_quit_metrics(self, instance_count):
-    metrics.GetMetricsLogger().Log(metrics.DEVAPPSERVER_SERVICE_CATEGORY,
-                                   'ServiceQuit',
-                                   label=type(self).__name__,
-                                   value=instance_count)
+    metrics.GetMetricsLogger().Log(
+        metrics.DEVAPPSERVER_SERVICE_CATEGORY,
+        'ServiceQuit',
+        label=type(self).__name__,
+        value=instance_count)
 
   @property
   def supports_individually_addressable_instances(self):
@@ -1152,37 +1200,30 @@ class Module(object):
   def create_interactive_command_module(self):
     """Returns a InteractiveCommandModule that can be sent user commands."""
     if self._instance_factory.SUPPORTS_INTERACTIVE_REQUESTS:
-      return InteractiveCommandModule(self._module_configuration,
-                                      self._host,
-                                      self._balanced_port,
-                                      self._api_host,
-                                      self._api_port,
-                                      self._auth_domain,
-                                      self._runtime_stderr_loglevel,
-                                      self._php_config,
-                                      self._python_config,
-                                      self._java_config,
-                                      self._go_config,
-                                      self._custom_config,
-                                      self._cloud_sql_config,
-                                      self._vm_config,
-                                      self._default_version_port,
-                                      self._port_registry,
-                                      self._request_data,
-                                      self._dispatcher,
-                                      self._use_mtime_file_watcher,
-                                      self._watcher_ignore_re,
-                                      self._allow_skipped_files,
-                                      self._threadsafe_override)
+      return InteractiveCommandModule(
+          self._module_configuration, self._host, self._balanced_port,
+          self._api_host, self._api_port, self._auth_domain,
+          self._runtime_stderr_loglevel, self._php_config, self._python_config,
+          self._java_config, self._go_config, self._custom_config,
+          self._cloud_sql_config, self._vm_config, self._default_version_port,
+          self._port_registry, self._request_data, self._dispatcher,
+          self._use_mtime_file_watcher, self._watcher_ignore_re,
+          self._allow_skipped_files, self._threadsafe_override)
     else:
       raise NotImplementedError('runtime does not support interactive commands')
 
-  def build_request_environ(self, method, relative_url, headers, body,
-                            source_ip, port, fake_login=False):
-    if isinstance(body, unicode):
+  def build_request_environ(self,
+                            method,
+                            relative_url,
+                            headers,
+                            body,
+                            source_ip,
+                            port,
+                            fake_login=False):
+    if isinstance(body, six.text_type):
       body = body.encode('ascii')
 
-    url = urlparse.urlsplit(relative_url)
+    url = six.moves.urllib.parse.urlsplit(relative_url)
     if port != 80:
       if ':' in self.host:
         host = '[%s]:%s' % (self.host, port)
@@ -1190,21 +1231,23 @@ class Module(object):
         host = '%s:%s' % (self.host, port)
     else:
       host = self.host
-    environ = {constants.FAKE_IS_ADMIN_HEADER: '1',
-               'CONTENT_LENGTH': str(len(body)),
-               'PATH_INFO': url.path,
-               'QUERY_STRING': url.query,
-               'REQUEST_METHOD': method,
-               'REMOTE_ADDR': source_ip,
-               'SERVER_NAME': self.host,
-               'SERVER_PORT': str(port),
-               'SERVER_PROTOCOL': 'HTTP/1.1',
-               'wsgi.version': (1, 0),
-               'wsgi.url_scheme': 'http',
-               'wsgi.errors': cStringIO.StringIO(),
-               'wsgi.multithread': True,
-               'wsgi.multiprocess': True,
-               'wsgi.input': cStringIO.StringIO(body)}
+    environ = {
+        constants.FAKE_IS_ADMIN_HEADER: '1',
+        'CONTENT_LENGTH': str(len(body)),
+        'PATH_INFO': url.path,
+        'QUERY_STRING': url.query,
+        'REQUEST_METHOD': method,
+        'REMOTE_ADDR': source_ip,
+        'SERVER_NAME': self.host,
+        'SERVER_PORT': str(port),
+        'SERVER_PROTOCOL': 'HTTP/1.1',
+        'wsgi.version': (1, 0),
+        'wsgi.url_scheme': 'http',
+        'wsgi.errors': six.StringIO(),
+        'wsgi.multithread': True,
+        'wsgi.multiprocess': True,
+        'wsgi.input': six.StringIO(six.ensure_text(body))
+    }
     if fake_login:
       environ[constants.FAKE_LOGGED_IN_HEADER] = '1'
     util.put_headers_in_environ(headers, environ)
@@ -1216,7 +1259,7 @@ class Module(object):
 
     Args:
       timeout: Integer milliseconds on which this watcher will be allowed to
-      wait for a change.
+        wait for a change.
 
     Returns:
       A set of string paths that have changed since the last call to this
@@ -1274,7 +1317,7 @@ class AutoScalingModule(Module):
     Returns:
       A float representation of the value in seconds.
     """
-    if timing.endswith('ms'):
+    if six.ensure_str(timing).endswith('ms'):
       return float(timing[:-2]) / 1000
     else:
       return float(timing[:-1])
@@ -1324,8 +1367,7 @@ class AutoScalingModule(Module):
 
     self._condition = threading.Condition()  # Protects instance state.
     self._instance_adjustment_thread = threading.Thread(
-        target=self._loop_adjusting_instances,
-        name='Instance Adjustment')
+        target=self._loop_adjusting_instances, name='Instance Adjustment')
 
   def start(self):
     """Start background management of the Module."""
@@ -1368,26 +1410,20 @@ class AutoScalingModule(Module):
     with self._condition:
       return self._num_outstanding_instance_requests
 
-  def _handle_instance_request(self,
-                               environ,
-                               start_response,
-                               url_map,
-                               match,
-                               request_id,
-                               inst,
-                               request_type):
+  def _handle_instance_request(self, environ, start_response, url_map, match,
+                               request_id, inst, request_type):
     """Handles a request routed a particular Instance.
 
     Args:
       environ: An environ dict for the request as defined in PEP-333.
       start_response: A function with semantics defined in PEP-333.
       url_map: An appinfo.URLMap instance containing the configuration for the
-          handler that matched.
+        handler that matched.
       match: A re.MatchObject containing the result of the matched URL pattern.
       request_id: A unique string id associated with the request.
       inst: The instance.Instance to send the request to.
       request_type: The type of the request. See instance.*_REQUEST module
-          constants.
+        constants.
 
     Returns:
       An iterable over strings containing the body of the HTTP response.
@@ -1421,21 +1457,21 @@ class AutoScalingModule(Module):
       environ: An environ dict for the request as defined in PEP-333.
       start_response: A function with semantics defined in PEP-333.
       url_map: An appinfo.URLMap instance containing the configuration for the
-          handler that matched.
+        handler that matched.
       match: A re.MatchObject containing the result of the matched URL pattern.
       request_id: A unique string id associated with the request.
       inst: The instance.Instance to send the request to. If None then an
-          appropriate instance.Instance will be chosen.
+        appropriate instance.Instance will be chosen.
       request_type: The type of the request. See instance.*_REQUEST module
-          constants.
+        constants.
 
     Returns:
       An iterable over strings containing the body of the HTTP response.
     """
     if inst is not None:
-      return self._handle_instance_request(
-          environ, start_response, url_map, match, request_id, inst,
-          request_type)
+      return self._handle_instance_request(environ, start_response, url_map,
+                                           match, request_id, inst,
+                                           request_type)
 
     with self._condition:
       self._num_outstanding_instance_requests += 1
@@ -1459,14 +1495,10 @@ class AutoScalingModule(Module):
             continue
 
         try:
-          logging.debug('Dispatching request to %s after %0.4fs pending',
-                        inst, time.time() - start_time)
-          return inst.handle(environ,
-                             start_response,
-                             url_map,
-                             match,
-                             request_id,
-                             request_type)
+          logging.debug('Dispatching request to %s after %0.4fs pending', inst,
+                        time.time() - start_time)
+          return inst.handle(environ, start_response, url_map, match,
+                             request_id, request_type)
         except instance.CannotAcceptRequests:
           continue
     finally:
@@ -1479,7 +1511,7 @@ class AutoScalingModule(Module):
 
     Args:
       permit_warmup: If True then the new instance.Instance will be sent a new
-          warmup request if it is configured to receive them.
+        warmup request if it is configured to receive them.
 
     Returns:
       The newly created instance.Instance. Returns None if no new instance
@@ -1491,20 +1523,18 @@ class AutoScalingModule(Module):
         if len(self._instances) >= self._max_instances:
           return None
 
-    perform_warmup = permit_warmup and (
-        'warmup' in (self._module_configuration.inbound_services or []))
+    perform_warmup = permit_warmup and ('warmup' in (
+        self._module_configuration.inbound_services or []))
 
     inst = self._instance_factory.new_instance(
-        self.generate_instance_id(),
-        expect_ready_request=perform_warmup)
+        self.generate_instance_id(), expect_ready_request=perform_warmup)
 
     with self._condition:
       if self._quit_event.is_set():
         return None
       self._instances.add(inst)
       self._instance_high_water_mark = max(
-          len(self._instances),
-          self._instance_high_water_mark)
+          len(self._instances), self._instance_high_water_mark)
 
     if not inst.start():
       return None
@@ -1526,12 +1556,17 @@ class AutoScalingModule(Module):
 
     try:
       environ = self.build_request_environ(
-          'GET', '/_ah/warmup', [], '', '0.1.0.3', self.balanced_port,
+          'GET',
+          '/_ah/warmup', [],
+          '',
+          '0.1.0.3',
+          self.balanced_port,
           fake_login=True)
-      self._handle_request(environ,
-                           start_response_utils.null_start_response,
-                           inst=inst,
-                           request_type=instance.READY_REQUEST)
+      self._handle_request(
+          environ,
+          start_response_utils.null_start_response,
+          inst=inst,
+          request_type=instance.READY_REQUEST)
       with self._condition:
         self._condition.notify(self.max_instance_concurrent_requests)
     except:
@@ -1561,10 +1596,10 @@ class AutoScalingModule(Module):
       else:
         peak_concurrent_requests = max(
             current_requests
-            for (t, current_requests)
-            in self._outstanding_request_history)
-        return int(math.ceil(peak_concurrent_requests /
-                             self.max_instance_concurrent_requests))
+            for (t, current_requests) in self._outstanding_request_history)
+        return int(
+            math.ceil(peak_concurrent_requests /
+                      self.max_instance_concurrent_requests))
 
   def _split_instances(self):
     """Returns a 2-tuple representing the required and extra Instances.
@@ -1580,8 +1615,7 @@ class AutoScalingModule(Module):
     with self._condition:
       num_required_instances = self._get_num_required_instances()
 
-      available = [inst for inst in self._instances
-                   if inst.can_accept_requests]
+      available = [inst for inst in self._instances if inst.can_accept_requests]
       available.sort(key=lambda inst: -inst.num_outstanding_requests)
 
       required = set(available[:num_required_instances])
@@ -1601,9 +1635,10 @@ class AutoScalingModule(Module):
           if required_instances[-1].remaining_request_capacity:
             return required_instances[-1]
 
-        available_instances = [inst for inst in not_required_instances
-                               if inst.remaining_request_capacity > 0 and
-                               inst.can_accept_requests]
+        available_instances = [
+            inst for inst in not_required_instances
+            if inst.remaining_request_capacity > 0 and inst.can_accept_requests
+        ]
         if available_instances:
           # Pick the instance with the *least* capacity to handle requests
           # to avoid using unnecessary idle instances.
@@ -1622,8 +1657,7 @@ class AutoScalingModule(Module):
 
     if len(not_required_instances) < self._min_idle_instances:
       self._add_instance(permit_warmup=True)
-    elif (len(not_required_instances) > self._max_idle_instances and
-          now >
+    elif (len(not_required_instances) > self._max_idle_instances and now >
           (self._last_instance_quit_time + self._MIN_SECONDS_BETWEEN_QUITS)):
       for inst in not_required_instances:
         if not inst.num_outstanding_requests:
@@ -1645,15 +1679,16 @@ class AutoScalingModule(Module):
         if self._automatic_restarts:
           self._handle_changes(_CHANGE_POLLING_MS)
         else:
-          time.sleep(_CHANGE_POLLING_MS/1000.0)
+          time.sleep(_CHANGE_POLLING_MS / 1000.0)
         try:
           self._adjust_instances()
         except Exception as e:  # pylint: disable=broad-except
-          logging.error('%s\n%s', e.message, traceback.format_exc())
+          logging.error(repr(e))
           # thread.interrupt_main() throws a KeyboardInterrupt error in the main
           # thread, which triggers devappserver.stop() and shuts down all other
           # processes.
-          thread.interrupt_main()
+          # pylint: disable=protected-access
+          six.moves._thread.interrupt_main()
           break
 
   def __call__(self, environ, start_response):
@@ -1720,7 +1755,7 @@ class ManualScalingModule(Module):
                                     self._initial_num_instances)
       else:
         initial_num_instances = self._initial_num_instances
-      for _ in xrange(initial_num_instances):
+      for _ in range(initial_num_instances):
         self._add_instance()
     self.report_start_metrics()
 
@@ -1763,26 +1798,20 @@ class ManualScalingModule(Module):
     with self._condition:
       return set(self._instances)
 
-  def _handle_instance_request(self,
-                               environ,
-                               start_response,
-                               url_map,
-                               match,
-                               request_id,
-                               inst,
-                               request_type):
+  def _handle_instance_request(self, environ, start_response, url_map, match,
+                               request_id, inst, request_type):
     """Handles a request routed a particular Instance.
 
     Args:
       environ: An environ dict for the request as defined in PEP-333.
       start_response: A function with semantics defined in PEP-333.
       url_map: An appinfo.URLMap instance containing the configuration for the
-          handler that matched.
+        handler that matched.
       match: A re.MatchObject containing the result of the matched URL pattern.
       request_id: A unique string id associated with the request.
       inst: The instance.Instance to send the request to.
       request_type: The type of the request. See instance.*_REQUEST module
-          constants.
+        constants.
 
     Returns:
       An iterable over strings containing the body of the HTTP response.
@@ -1791,8 +1820,8 @@ class ManualScalingModule(Module):
     timeout_time = start_time + self._get_wait_time()
     try:
       while time.time() < timeout_time:
-        logging.debug('Dispatching request to %s after %0.4fs pending',
-                      inst, time.time() - start_time)
+        logging.debug('Dispatching request to %s after %0.4fs pending', inst,
+                      time.time() - start_time)
         try:
           return inst.handle(environ, start_response, url_map, match,
                              request_id, request_type)
@@ -1821,13 +1850,13 @@ class ManualScalingModule(Module):
       environ: An environ dict for the request as defined in PEP-333.
       start_response: A function with semantics defined in PEP-333.
       url_map: An appinfo.URLMap instance containing the configuration for the
-          handler that matched.
+        handler that matched.
       match: A re.MatchObject containing the result of the matched URL pattern.
       request_id: A unique string id associated with the request.
       inst: The instance.Instance to send the request to. If None then an
-          appropriate instance.Instance will be chosen.
+        appropriate instance.Instance will be chosen.
       request_type: The type of the request. See instance.*_REQUEST module
-          constants.
+        constants.
 
     Returns:
       An iterable over strings containing the body of the HTTP response.
@@ -1838,13 +1867,13 @@ class ManualScalingModule(Module):
     if self._module_configuration.is_backend:
       environ['BACKEND_ID'] = self._module_configuration.module_name
     else:
-      environ['BACKEND_ID'] = (
-          self._module_configuration.version_id.split('.', 1)[0])
+      version_id = six.ensure_str(self._module_configuration.version_id)
+      environ['BACKEND_ID'] = version_id.split('.', 1)[0]
 
     if inst is not None:
-      return self._handle_instance_request(
-          environ, start_response, url_map, match, request_id, inst,
-          request_type)
+      return self._handle_instance_request(environ, start_response, url_map,
+                                           match, request_id, inst,
+                                           request_type)
 
     start_time = time.time()
     timeout_time = start_time + self._get_wait_time()
@@ -1856,8 +1885,8 @@ class ManualScalingModule(Module):
       inst = self._choose_instance(timeout_time)
       if inst:
         try:
-          logging.debug('Dispatching request to %s after %0.4fs pending',
-                        inst, time.time() - start_time)
+          logging.debug('Dispatching request to %s after %0.4fs pending', inst,
+                        time.time() - start_time)
           return inst.handle(environ, start_response, url_map, match,
                              request_id, request_type)
         except instance.CannotAcceptRequests:
@@ -1875,8 +1904,8 @@ class ManualScalingModule(Module):
     """
     instance_id = self.get_num_instances()
     assert self._max_instances is None or instance_id < self._max_instances
-    inst = self._instance_factory.new_instance(instance_id,
-                                               expect_ready_request=True)
+    inst = self._instance_factory.new_instance(
+        instance_id, expect_ready_request=True)
     wsgi_servr = wsgi_server.WsgiServer(
         (self._host, 0), functools.partial(self._handle_request, inst=inst))
     wsgi_servr.start()
@@ -1887,9 +1916,8 @@ class ManualScalingModule(Module):
         return
       self._wsgi_servers.append(wsgi_servr)
       self._instances.append(inst)
-      self._instance_high_water_mark = max(
-          self._instance_high_water_mark,
-          len(self._instances))
+      self._instance_high_water_mark = max(self._instance_high_water_mark,
+                                           len(self._instances))
       suspended = self._suspended
     if not suspended:
       self._async_start_instance(wsgi_servr, inst)
@@ -1911,12 +1939,17 @@ class ManualScalingModule(Module):
                  self.name, self.balanced_address)
     try:
       environ = self.build_request_environ(
-          'GET', '/_ah/start', [], '', '0.1.0.3', wsgi_servr.port,
+          'GET',
+          '/_ah/start', [],
+          '',
+          '0.1.0.3',
+          wsgi_servr.port,
           fake_login=True)
-      self._handle_request(environ,
-                           start_response_utils.null_start_response,
-                           inst=inst,
-                           request_type=instance.READY_REQUEST)
+      self._handle_request(
+          environ,
+          start_response_utils.null_start_response,
+          inst=inst,
+          request_type=instance.READY_REQUEST)
       logging.debug('Sent start request: %s', inst)
       with self._condition:
         self._condition.notify(self.max_instance_concurrent_requests)
@@ -1945,9 +1978,8 @@ class ManualScalingModule(Module):
 
     file_changes = self._get_file_changes(timeout)
     if file_changes:
-      logging.info(
-          '[%s] Detected file changes:\n  %s', self.name,
-          '\n  '.join(sorted(file_changes)))
+      logging.info('[%s] Detected file changes:\n  %s', self.name,
+                   '\n  '.join(sorted(file_changes)))
       self._instance_factory.files_changed()
 
     if config_changes & _RESTART_INSTANCES_CONFIG_CHANGES:
@@ -1965,7 +1997,7 @@ class ManualScalingModule(Module):
         if self._automatic_restarts:
           self._handle_changes(_CHANGE_POLLING_MS)
         else:
-          time.sleep(_CHANGE_POLLING_MS/1000.0)
+          time.sleep(_CHANGE_POLLING_MS / 1000.0)
 
   def get_num_instances(self):
     with self._instances_change_lock:
@@ -1985,7 +2017,7 @@ class ManualScalingModule(Module):
           instances_to_quit = self._instances[instances:]
           del self._instances[instances:]
       if running_instances < instances:
-        for _ in xrange(instances - running_instances):
+        for _ in range(instances - running_instances):
           self._add_instance()
     if running_instances > instances:
       for inst, wsgi_servr in zip(instances_to_quit, wsgi_servers_to_quit):
@@ -2007,7 +2039,7 @@ class ManualScalingModule(Module):
         raise request_info.VersionAlreadyStoppedError()
       self._suspended = True
       with self._condition:
-        instances_to_stop = zip(self._instances, self._wsgi_servers)
+        instances_to_stop = list(zip(self._instances, self._wsgi_servers))
         for wsgi_servr in self._wsgi_servers:
           wsgi_servr.set_error(404)
     for inst, wsgi_servr in instances_to_stop:
@@ -2032,8 +2064,8 @@ class ManualScalingModule(Module):
         wsgi_servers = self._wsgi_servers
       instances_to_start = []
       for instance_id, wsgi_servr in enumerate(wsgi_servers):
-        inst = self._instance_factory.new_instance(instance_id,
-                                                   expect_ready_request=True)
+        inst = self._instance_factory.new_instance(
+            instance_id, expect_ready_request=True)
         wsgi_servr.set_app(functools.partial(self._handle_request, inst=inst))
         self._port_registry.add(wsgi_servr.port, self, inst)
         with self._condition:
@@ -2055,8 +2087,8 @@ class ManualScalingModule(Module):
         wsgi_servers = self._wsgi_servers[:]
       instances_to_start = []
       for instance_id, wsgi_servr in enumerate(wsgi_servers):
-        inst = self._instance_factory.new_instance(instance_id,
-                                                   expect_ready_request=True)
+        inst = self._instance_factory.new_instance(
+            instance_id, expect_ready_request=True)
         wsgi_servr.set_app(functools.partial(self._handle_request, inst=inst))
         self._port_registry.add(wsgi_servr.port, self, inst)
         instances_to_start.append(inst)
@@ -2071,7 +2103,8 @@ class ManualScalingModule(Module):
 
     start_futures = [
         self._async_start_instance(wsgi_servr, inst)
-        for wsgi_servr, inst in zip(wsgi_servers, instances_to_start)]
+        for wsgi_servr, inst in zip(wsgi_servers, instances_to_start)
+    ]
     logging.info('Waiting for instances to restart')
 
     _, not_done = futures.wait(start_futures, timeout=_SHUTDOWN_TIMEOUT)
@@ -2115,6 +2148,7 @@ class ManualScalingModule(Module):
 
 class ExternalModule(Module):
   """A module with a single instance that is run externally on a given port."""
+
   # TODO: reduce code duplication between the various Module classes.
 
   def __init__(self, **kwargs):
@@ -2180,26 +2214,20 @@ class ExternalModule(Module):
     """A set of all the instances currently in the Module."""
     return {self._instance}
 
-  def _handle_instance_request(self,
-                               environ,
-                               start_response,
-                               url_map,
-                               match,
-                               request_id,
-                               inst,
-                               request_type):
+  def _handle_instance_request(self, environ, start_response, url_map, match,
+                               request_id, inst, request_type):
     """Handles a request routed a particular Instance.
 
     Args:
       environ: An environ dict for the request as defined in PEP-333.
       start_response: A function with semantics defined in PEP-333.
       url_map: An appinfo.URLMap instance containing the configuration for the
-          handler that matched.
+        handler that matched.
       match: A re.MatchObject containing the result of the matched URL pattern.
       request_id: A unique string id associated with the request.
       inst: The instance.Instance to send the request to.
       request_type: The type of the request. See instance.*_REQUEST module
-          constants.
+        constants.
 
     Returns:
       An iterable over strings containing the body of the HTTP response.
@@ -2208,8 +2236,8 @@ class ExternalModule(Module):
     timeout_time = start_time + self._get_wait_time()
     try:
       while time.time() < timeout_time:
-        logging.debug('Dispatching request to %s after %0.4fs pending',
-                      inst, time.time() - start_time)
+        logging.debug('Dispatching request to %s after %0.4fs pending', inst,
+                      time.time() - start_time)
         try:
           return inst.handle(environ, start_response, url_map, match,
                              request_id, request_type)
@@ -2237,13 +2265,13 @@ class ExternalModule(Module):
       environ: An environ dict for the request as defined in PEP-333.
       start_response: A function with semantics defined in PEP-333.
       url_map: An appinfo.URLMap instance containing the configuration for the
-          handler that matched.
+        handler that matched.
       match: A re.MatchObject containing the result of the matched URL pattern.
       request_id: A unique string id associated with the request.
       inst: The instance.Instance to send the request to. If None then an
-          appropriate instance.Instance will be chosen.
+        appropriate instance.Instance will be chosen.
       request_type: The type of the request. See instance.*_REQUEST module
-          constants.
+        constants.
 
     Returns:
       An iterable over strings containing the body of the HTTP response.
@@ -2253,11 +2281,11 @@ class ExternalModule(Module):
       return self._error_response(environ, start_response, 404)
     environ['BACKEND_ID'] = (
         self._module_configuration.module_name
-        if self._module_configuration.is_backend
-        else self._module_configuration.version_id.split('.', 1)[0])
-    return self._handle_instance_request(
-        environ, start_response, url_map, match, request_id,
-        inst or self._instance, request_type)
+        if self._module_configuration.is_backend else six.ensure_str(
+            self._module_configuration.version_id).split('.', 1)[0])
+    return self._handle_instance_request(environ, start_response, url_map,
+                                         match, request_id, inst or
+                                         self._instance, request_type)
 
   def _add_instance(self):
     """Creates and adds a new instance.Instance to the Module.
@@ -2318,7 +2346,7 @@ class ExternalModule(Module):
         if self._automatic_restarts:
           self._handle_changes(_CHANGE_POLLING_MS)
         else:
-          time.sleep(_CHANGE_POLLING_MS/1000.0)
+          time.sleep(_CHANGE_POLLING_MS / 1000.0)
 
   def get_num_instances(self):
     return 1
@@ -2343,8 +2371,8 @@ class ExternalModule(Module):
       self._suspended = True
       with self._condition:
         self._wsgi_server.set_error(404)
-    return _THREAD_POOL.submit(
-        self._suspend_instance, self._instance, self._wsgi_server.port)
+    return _THREAD_POOL.submit(self._suspend_instance, self._instance,
+                               self._wsgi_server.port)
 
   def _suspend_instance(self, inst, port):
     inst.quit(expect_shutdown=True)
@@ -2406,28 +2434,21 @@ class _ExternalInstanceFactory(instance.InstanceFactory):
 
   # TODO: reconsider this
   START_URL_MAP = appinfo.URLMap(
-      url='/_ah/start',
-      script='ignored',
-      login='admin')
+      url='/_ah/start', script='ignored', login='admin')
   WARMUP_URL_MAP = appinfo.URLMap(
-      url='/_ah/warmup',
-      script='ignored',
-      login='admin')
+      url='/_ah/warmup', script='ignored', login='admin')
 
   def __init__(self, request_data, module_configuration):
-    super(_ExternalInstanceFactory, self).__init__(
-        request_data, self._MAX_CONCURRENT_REQUESTS)
+    super(_ExternalInstanceFactory,
+          self).__init__(request_data, self._MAX_CONCURRENT_REQUESTS)
     self._module_configuration = module_configuration
 
   def new_instance(self, instance_id, expect_ready_request=False):
     assert instance_id == 0
     proxy = _ExternalRuntimeProxy(self._module_configuration)
-    return instance.Instance(self.request_data,
-                             instance_id,
-                             proxy,
+    return instance.Instance(self.request_data, instance_id, proxy,
                              self.max_concurrent_requests,
-                             self.max_background_threads,
-                             expect_ready_request)
+                             self.max_background_threads, expect_ready_request)
 
 
 class _ExternalRuntimeProxy(instance.RuntimeProxy):
@@ -2438,7 +2459,8 @@ class _ExternalRuntimeProxy(instance.RuntimeProxy):
 
   def start(self):
     self._proxy = http_proxy.HttpProxy(
-        host='localhost', port=self._module_configuration.external_port,
+        host='localhost',
+        port=self._module_configuration.external_port,
         instance_died_unexpectedly=lambda: False,
         instance_logs_getter=lambda: '',
         error_handler_file=application_configuration.get_app_error_file(
@@ -2450,8 +2472,8 @@ class _ExternalRuntimeProxy(instance.RuntimeProxy):
 class BasicScalingModule(Module):
   """A pool of instances that is basic-scaled."""
 
-  _DEFAULT_BASIC_SCALING = appinfo.BasicScaling(max_instances='1',
-                                                idle_timeout='15m')
+  _DEFAULT_BASIC_SCALING = appinfo.BasicScaling(
+      max_instances='1', idle_timeout='15m')
 
   @staticmethod
   def _parse_idle_timeout(timing):
@@ -2463,7 +2485,7 @@ class BasicScalingModule(Module):
     Returns:
       An int representation of the value in seconds.
     """
-    if timing.endswith('m'):
+    if six.ensure_str(timing).endswith('m'):
       return int(timing[:-1]) * 60
     else:
       return int(timing[:-1])
@@ -2505,12 +2527,14 @@ class BasicScalingModule(Module):
     self._instance_running = []  # Protected by self._condition.
     self._instance_high_water_mark = 0  # Protected by self._condition
 
-    for instance_id in xrange(self._max_instances):
-      inst = self._instance_factory.new_instance(instance_id,
-                                                 expect_ready_request=True)
+    for instance_id in range(self._max_instances):
+      inst = self._instance_factory.new_instance(
+          instance_id, expect_ready_request=True)
       self._instances.append(inst)
-      self._wsgi_servers.append(wsgi_server.WsgiServer(
-          (self._host, 0), functools.partial(self._handle_request, inst=inst)))
+      self._wsgi_servers.append(
+          wsgi_server.WsgiServer(
+              (self._host, 0),
+              functools.partial(self._handle_request, inst=inst)))
       self._instance_running.append(False)
 
     self._condition = threading.Condition()  # Protects instance state.
@@ -2572,26 +2596,20 @@ class BasicScalingModule(Module):
     with self._condition:
       return set(self._instances)
 
-  def _handle_instance_request(self,
-                               environ,
-                               start_response,
-                               url_map,
-                               match,
-                               request_id,
-                               inst,
-                               request_type):
+  def _handle_instance_request(self, environ, start_response, url_map, match,
+                               request_id, inst, request_type):
     """Handles a request routed a particular Instance.
 
     Args:
       environ: An environ dict for the request as defined in PEP-333.
       start_response: A function with semantics defined in PEP-333.
       url_map: An appinfo.URLMap instance containing the configuration for the
-          handler that matched.
+        handler that matched.
       match: A re.MatchObject containing the result of the matched URL pattern.
       request_id: A unique string id associated with the request.
       inst: The instance.Instance to send the request to.
       request_type: The type of the request. See instance.*_REQUEST module
-          constants.
+        constants.
 
     Returns:
       An iterable over strings containing the body of the HTTP response.
@@ -2601,8 +2619,8 @@ class BasicScalingModule(Module):
     timeout_time = start_time + self._get_wait_time()
     try:
       while time.time() < timeout_time:
-        logging.debug('Dispatching request to %s after %0.4fs pending',
-                      inst, time.time() - start_time)
+        logging.debug('Dispatching request to %s after %0.4fs pending', inst,
+                      time.time() - start_time)
         try:
           return inst.handle(environ, start_response, url_map, match,
                              request_id, request_type)
@@ -2616,9 +2634,8 @@ class BasicScalingModule(Module):
           else:
             self._instance_running[instance_id] = True
             should_start = True
-            self._instance_high_water_mark = max(
-                self._instance_high_water_mark,
-                sum(self._instance_running))
+            self._instance_high_water_mark = max(self._instance_high_water_mark,
+                                                 sum(self._instance_running))
         if should_start:
           self._start_instance(instance_id)
         else:
@@ -2643,13 +2660,13 @@ class BasicScalingModule(Module):
       environ: An environ dict for the request as defined in PEP-333.
       start_response: A function with semantics defined in PEP-333.
       url_map: An appinfo.URLMap instance containing the configuration for the
-          handler that matched.
+        handler that matched.
       match: A re.MatchObject containing the result of the matched URL pattern.
       request_id: A unique string id associated with the request.
       inst: The instance.Instance to send the request to. If None then an
-          appropriate instance.Instance will be chosen.
+        appropriate instance.Instance will be chosen.
       request_type: The type of the request. See instance.*_REQUEST module
-          constants.
+        constants.
 
     Returns:
       An iterable over strings containing the body of the HTTP response.
@@ -2660,11 +2677,12 @@ class BasicScalingModule(Module):
       environ['BACKEND_ID'] = self._module_configuration.module_name
     else:
       environ['BACKEND_ID'] = (
-          self._module_configuration.version_id.split('.', 1)[0])
+          six.ensure_str(self._module_configuration.version_id).split('.',
+                                                                      1)[0])
     if inst is not None:
-      return self._handle_instance_request(
-          environ, start_response, url_map, match, request_id, inst,
-          request_type)
+      return self._handle_instance_request(environ, start_response, url_map,
+                                           match, request_id, inst,
+                                           request_type)
 
     start_time = time.time()
     timeout_time = start_time + self._get_wait_time()
@@ -2674,8 +2692,8 @@ class BasicScalingModule(Module):
       inst = self._choose_instance(timeout_time)
       if inst:
         try:
-          logging.debug('Dispatching request to %s after %0.4fs pending',
-                        inst, time.time() - start_time)
+          logging.debug('Dispatching request to %s after %0.4fs pending', inst,
+                        time.time() - start_time)
           return inst.handle(environ, start_response, url_map, match,
                              request_id, request_type)
         except instance.CannotAcceptRequests:
@@ -2698,9 +2716,8 @@ class BasicScalingModule(Module):
         if not running:
           self._instance_running[instance_id] = True
           inst = self._instances[instance_id]
-          self._instance_high_water_mark = max(
-              self._instance_high_water_mark,
-              sum(self._instance_running))
+          self._instance_high_water_mark = max(self._instance_high_water_mark,
+                                               sum(self._instance_running))
           break
       else:
         return None
@@ -2721,12 +2738,17 @@ class BasicScalingModule(Module):
                     wsgi_servr.port)
       try:
         environ = self.build_request_environ(
-            'GET', '/_ah/start', [], '', '0.1.0.3', wsgi_servr.port,
+            'GET',
+            '/_ah/start', [],
+            '',
+            '0.1.0.3',
+            wsgi_servr.port,
             fake_login=True)
-        self._handle_request(environ,
-                             start_response_utils.null_start_response,
-                             inst=inst,
-                             request_type=instance.READY_REQUEST)
+        self._handle_request(
+            environ,
+            start_response_utils.null_start_response,
+            inst=inst,
+            request_type=instance.READY_REQUEST)
         logging.debug('Sent start request: %s', inst)
         with self._condition:
           self._condition.notify(self.max_instance_concurrent_requests)
@@ -2780,7 +2802,7 @@ class BasicScalingModule(Module):
         if self._automatic_restarts:
           self._handle_changes(_CHANGE_POLLING_MS)
         else:
-          time.sleep(_CHANGE_POLLING_MS/1000.0)
+          time.sleep(_CHANGE_POLLING_MS / 1000.0)
 
   def _shutdown_idle_instances(self):
     instances_to_stop = []
@@ -2788,8 +2810,8 @@ class BasicScalingModule(Module):
       for instance_id, inst in enumerate(self._instances):
         if (self._instance_running[instance_id] and
             inst.idle_seconds > self._instance_idle_timeout):
-          instances_to_stop.append((self._instances[instance_id],
-                                    self._wsgi_servers[instance_id]))
+          instances_to_stop.append(
+              (self._instances[instance_id], self._wsgi_servers[instance_id]))
           self._instance_running[instance_id] = False
           new_instance = self._instance_factory.new_instance(
               instance_id, expect_ready_request=True)
@@ -2853,80 +2875,63 @@ class InteractiveCommandModule(Module):
 
   _MAX_REQUEST_WAIT_TIME = 15
 
-  def __init__(self,
-               module_configuration,
-               host,
-               balanced_port,
-               api_host,
-               api_port,
-               auth_domain,
-               runtime_stderr_loglevel,
-               php_config,
-               python_config,
-               java_config,
-               go_config,
-               custom_config,
-               cloud_sql_config,
-               vm_config,
-               default_version_port,
-               port_registry,
-               request_data,
-               dispatcher,
-               use_mtime_file_watcher,
-               watcher_ignore_re,
-               allow_skipped_files,
-               threadsafe_override):
+  def __init__(self, module_configuration, host, balanced_port, api_host,
+               api_port, auth_domain, runtime_stderr_loglevel, php_config,
+               python_config, java_config, go_config, custom_config,
+               cloud_sql_config, vm_config, default_version_port, port_registry,
+               request_data, dispatcher, use_mtime_file_watcher,
+               watcher_ignore_re, allow_skipped_files, threadsafe_override):
     """Initializer for InteractiveCommandModule.
 
     Args:
       module_configuration: An application_configuration.ModuleConfiguration
-          instance storing the configuration data for this module.
+        instance storing the configuration data for this module.
       host: A string containing the host that will be used when constructing
-          HTTP headers sent to the Instance executing the interactive command
-          e.g. "localhost".
+        HTTP headers sent to the Instance executing the interactive command e.g.
+        "localhost".
       balanced_port: An int specifying the port that will be used when
-          constructing HTTP headers sent to the Instance executing the
-          interactive command e.g. "localhost".
+        constructing HTTP headers sent to the Instance executing the interactive
+        command e.g. "localhost".
       api_host: The host that APIServer listens for RPC requests on.
       api_port: The port that APIServer listens for RPC requests on.
       auth_domain: A string containing the auth domain to set in the environment
-          variables.
+        variables.
       runtime_stderr_loglevel: An int reprenting the minimum logging level at
-          which runtime log messages should be written to stderr. See
-          devappserver2.py for possible values.
+        which runtime log messages should be written to stderr. See
+        devappserver2.py for possible values.
       php_config: A runtime_config_pb2.PhpConfig instances containing PHP
-          runtime-specific configuration. If None then defaults are used.
+        runtime-specific configuration. If None then defaults are used.
       python_config: A runtime_config_pb2.PythonConfig instance containing
-          Python runtime-specific configuration. If None then defaults are used.
-      java_config: A runtime_config_pb2.JavaConfig instance containing
-          Java runtime-specific configuration. If None then defaults are used.
+        Python runtime-specific configuration. If None then defaults are used.
+      java_config: A runtime_config_pb2.JavaConfig instance containing Java
+        runtime-specific configuration. If None then defaults are used.
       go_config: A runtime_config_pb2.GoConfig instances containing Go
-          runtime-specific configuration. If None then defaults are used.
+        runtime-specific configuration. If None then defaults are used.
       custom_config: A runtime_config_pb2.CustomConfig instance. If None, or
-          'custom_entrypoint' is not set, then attempting to instantiate a
-          custom runtime module will result in an error.
+        'custom_entrypoint' is not set, then attempting to instantiate a custom
+        runtime module will result in an error.
       cloud_sql_config: A runtime_config_pb2.CloudSQL instance containing the
-          required configuration for local Google Cloud SQL development. If None
-          then Cloud SQL will not be available.
-      vm_config: A runtime_config_pb2.VMConfig instance containing
-          VM runtime-specific configuration. If None all docker-related stuff
-          is disabled.
+        required configuration for local Google Cloud SQL development. If None
+        then Cloud SQL will not be available.
+      vm_config: A runtime_config_pb2.VMConfig instance containing VM
+        runtime-specific configuration. If None all docker-related stuff is
+        disabled.
       default_version_port: An int containing the port of the default version.
       port_registry: A dispatcher.PortRegistry used to provide the Dispatcher
-          with a mapping of port to Module and Instance.
+        with a mapping of port to Module and Instance.
       request_data: A wsgi_request_info.WSGIRequestInfo that will be provided
-          with request information for use by API stubs.
+        with request information for use by API stubs.
       dispatcher: A Dispatcher instance that can be used to make HTTP requests.
       use_mtime_file_watcher: A bool containing whether to use mtime polling to
-          monitor file changes even if other options are available on the
-          current platform.
+        monitor file changes even if other options are available on the current
+        platform.
       watcher_ignore_re: A regex that optionally defines a pattern for the file
-          watcher to ignore.
+        watcher to ignore.
       allow_skipped_files: If True then all files in the application's directory
-          are readable, even if they appear in a static handler or "skip_files"
-          directive.
+        are readable, even if they appear in a static handler or "skip_files"
+        directive.
       threadsafe_override: If not None, ignore the YAML file value of threadsafe
-          and use this value instead.
+        and use this value instead.
     """
     super(InteractiveCommandModule, self).__init__(
         module_configuration,
@@ -2989,12 +2994,12 @@ class InteractiveCommandModule(Module):
       environ: An environ dict for the request as defined in PEP-333.
       start_response: A function with semantics defined in PEP-333.
       url_map: An appinfo.URLMap instance containing the configuration for the
-          handler that matched.
+        handler that matched.
       match: A re.MatchObject containing the result of the matched URL pattern.
       request_id: A unique string id associated with the request.
       inst: The instance.Instance to send the request to.
       request_type: The type of the request. See instance.*_REQUEST module
-          constants. This must be instance.INTERACTIVE_REQUEST.
+        constants. This must be instance.INTERACTIVE_REQUEST.
 
     Returns:
       An iterable over strings containing the body of the HTTP response.
@@ -3019,8 +3024,8 @@ class InteractiveCommandModule(Module):
         self._inst.start()
 
       try:
-        return inst.handle(environ, start_response, url_map, match,
-                           request_id, request_type)
+        return inst.handle(environ, start_response, url_map, match, request_id,
+                           request_type)
       except instance.CannotAcceptRequests:
         inst.wait(timeout_time)
       except Exception:
@@ -3057,18 +3062,17 @@ class InteractiveCommandModule(Module):
     start_response = start_response_utils.CapturingStartResponse()
 
     # 192.0.2.0 is an example address defined in RFC 5737.
-    environ = self.build_request_environ(
-        'POST', '/', [], command, '192.0.2.0', self.balanced_port)
+    environ = self.build_request_environ('POST', '/', [], command, '192.0.2.0',
+                                         self.balanced_port)
 
     try:
       response = self._handle_request(
-          environ,
-          start_response,
-          request_type=instance.INTERACTIVE_REQUEST)
+          environ, start_response, request_type=instance.INTERACTIVE_REQUEST)
     except Exception as e:
       raise InteractiveCommandError('Unexpected command failure: ', str(e))
 
     if start_response.status != '200 OK':
-      raise InteractiveCommandError(start_response.merged_response(response))
+      raise InteractiveCommandError(
+          six.ensure_text(start_response.merged_response(response)))
 
     return start_response.merged_response(response)

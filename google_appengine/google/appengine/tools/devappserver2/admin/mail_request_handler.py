@@ -20,6 +20,9 @@ import email.mime.multipart
 import email.mime.text
 import email.utils
 
+import google
+import six
+
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 
 REMOTE_IP = '0.1.0.20'
@@ -50,8 +53,8 @@ class MailRequestHandler(admin_request_handler.AdminRequestHandler):
     message['Cc'] = cc
     message['Subject'] = subject
     message['Date'] = email.utils.formatdate()
-    plain_text = email.mime.Text.MIMEText(body, 'plain', 'utf-8')
-    html_text = email.mime.Text.MIMEText(body, 'html', 'utf-8')
+    plain_text = six.moves.email_mime_text.MIMEText(body, 'plain', 'utf-8')
+    html_text = six.moves.email_mime_text.MIMEText(body, 'html', 'utf-8')
     message.attach(plain_text)
     message.attach(html_text)
     return message

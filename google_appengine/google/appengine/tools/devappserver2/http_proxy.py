@@ -14,17 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Forwards HTTP requests to an application instance on a given host and port.
 
 An instance (also referred to as a runtime process) handles dynamic content
 only. Static files are handled separately.
 """
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import contextlib
-import httplib
 import logging
-import urllib
 import wsgiref.headers
+
+import six
+from six.moves import urllib
+import six.moves.http_client
 
 from google.appengine.tools.devappserver2 import http_runtime_constants
 from google.appengine.tools.devappserver2 import http_utils
@@ -33,29 +40,35 @@ from google.appengine.tools.devappserver2 import login
 from google.appengine.tools.devappserver2 import util
 
 
-class HttpProxy:
+class HttpProxy(object):
   """Forwards HTTP requests to an application instance."""
-  def __init__(self, host, port, instance_died_unexpectedly,
-               instance_logs_getter, error_handler_file, prior_error=None,
+
+  def __init__(self,
+               host,
+               port,
+               instance_died_unexpectedly,
+               instance_logs_getter,
+               error_handler_file,
+               prior_error=None,
                request_id_header_name=None):
     """Initializer for HttpProxy.
 
     Args:
       host: A hostname or an IP address of where application instance is
-          running.
+        running.
       port: Port that application instance is listening on.
       instance_died_unexpectedly: Function returning True if instance has
-          unexpectedly died.
+        unexpectedly died.
       instance_logs_getter: Function returning logs from the instance.
       error_handler_file: Application specific error handler for default error
-          code if specified (only default error code is supported by
-          Dev AppServer).
+        code if specified (only default error code is supported by Dev
+        AppServer).
       prior_error: Errors occurred before (for example during creation of an
-          instance). In case prior_error is not None handle will always return
-          corresponding error message without even trying to connect to the
-          instance.
+        instance). In case prior_error is not None handle will always return
+        corresponding error message without even trying to connect to the
+        instance.
       request_id_header_name: Optional string name used to pass request ID to
-          API server.  Defaults to http_runtime_constants.REQUEST_ID_HEADER.
+        API server.  Defaults to http_runtime_constants.REQUEST_ID_HEADER.
     """
     self._host = host
     self._port = port
@@ -70,7 +83,7 @@ class HttpProxy:
   def _respond_with_error(self, message, start_response):
     instance_logs = self._instance_logs_getter()
     if instance_logs:
-      message += '\n\n' + instance_logs
+      message += '\n\n' + six.ensure_str(instance_logs)
     # TODO: change 'text/plain' to 'text/plain; charset=utf-8'
     # throughout devappserver2.
     start_response('500 Internal Server Error',
@@ -103,13 +116,13 @@ class HttpProxy:
       environ: An environ dict for the request as defined in PEP-333.
       start_response: A function with semantics defined in PEP-333.
       url_map: An appinfo.URLMap instance containing the configuration for the
-          handler matching this request, or None if the http proxy is for an
-          instance with its own handlers.
+        handler matching this request, or None if the http proxy is for an
+        instance with its own handlers.
       match: A re.MatchObject containing the result of the matched URL pattern,
-          or None if the http proxy is for an instance with its own handlers.
+        or None if the http proxy is for an instance with its own handlers.
       request_id: A unique string id associated with the request.
       request_type: The type of the request. See instance.*_REQUEST module
-          constants.
+        constants.
 
     Yields:
       A sequence of strings containing the body of the HTTP response.
@@ -133,17 +146,18 @@ class HttpProxy:
       environ[http_runtime_constants.REQUEST_TYPE_HEADER] = 'interactive'
 
     for name in http_runtime_constants.ENVIRONS_TO_PROPAGATE:
-      if http_runtime_constants.APPENGINE_ENVIRON_PREFIX + name not in environ:
+      if http_runtime_constants.APPENGINE_ENVIRON_PREFIX + six.ensure_str(
+          name) not in environ:
         value = environ.get(name, None)
         if value is not None:
-          environ[
-              http_runtime_constants.APPENGINE_ENVIRON_PREFIX + name] = value
+          environ[http_runtime_constants.APPENGINE_ENVIRON_PREFIX +
+                  six.ensure_str(name)] = value
     headers = util.get_headers_from_environ(environ)
     if environ.get('QUERY_STRING'):
-      url = '%s?%s' % (urllib.quote(environ['PATH_INFO']),
-                       environ['QUERY_STRING'])
+      url = '%s?%s' % (urllib.parse.quote(
+          environ['PATH_INFO']), environ['QUERY_STRING'])
     else:
-      url = urllib.quote(environ['PATH_INFO'])
+      url = urllib.parse.quote(environ['PATH_INFO'])
     if 'CONTENT_LENGTH' in environ:
       headers['CONTENT-LENGTH'] = environ['CONTENT_LENGTH']
       data = environ['wsgi.input'].read(int(environ['CONTENT_LENGTH']))
@@ -153,39 +167,40 @@ class HttpProxy:
     cookies = environ.get('HTTP_COOKIE')
     user_email, admin, user_id = login.get_user_info(cookies)
     if user_email:
-      nickname, organization = user_email.split('@', 1)
+      nickname, organization = six.ensure_str(user_email).split('@', 1)
     else:
       nickname = ''
       organization = ''
     headers[self.request_id_header_name] = request_id
-    headers[http_runtime_constants.APPENGINE_HEADER_PREFIX + 'User-Id'] = (
-        user_id)
-    headers[http_runtime_constants.APPENGINE_HEADER_PREFIX + 'User-Email'] = (
-        user_email)
-    headers[
-        http_runtime_constants.APPENGINE_HEADER_PREFIX + 'User-Is-Admin'] = (
-            str(int(admin)))
-    headers[
-        http_runtime_constants.APPENGINE_HEADER_PREFIX + 'User-Nickname'] = (
-            nickname)
-    headers[http_runtime_constants.APPENGINE_HEADER_PREFIX +
+    headers[six.ensure_str(http_runtime_constants.APPENGINE_HEADER_PREFIX) +
+            'User-Id'] = (
+                user_id)
+    headers[six.ensure_str(http_runtime_constants.APPENGINE_HEADER_PREFIX) +
+            'User-Email'] = (
+                user_email)
+    headers[six.ensure_str(http_runtime_constants.APPENGINE_HEADER_PREFIX) +
+            'User-Is-Admin'] = (
+                str(int(admin)))
+    headers[six.ensure_str(http_runtime_constants.APPENGINE_HEADER_PREFIX) +
+            'User-Nickname'] = (
+                nickname)
+    headers[six.ensure_str(http_runtime_constants.APPENGINE_HEADER_PREFIX) +
             'User-Organization'] = organization
     headers['X-AppEngine-Country'] = 'ZZ'
     if environ.get('wsgi.url_scheme') == 'https':
-      headers[http_runtime_constants.APPENGINE_DEV_HEADER_PREFIX +
-              'LocalSSL'] = '1'
-    connection = httplib.HTTPConnection(self._host, self._port)
+      headers[six.ensure_str(http_runtime_constants.APPENGINE_DEV_HEADER_PREFIX)
+              + 'LocalSSL'] = '1'
+    connection = six.moves.http_client.HTTPConnection(self._host, self._port)
     with contextlib.closing(connection):
       try:
         connection.connect()
-        connection.request(environ.get('REQUEST_METHOD', 'GET'),
-                           url,
-                           data,
-                           dict(headers.items()))
+        connection.request(
+            environ.get('REQUEST_METHOD', 'GET'), url, data,
+            dict(list(headers.items())))
 
         try:
           response = connection.getresponse()
-        except httplib.HTTPException as e:
+        except six.moves.http_client.HTTPException as e:
           # The runtime process has written a bad HTTP response. For example,
           # a Go runtime process may have crashed in app-specific code.
           yield self._respond_with_error(
@@ -197,7 +212,11 @@ class HttpProxy:
         # allowing use of multiple Set-Cookie headers.
         headers = []
         for name in response.msg:
-          for value in response.msg.getheaders(name):
+          if six.PY3:
+            hdrs = response.msg.get_all(name)
+          else:
+            hdrs = response.msg.getheaders(name)
+          for value in hdrs:
             headers.append((name, value))
 
         response_headers = wsgiref.headers.Headers(headers)
@@ -218,7 +237,7 @@ class HttpProxy:
           return
         del response_headers[http_runtime_constants.ERROR_CODE_HEADER]
         start_response('%s %s' % (response.status, response.reason),
-                       response_headers.items())
+                       list(response_headers.items()))
 
         # Yield the response body in small blocks.
         while True:
@@ -227,7 +246,7 @@ class HttpProxy:
             if not block:
               break
             yield block
-          except httplib.HTTPException:
+          except six.moves.http_client.HTTPException:
             # The runtime process has encountered a problem, but has not
             # necessarily crashed. For example, a Go runtime process' HTTP
             # handler may have panicked in app-specific code (which the http

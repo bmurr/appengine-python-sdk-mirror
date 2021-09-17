@@ -84,26 +84,27 @@ class RewriterMiddlewareTest(wsgi_test_utils.RewriterTestCase):
       state.body = ('%s%say ' % (w[1:], w[:1].lower()) for w in body.split())
       self.modify_calls += 1
 
-    response_rewriter_chain = [check_initial_response,
-                               check_chain,
-                               check_chain,
-                               modify_status,
-                               modify_headers,
-                               modify_body,
-                              ]
+    response_rewriter_chain = [
+        check_initial_response,
+        check_chain,
+        check_chain,
+        modify_status,
+        modify_headers,
+        modify_body,
+    ]
 
     def test_middleware(application):
       return functools.partial(request_rewriter._rewriter_middleware, [],
                                response_rewriter_chain, application)
+
     self.rewriter_middleware = test_middleware
 
   def test_rewrite_response_chain(self):
     """Tests that rewriter_middleware correctly chains rewriters."""
     environ = {'ENVIRON_KEY': 'Environ value'}
-    application = wsgi_test_utils.constant_app(
-        '200 Good to go',
-        [('SomeHeader', 'Some value')],
-        'Original content')
+    application = wsgi_test_utils.constant_app('200 Good to go',
+                                               [('SomeHeader', 'Some value')],
+                                               'Original content')
 
     expected_status = '400 Not so good'
 
@@ -289,14 +290,12 @@ class ResponseRewritersTest(wsgi_test_utils.RewriterTestCase):
 
   def test_content_length_rewrite(self):
     """Tests when the 'Content-Length' header needs to be updated."""
-    application = wsgi_test_utils.constant_app(
-        '200 OK',
-        [('Content-Type', 'text/html'),
-         ('Cache-Control', 'no-cache'),
-         ('Expires', 'Fri, 01 Jan 1990 00:00:00 GMT'),
-         ('Content-Length', '1234'),
-        ],
-        'this is my data')
+    application = wsgi_test_utils.constant_app('200 OK', [
+        ('Content-Type', 'text/html'),
+        ('Cache-Control', 'no-cache'),
+        ('Expires', 'Fri, 01 Jan 1990 00:00:00 GMT'),
+        ('Content-Length', '1234'),
+    ], 'this is my data')
 
     expected_status = '200 OK'
 
@@ -314,14 +313,12 @@ class ResponseRewritersTest(wsgi_test_utils.RewriterTestCase):
 
   def test_too_big_rewrite(self):
     """Tests that a response that is too big is rejected."""
-    application = wsgi_test_utils.constant_app(
-        '200 OK',
-        [('Content-Type', 'text/plain'),
-         ('Cache-Control', 'no-cache'),
-         ('Expires', 'Fri, 01 Jan 1990 00:00:00 GMT'),
-         ('Content-Length', '1234'),
-        ],
-        'x' * 33554433)     # 32 MB + 1 byte
+    application = wsgi_test_utils.constant_app('200 OK', [
+        ('Content-Type', 'text/plain'),
+        ('Cache-Control', 'no-cache'),
+        ('Expires', 'Fri, 01 Jan 1990 00:00:00 GMT'),
+        ('Content-Length', '1234'),
+    ], 'x' * 33554433)  # 32 MB + 1 byte
 
     expected_status = '500 Internal Server Error'
 
@@ -342,14 +339,12 @@ class ResponseRewritersTest(wsgi_test_utils.RewriterTestCase):
     """Tests that a HEAD request does not delete or alter the Content-Length."""
     environ = {'REQUEST_METHOD': 'HEAD'}
 
-    application = wsgi_test_utils.constant_app(
-        '200 OK',
-        [('Content-Type', 'text/html'),
-         ('Cache-Control', 'no-cache'),
-         ('Expires', 'Fri, 01 Jan 1990 00:00:00 GMT'),
-         ('Content-Length', '1234'),
-        ],
-        'this is my data')
+    application = wsgi_test_utils.constant_app('200 OK', [
+        ('Content-Type', 'text/html'),
+        ('Cache-Control', 'no-cache'),
+        ('Expires', 'Fri, 01 Jan 1990 00:00:00 GMT'),
+        ('Content-Length', '1234'),
+    ], 'this is my data')
 
     expected_status = '200 OK'
 
@@ -368,12 +363,10 @@ class ResponseRewritersTest(wsgi_test_utils.RewriterTestCase):
 
   def test_default_content_type(self):
     """Tests that the default Content-Type header is applied."""
-    application = wsgi_test_utils.constant_app(
-        '200 OK',
-        [('Cache-Control', 'no-cache'),
-         ('Expires', 'Fri, 01 Jan 1990 00:00:00 GMT'),
-        ],
-        'this is my data')
+    application = wsgi_test_utils.constant_app('200 OK', [
+        ('Cache-Control', 'no-cache'),
+        ('Expires', 'Fri, 01 Jan 1990 00:00:00 GMT'),
+    ], 'this is my data')
 
     expected_status = '200 OK'
 
@@ -391,10 +384,9 @@ class ResponseRewritersTest(wsgi_test_utils.RewriterTestCase):
 
   def test_cache_control_rewrite(self):
     """Tests when the 'cache-control' header needs to be updated."""
-    application = wsgi_test_utils.constant_app(
-        '200 OK',
-        [('Content-Type', 'text/html')],
-        'this is my data')
+    application = wsgi_test_utils.constant_app('200 OK',
+                                               [('Content-Type', 'text/html')],
+                                               'this is my data')
 
     expected_status = '200 OK'
 
@@ -412,13 +404,11 @@ class ResponseRewritersTest(wsgi_test_utils.RewriterTestCase):
 
   def test_manual_cache_control(self):
     """Tests that the user is able to manually set Cache-Control and Expires."""
-    application = wsgi_test_utils.constant_app(
-        '200 OK',
-        [('Content-Type', 'text/html'),
-         ('Cache-Control', 'max-age'),
-         ('Expires', 'Mon, 25 Jul 9999 14:47:05 GMT'),
-        ],
-        'this is my data')
+    application = wsgi_test_utils.constant_app('200 OK', [
+        ('Content-Type', 'text/html'),
+        ('Cache-Control', 'max-age'),
+        ('Expires', 'Mon, 25 Jul 9999 14:47:05 GMT'),
+    ], 'this is my data')
 
     expected_status = '200 OK'
 
@@ -436,12 +426,10 @@ class ResponseRewritersTest(wsgi_test_utils.RewriterTestCase):
 
   def test_manual_cache_control_not_expires(self):
     """Tests that the user is able to set Cache-Control without Expires."""
-    application = wsgi_test_utils.constant_app(
-        '200 OK',
-        [('Content-Type', 'text/html'),
-         ('Cache-Control', 'max-age'),
-        ],
-        'this is my data')
+    application = wsgi_test_utils.constant_app('200 OK', [
+        ('Content-Type', 'text/html'),
+        ('Cache-Control', 'max-age'),
+    ], 'this is my data')
 
     expected_status = '200 OK'
 
@@ -459,12 +447,10 @@ class ResponseRewritersTest(wsgi_test_utils.RewriterTestCase):
 
   def test_manual_expires(self):
     """Tests that the user is able to set Expires without Cache-Control."""
-    application = wsgi_test_utils.constant_app(
-        '200 OK',
-        [('Content-Type', 'text/html'),
-         ('Expires', 'Wed, 25 Jul 2012 14:47:05 GMT'),
-        ],
-        'this is my data')
+    application = wsgi_test_utils.constant_app('200 OK', [
+        ('Content-Type', 'text/html'),
+        ('Expires', 'Wed, 25 Jul 2012 14:47:05 GMT'),
+    ], 'this is my data')
 
     expected_status = '200 OK'
 
@@ -489,21 +475,19 @@ class ResponseRewritersTest(wsgi_test_utils.RewriterTestCase):
     time.time().AndReturn(788918400)  # 1 Jan 1995 00:00:00
     m.ReplayAll()
 
-    application = wsgi_test_utils.constant_app(
-        '200 OK',
-        [('Content-Type', 'text/html'),
-         ('Set-Cookie', 'UserID=john; Max-Age=3600; Version=1'),
-        ],
-        'this is my data')
+    application = wsgi_test_utils.constant_app('200 OK', [
+        ('Content-Type', 'text/html'),
+        ('Set-Cookie', 'UserID=john; Max-Age=3600; Version=1'),
+    ], 'this is my data')
 
     expected_status = '200 OK'
 
     expected_headers = {
-      'Content-Type': 'text/html',
-      'Cache-Control': 'no-cache',
-      'Expires': 'Fri, 01 Jan 1990 00:00:00 GMT',
-      'Content-length': '15',
-      'Set-Cookie': 'UserID=john; Max-Age=3600; Version=1',
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache',
+        'Expires': 'Fri, 01 Jan 1990 00:00:00 GMT',
+        'Content-length': '15',
+        'Set-Cookie': 'UserID=john; Max-Age=3600; Version=1',
     }
 
     expected_body = 'this is my data'
@@ -520,24 +504,22 @@ class ResponseRewritersTest(wsgi_test_utils.RewriterTestCase):
     time.time().AndReturn(788918400)  # 1 Jan 1995 00:00:00
     m.ReplayAll()
 
-    application = wsgi_test_utils.constant_app(
-        '200 OK',
-        [('Content-Type', 'text/html'),
-         ('Cache-Control', 'public'),
-         ('Cache-Control', 'max-age=20'),
-         ('Expires', 'Mon, 25 Jul 9999 14:47:05 GMT'),
-         ('Set-Cookie', 'UserID=john; Max-Age=3600; Version=1'),
-        ],
-        'this is my data')
+    application = wsgi_test_utils.constant_app('200 OK', [
+        ('Content-Type', 'text/html'),
+        ('Cache-Control', 'public'),
+        ('Cache-Control', 'max-age=20'),
+        ('Expires', 'Mon, 25 Jul 9999 14:47:05 GMT'),
+        ('Set-Cookie', 'UserID=john; Max-Age=3600; Version=1'),
+    ], 'this is my data')
 
     expected_status = '200 OK'
 
     expected_headers = {
-      'Content-Type': 'text/html',
-      'Cache-Control': 'max-age=20, private',
-      'Expires': 'Sun, 01 Jan 1995 00:00:00 GMT',
-      'Content-Length': '15',
-      'Set-Cookie': 'UserID=john; Max-Age=3600; Version=1',
+        'Content-Type': 'text/html',
+        'Cache-Control': 'max-age=20, private',
+        'Expires': 'Sun, 01 Jan 1995 00:00:00 GMT',
+        'Content-Length': '15',
+        'Set-Cookie': 'UserID=john; Max-Age=3600; Version=1',
     }
 
     expected_body = 'this is my data'
@@ -554,23 +536,21 @@ class ResponseRewritersTest(wsgi_test_utils.RewriterTestCase):
     time.time().AndReturn(788918400)  # 1 Jan 1995 00:00:00
     m.ReplayAll()
 
-    application = wsgi_test_utils.constant_app(
-        '200 OK',
-        [('Content-Type', 'text/html'),
-         ('Cache-Control', 'private, max-age=20'),
-         ('Expires', 'Mon, 13 Mar 1992 18:12:51 GMT'),
-         ('Set-Cookie', 'UserID=john; Max-Age=3600; Version=1'),
-        ],
-        'this is my data')
+    application = wsgi_test_utils.constant_app('200 OK', [
+        ('Content-Type', 'text/html'),
+        ('Cache-Control', 'private, max-age=20'),
+        ('Expires', 'Mon, 13 Mar 1992 18:12:51 GMT'),
+        ('Set-Cookie', 'UserID=john; Max-Age=3600; Version=1'),
+    ], 'this is my data')
 
     expected_status = '200 OK'
 
     expected_headers = {
-      'Content-Type': 'text/html',
-      'Cache-Control': 'private, max-age=20',
-      'Expires': 'Mon, 13 Mar 1992 18:12:51 GMT',
-      'Content-Length': '15',
-      'Set-Cookie': 'UserID=john; Max-Age=3600; Version=1',
+        'Content-Type': 'text/html',
+        'Cache-Control': 'private, max-age=20',
+        'Expires': 'Mon, 13 Mar 1992 18:12:51 GMT',
+        'Content-Length': '15',
+        'Set-Cookie': 'UserID=john; Max-Age=3600; Version=1',
     }
 
     expected_body = 'this is my data'
@@ -589,23 +569,21 @@ class ResponseRewritersTest(wsgi_test_utils.RewriterTestCase):
     time.time().AndReturn(788918400)  # 1 Jan 1995 00:00:00
     m.ReplayAll()
 
-    application = wsgi_test_utils.constant_app(
-        '404 Not Found',
-        [('Content-Type', 'text/html'),
-         ('Cache-Control', 'public, max-age=20'),
-         ('Expires', 'Mon, 25 Jul 9999 14:47:05 GMT'),
-         ('Set-Cookie', 'UserID=john; Max-Age=3600; Version=1'),
-        ],
-        'this is my data')
+    application = wsgi_test_utils.constant_app('404 Not Found', [
+        ('Content-Type', 'text/html'),
+        ('Cache-Control', 'public, max-age=20'),
+        ('Expires', 'Mon, 25 Jul 9999 14:47:05 GMT'),
+        ('Set-Cookie', 'UserID=john; Max-Age=3600; Version=1'),
+    ], 'this is my data')
 
     expected_status = '404 Not Found'
 
     expected_headers = {
-      'Content-Type': 'text/html',
-      'Cache-Control': 'max-age=20, private',
-      'Expires': 'Sun, 01 Jan 1995 00:00:00 GMT',
-      'Content-Length': '15',
-      'Set-Cookie': 'UserID=john; Max-Age=3600; Version=1',
+        'Content-Type': 'text/html',
+        'Cache-Control': 'max-age=20, private',
+        'Expires': 'Sun, 01 Jan 1995 00:00:00 GMT',
+        'Content-Length': '15',
+        'Set-Cookie': 'UserID=john; Max-Age=3600; Version=1',
     }
 
     expected_body = 'this is my data'
@@ -618,12 +596,10 @@ class ResponseRewritersTest(wsgi_test_utils.RewriterTestCase):
 
   def _run_no_body_status_test(self, status):
     """Tests rewriting when the status is not allowed to have a body."""
-    application = wsgi_test_utils.constant_app(
-        status,
-        [('Content-Type', 'text/html'),
-         ('Content-Length', '1234'),
-        ],
-        'this is my data')
+    application = wsgi_test_utils.constant_app(status, [
+        ('Content-Type', 'text/html'),
+        ('Content-Length', '1234'),
+    ], 'this is my data')
 
     expected_status = status
 
@@ -654,14 +630,12 @@ class ResponseRewritersTest(wsgi_test_utils.RewriterTestCase):
 
   def test_no_rewrite(self):
     """Tests when nothing gets rewritten."""
-    application = wsgi_test_utils.constant_app(
-        '200 OK',
-        [('Content-Type', 'text/html'),
-         ('Cache-Control', 'no-cache'),
-         ('Expires', 'Fri, 01 Jan 1990 00:00:00 GMT'),
-         ('Content-Length', '15'),
-        ],
-        'this is my data')
+    application = wsgi_test_utils.constant_app('200 OK', [
+        ('Content-Type', 'text/html'),
+        ('Cache-Control', 'no-cache'),
+        ('Expires', 'Fri, 01 Jan 1990 00:00:00 GMT'),
+        ('Content-Length', '15'),
+    ], 'this is my data')
 
     expected_status = '200 OK'
 
@@ -681,30 +655,31 @@ class ResponseRewritersTest(wsgi_test_utils.RewriterTestCase):
     """Tests that unsafe headers are deleted."""
     application = wsgi_test_utils.constant_app(
         '200 OK',
-        [('Server', 'iis'),
-         ('Date', 'sometime in the summer'),
-         ('Content-Type', 'text/html'),
-         ('Cache-Control', 'no-cache'),
-         ('Expires', 'Fri, 01 Jan 1990 00:00:00 GMT'),
-         ('Content-Length', '1500'),
-         ('Content-Encoding', 'gzip'),
-         ('Accept-Encoding', 'gzip'),
-         ('Transfer-Encoding', 'chunked'),
-         ('Content-Disposition', 'attachment; filename="h\xc3\xa9llo.png"'),
-         ('Connection', 'close'),
-         ('Keep-Alive', 'foo'),
-         ('Proxy-Authenticate', 'Basic'),
-         ('Trailer', 'X-Bar'),
-         ('Upgrade', 'SPDY/2'),
-         # Detailed illegal character tests
-         ('has space', 'foo'),
-         ('has:colon', 'foo'),
-         ('has-non-printable\x03', 'foo'),
-         ('has-non-ascii\xdc', 'foo'),
-         ('value-has-space', 'has space'),                      # Legal
-         ('value-has-colon', 'has:colon'),                      # Legal
-         ('value-has-non-printable', 'ab\x03cd'),
-         ('value-has-non-ascii', 'ab\xdccd'),
+        [
+            ('Server', 'iis'),
+            ('Date', 'sometime in the summer'),
+            ('Content-Type', 'text/html'),
+            ('Cache-Control', 'no-cache'),
+            ('Expires', 'Fri, 01 Jan 1990 00:00:00 GMT'),
+            ('Content-Length', '1500'),
+            ('Content-Encoding', 'gzip'),
+            ('Accept-Encoding', 'gzip'),
+            ('Transfer-Encoding', 'chunked'),
+            ('Content-Disposition', 'attachment; filename="h\xc3\xa9llo.png"'),
+            ('Connection', 'close'),
+            ('Keep-Alive', 'foo'),
+            ('Proxy-Authenticate', 'Basic'),
+            ('Trailer', 'X-Bar'),
+            ('Upgrade', 'SPDY/2'),
+            # Detailed illegal character tests
+            ('has space', 'foo'),
+            ('has:colon', 'foo'),
+            ('has-non-printable\x03', 'foo'),
+            ('has-non-ascii\xdc', 'foo'),
+            ('value-has-space', 'has space'),  # Legal
+            ('value-has-colon', 'has:colon'),  # Legal
+            ('value-has-non-printable', 'ab\x03cd'),
+            ('value-has-non-ascii', 'ab\xdccd'),
         ],
         'this is my data')
 

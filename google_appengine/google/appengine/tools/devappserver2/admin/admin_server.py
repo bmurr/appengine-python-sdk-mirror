@@ -19,9 +19,9 @@
 
 
 import logging
-import urlparse
 
 import google
+import six.moves.urllib
 import webapp2
 
 from google.appengine.tools.devappserver2 import wsgi_server
@@ -96,7 +96,7 @@ class AdminApplication(webapp2.WSGIApplication):
     """Blocks all requests that have an invalid "Origin" header."""
     origin = environ.get('HTTP_ORIGIN')
     if origin:
-      parsed_origin = urlparse.urlparse(origin)
+      parsed_origin = six.moves.urllib.parse.urlparse(origin)
       if (parsed_origin.hostname != self.host or
           parsed_origin.port != self.port):
         start_response('400 Bad Request', [])

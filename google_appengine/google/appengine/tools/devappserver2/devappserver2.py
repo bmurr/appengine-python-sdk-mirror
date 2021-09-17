@@ -23,13 +23,19 @@ import logging
 import os
 import sys
 import time
+import six
 
 if 'DEVAPPSERVER_EXTRA_IMPORTS' in os.environ:
   extras = os.environ['DEVAPPSERVER_EXTRA_IMPORTS'].split(':')
   for extra in extras:
     importlib.import_module(extra)
 # pylint: disable=g-import-not-at-top
-from google.appengine.api import request_info
+
+if six.PY2:
+  from google.appengine.api import request_info
+else:
+  from google.appengine.api import request_info
+
 from google.appengine.tools.devappserver2 import api_server
 from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import cli_parser
@@ -266,8 +272,9 @@ class DevelopmentServer(object):
       }
     if options.runtime_python_path:
       runtime_python_path = options.runtime_python_path
-    instance_factory.PythonRuntimeInstanceFactory.SetRuntimePythonPath(
-        runtime_python_path)
+    if runtime_python_path:
+      instance_factory.PythonRuntimeInstanceFactory.SetRuntimePythonPath(
+          runtime_python_path)
 
   def start(self, options):
     """Start devappserver2 servers based on the provided command line arguments.
@@ -480,19 +487,21 @@ class DevelopmentServer(object):
     """
     php_config = runtime_config_pb2.PhpConfig()
     if options.php_executable_path:
-      php_config.php_executable_path = os.path.abspath(
-          options.php_executable_path)
+      php_config.php_executable_path = six.ensure_binary(
+          os.path.abspath(options.php_executable_path))
     if options.php_library_path:
       php_config.php_library_path = options.php_library_path
     php_config.enable_debugger = options.php_remote_debugging
     if options.php_gae_extension_path:
-      php_config.gae_extension_path = os.path.abspath(
-          options.php_gae_extension_path)
+      php_config.gae_extension_path = six.ensure_binary(
+          os.path.abspath(options.php_gae_extension_path))
     if options.php_xdebug_extension_path:
       php_config.xdebug_extension_path = os.path.abspath(
           options.php_xdebug_extension_path)
+    if getattr(options, 'php_composer_path', None):
+      php_config.php_composer_path = os.path.abspath(options.php_composer_path)
     if php_version:
-      php_config.php_version = php_version
+      php_config.php_version = six.ensure_binary(php_version)
 
     return php_config
 

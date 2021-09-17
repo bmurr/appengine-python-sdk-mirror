@@ -18,9 +18,11 @@
 
 
 
-import cStringIO
 import unittest
 import wsgiref.headers
+
+import google
+import six
 
 from google.appengine.tools.devappserver2 import request_rewriter
 
@@ -54,7 +56,7 @@ class WSGITestCase(unittest.TestCase):
     matter, but duplicate headers (headers of the same name) must be the same in
     both.
 
-    Note: This should be used instead of assertEqual, assertItemsEqual or
+    Note: This should be used instead of assertEqual, assertCountEqual or
     assertDictEqual. Using standard asserts for lists and dicts will be case
     sensitive. Using assert for wsgiref.headers.Headers does reference equality.
 
@@ -72,15 +74,10 @@ class WSGITestCase(unittest.TestCase):
     for name, value in actual:
       self.assertIsInstance(name, str, 'header name %r must be a str' % name)
       self.assertIsInstance(name, str, 'header value %r must be a str' % value)
-    self.assertItemsEqual(expected, actual, msg)
+    six.assertCountEqual(self, expected, actual, msg)
 
-  def assertResponse(self,
-                     expected_status,
-                     expected_headers,
-                     expected_content,
-                     fn,
-                     *args,
-                     **kwargs):
+  def assertResponse(self, expected_status, expected_headers, expected_content,
+                     fn, *args, **kwargs):
     """Calls fn(*args, <start_response>, **kwargs) and checks the result.
 
     Args:
@@ -88,21 +85,20 @@ class WSGITestCase(unittest.TestCase):
       expected_headers: A dict, list or wsgiref.headers.Headers representing the
           expected generated HTTP headers e.g. {'Content-type': 'text/plain'}.
       expected_content: The expected content generated e.g. 'Hello World'.
-      fn: The function to test. This function will be called with
-          fn(*args, start_response=<func>, **kwargs) where the start_response
-          function verifies that it is called with the correct status and
-          headers.
+      fn: The function to test. This function will be called with fn(*args,
+        start_response=<func>, **kwargs) where the start_response function
+        verifies that it is called with the correct status and headers.
       *args: The positional arguments passed to fn.
       **kwargs: The keyword arguments passed to fn.
     """
 
     # Buffer for 'write' callable
-    write_buffer = cStringIO.StringIO()
+    write_buffer = six.BytesIO()
 
     def start_response(status, headers, exc_info=None):
       self.assertEqual(expected_status, status)
       self.assertHeadersEqual(expected_headers, headers)
-      self.assertEqual(None, exc_info)
+      self.assertIsNone(exc_info)
       return write_buffer.write
 
     args += (start_response,)
@@ -111,11 +107,10 @@ class WSGITestCase(unittest.TestCase):
     # (URLHandler.handle_authorization). Explicitly test for this to avoid a
     # confusing TypeError on the following line.
     self.assertNotEqual(None, response, '%r(*args, **kwargs) != None' % fn)
-    response = ''.join(response)
-    self.assertIsInstance(
-        response, str, 'response %r must be a str' % response[:10])
-    self.assertMultiLineEqual(expected_content,
-                              write_buffer.getvalue() + response)
+    response = six.b('').join(six.ensure_binary(line) for line in response)
+    self.assertEqual(
+        six.ensure_binary(expected_content).split(six.b('\n')),
+        (write_buffer.getvalue() + response).split(six.b('\n')))
 
 
 class RewriterTestCase(WSGITestCase):
@@ -124,8 +119,12 @@ class RewriterTestCase(WSGITestCase):
   rewriter_middleware = staticmethod(
       request_rewriter.frontend_rewriter_middleware)
 
-  def assert_rewritten_response(self, expected_status, expected_headers,
-                                expected_body, application, environ=None):
+  def assert_rewritten_response(self,
+                                expected_status,
+                                expected_headers,
+                                expected_body,
+                                application,
+                                environ=None):
     """Tests that a rewritten application produces the expected response.
 
     This applies the response rewriter chain to application and then tests the

@@ -14,18 +14,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Manage the lifecycle of modules and dispatch requests to them."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import collections
 import logging
 import socket
 import sys
 import threading
-import urlparse
 import wsgiref.headers
 
-from google.appengine.api import appinfo
-from google.appengine.api import request_info
+import six
+from six.moves import map
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import appinfo
+  from google.appengine.api import request_info
+else:
+  from google.appengine.api import appinfo
+  from google.appengine.api import request_info
+
 from google.appengine.tools.devappserver2 import instance
 from google.appengine.tools.devappserver2 import module
 from google.appengine.tools.devappserver2 import runtime_factories
@@ -44,8 +57,10 @@ ResponseTuple = collections.namedtuple('ResponseTuple',
 
 # This must be kept in sync with dispatch_ah_url_path_prefix_whitelist in
 # google/production/borg/apphosting/templates/frontend.borg.
-DISPATCH_AH_URL_PATH_PREFIX_WHITELIST = ('/_ah/queue/deferred',
-                                         '/_ah/api',)
+DISPATCH_AH_URL_PATH_PREFIX_WHITELIST = (
+    '/_ah/queue/deferred',
+    '/_ah/api',
+)
 
 
 class PortRegistry(object):
@@ -111,61 +126,60 @@ class Dispatcher(request_info.Dispatcher):
 
     Args:
       configuration: An application_configuration.ApplicationConfiguration
-          instance storing the configuration data for the app.
+        instance storing the configuration data for the app.
       host: A string containing the host that any HTTP servers should bind to
-          e.g. "localhost".
+        e.g. "localhost".
       port: An int specifying the first port where servers should listen.
       auth_domain: A string containing the auth domain to set in the environment
-          variables.
+        variables.
       runtime_stderr_loglevel: An int reprenting the minimum logging level at
-          which runtime log messages should be written to stderr. See
-          devappserver2.py for possible values.
+        which runtime log messages should be written to stderr. See
+        devappserver2.py for possible values.
       php_config: A runtime_config_pb2.PhpConfig instances containing PHP
-          runtime-specific configuration. If None then defaults are used.
+        runtime-specific configuration. If None then defaults are used.
       python_config: A runtime_config_pb2.PythonConfig instance containing
-          Python runtime-specific configuration. If None then defaults are
-          used.
+        Python runtime-specific configuration. If None then defaults are used.
       java_config: A runtime_config_pb2.JavaConfig instance containing Java
-          runtime-specific configuration. If None then defaults are used.
+        runtime-specific configuration. If None then defaults are used.
       go_config: A runtime_config_pb2.GoConfig instance containing Go
-          runtime-specific configuration. If None then defaults are used.
+        runtime-specific configuration. If None then defaults are used.
       custom_config: A runtime_config_pb2.CustomConfig instance. If None, or
-          'custom_entrypoint' is not set, then attempting to instantiate a
-          custom runtime module will result in an error.
+        'custom_entrypoint' is not set, then attempting to instantiate a custom
+        runtime module will result in an error.
       cloud_sql_config: A runtime_config_pb2.CloudSQL instance containing the
-          required configuration for local Google Cloud SQL development. If None
-          then Cloud SQL will not be available.
-      vm_config: A runtime_config_pb2.VMConfig instance containing
-          VM runtime-specific configuration.
+        required configuration for local Google Cloud SQL development. If None
+        then Cloud SQL will not be available.
+      vm_config: A runtime_config_pb2.VMConfig instance containing VM
+        runtime-specific configuration.
       module_to_max_instances: A mapping between a module name and the maximum
-          number of instances that can be created (this overrides the settings
-          found in the configuration argument) e.g.
+        number of instances that can be created (this overrides the settings
+        found in the configuration argument) e.g.
           {'default': 10, 'backend': 15}.
       use_mtime_file_watcher: A bool containing whether to use mtime polling to
-          monitor file changes even if other options are available on the
-          current platform.
+        monitor file changes even if other options are available on the current
+        platform.
       watcher_ignore_re: A RegexObject that optionally defines a pattern for the
-          file watcher to ignore.
-      automatic_restart: If True then instances will be restarted when a
-          file or configuration change that affects them is detected.
+        file watcher to ignore.
+      automatic_restart: If True then instances will be restarted when a file or
+        configuration change that affects them is detected.
       allow_skipped_files: If True then all files in the application's directory
-          are readable, even if they appear in a static handler or "skip_files"
-          directive.
+        are readable, even if they appear in a static handler or "skip_files"
+        directive.
       module_to_threadsafe_override: A mapping between the module name and what
-          to override the module's YAML threadsafe configuration (so modules
-          not named continue to use their YAML configuration).
-      external_port: The port on which the single external module is expected
-          to listen, or None if there are no external modules. This will later
-          be changed so that the association between external modules and their
-          ports is more flexible.
+        to override the module's YAML threadsafe configuration (so modules not
+        named continue to use their YAML configuration).
+      external_port: The port on which the single external module is expected to
+        listen, or None if there are no external modules. This will later be
+        changed so that the association between external modules and their ports
+        is more flexible.
       specified_service_ports: A dict of string(service_name)->int(port number).
-          This allows services of given names to run on specified ports.
+        This allows services of given names to run on specified ports.
       addn_host: A list of additional HTTP hosts to be whitelisted if
-          enable_host_checking is turned on.
-      enable_host_checking: A bool indicating that HTTP Host checking should
-          be enforced for incoming requests.
+        enable_host_checking is turned on.
+      enable_host_checking: A bool indicating that HTTP Host checking should be
+        enforced for incoming requests.
       ssl_certificate_paths: A ssl_utils.SSLCertificatePaths instance. If
-          specified, modules will be launched with SSL.
+        specified, modules will be launched with SSL.
       test_ssl_port: An ssl port for the users app for dev_appserver tests.
     """
     self._configuration = configuration
@@ -213,7 +227,7 @@ class Dispatcher(request_info.Dispatcher):
       api_host: The hostname that APIServer listens for RPC requests on.
       api_port: The port that APIServer listens for RPC requests on.
       request_data: A wsgi_request_info.WSGIRequestInfo that will be provided
-          with request information for use by API stubs.
+        with request information for use by API stubs.
 
     Raises:
       RuntimeError: In case of cannot find port for a service.
@@ -223,8 +237,8 @@ class Dispatcher(request_info.Dispatcher):
     self._request_data = request_data
     self._executor.start()
     if self._configuration.dispatch:
-      self._dispatch_server = wsgi_server.WsgiServer((self._host,
-                                                      self._default_port), self)
+      self._dispatch_server = wsgi_server.WsgiServer(
+          (self._host, self._default_port), self)
       self._dispatch_server.start()
       logging.info('Starting dispatcher running at: http://%s:%s', self._host,
                    self._dispatch_server.port)
@@ -343,10 +357,10 @@ class Dispatcher(request_info.Dispatcher):
         logging.warning('You are creating a python27 module, but your python '
                         'minor version is below 2.7.')
       elif sys.version_info[2] < runtime_factories.PYTHON27_PROD_VERSION[2]:
-        logging.warning('Your python27 micro version is below %s, our '
-                        'current production version.',
-                        '.'.join(map(str,
-                                     runtime_factories.PYTHON27_PROD_VERSION)))
+        logging.warning(
+            'Your python27 micro version is below %s, our '
+            'current production version.',
+            '.'.join(map(str, runtime_factories.PYTHON27_PROD_VERSION)))
 
   def _create_module(self, module_configuration, port, ssl_port=None):
     self.check_python_version(module_configuration.runtime)
@@ -399,7 +413,7 @@ class Dispatcher(request_info.Dispatcher):
 
   @property
   def modules(self):
-    return self._module_name_to_module.values()
+    return list(self._module_name_to_module.values())
 
   def get_hostname(self, module_name, version, instance_id=None):
     """Returns the hostname for a (module, version, instance_id) tuple.
@@ -433,7 +447,8 @@ class Dispatcher(request_info.Dispatcher):
     # Convert to an address that can connect from local and remote machines.
     # TODO: handle IPv6 bind-all address (::).
     try:
-      if socket.inet_aton(parts[0]) == '\0\0\0\0':
+      if socket.inet_pton(socket.AF_INET,
+                          parts[0]) == six.ensure_binary('\0\0\0\0'):
         hostname = ':'.join([socket.gethostname()] + parts[1:])
     except socket.error:
       # socket.inet_aton raised an exception so parts[0] is not an IP address.
@@ -501,11 +516,11 @@ class Dispatcher(request_info.Dispatcher):
     Args:
       runnable: A callable object to call at the specified time.
       eta: An int containing the time to run the event, in seconds since the
-          epoch.
+        epoch.
       service: A str containing the name of the service that owns this event.
-          This should be set if event_id is set.
+        This should be set if event_id is set.
       event_id: A str containing the id of the event. If set, this can be passed
-          to update_event to change the time at which the event should run.
+        to update_event to change the time at which the event should run.
     """
     if service is not None and event_id is not None:
       key = (service, event_id)
@@ -518,7 +533,7 @@ class Dispatcher(request_info.Dispatcher):
 
     Args:
       eta: An int containing the time to run the event, in seconds since the
-          epoch.
+        epoch.
       service: A str containing the name of the service that owns this event.
       event_id: A str containing the id of the event to update.
     """
@@ -530,6 +545,7 @@ class Dispatcher(request_info.Dispatcher):
     Args:
       module_name: The name of the module.
       version: The version id.
+
     Returns:
       Module object.
     Raises:
@@ -558,6 +574,7 @@ class Dispatcher(request_info.Dispatcher):
     Args:
       module_name: The name of the module.
       version: The version id.
+
     Returns:
       Module object.
     Raises:
@@ -571,7 +588,7 @@ class Dispatcher(request_info.Dispatcher):
         # If there is no default module, but there are other modules, take any.
         # This is somewhat of a hack, and can be removed if we ever enforce the
         # existence of a default module.
-        module_name = self._module_name_to_module.keys()[0]
+        module_name = list(self._module_name_to_module.keys())[0]
       else:
         raise request_info.ModuleDoesNotExistError(module_name)
     if (version is not None and
@@ -648,12 +665,11 @@ class Dispatcher(request_info.Dispatcher):
     """Dispatch a background thread request.
 
     Args:
-      module_name: A str containing the module name to service this
-          request.
+      module_name: A str containing the module name to service this request.
       version: A str containing the version to service this request.
       inst: The instance to service this request.
       background_request_id: A str containing the unique background thread
-          request identifier.
+        request identifier.
 
     Raises:
       NotSupportedWithAutoScalingError: The provided module/version uses
@@ -669,20 +685,28 @@ class Dispatcher(request_info.Dispatcher):
     port = _module.get_instance_port(inst.instance_id)
     environ = _module.build_request_environ(
         'GET', '/_ah/background',
-        [('X-AppEngine-BackgroundRequest', background_request_id)],
-        '', '0.1.0.3', port)
-    _THREAD_POOL.submit(self._handle_request,
-                        environ,
-                        start_response_utils.null_start_response,
-                        _module,
-                        inst,
-                        request_type=instance.BACKGROUND_REQUEST,
-                        catch_and_log_exceptions=True)
+        [('X-AppEngine-BackgroundRequest', background_request_id)], '',
+        '0.1.0.3', port)
+    _THREAD_POOL.submit(
+        self._handle_request,
+        environ,
+        start_response_utils.null_start_response,
+        _module,
+        inst,
+        request_type=instance.BACKGROUND_REQUEST,
+        catch_and_log_exceptions=True)
 
   # TODO: Think of better names for add_async_request and
   # add_request.
-  def add_async_request(self, method, relative_url, headers, body, source_ip,
-                        module_name=None, version=None, instance_id=None):
+  def add_async_request(self,
+                        method,
+                        relative_url,
+                        headers,
+                        body,
+                        source_ip,
+                        module_name=None,
+                        version=None,
+                        instance_id=None):
     """Dispatch an HTTP request asynchronously.
 
     Args:
@@ -692,33 +716,41 @@ class Dispatcher(request_info.Dispatcher):
       body: A str containing the request body.
       source_ip: The source ip address for the request.
       module_name: An optional str containing the module name to service this
-          request. If unset, the request will be dispatched to the default
-          module.
+        request. If unset, the request will be dispatched to the default module.
       version: An optional str containing the version to service this request.
-          If unset, the request will be dispatched to the default version.
+        If unset, the request will be dispatched to the default version.
       instance_id: An optional str containing the instance_id of the instance to
-          service this request. If unset, the request will be dispatched to
-          according to the load-balancing for the module and version.
+        service this request. If unset, the request will be dispatched to
+        according to the load-balancing for the module and version.
     """
     if module_name:
       _module = self._get_module_with_soft_routing(module_name, version)
     else:
-      _module = self._module_for_request(urlparse.urlsplit(relative_url).path)
+      _module = self._module_for_request(
+          six.moves.urllib.parse.urlsplit(relative_url).path)
     inst = _module.get_instance(instance_id) if instance_id else None
     port = _module.get_instance_port(instance_id) if instance_id else (
         _module.balanced_port)
     environ = _module.build_request_environ(method, relative_url, headers, body,
                                             source_ip, port)
 
-    _THREAD_POOL.submit(self._handle_request,
-                        environ,
-                        start_response_utils.null_start_response,
-                        _module,
-                        inst,
-                        catch_and_log_exceptions=True)
+    _THREAD_POOL.submit(
+        self._handle_request,
+        environ,
+        start_response_utils.null_start_response,
+        _module,
+        inst,
+        catch_and_log_exceptions=True)
 
-  def add_request(self, method, relative_url, headers, body, source_ip,
-                  module_name=None, version=None, instance_id=None,
+  def add_request(self,
+                  method,
+                  relative_url,
+                  headers,
+                  body,
+                  source_ip,
+                  module_name=None,
+                  version=None,
+                  instance_id=None,
                   fake_login=False):
     """Process an HTTP request.
 
@@ -729,15 +761,15 @@ class Dispatcher(request_info.Dispatcher):
       body: A str containing the request body.
       source_ip: The source ip address for the request.
       module_name: An optional str containing the module name to service this
-          request. If unset, the request will be dispatched according to the
-          host header and relative_url.
+        request. If unset, the request will be dispatched according to the host
+        header and relative_url.
       version: An optional str containing the version to service this request.
-          If unset, the request will be dispatched according to the host header
-          and relative_url.
+        If unset, the request will be dispatched according to the host header
+        and relative_url.
       instance_id: An optional str containing the instance_id of the instance to
-          service this request. If unset, the request will be dispatched
-          according to the host header and relative_url and, if applicable, the
-          load-balancing for the module and version.
+        service this request. If unset, the request will be dispatched according
+        to the host header and relative_url and, if applicable, the
+        load-balancing for the module and version.
       fake_login: A bool indicating whether login checks should be bypassed,
           i.e. "login: required" should be ignored for this request.
 
@@ -751,7 +783,8 @@ class Dispatcher(request_info.Dispatcher):
     else:
       headers_dict = wsgiref.headers.Headers(headers)
       _module, inst = self._resolve_target(
-          headers_dict['Host'], urlparse.urlsplit(relative_url).path)
+          headers_dict['Host'],
+          six.moves.urllib.parse.urlsplit(relative_url).path)
     if inst:
       try:
         port = _module.get_instance_port(inst.instance_id)
@@ -759,28 +792,29 @@ class Dispatcher(request_info.Dispatcher):
         port = _module.balanced_port
     else:
       port = _module.balanced_port
-    environ = _module.build_request_environ(method, relative_url, headers, body,
-                                            source_ip, port,
-                                            fake_login=fake_login)
+    environ = _module.build_request_environ(
+        method,
+        relative_url,
+        headers,
+        body,
+        source_ip,
+        port,
+        fake_login=fake_login)
     start_response = start_response_utils.CapturingStartResponse()
-    response = self._handle_request(environ,
-                                    start_response,
-                                    _module,
-                                    inst)
+    response = self._handle_request(environ, start_response, _module, inst)
 
     # merged_response can have side effects which modify start_response.*, so
     # we cannot safely inline it into the ResponseTuple initialization below.
     merged = start_response.merged_response(response)
     return request_info.ResponseTuple(start_response.status,
-                                      start_response.response_headers,
-                                      merged)
+                                      start_response.response_headers, merged)
 
   def _resolve_target(self, hostname, path):
     """Returns the module and instance that should handle this request.
 
     Args:
       hostname: A string containing the value of the host header in the request
-          or None if one was not present.
+        or None if one was not present.
       path: A string containing the path of the request.
 
     Returns:
@@ -812,14 +846,15 @@ class Dispatcher(request_info.Dispatcher):
       # of the same module. All we can really do is route to the default
       # version of the specified module.
       if '.' in prefix:
-        logging.warning('Ignoring instance/version in %s; multiple versions '
-                        'are not supported in devappserver.', prefix)
-      module_name = prefix.split('.')[-1]
+        logging.warning(
+            'Ignoring instance/version in %s; multiple versions '
+            'are not supported in devappserver.', prefix)
+      module_name = six.ensure_str(prefix).split('.')[-1]
       return self._get_module_with_soft_routing(module_name, None), None
 
     else:
       if ':' in hostname:
-        port = int(hostname.rsplit(':', 1)[1])
+        port = int(six.ensure_str(hostname).rsplit(':', 1)[1])
       else:
         port = 80
       try:
@@ -830,8 +865,12 @@ class Dispatcher(request_info.Dispatcher):
       _module = self._module_for_request(path)
     return _module, inst
 
-  def _handle_request(self, environ, start_response, _module,
-                      inst=None, request_type=instance.NORMAL_REQUEST,
+  def _handle_request(self,
+                      environ,
+                      start_response,
+                      _module,
+                      inst=None,
+                      request_type=instance.NORMAL_REQUEST,
                       catch_and_log_exceptions=False):
     """Dispatch a WSGI request.
 
@@ -839,20 +878,20 @@ class Dispatcher(request_info.Dispatcher):
       environ: An environ dict for the request as defined in PEP-333.
       start_response: A function with semantics defined in PEP-333.
       _module: The module to dispatch this request to.
-      inst: The instance to service this request. If None, the module will
-          be left to choose the instance to serve this request.
+      inst: The instance to service this request. If None, the module will be
+        left to choose the instance to serve this request.
       request_type: The request_type of this request. See instance.*_REQUEST
-          module constants.
+        module constants.
       catch_and_log_exceptions: A bool containing whether to catch and log
-          exceptions in handling the request instead of leaving it for the
-          caller to handle.
+        exceptions in handling the request instead of leaving it for the caller
+        to handle.
 
     Returns:
       An iterable over the response to the request as defined in PEP-333.
     """
     try:
-      return _module._handle_request(environ, start_response, inst=inst,
-                                     request_type=request_type)
+      return _module._handle_request(
+          environ, start_response, inst=inst, request_type=request_type)
     except:
       if catch_and_log_exceptions:
         logging.exception('Internal error while handling request.')
@@ -860,31 +899,35 @@ class Dispatcher(request_info.Dispatcher):
         raise
 
   def __call__(self, environ, start_response):
-    return self._handle_request(
-        environ, start_response, self._module_for_request(environ['PATH_INFO']))
+    return self._handle_request(environ, start_response,
+                                self._module_for_request(environ['PATH_INFO']))
 
   def _should_use_dispatch_config(self, path):
     """Determines whether or not to use the dispatch config.
 
     Args:
       path: The request path.
+
     Returns:
       A Boolean indicating whether or not to use the rules in dispatch config.
     """
-    if (not path.startswith('/_ah/') or
-        any(path.startswith(wl) for wl
-            in DISPATCH_AH_URL_PATH_PREFIX_WHITELIST)):
+    if (not six.ensure_str(path).startswith('/_ah/') or any(
+        six.ensure_str(path).startswith(wl)
+        for wl in DISPATCH_AH_URL_PATH_PREFIX_WHITELIST)):
       return True
     else:
-      logging.warning('Skipping dispatch.yaml rules because %s is not a '
-                      'dispatchable path.', path)
+      logging.warning(
+          'Skipping dispatch.yaml rules because %s is not a '
+          'dispatchable path.', path)
       return False
 
   def _module_for_request(self, path):
     dispatch = self._configuration.dispatch
     if dispatch and self._should_use_dispatch_config(path):
       for url, module_name in dispatch.dispatch:
-        if (url.path_exact and path == url.path or
-            not url.path_exact and path.startswith(url.path)):
+        if (url.path_exact and
+            six.ensure_text(path) == six.ensure_text(url.path) or
+            not url.path_exact and
+            six.ensure_text(path).startswith(six.ensure_text(url.path))):
           return self._get_module_with_soft_routing(module_name, None)
     return self._get_module_with_soft_routing(None, None)

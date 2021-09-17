@@ -16,7 +16,13 @@
 #
 """A handler that displays information about blobstore blobs."""
 
-from google.appengine.ext import blobstore
+import six
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.ext import blobstore
+else:
+  from google.appengine.ext import blobstore
 
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 

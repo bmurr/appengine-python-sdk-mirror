@@ -14,7 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Tests for google.apphosting.tools.devappserver2.application_configuration."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 
 
@@ -29,11 +34,20 @@ import unittest
 
 import google
 import mock
+import six
 
-from google.appengine.api import appinfo
-from google.appengine.api import appinfo_includes
-from google.appengine.api import backendinfo
-from google.appengine.api import dispatchinfo
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import appinfo
+  from google.appengine.api import appinfo_includes
+  from google.appengine.api import backendinfo
+  from google.appengine.api import dispatchinfo
+else:
+  from google.appengine.api import appinfo
+  from google.appengine.api import appinfo_includes
+  from google.appengine.api import backendinfo
+  from google.appengine.api import dispatchinfo
+
 from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import constants
 from google.appengine.tools.devappserver2 import errors
@@ -788,8 +802,8 @@ class TestBackendsConfiguration(unittest.TestCase):
                           '_parse_configuration', return_value=backend_info):
       config = application_configuration.BackendsConfiguration(
           '/appdir/app.yaml', '/appdir/backends.yaml')
-      self.assertItemsEqual([static_configuration, dynamic_configuration],
-                            config.get_backend_configurations())
+      six.assertCountEqual(self, [static_configuration, dynamic_configuration],
+                           config.get_backend_configurations())
 
   def test_no_backends(self):
     backend_info = backendinfo.BackendInfoExternal()
@@ -1164,7 +1178,8 @@ class TestApplicationConfiguration(unittest.TestCase):
   def _make_file_hierarchy(self, filenames):
     absnames = []
     for filename in filenames:
-      absname = os.path.normpath(self.tmpdir + '/' + filename)
+      absname = os.path.normpath(
+          six.ensure_str(self.tmpdir) + '/' + six.ensure_str(filename))
       absnames += [absname]
       dirname = os.path.dirname(absname)
       if not os.path.exists(dirname):

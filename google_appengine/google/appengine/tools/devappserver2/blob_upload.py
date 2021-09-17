@@ -14,17 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Handles blob store uploading and serving in the front-end.
 
 Includes a WSGI application that handles upload requests and inserts the
 contents into the blob store.
 """
 
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import base64
 import cgi
-import cStringIO
 import datetime
 import email.generator
 import email.message
@@ -36,17 +38,31 @@ import random
 import re
 import sys
 import time
-import urlparse
 
 import google
+
+import six
+import six.moves.urllib.parse
 import webob.exc
 
-from google.appengine.api import apiproxy_stub_map
-from google.appengine.api import datastore
-from google.appengine.api import datastore_errors
-from google.appengine.api.blobstore import blobstore
-from google.appengine.ext.cloudstorage import cloudstorage_stub
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import datastore
+  from google.appengine.api import datastore_errors
+  from google.appengine.api.blobstore import blobstore
+  from google.appengine.ext.cloudstorage import cloudstorage_stub
+else:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import datastore
+  from google.appengine.api import datastore_errors
+  from google.appengine.api.blobstore import blobstore
+  from cloudstorage import cloudstorage_stub
+
 from google.appengine.tools.devappserver2 import constants
+
+EMAIL_MESSSAGE_CLASS = (
+    email.Message.Message if six.PY2 else email.message.EmailMessage)
 
 # Upload URL path.
 UPLOAD_URL_PATH = '_ah/upload/'
@@ -60,18 +76,20 @@ _MIME_PATTERN = re.compile(r'([^/; ]+)/([^/; ]+)$')
 # These are environment variables that do not make any sense to transmit because
 # the values contained in them would be obsolete after the request has been
 # transformed from full upload objects to blob-info records.
-_STRIPPED_ENVIRON = frozenset(('HTTP_CONTENT_LENGTH',
-                               'HTTP_CONTENT_MD5',
-                               'HTTP_CONTENT_TYPE',
-                              ))
+_STRIPPED_ENVIRON = frozenset((
+    'HTTP_CONTENT_LENGTH',
+    'HTTP_CONTENT_MD5',
+    'HTTP_CONTENT_TYPE',
+))
 
 # These are the MIME headers that need to be removed from the external-body
 # message, because we are going to set our own.
 # cgi.FieldStorage makes these all lowercase.
-_STRIPPED_FILE_HEADERS = frozenset(('content-type',
-                                    'content-md5',
-                                    'content-length',
-                                   ))
+_STRIPPED_FILE_HEADERS = frozenset((
+    'content-type',
+    'content-md5',
+    'content-length',
+))
 
 # The maximum length of the content-type and filename fields as dictated by
 # the maximum length of a string in the datastore
@@ -130,11 +148,11 @@ def _generate_blob_key(time_func=time.time, random_func=random.random):
   while tries < 10:
     number = str(random_func())
     digester = hashlib.md5()
-    digester.update(timestamp)
-    digester.update(number)
+    digester.update(six.ensure_binary(timestamp))
+    digester.update(six.ensure_binary(number))
     blob_key = base64.urlsafe_b64encode(digester.digest())
-    datastore_key = datastore.Key.from_path(blobstore.BLOB_INFO_KIND, blob_key,
-                                            namespace='')
+    datastore_key = datastore.Key.from_path(
+        blobstore.BLOB_INFO_KIND, six.ensure_text(blob_key), namespace='')
     try:
       datastore.Get(datastore_key)
       tries += 1
@@ -158,10 +176,10 @@ def _split_mime_type(mime_type):
     _InvalidMIMETypeFormatError: mime_type is incorrectly formatted.
   """
   if mime_type:
-    match = _MIME_PATTERN.match(mime_type)
+    match = _MIME_PATTERN.match(six.ensure_str(mime_type))
     if not match:
-      raise _InvalidMIMETypeFormatError(
-          'Incorrectly formatted MIME type: %s' % mime_type)
+      raise _InvalidMIMETypeFormatError('Incorrectly formatted MIME type: %s' %
+                                        mime_type)
     return match.groups()
   else:
     return 'application', 'octet-stream'
@@ -176,7 +194,9 @@ class Application(object):
   uploaded file contents are replaced with their blob keys.
   """
 
-  def __init__(self, forward_app, get_blob_storage=_get_blob_storage,
+  def __init__(self,
+               forward_app,
+               get_blob_storage=_get_blob_storage,
                generate_blob_key=_generate_blob_key,
                now_func=datetime.datetime.now):
     """Constructs a new Application.
@@ -235,8 +255,8 @@ class Application(object):
     self._blob_storage.StoreBlob(blob_key, blob_file)
 
     # Store the blob metadata in the datastore as a __BlobInfo__ entity.
-    blob_entity = datastore.Entity('__BlobInfo__', name=str(blob_key),
-                                   namespace='')
+    blob_entity = datastore.Entity(
+        '__BlobInfo__', name=str(blob_key), namespace='')
     blob_entity['content_type'] = content_type
     blob_entity['creation'] = creation
     blob_entity['filename'] = filename
@@ -261,14 +281,15 @@ class Application(object):
       datastore.Entity('__GsFileInfo__') associated with the upload.
     """
     gs_stub = cloudstorage_stub.CloudStorageStub(self._blob_storage)
-    blobkey = gs_stub.post_start_creation('/' + gs_filename,
+    blobkey = gs_stub.post_start_creation('/' + six.ensure_str(gs_filename),
                                           {'content-type': content_type})
     content = blob_file.read()
-    return gs_stub.put_continue_creation(
-        blobkey, content, (0, len(content) - 1), len(content), filename)
+    return gs_stub.put_continue_creation(blobkey, six.ensure_binary(content),
+                                         (0, len(content) - 1), len(content),
+                                         filename)
 
-  def _preprocess_data(self, content_type, blob_file,
-                       filename, base64_encoding):
+  def _preprocess_data(self, content_type, blob_file, filename,
+                       base64_encoding):
     """Preprocess data and metadata before storing them.
 
     Args:
@@ -284,14 +305,15 @@ class Application(object):
       _InvalidMetadataError: when metadata are not utf-8 encoded.
     """
     if base64_encoding:
-      blob_file = cStringIO.StringIO(base64.urlsafe_b64decode(blob_file.read()))
+      blob_file = six.BytesIO(
+          base64.urlsafe_b64decode(six.ensure_str(blob_file.read())))
 
     # If content_type or filename are bytes, assume UTF-8 encoding.
     try:
-      if not isinstance(content_type, unicode):
-        content_type = content_type.decode('utf-8')
-      if filename and not isinstance(filename, unicode):
-        filename = filename.decode('utf-8')
+      if not isinstance(content_type, six.text_type):
+        content_type = six.ensure_text(content_type)
+      if filename and not isinstance(filename, six.text_type):
+        filename = six.ensure_text(filename)
     except UnicodeDecodeError:
       raise _InvalidMetadataError(
           'The uploaded entity contained invalid UTF-8 metadata. This may be '
@@ -299,7 +321,9 @@ class Application(object):
           'charset other than "utf-8".')
     return content_type, blob_file, filename
 
-  def store_and_build_forward_message(self, form, boundary=None,
+  def store_and_build_forward_message(self,
+                                      form,
+                                      boundary=None,
                                       max_bytes_per_blob=None,
                                       max_bytes_total=None,
                                       bucket_name=None):
@@ -314,12 +338,12 @@ class Application(object):
         original POST data.
       boundary: The optional boundary to use for the resulting form. If omitted,
         one is randomly generated.
-      max_bytes_per_blob: The maximum size in bytes that any single blob
-        in the form is allowed to be.
-      max_bytes_total: The maximum size in bytes that the total of all blobs
-        in the form is allowed to be.
+      max_bytes_per_blob: The maximum size in bytes that any single blob in the
+        form is allowed to be.
+      max_bytes_total: The maximum size in bytes that the total of all blobs in
+        the form is allowed to be.
       bucket_name: The name of the Google Storage bucket to store the uploaded
-                   files.
+        files.
 
     Returns:
       A tuple (content_type, content_text), where content_type is the value of
@@ -354,7 +378,7 @@ class Application(object):
     for form_item in form_items:
       disposition_parameters = {'name': form_item.name}
 
-      variable = email.message.Message()
+      variable = EMAIL_MESSSAGE_CLASS()
 
       if form_item.filename is None:
         # Copy as is
@@ -405,7 +429,7 @@ class Application(object):
           block = form_item.file.read(1 << 20)
           if not block:
             break
-          digester.update(block)
+          digester.update(six.ensure_binary(block))
         form_item.file.seek(0)
 
         # Create the external body message containing meta-data about the blob.
@@ -415,7 +439,8 @@ class Application(object):
         # NOTE: This is in violation of RFC 2616 (Content-MD5 should be the
         # base-64 encoding of the binary hash, not the hex digest), but it is
         # consistent with production.
-        content_md5 = base64.urlsafe_b64encode(digester.hexdigest())
+        content_md5 = base64.urlsafe_b64encode(
+            six.ensure_binary(digester.hexdigest()))
         # Create header MIME message
         headers = dict(form_item.headers)
         for name in _STRIPPED_FILE_HEADERS:
@@ -432,28 +457,26 @@ class Application(object):
           headers[blobstore.CLOUD_STORAGE_OBJECT_HEADER] = (
               blobstore.GS_PREFIX + gs_filename)
         for key, value in headers.items():
-          external.add_header(key, value)
+          external.add_header(six.ensure_text(key), six.ensure_text(value))
         # Add disposition parameters (a clone of the outer message's field).
         if not external.get('Content-Disposition'):
           external.add_header('Content-Disposition', 'form-data',
                               **disposition_parameters)
 
-        base64_encoding = (form_item.headers.get('Content-Transfer-Encoding') ==
-                           'base64')
+        base64_encoding = (
+            form_item.headers.get('Content-Transfer-Encoding') == 'base64')
         content_type, blob_file, filename = self._preprocess_data(
-            external['content-type'],
-            form_item.file,
-            form_item.filename,
+            external['content-type'], form_item.file, form_item.filename,
             base64_encoding)
 
         # Store the actual contents to storage.
         if gs_filename:
-          info_entity = self.store_gs_file(
-              content_type, gs_filename, blob_file, filename)
+          info_entity = self.store_gs_file(content_type, gs_filename, blob_file,
+                                           filename)
         else:
           try:
-            info_entity = self.store_blob(content_type, filename,
-                                          digester, blob_file, creation)
+            info_entity = self.store_blob(content_type, filename, digester,
+                                          blob_file, creation)
           except _TooManyConflictsError:
             too_many_conflicts = True
             break
@@ -461,15 +484,18 @@ class Application(object):
         # Track created blobs in case we need to roll them back.
         created_blobs.append(info_entity)
 
-        variable.add_header('Content-Type', 'message/external-body',
-                            access_type=blobstore.BLOB_KEY_HEADER,
-                            blob_key=info_entity.key().name())
+        variable.add_header(
+            'Content-Type',
+            'message/external-body',
+            access_type=blobstore.BLOB_KEY_HEADER,
+            blob_key=info_entity.key().name())
         variable.set_payload([external])
 
       # Set common information.
       variable.add_header('Content-Disposition', 'form-data',
                           **disposition_parameters)
       message.attach(variable)
+      message.as_string()
 
     if (mime_type_error or too_many_conflicts or upload_too_large or
         filename_too_large or content_type_too_large):
@@ -490,7 +516,7 @@ class Application(object):
             invalid_field, _MAX_STRING_NAME_LENGTH)
         self.abort(400, detail=detail)
 
-    message_out = cStringIO.StringIO()
+    message_out = six.StringIO()
     gen = email.generator.Generator(message_out, maxheaderlen=0)
     gen.flatten(message, unixfrom=False)
 
@@ -518,7 +544,7 @@ class Application(object):
     if environ['REQUEST_METHOD'].lower() != 'post':
       self.abort(405)
 
-    url_match = _UPLOAD_URL_PATTERN.match(environ['PATH_INFO'])
+    url_match = _UPLOAD_URL_PATTERN.match(six.ensure_str(environ['PATH_INFO']))
     if not url_match:
       self.abort(404)
     upload_key = url_match.group(1)
@@ -536,8 +562,11 @@ class Application(object):
     max_bytes_total = upload_session['max_bytes_total']
     bucket_name = upload_session.get('gs_bucket_name', None)
 
-    upload_form = cgi.FieldStorage(fp=environ['wsgi.input'],
-                                   environ=environ)
+    field_storage_args = {'fp': environ['wsgi.input'], 'environ': environ}
+    if six.PY3:
+      field_storage_args['limit'] = sys.maxsize
+
+    upload_form = cgi.FieldStorage(**field_storage_args)
 
     # Generate debug log message
     logstrings = []
@@ -571,7 +600,7 @@ class Application(object):
 
     # Forward on to success_path. Like production, only the path and query
     # matter.
-    parsed_url = urlparse.urlsplit(success_path)
+    parsed_url = six.moves.urllib.parse.urlsplit(success_path)
     environ['PATH_INFO'] = parsed_url.path
     if parsed_url.query:
       environ['QUERY_STRING'] = parsed_url.query
@@ -580,7 +609,7 @@ class Application(object):
     environ[constants.FAKE_IS_ADMIN_HEADER] = '1'
 
     # Set the wsgi variables
-    environ['wsgi.input'] = cStringIO.StringIO(content_text)
+    environ['wsgi.input'] = six.StringIO(content_text)
 
   def __call__(self, environ, start_response):
     """Handles WSGI requests.

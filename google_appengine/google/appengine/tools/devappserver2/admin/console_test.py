@@ -23,6 +23,7 @@ import unittest
 import google
 
 import mox
+import six
 import webapp2
 
 from google.appengine.tools.devappserver2 import dispatcher
@@ -35,6 +36,7 @@ class ConsoleRequestHandlerTest(unittest.TestCase):
   """Tests for devappserver2.admin.console.ConsoleRequestHandler."""
 
   def setUp(self):
+    super(ConsoleRequestHandlerTest, self).setUp()
     self.mox = mox.Mox()
     self.mox.StubOutWithMock(console.ConsoleRequestHandler, 'dispatcher')
     self.mox.StubOutWithMock(admin_request_handler.AdminRequestHandler, 'post')
@@ -46,6 +48,7 @@ class ConsoleRequestHandlerTest(unittest.TestCase):
 
   def tearDown(self):
     self.mox.UnsetStubs()
+    super(ConsoleRequestHandlerTest, self).tearDown()
 
   def test_post_new_module(self):
     self.mox.StubOutWithMock(console.ConsoleRequestHandler, 'enable_console')
@@ -67,7 +70,7 @@ class ConsoleRequestHandlerTest(unittest.TestCase):
     handler.post()
     self.mox.VerifyAll()
     self.assertEqual(200, response.status_int)
-    self.assertEqual('10\n', response.body)
+    self.assertEqual(six.ensure_binary('10\n'), response.body)
 
   def test_post_cached_module(self):
     self.mox.StubOutWithMock(console.ConsoleRequestHandler, 'enable_console')
@@ -89,7 +92,7 @@ class ConsoleRequestHandlerTest(unittest.TestCase):
     handler.post()
     self.mox.VerifyAll()
     self.assertEqual(200, response.status_int)
-    self.assertEqual('10\n', response.body)
+    self.assertEqual(six.ensure_binary('10\n'), response.body)
 
   def test_post_exception(self):
     self.mox.StubOutWithMock(console.ConsoleRequestHandler, 'enable_console')
@@ -111,7 +114,7 @@ class ConsoleRequestHandlerTest(unittest.TestCase):
     handler.post()
     self.mox.VerifyAll()
     self.assertEqual(200, response.status_int)
-    self.assertEqual('restart', response.body)
+    self.assertEqual(six.ensure_binary('restart'), response.body)
 
   def test_post_when_console_disabled_fails(self):
     self.mox.StubOutWithMock(console.ConsoleRequestHandler, 'enable_console')
@@ -127,8 +130,9 @@ class ConsoleRequestHandlerTest(unittest.TestCase):
     handler.post()
     self.mox.VerifyAll()
     self.assertEqual(404, response.status_int)
-    self.assertIn('The interactive console is currently disabled.',
-                  response.body)
+    self.assertIn(
+        six.ensure_binary('The interactive console is currently disabled.'),
+        response.body)
 
   def test_restart(self):
     console.ConsoleRequestHandler._modulename_to_shell_module = {

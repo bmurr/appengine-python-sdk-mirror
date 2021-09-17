@@ -20,8 +20,16 @@
 
 import datetime
 
-from google.appengine.api import apiproxy_stub_map
-from google.appengine.api.taskqueue import taskqueue_service_pb
+import google
+import six
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api.taskqueue import taskqueue_service_pb
+else:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api.taskqueue import taskqueue_service_bytes_pb2
 
 
 def _human_readable_eta(eta_usec):
@@ -45,25 +53,20 @@ def _human_readable_eta_delta(eta_usec):
 class QueueInfo(object):
   """Represents information about a Queue."""
 
-  def __init__(self,
-               name,
-               mode,
-               rate,
-               bucket_size,
-               tasks_in_queue,
+  def __init__(self, name, mode, rate, bucket_size, tasks_in_queue,
                oldest_eta_usec):
     """Initializer for _QueueInfo.
 
     Args:
       name: The name of the queue e.g. "default".
       mode: A taskqueue_service_pb.TaskQueueMode constant representing the queue
-          type e.g. PULL.
+        type e.g. PULL.
       rate: The execution rate of the queue as a string e.g. "10/s". May be None
-          for pull queues.
+        for pull queues.
       bucket_size: An int representing the size of the queues token bucket.
       tasks_in_queue: The number of tasks in the queue.
       oldest_eta_usec: The eta of the oldest task in the queue in microseconds
-          from the epoch.
+        from the epoch.
     """
     self.name = name
     self.mode = mode
@@ -94,47 +97,68 @@ class QueueInfo(object):
     """Return a new _QueueInfo given information from the taskqueue service.
 
     Args:
-      queue: A taskqueue_service_pb.TaskQueueFetchQueuesResponse_Queue instance
-          containing information about the queue.
+      queue: A taskqueue_service_bytes_pb2.TaskQueueFetchQueuesResponse_Queue
+        instance containing information about the queue.
       queue_stats: A
-          taskqueue_service_pb.TaskQueueFetchQueueStatsResponse_QueueStats
-          instance containing information about the queue.
+        taskqueue_service_bytes_pb2.TaskQueueFetchQueueStatsResponse_QueueStats
+        instance containing information about the queue.
 
     Returns:
       A _QueueInfo constructed using the provided queue information.
     """
-    return cls(queue.queue_name(),
-               queue.mode(),
-               queue.user_specified_rate(),
-               queue.bucket_capacity(),
-               queue_stats.num_tasks(),
-               queue_stats.oldest_eta_usec())
-
+    if six.PY2:
+      return cls(queue.queue_name(), queue.mode(), queue.user_specified_rate(),
+                 queue.bucket_capacity(), queue_stats.num_tasks(),
+                 queue_stats.oldest_eta_usec())
+    else:
+      return cls(queue.queue_name, queue.mode, queue.user_specified_rate,
+                 queue.bucket_capacity, queue_stats.num_tasks,
+                 queue_stats.oldest_eta_usec)
 
   @classmethod
   def get(cls, queue_names=frozenset()):
     """Returns a 2-tuple: (list of push _QueueInfo, list of pull _QueueInfo)."""
-    fetch_queue_request = taskqueue_service_pb.TaskQueueFetchQueuesRequest()
-    fetch_queue_request.set_max_rows(1000)
-    fetch_queue_response = taskqueue_service_pb.TaskQueueFetchQueuesResponse()
-    apiproxy_stub_map.MakeSyncCall('taskqueue',
-                                   'FetchQueues',
-                                   fetch_queue_request,
-                                   fetch_queue_response)
+    if six.PY2:
+      fetch_queue_request = taskqueue_service_pb.TaskQueueFetchQueuesRequest()
+      fetch_queue_request.set_max_rows(1000)
+      fetch_queue_response = taskqueue_service_pb.TaskQueueFetchQueuesResponse()
+      apiproxy_stub_map.MakeSyncCall('taskqueue', 'FetchQueues',
+                                     fetch_queue_request, fetch_queue_response)
 
-    queue_stats_request = taskqueue_service_pb.TaskQueueFetchQueueStatsRequest()
-    for queue in fetch_queue_response.queue_list():
-      queue_stats_request.add_queue_name(queue.queue_name())
-    queue_stats_response = (
-        taskqueue_service_pb.TaskQueueFetchQueueStatsResponse())
-    apiproxy_stub_map.MakeSyncCall('taskqueue',
-                                   'FetchQueueStats',
-                                   queue_stats_request,
-                                   queue_stats_response)
+      queue_stats_request = taskqueue_service_pb.TaskQueueFetchQueueStatsRequest(
+      )
+      for queue in fetch_queue_response.queue_list():
+        queue_stats_request.add_queue_name(queue.queue_name())
+      queue_stats_response = (
+          taskqueue_service_pb.TaskQueueFetchQueueStatsResponse())
+      apiproxy_stub_map.MakeSyncCall('taskqueue', 'FetchQueueStats',
+                                     queue_stats_request, queue_stats_response)
 
-    for queue, queue_stats in zip(
-        fetch_queue_response.queue_list(),
-        queue_stats_response.queuestats_list()):
-      if queue_names and queue.queue_name() not in queue_names:
-        continue
-      yield cls._from_queue_and_stats(queue, queue_stats)
+      for queue, queue_stats in zip(fetch_queue_response.queue_list(),
+                                    queue_stats_response.queuestats_list()):
+        if queue_names and queue.queue_name() not in queue_names:
+          continue
+        yield cls._from_queue_and_stats(queue, queue_stats)
+    else:
+      fetch_queue_request = taskqueue_service_bytes_pb2.TaskQueueFetchQueuesRequest(
+      )
+      fetch_queue_request.max_rows = 1000
+      fetch_queue_response = taskqueue_service_bytes_pb2.TaskQueueFetchQueuesResponse(
+      )
+      apiproxy_stub_map.MakeSyncCall('taskqueue', 'FetchQueues',
+                                     fetch_queue_request, fetch_queue_response)
+
+      queue_stats_request = taskqueue_service_bytes_pb2.TaskQueueFetchQueueStatsRequest(
+      )
+      for queue in fetch_queue_response.queue:
+        queue_stats_request.queue_name.append(queue.queue_name)
+      queue_stats_response = (
+          taskqueue_service_bytes_pb2.TaskQueueFetchQueueStatsResponse())
+      apiproxy_stub_map.MakeSyncCall('taskqueue', 'FetchQueueStats',
+                                     queue_stats_request, queue_stats_response)
+
+      for queue, queue_stats in zip(fetch_queue_response.queue,
+                                    queue_stats_response.queuestats):
+        if queue_names and queue.queue_name not in queue_names:
+          continue
+        yield cls._from_queue_and_stats(queue, queue_stats)

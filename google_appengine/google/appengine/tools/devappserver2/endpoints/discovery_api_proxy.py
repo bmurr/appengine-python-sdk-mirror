@@ -14,17 +14,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Proxy that dispatches Discovery requests to the prod Discovery service."""
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-
-
-
-
-
-import httplib
 import json
 import logging
+
+import google
+
+import six
+import six.moves.http_client
+
+
+
+
+
+
+
 
 
 class DiscoveryApiProxy(object):
@@ -46,9 +56,10 @@ class DiscoveryApiProxy(object):
     Returns:
       HTTP response body or None if it failed.
     """
-    full_path = self._DISCOVERY_API_PATH_PREFIX + path
+    full_path = self._DISCOVERY_API_PATH_PREFIX + six.ensure_str(path)
     headers = {'Content-type': 'application/json'}
-    connection = httplib.HTTPSConnection(self._DISCOVERY_PROXY_HOST)
+    connection = six.moves.http_client.HTTPSConnection(
+        self._DISCOVERY_PROXY_HOST)
     try:
       connection.request('POST', full_path, body, headers)
       response = connection.getresponse()
@@ -78,7 +89,7 @@ class DiscoveryApiProxy(object):
     """
     if api_format not in ['rest', 'rpc']:
       raise ValueError('Invalid API format')
-    path = 'apis/generate/' + api_format
+    path = 'apis/generate/' + six.ensure_str(api_format)
     request_dict = {'config': json.dumps(api_config)}
     request_body = json.dumps(request_dict)
     return self._dispatch_request(path, request_body)
@@ -108,7 +119,7 @@ class DiscoveryApiProxy(object):
           proxy host.
         response_body: A string containing the response body.
     """
-    connection = httplib.HTTPSConnection(self._STATIC_PROXY_HOST)
+    connection = six.moves.http_client.HTTPSConnection(self._STATIC_PROXY_HOST)
     try:
       connection.request('GET', path, None, {})
       response = connection.getresponse()

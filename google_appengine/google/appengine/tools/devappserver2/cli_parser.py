@@ -33,8 +33,17 @@ import os
 import re
 import subprocess
 
-from google.appengine.api import appinfo
-from google.appengine.datastore import datastore_stub_util
+import google
+import six
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import appinfo
+  from google.appengine.datastore import datastore_stub_util
+else:
+  from google.appengine.api import appinfo
+  from google.appengine.datastore import datastore_stub_util
+
 from google.appengine.tools import boolean_action
 from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import constants
@@ -632,6 +641,12 @@ def create_command_line_parser(configuration=None):
                          type=parse_path,
                          restrict_configuration=[DEV_APPSERVER_CONFIGURATION],
                          help='path to the xdebug extension')
+  parser.add_argument(
+      '--php_composer_path',
+      metavar='PATH',
+      type=parse_path,
+      restrict_configuration=[DEV_APPSERVER_CONFIGURATION],
+      help='path to composer script')
 
   # App Identity
   appidentity_group = parser.add_argument_group('Application Identity')

@@ -16,22 +16,35 @@
 #
 """Tests for devappserver2.blob_download."""
 
-import base64
-import cStringIO
 import datetime
 import os
 import shutil
 import tempfile
 import unittest
 
-from google.appengine.api import apiproxy_stub_map
-from google.appengine.api import blobstore
-from google.appengine.api import datastore
-from google.appengine.api import datastore_file_stub
-from google.appengine.api import namespace_manager
-from google.appengine.api.blobstore import blobstore_stub
-from google.appengine.api.blobstore import file_blob_storage
-from google.appengine.ext.cloudstorage import cloudstorage_stub
+import google
+import six
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import blobstore
+  from google.appengine.api import datastore
+  from google.appengine.api import datastore_file_stub
+  from google.appengine.api import namespace_manager
+  from google.appengine.api.blobstore import blobstore_stub
+  from google.appengine.api.blobstore import file_blob_storage
+  from google.appengine.ext.cloudstorage import cloudstorage_stub
+else:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import blobstore
+  from google.appengine.api import datastore
+  from google.appengine.api import datastore_file_stub
+  from google.appengine.api import namespace_manager
+  from google.appengine.api.blobstore import blobstore_stub
+  from google.appengine.api.blobstore import file_blob_storage
+  from cloudstorage import cloudstorage_stub
+
 from google.appengine.tools.devappserver2 import blob_download
 from google.appengine.tools.devappserver2 import request_rewriter
 from google.appengine.tools.devappserver2 import wsgi_test_utils
@@ -42,6 +55,7 @@ class DownloadTestBase(unittest.TestCase):
 
   def setUp(self):
     """Configure test harness."""
+    super(DownloadTestBase, self).setUp()
     # Configure os.environ to make it look like the relevant parts of the
     # CGI environment that the stub relies on.
     self.original_environ = dict(os.environ)
@@ -51,13 +65,13 @@ class DownloadTestBase(unittest.TestCase):
         'SERVER_PORT': '8080',
         'AUTH_DOMAIN': 'abcxyz.com',
         'USER_EMAIL': 'user@abcxyz.com',
-        })
+    })
 
     # Set up testing blobstore files.
     self.tmpdir = tempfile.mkdtemp()
     storage_directory = os.path.join(self.tmpdir, 'blob_storage')
-    self.blob_storage = file_blob_storage.FileBlobStorage(storage_directory,
-                                                          'appid1')
+    self.blob_storage = file_blob_storage.FileBlobStorage(
+        storage_directory, 'appid1')
     self.blobstore_stub = blobstore_stub.BlobstoreServiceStub(self.blob_storage)
 
     # Use a fresh file datastore stub.
@@ -79,6 +93,7 @@ class DownloadTestBase(unittest.TestCase):
     """Restore original environment."""
     os.environ = self.original_environ
     shutil.rmtree(self.tmpdir)
+    super(DownloadTestBase, self).tearDown()
 
   def create_blob(self):
     """Create a blob in the datastore and on disk.
@@ -86,12 +101,11 @@ class DownloadTestBase(unittest.TestCase):
     Returns:
       BlobKey of new blob.
     """
-    contents = 'a blob'
+    contents = b'a blob'
     blob_key = blobstore.BlobKey('blob-key-1')
-    self.blob_storage.StoreBlob(blob_key, cStringIO.StringIO(contents))
-    entity = datastore.Entity(blobstore.BLOB_INFO_KIND,
-                              name=str(blob_key),
-                              namespace='')
+    self.blob_storage.StoreBlob(blob_key, six.BytesIO(contents))
+    entity = datastore.Entity(
+        blobstore.BLOB_INFO_KIND, name=str(blob_key), namespace='')
     entity['content_type'] = 'image/png'
     entity['creation'] = datetime.datetime(1999, 10, 10, 8, 42, 0)
     entity['filename'] = 'largeblob.png'
@@ -106,7 +120,7 @@ class BlobDownloadTest(DownloadTestBase, wsgi_test_utils.WSGITestCase):
 
   def test_non_download_response(self):
     """Response is not rewritten if missing download header."""
-    environ = {'HTTP_RANGE': 'bytes=2-5'}   # Should be ignored.
+    environ = {'HTTP_RANGE': 'bytes=2-5'}  # Should be ignored.
 
     headers = [(blobstore.BLOB_RANGE_HEADER, 'bytes=1-4')]
 
@@ -118,46 +132,43 @@ class BlobDownloadTest(DownloadTestBase, wsgi_test_utils.WSGITestCase):
     self.assertEqual('200 original message', state.status)
     # X-AppEngine-BlobRange should not be removed if there is no BlobKey header.
     self.assertHeadersEqual(headers, state.headers)
-    self.assertEqual('original body', ''.join(state.body))
+    self.assertEqual('original body',
+                     ''.join(six.ensure_text(line) for line in state.body))
     self.assertFalse(state.allow_large_response)
 
   def test_get_blob_storage(self):
     """Test getting blob storage from datastore stub."""
     blob_storage = blob_download._get_blob_storage()
-    self.assertEquals(self.blobstore_stub.storage, blob_storage)
+    self.assertEqual(self.blobstore_stub.storage, blob_storage)
 
   def test_parse_range_header(self):
     """Test ParseRangeHeader function."""
-    self.assertEquals(
-        (None, None), blob_download._parse_range_header(''))
-    self.assertEquals(
-        (None, None), blob_download._parse_range_header('invalid'))
-    self.assertEquals(
-        (1, None), blob_download._parse_range_header('bytes=1-'))
-    self.assertEquals(
-        (10, 21), blob_download._parse_range_header('bytes=10-20'))
-    self.assertEquals(
-        (-30, None), blob_download._parse_range_header('bytes=-30'))
-    self.assertEquals(
-        (None, None), blob_download._parse_range_header('bytes=-30-'))
-    self.assertEquals(
-        (None, None), blob_download._parse_range_header('bytes=-30-40'))
-    self.assertEquals(
-        (None, None), blob_download._parse_range_header('bytes=0-1,2-3'))
-    self.assertEquals(
-        (None, None), blob_download._parse_range_header('bytes=-0'))
-    self.assertEquals(
-        (None, None), blob_download._parse_range_header('bits=0-20'))
-    self.assertEquals(
-        (None, None), blob_download._parse_range_header('bytes=a-20'))
-    self.assertEquals(
-        (None, None), blob_download._parse_range_header('bytes=0-a'))
-    self.assertEquals(
-        (None, None), blob_download._parse_range_header('bytes=0--'))
-    self.assertEquals(
-        (None, None), blob_download._parse_range_header('bytes=--10'))
-    self.assertEquals(
-        (None, None), blob_download._parse_range_header('bytes=0--10'))
+    self.assertEqual((None, None), blob_download._parse_range_header(''))
+    self.assertEqual((None, None), blob_download._parse_range_header('invalid'))
+    self.assertEqual((1, None), blob_download._parse_range_header('bytes=1-'))
+    self.assertEqual((10, 21), blob_download._parse_range_header('bytes=10-20'))
+    self.assertEqual((-30, None),
+                     blob_download._parse_range_header('bytes=-30'))
+    self.assertEqual((None, None),
+                     blob_download._parse_range_header('bytes=-30-'))
+    self.assertEqual((None, None),
+                     blob_download._parse_range_header('bytes=-30-40'))
+    self.assertEqual((None, None),
+                     blob_download._parse_range_header('bytes=0-1,2-3'))
+    self.assertEqual((None, None),
+                     blob_download._parse_range_header('bytes=-0'))
+    self.assertEqual((None, None),
+                     blob_download._parse_range_header('bits=0-20'))
+    self.assertEqual((None, None),
+                     blob_download._parse_range_header('bytes=a-20'))
+    self.assertEqual((None, None),
+                     blob_download._parse_range_header('bytes=0-a'))
+    self.assertEqual((None, None),
+                     blob_download._parse_range_header('bytes=0--'))
+    self.assertEqual((None, None),
+                     blob_download._parse_range_header('bytes=--10'))
+    self.assertEqual((None, None),
+                     blob_download._parse_range_header('bytes=0--10'))
 
   def test_rewrite_for_download_use_stored_content_type_auto_mime(self):
     """Use auto Content-Type to set the blob's stored mime type."""
@@ -183,8 +194,9 @@ class BlobDownloadTest(DownloadTestBase, wsgi_test_utils.WSGITestCase):
     }
     self.assertHeadersEqual(expected_headers, state.headers)
     # Ensure that Content-Type is a str, not a unicode.
-    self.assertIsInstance(state.headers['Content-Type'], str)
-    self.assertEqual('a blob', ''.join(state.body))
+    self.assertIsInstance(state.headers['Content-Type'], six.string_types)
+    self.assertEqual('a blob',
+                     ''.join(six.ensure_text(line) for line in state.body))
     self.assertTrue(state.allow_large_response)
 
   def test_rewrite_for_download_preserve_user_content_type(self):
@@ -206,7 +218,8 @@ class BlobDownloadTest(DownloadTestBase, wsgi_test_utils.WSGITestCase):
         'Content-Type': 'image/jpg',
     }
     self.assertHeadersEqual(expected_headers, state.headers)
-    self.assertEqual('a blob', ''.join(state.body))
+    self.assertEqual('a blob',
+                     ''.join(six.ensure_text(line) for line in state.body))
     self.assertTrue(state.allow_large_response)
 
   def test_rewrite_for_download_not_200(self):
@@ -222,12 +235,12 @@ class BlobDownloadTest(DownloadTestBase, wsgi_test_utils.WSGITestCase):
     self.assertEqual('500 Internal Server Error', state.status)
     expected_headers = {'Content-Length': '0'}
     self.assertHeadersEqual(expected_headers, state.headers)
-    self.assertEqual('', ''.join(state.body))
+    self.assertEqual('', ''.join(six.ensure_text(line) for line in state.body))
     self.assertFalse(state.allow_large_response)
 
   def test_rewrite_for_download_missing_blob(self):
     """Tests downloading a missing blob key."""
-    environ = {'HTTP_RANGE': 'bytes=2-5'}   # Should be ignored.
+    environ = {'HTTP_RANGE': 'bytes=2-5'}  # Should be ignored.
     headers = [(blobstore.BLOB_KEY_HEADER, 'no such blob')]
     state = request_rewriter.RewriterState(environ, '200 original message',
                                            headers, 'original body')
@@ -237,12 +250,12 @@ class BlobDownloadTest(DownloadTestBase, wsgi_test_utils.WSGITestCase):
     self.assertEqual('500 Internal Server Error', state.status)
     expected_headers = {'Content-Length': '0'}
     self.assertHeadersEqual(expected_headers, state.headers)
-    self.assertEqual('', ''.join(state.body))
+    self.assertEqual('', ''.join(six.ensure_text(line) for line in state.body))
     self.assertFalse(state.allow_large_response)
 
   def test_rewrite_for_download_missing_blob_delete_headers(self):
     """Tests that a missing blob deletes Content-Type and BlobRange headers."""
-    environ = {'HTTP_RANGE': 'bytes=2-5'}   # Should be ignored.
+    environ = {'HTTP_RANGE': 'bytes=2-5'}  # Should be ignored.
     headers = [
         (blobstore.BLOB_KEY_HEADER, 'no such blob'),
         (blobstore.BLOB_RANGE_HEADER, 'bytes=1-4'),
@@ -256,11 +269,15 @@ class BlobDownloadTest(DownloadTestBase, wsgi_test_utils.WSGITestCase):
     self.assertEqual('500 Internal Server Error', state.status)
     expected_headers = {'Content-Length': '0'}
     self.assertHeadersEqual(expected_headers, state.headers)
-    self.assertEqual('', ''.join(state.body))
+    self.assertEqual('', ''.join(six.ensure_text(line) for line in state.body))
     self.assertFalse(state.allow_large_response)
 
-  def do_blob_range_test(self, blobrange, expected_range, expected_body,
-                         test_range_request=False, expect_unsatisfiable=False):
+  def do_blob_range_test(self,
+                         blobrange,
+                         expected_range,
+                         expected_body,
+                         test_range_request=False,
+                         expect_unsatisfiable=False):
     """Performs a blob range response test.
 
     Args:
@@ -278,11 +295,11 @@ class BlobDownloadTest(DownloadTestBase, wsgi_test_utils.WSGITestCase):
     if test_range_request:
       environ['HTTP_RANGE'] = blobrange
     else:
-      environ['HTTP_RANGE'] = 'bytes=2-5'   # Should be ignored.
+      environ['HTTP_RANGE'] = 'bytes=2-5'  # Should be ignored.
     headers = [
         (blobstore.BLOB_KEY_HEADER, str(blob_key)),
         ('Content-Type', 'image/jpg'),
-        ('Content-Range', 'bytes 1-2/6'),   # Should be ignored.
+        ('Content-Range', 'bytes 1-2/6'),  # Should be ignored.
     ]
     if not test_range_request:
       headers.append((blobstore.BLOB_RANGE_HEADER, blobrange))
@@ -305,7 +322,8 @@ class BlobDownloadTest(DownloadTestBase, wsgi_test_utils.WSGITestCase):
 
     self.assertEqual(expected_status, state.status)
     self.assertHeadersEqual(expected_headers, state.headers)
-    self.assertEqual(expected_body, ''.join(state.body))
+    self.assertEqual(expected_body,
+                     ''.join(six.ensure_text(line) for line in state.body))
     self.assertEqual(expected_allow_large_response, state.allow_large_response)
 
   def test_download_range_blob_range_header(self):
@@ -354,7 +372,7 @@ class BlobDownloadTest(DownloadTestBase, wsgi_test_utils.WSGITestCase):
     """Tests that whole blob is downloaded when BlobRange is empty."""
     blob_key = self.create_blob()
 
-    environ = {'HTTP_RANGE': 'bytes=2-5'}   # Should be ignored.
+    environ = {'HTTP_RANGE': 'bytes=2-5'}  # Should be ignored.
     headers = [
         (blobstore.BLOB_KEY_HEADER, str(blob_key)),
         (blobstore.BLOB_RANGE_HEADER, ''),
@@ -371,68 +389,77 @@ class BlobDownloadTest(DownloadTestBase, wsgi_test_utils.WSGITestCase):
         'Content-Type': 'image/jpg',
     }
     self.assertHeadersEqual(expected_headers, state.headers)
-    self.assertEqual('a blob', ''.join(state.body))
+    self.assertEqual('a blob',
+                     ''.join(six.ensure_text(line) for line in state.body))
     self.assertTrue(state.allow_large_response)
 
   def test_download_range_range_header(self):
     """Tests downloading range due to a Range request header."""
-    self.do_blob_range_test('bytes=1-4', 'bytes 1-4/6', ' blo',
-                            test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=1-4', 'bytes 1-4/6', ' blo', test_range_request=True)
 
   def test_download_range_request_range_header_start_before_start(self):
     """Tests downloading range when Range start is before the blob start."""
-    self.do_blob_range_test('bytes=-10', 'bytes 0-5/6', 'a blob',
-                            test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=-10', 'bytes 0-5/6', 'a blob', test_range_request=True)
 
   def test_download_range_request_range_header_start_after_end(self):
     """Tests for error when Range start is after the blob end."""
-    self.do_blob_range_test('bytes=6-20', '*/6', '',
-                            test_range_request=True, expect_unsatisfiable=True)
+    self.do_blob_range_test(
+        'bytes=6-20',
+        '*/6',
+        '',
+        test_range_request=True,
+        expect_unsatisfiable=True)
 
   def test_download_range_range_header_too_long(self):
     """Tests downloading range when Range is larger than blob."""
-    self.do_blob_range_test('bytes=1-500', 'bytes 1-5/6', ' blob',
-                            test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=1-500', 'bytes 1-5/6', ' blob', test_range_request=True)
 
   def test_download_range_request_range_header_not_parsable(self):
     """Tests for error when Range header is not parseable."""
-    self.do_blob_range_test('bytes=half of it', '*/6', '',
-                            test_range_request=True, expect_unsatisfiable=True)
+    self.do_blob_range_test(
+        'bytes=half of it',
+        '*/6',
+        '',
+        test_range_request=True,
+        expect_unsatisfiable=True)
 
   def test_download_range_range_header_no_end(self):
     """Tests downloading range when Range only provides start index."""
-    self.do_blob_range_test('bytes=2-', 'bytes 2-5/6', 'blob',
-                            test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=2-', 'bytes 2-5/6', 'blob', test_range_request=True)
 
   def test_download_range_range_header_negative_start(self):
     """Tests downloading range when Range uses a negative start index."""
-    self.do_blob_range_test('bytes=-1', 'bytes 5-5/6', 'b',
-                            test_range_request=True)
-    self.do_blob_range_test('bytes=-2', 'bytes 4-5/6', 'ob',
-                            test_range_request=True)
-    self.do_blob_range_test('bytes=-3', 'bytes 3-5/6', 'lob',
-                            test_range_request=True)
-    self.do_blob_range_test('bytes=-4', 'bytes 2-5/6', 'blob',
-                            test_range_request=True)
-    self.do_blob_range_test('bytes=-5', 'bytes 1-5/6', ' blob',
-                            test_range_request=True)
-    self.do_blob_range_test('bytes=-6', 'bytes 0-5/6', 'a blob',
-                            test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=-1', 'bytes 5-5/6', 'b', test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=-2', 'bytes 4-5/6', 'ob', test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=-3', 'bytes 3-5/6', 'lob', test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=-4', 'bytes 2-5/6', 'blob', test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=-5', 'bytes 1-5/6', ' blob', test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=-6', 'bytes 0-5/6', 'a blob', test_range_request=True)
 
   def test_download_range_range_header_single_byte(self):
     """Tests downloading range when Range is a single byte."""
-    self.do_blob_range_test('bytes=0-0', 'bytes 0-0/6', 'a',
-                            test_range_request=True)
-    self.do_blob_range_test('bytes=1-1', 'bytes 1-1/6', ' ',
-                            test_range_request=True)
-    self.do_blob_range_test('bytes=2-2', 'bytes 2-2/6', 'b',
-                            test_range_request=True)
-    self.do_blob_range_test('bytes=3-3', 'bytes 3-3/6', 'l',
-                            test_range_request=True)
-    self.do_blob_range_test('bytes=4-4', 'bytes 4-4/6', 'o',
-                            test_range_request=True)
-    self.do_blob_range_test('bytes=5-5', 'bytes 5-5/6', 'b',
-                            test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=0-0', 'bytes 0-0/6', 'a', test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=1-1', 'bytes 1-1/6', ' ', test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=2-2', 'bytes 2-2/6', 'b', test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=3-3', 'bytes 3-3/6', 'l', test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=4-4', 'bytes 4-4/6', 'o', test_range_request=True)
+    self.do_blob_range_test(
+        'bytes=5-5', 'bytes 5-5/6', 'b', test_range_request=True)
 
   def test_download_range_range_header_empty(self):
     """Tests that whole blob is downloaded when Range is empty."""
@@ -454,7 +481,8 @@ class BlobDownloadTest(DownloadTestBase, wsgi_test_utils.WSGITestCase):
         'Content-Type': 'image/jpg',
     }
     self.assertHeadersEqual(expected_headers, state.headers)
-    self.assertEqual('a blob', ''.join(state.body))
+    self.assertEqual('a blob',
+                     ''.join(six.ensure_text(line) for line in state.body))
     self.assertTrue(state.allow_large_response)
 
 
@@ -479,7 +507,7 @@ class BlobDownloadTestGoogleStorage(BlobDownloadTest):
     Returns:
       The BlobKey of the new object."
     """
-    data = 'a blob'
+    data = b'a blob'
     filename = '/some_bucket/some_object'
     stub = cloudstorage_stub.CloudStorageStub(self.blob_storage)
     options = {}
@@ -487,7 +515,7 @@ class BlobDownloadTestGoogleStorage(BlobDownloadTest):
       options['content-type'] = content_type
     blob_key = stub.post_start_creation(filename, options)
     stub.put_continue_creation(blob_key, data, (0, len(data) - 1), len(data))
-    self.blob_storage.StoreBlob(blob_key, cStringIO.StringIO(data))
+    self.blob_storage.StoreBlob(blob_key, six.BytesIO(data))
 
     return blob_key
 
@@ -507,7 +535,8 @@ class BlobDownloadTestGoogleStorage(BlobDownloadTest):
         'Content-Type': cloudstorage_stub._GCS_DEFAULT_CONTENT_TYPE,
     }
     self.assertHeadersEqual(expected_headers, state.headers)
-    self.assertEqual('a blob', ''.join(state.body))
+    self.assertEqual('a blob',
+                     ''.join(six.ensure_text(line) for line in state.body))
 
 
 class BlobDownloadIntegrationTest(DownloadTestBase,
@@ -572,13 +601,13 @@ class BlobDownloadIntegrationTest(DownloadTestBase,
     """Tests for error when BlobRange start is after the blob end."""
     blob_key = self.create_blob()
 
-    environ = {'HTTP_RANGE': 'bytes=2-5'}   # Should be ignored.
+    environ = {'HTTP_RANGE': 'bytes=2-5'}  # Should be ignored.
 
     headers = [
         (blobstore.BLOB_KEY_HEADER, str(blob_key)),
         (blobstore.BLOB_RANGE_HEADER, 'bytes=6-20'),
-        ('Content-Type', 'text/x-my-content-type'),   # Should be ignored.
-        ('Content-Range', 'bytes 1-2/6'),             # Should be ignored.
+        ('Content-Type', 'text/x-my-content-type'),  # Should be ignored.
+        ('Content-Range', 'bytes 1-2/6'),  # Should be ignored.
     ]
     application = wsgi_test_utils.constant_app('200 original message', headers,
                                                'original body')

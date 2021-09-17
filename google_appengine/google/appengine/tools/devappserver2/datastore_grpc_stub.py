@@ -16,27 +16,36 @@
 #
 """Provides utility functions to create grpc stub and make grpc call."""
 
-import httplib
 import pickle
 import threading
-import urllib2
-from google.appengine.api import apiproxy_stub
-from google.appengine.ext.remote_api import remote_api_pb
-from google.appengine.ext.remote_api import remote_api_stub
-from google.appengine.runtime import apiproxy_errors
+
+import google
+import six
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import apiproxy_stub
+  from google.appengine.ext.remote_api import remote_api_pb
+  from google.appengine.ext.remote_api import remote_api_stub
+  from google.appengine.runtime import apiproxy_errors
+else:
+  from google.appengine.api import apiproxy_stub
+  from google.appengine.ext.remote_api import remote_api_bytes_pb2
+  from google.appengine.ext.remote_api import remote_api_stub
+  from google.appengine.runtime import apiproxy_errors
+
+
 try:
   # pylint: disable=g-import-not-at-top
 
 
 
 
-  import google
   import grpc
   from google.appengine.tools.devappserver2 import grpc_service_pb2
 except ImportError:
   grpc = None
   grpc_service_pb2 = None
-
 
 # The timeout in seconds for gRPC calls.
 _TIMEOUT = remote_api_stub.TIMEOUT_SECONDS
@@ -57,8 +66,7 @@ class DatastoreGrpcStub(apiproxy_stub.APIProxyStub):
   MakeSyncCall) for maximum backward compatibility.
   """
 
-  def __init__(self, grpc_apiserver_host,
-               txn_add_task_callback_hostport=None):
+  def __init__(self, grpc_apiserver_host, txn_add_task_callback_hostport=None):
     """Creates a grpc_service.CallHandler stub.
 
     Args:
@@ -105,16 +113,18 @@ class DatastoreGrpcStub(apiproxy_stub.APIProxyStub):
             options=[
                 ('grpc.max_receive_message_length', _MAX_MESSAGE_LENGTH_BYTES),
                 ('grpc.max_send_message_length', _MAX_MESSAGE_LENGTH_BYTES),
-                ('grpc.max_message_length', _MAX_MESSAGE_LENGTH_BYTES)])
+                ('grpc.max_message_length', _MAX_MESSAGE_LENGTH_BYTES)
+            ])
         self._call_handler_stub = grpc_service_pb2.CallHandlerStub(channel)
       return self._call_handler_stub
 
   def Clear(self):
     # api_server.py has _handle_CLEAR() method which requires this interface for
     # reusing api_server between unittests.
-    response = urllib2.urlopen(
-        urllib2.Request('http://%s/reset' % self.grpc_apiserver_host, data=''))
-    if response.code != httplib.OK:
+    response = six.moves.urllib.urlopen(
+        six.moves.urllib.Request(
+            'http://%s/reset' % self.grpc_apiserver_host, data=''))
+    if response.code != six.moves.http_client.OK:
       raise IOError('The Cloud Datastore emulator did not reset successfully.')
 
   def Write(self):
@@ -135,7 +145,7 @@ class DatastoreGrpcStub(apiproxy_stub.APIProxyStub):
 
     Args:
       txn_add_task_callback_hostport: String, the host:port for datastore
-      emulator to make grpc call to api_server.
+        emulator to make grpc call to api_server.
     """
     self._txn_add_task_callback_hostport = self._StripPrefix(
         txn_add_task_callback_hostport)
@@ -150,7 +160,7 @@ class DatastoreGrpcStub(apiproxy_stub.APIProxyStub):
       request: A protocol buffer of the type corresponding to 'call'.
       response: A protocol buffer of the type corresponding to 'call'.
       request_id: A unique string identifying the request associated with the
-          API call.
+        API call.
 
     Raises:
       ConnectionError: connection to the emulator is lost.
@@ -159,9 +169,7 @@ class DatastoreGrpcStub(apiproxy_stub.APIProxyStub):
     self.CheckRequest(service, call, request)
 
     request_pb = grpc_service_pb2.Request(
-        service_name=service,
-        method=call,
-        request=request.Encode())
+        service_name=service, method=call, request=request.Encode())
     if call == 'Commit':
       request_pb.txn_add_task_callback_hostport = self._txn_add_task_callback_hostport  # pylint: disable=line-too-long
     if request_id:
@@ -195,6 +203,12 @@ class DatastoreGrpcStub(apiproxy_stub.APIProxyStub):
       A remote_api_pb.Response message.
     """
     # Translate remote_api_pb.Request into grpc_service_pb2.Request
+    if six.PY2:
+      return self.MakeSyncCallForRemoteApiPy2(request)
+    else:
+      return self.MakeSyncCallForRemoteApiPy3(request)
+
+  def MakeSyncCallForRemoteApiPy2(self, request):
     request_pb = grpc_service_pb2.Request(
         service_name=request.service_name(),
         method=request.method(),
@@ -213,11 +227,13 @@ class DatastoreGrpcStub(apiproxy_stub.APIProxyStub):
 
 
 
-      response.set_exception(pickle.dumps(
-          # Raising built-in Exception instead of ConnectionError, because the
-          # later can not be parsed by remote_api.
-          Exception('Cannot connect to Cloud Datastore Emulator on {}'.format(
-              self.grpc_apiserver_host))))
+      response.set_exception(
+          pickle.dumps(
+              # Raising built-in Exception instead of ConnectionError, because
+              # the later can not be parsed by remote_api.
+              Exception(
+                  'Cannot connect to Cloud Datastore Emulator on {}'.format(
+                      self.grpc_apiserver_host))))
       return response
 
 
@@ -234,6 +250,51 @@ class DatastoreGrpcStub(apiproxy_stub.APIProxyStub):
       response_app_err = response.mutable_application_error()
       response_app_err.set_code(app_err.code)
       response_app_err.set_detail(app_err.detail)
+
+    return response
+
+  def MakeSyncCallForRemoteApiPy3(self, request):
+    request_pb = grpc_service_pb2.Request(
+        service_name=request.service_name,
+        method=request.method,
+        request=request.request,
+        txn_add_task_callback_hostport=self._txn_add_task_callback_hostport)
+    if request.HasField('request_id'):
+      request_pb.request_id = request.request_id
+
+    response = remote_api_bytes_pb2.Response()
+
+    try:
+      response_pb = self.get_or_set_call_handler_stub().HandleCall(
+          request_pb, _TIMEOUT)
+    except Exception:  # pylint: disable=broad-except
+
+
+
+
+      response.exception = pickle.dumps(
+          # Raising built-in Exception instead of ConnectionError, because the
+          # later can not be parsed by remote_api.
+          Exception('Cannot connect to Cloud Datastore Emulator on {}'.format(
+              self.grpc_apiserver_host)),
+          protocol=2)
+      return response
+
+
+
+
+    response.response = response_pb.response
+    if response_pb.HasField('rpc_error'):
+      rpc_error = response_pb.rpc_error
+      response_rpc_error = response.rpc_error
+      response_rpc_error.code = rpc_error.code
+      response_rpc_error.detail = rpc_error.detail
+    if response_pb.HasField('application_error'):
+      app_err = response_pb.application_error
+      response_app_err = response.application_error
+      response_app_err.code = app_err.code
+      response_app_err.detail = app_err.detail
+
     return response
 
   def _StripPrefix(self, host_str):

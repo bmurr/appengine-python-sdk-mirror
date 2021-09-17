@@ -14,29 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""features module.
-
-This module simplifies the access to the appengine feature flags.
-"""
+"""API for unit tests to control optional features."""
 
 import __builtin__
-from . import testonly
 
 
-def IsEnabled(feature_name, default=False):
-  """Indicates if a specific feature flag is enabled.
 
-  Args:
-    feature_name: The name of the feature flag to check.
-    default: Default value if the flags are not initialized (In a test
-             environment for example).
 
-  Returns:
-    True/False if the flag is set/not set or default if the feature flags
-    were not initialized.
-  """
-  try:
+def Add(feature):
+  if hasattr(__builtin__, '_APPENGINE_FEATURE_FLAGS'):
 
-    return feature_name in __builtin__._APPENGINE_FEATURE_FLAGS
-  except AttributeError:
-    return default
+    assert isinstance(__builtin__._APPENGINE_FEATURE_FLAGS, list)
+    assert __builtin__._APPENGINE_FEATURE_FLAGS
+    __builtin__._APPENGINE_FEATURE_FLAGS.append(feature)
+  else:
+    __builtin__._APPENGINE_FEATURE_FLAGS = [feature]
+
+
+def Remove(feature):
+  __builtin__._APPENGINE_FEATURE_FLAGS.remove(feature)
+
+
+
+
+  if not __builtin__._APPENGINE_FEATURE_FLAGS:
+    del __builtin__._APPENGINE_FEATURE_FLAGS

@@ -20,9 +20,17 @@ import datetime
 import os.path
 import traceback
 
+import google
+import six
+
 from google.appengine.cron import groctimespecification
-from google.appengine.api import croninfo
-from google.appengine.api import yaml_errors
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import croninfo
+else:
+  from google.appengine.api import croninfo
+
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 
 try:
@@ -41,7 +49,8 @@ class CronHandler(admin_request_handler.AdminRequestHandler):
     values['has_pytz'] = bool(pytz)
     try:
       values['cronjobs'] = self._get_cron_jobs()
-    except (StandardError, yaml_errors.Error):
+    # pylint: disable=bare-except
+    except:
       values['cron_error'] = traceback.format_exc()
     self.response.write(self.render('cron.html', values))
 
@@ -72,7 +81,7 @@ class CronHandler(admin_request_handler.AdminRequestHandler):
       A croninfo.CronInfoExternal containing cron jobs.
 
     Raises:
-      yaml_errors.Error, StandardError: The cron.yaml was invalid.
+      Exception: The cron.yaml was invalid.
     """
     for cron_yaml in ('cron.yaml', 'cron.yml'):
       try:

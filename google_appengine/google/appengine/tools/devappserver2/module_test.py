@@ -31,12 +31,18 @@ import time
 
 import google
 from concurrent import futures
-import httplib
 import mock
 import mox
+import six
 
-from google.appengine.api import appinfo
-from google.appengine.api import request_info
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import appinfo
+  from google.appengine.api import request_info
+else:
+  from google.appengine.api import appinfo
+  from google.appengine.api import request_info
+
 from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import constants
 from google.appengine.tools.devappserver2 import dispatcher
@@ -2681,7 +2687,8 @@ class TestInteractiveCommandModule(stub_testing.StubTestCase):
             good_response)
 
     self.mox.ReplayAll()
-    self.assertEqual('10\n', self.servr.send_interactive_command('print 5+5'))
+    self.assertEqual(
+        six.b('10\n'), self.servr.send_interactive_command('print 5+5'))
     self.mox.VerifyAll()
 
   def test_send_interactive_command_handle_request_exception(self):
@@ -2775,7 +2782,7 @@ class TestInteractiveCommandModule(stub_testing.StubTestCase):
 
     def restart_and_raise(*args):
       self.servr._inst = None
-      raise httplib.BadStatusLine('line')
+      raise six.moves.http_client.BadStatusLine('line')
 
     start_response = start_response_utils.CapturingStartResponse()
     self.servr._instance_factory.new_instance(
@@ -2801,12 +2808,13 @@ class TestInteractiveCommandModule(stub_testing.StubTestCase):
     self.inst.handle(self.environ, self.start_response, self.url_map,
                      self.match, self.request_id,
                      instance.INTERACTIVE_REQUEST).AndRaise(
-                         httplib.BadStatusLine('line'))
+                         six.moves.http_client.BadStatusLine('line'))
 
     self.mox.ReplayAll()
-    self.assertRaises(httplib.BadStatusLine, self.servr._handle_script_request,
-                      self.environ, self.start_response, self.url_map,
-                      self.match, self.request_id)
+    self.assertRaises(six.moves.http_client.BadStatusLine,
+                      self.servr._handle_script_request, self.environ,
+                      self.start_response, self.url_map, self.match,
+                      self.request_id)
     self.mox.VerifyAll()
 
 

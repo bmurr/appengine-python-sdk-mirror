@@ -31,6 +31,7 @@ import unittest
 import google
 
 from distutils import util
+import mock
 import mox
 
 from google.appengine.tools.devappserver2.python.runtime import stubs
@@ -437,6 +438,12 @@ class FakeFileTest(unittest.TestCase):
 
   def test_is_accessible_none_filename(self):
     self.assertRaises(TypeError, stubs.FakeFile.is_file_accessible, None)
+
+  def test_is_accessible_plist_on_mac(self):
+    with mock.patch('sys.platform', 'darwin'):
+      self.assertEqual(
+          stubs.FakeFile.is_file_accessible('/Blah/Blah/Blah.plist'),
+          stubs.FakeFile.Visibility.OK)
 
 
 if __name__ == '__main__':

@@ -31,6 +31,7 @@ import select
 import struct
 import sys
 import threading
+import six
 
 from google.appengine.tools.devappserver2 import watcher_common
 
@@ -130,7 +131,7 @@ class InotifyFileWatcher(object):
     self._watch_to_directory = {}
     self._directory_to_watch_descriptor = {}
     self._directory_to_subdirs = {}
-    self._inotify_events = ''
+    self._inotify_events = six.b('')
     self._skip_files_re = None
     self._watcher_ignore_re = None
     self._inotify_fd = _libc.inotify_init()
@@ -195,7 +196,7 @@ class InotifyFileWatcher(object):
 
         watch_descriptor = _libc.inotify_add_watch(
             self._inotify_fd,
-            ctypes.create_string_buffer(directory_path),
+            ctypes.create_string_buffer(six.ensure_binary(directory_path)),
             _INTERESTING_INOTIFY_EVENTS)
         if watch_descriptor < 0:
           if ctypes.get_errno() == errno.ENOSPC:
@@ -284,7 +285,7 @@ class InotifyFileWatcher(object):
 
           name = self._inotify_events[
               _INOTIFY_EVENT_SIZE:_INOTIFY_EVENT_SIZE + length]
-          name = name.rstrip('\0')
+          name = name.rstrip(six.b('\0'))
 
           logging.debug(
               'wd=%s, mask=%s, cookie=%s, length=%s, name=%r', wd,
@@ -301,7 +302,7 @@ class InotifyFileWatcher(object):
             logging.debug('Watch deleted for watch descriptor=%d', wd)
             continue
 
-          path = os.path.join(directory, name)
+          path = os.path.join(six.ensure_text(directory), six.ensure_text(name))
           if os.path.isdir(path) or path in self._directory_to_watch_descriptor:
             if mask & IN_DELETE:
               self._remove_watch_for_path(path)

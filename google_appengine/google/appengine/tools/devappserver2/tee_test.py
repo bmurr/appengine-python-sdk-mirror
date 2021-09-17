@@ -18,13 +18,15 @@
 
 
 
-import cStringIO
+import google
 import unittest
+import six
 
 from google.appengine.tools.devappserver2 import tee
 
 
 class Counter(object):
+
   def __init__(self, limit):
     self.__index = 0
     self.__limit = limit
@@ -32,21 +34,22 @@ class Counter(object):
   def readline(self):
     if self.__index < self.__limit:
       self.__index += 1
-      return 'line%d\n' % self.__index
-    return ''
+      return six.b('line%d\n' % self.__index)
+    return six.b('')
 
 
 class TeeTest(unittest.TestCase):
+
   def test_tee(self):
-    output = cStringIO.StringIO()
+    output = six.BytesIO()
     tee.Tee._MAX_LINES = 3
     t = tee.Tee(Counter(100), output)
     t.start()
     t.join()
-    self.assertEqual('line98\nline99\nline100\n', t.get_buf())
-    expected = ''
+    self.assertEqual(b'line98\nline99\nline100\n', t.get_buf())
+    expected = six.b('')
     for i in range(100):
-      expected += 'line%d\n' % (i+1)
+      expected += six.b('line%d\n' % (i + 1))
     self.assertEqual(expected, output.getvalue())
 
 

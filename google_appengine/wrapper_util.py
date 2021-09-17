@@ -147,6 +147,7 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'rsa'),
         os.path.join(dir_path, 'lib', 'pyasn1'),
         os.path.join(dir_path, 'lib', 'pyasn1_modules'),
+        os.path.join(dir_path, 'lib', 'py27_urlquote'),
     ]
 
     if sys.version_info >= (2, 6):
@@ -162,6 +163,7 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'concurrent'),
         os.path.join(dir_path, 'lib', 'ipaddr'),
         os.path.join(dir_path, 'lib', 'portpicker'),
+        os.path.join(dir_path, 'lib', 'py27_urlquote'),
     ]
     if grpc_importable:
       self.api_server_extra_paths.append(grpc_path)
@@ -244,6 +246,7 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'markupsafe-0.15'),
         os.path.join(dir_path, 'lib', 'webob-1.2.3'),
         os.path.join(dir_path, 'lib', 'webapp2-2.5.2'),
+        os.path.join(dir_path, 'lib', 'py27_urlquote'),
     ]
 
     devappserver2_paths = stub_paths + [
@@ -255,6 +258,7 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'jinja2-2.6'),
         os.path.join(dir_path, 'lib', 'webob-1.2.3'),
         os.path.join(dir_path, 'lib', 'webapp2-2.5.1'),
+        os.path.join(dir_path, 'lib', 'py27_urlquote'),
     ]
     if grpc_importable:
       devappserver2_paths.append(grpc_path)
@@ -267,6 +271,10 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'six_subset'),
         os.path.join(dir_path, 'lib', 'yaml-3.10'),
     ]
+    if sys.version_info >= (2, 6):
+      php_runtime_paths.extend([
+          os.path.join(dir_path, 'lib', 'six-1.12.0'),
+      ])
 
     python_runtime_paths = [
         os.path.join(dir_path, 'python27', 'sdk'),

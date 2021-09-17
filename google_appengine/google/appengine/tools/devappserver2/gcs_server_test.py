@@ -16,14 +16,19 @@
 #
 """Tests for google.appengine.tools.devappserver2.gcs_server."""
 
-import cStringIO
-import httplib
+import io
 import unittest
 
 import google
 import mock
+import six
 
-from google.appengine.ext.cloudstorage import stub_dispatcher
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.ext.cloudstorage import stub_dispatcher
+else:
+  from cloudstorage import stub_dispatcher
+
 from google.appengine.tools.devappserver2 import gcs_server
 from google.appengine.tools.devappserver2 import wsgi_test_utils
 
@@ -52,7 +57,8 @@ class GCSTest(wsgi_test_utils.WSGITestCase):
         'PATH_INFO': path,
         'QUERY_STRING': query,
         'wsgi.url_scheme': 'http',
-        'wsgi.input': cStringIO.StringIO(body),
+        'wsgi.input': io.BytesIO(six.ensure_binary(body)),
+        'wsgi.input_terminated': True
     }
 
     for k, v in headers.items():
@@ -66,9 +72,10 @@ class GCSTest(wsgi_test_utils.WSGITestCase):
 
     # webob always adds Host header and optionally adds Content-Length header
     # for requests with non-empty body.
-    new_headers = dict(headers)
+    new_headers = headers.copy()
     new_headers['Host'] = self._host
-    if body:
+    # In python 3, the Content-Length is always included.
+    if six.PY3 or body:
       new_headers['Content-Length'] = str(len(body))
 
     url = 'http://%s%s' % (self._host, path)
@@ -83,7 +90,7 @@ class GCSTest(wsgi_test_utils.WSGITestCase):
                        'param=1', 'body', '404 Not Found', [('a', 'b')], 'blah')
 
     dispatch_mock.assert_called_with(*self.expect_dispatch_args(
-        'POST', {'Foo': 'bar'}, '/_ah/gcs/some_bucket?param=1', 'body'))
+        'POST', {'Foo': 'bar'}, '/_ah/gcs/some_bucket?param=1', six.b('body')))
 
   def test_http_308(self):
     """Tests that the non-standard HTTP 308 status code is handled properly."""
@@ -93,12 +100,12 @@ class GCSTest(wsgi_test_utils.WSGITestCase):
       self.run_request('GET', {}, '/_ah/gcs/some_bucket', '', '',
                        '308 Resume Incomplete', [], '')
 
-    dispatch_mock.assert_called_with(
-        *self.expect_dispatch_args('GET', {}, '/_ah/gcs/some_bucket', ''))
+    dispatch_mock.assert_called_with(*self.expect_dispatch_args(
+        'GET', {}, '/_ah/gcs/some_bucket', six.b('')))
 
   def test_dispatch_value_error(self):
     """Tests that ValueError raised by dispatch stub is handled properly."""
-    error = ValueError('Invalid Token', httplib.BAD_REQUEST)
+    error = ValueError('Invalid Token', six.moves.http_client.BAD_REQUEST)
     with mock.patch.object(
         stub_dispatcher, 'dispatch', side_effect=error) as dispatch_mock:
       self.run_request('GET', {}, '/_ah/some_bucket', '', '', '400 Bad Request',

@@ -17,16 +17,26 @@
 """Tests for google.appengine.tools.devappserver2.dispatcher."""
 
 import logging
+import os
 import socket
 import unittest
 
 import google
 
+import mock
 import mox
+import six
 
-from google.appengine.api import appinfo
-from google.appengine.api import dispatchinfo
-from google.appengine.api import request_info
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import appinfo
+  from google.appengine.api import dispatchinfo
+  from google.appengine.api import request_info
+else:
+  from google.appengine.api import appinfo
+  from google.appengine.api import dispatchinfo
+  from google.appengine.api import request_info
+
 from google.appengine.tools.devappserver2 import dispatcher
 from google.appengine.tools.devappserver2 import module
 from google.appengine.tools.devappserver2 import scheduled_executor
@@ -78,27 +88,27 @@ class DispatchConfigurationStub(object):
 
 
 MODULE_CONFIGURATIONS = [
-    ModuleConfigurationStub(application='app',
-                            module_name='default',
-                            version='version',
-                            manual_scaling=False),
-    ModuleConfigurationStub(application='app',
-                            module_name='other',
-                            version='version2',
-                            manual_scaling=True),
-    ModuleConfigurationStub(application='app',
-                            module_name='another',
-                            version='version3',
-                            manual_scaling=True),
-    ]
+    ModuleConfigurationStub(
+        application='app',
+        module_name='default',
+        version='version',
+        manual_scaling=False),
+    ModuleConfigurationStub(
+        application='app',
+        module_name='other',
+        version='version2',
+        manual_scaling=True),
+    ModuleConfigurationStub(
+        application='app',
+        module_name='another',
+        version='version3',
+        manual_scaling=True),
+]
 
 
 class AutoScalingModuleFacade(module.AutoScalingModule):
 
-  def __init__(self,
-               module_configuration,
-               host='fakehost',
-               balanced_port=0):
+  def __init__(self, module_configuration, host='fakehost', balanced_port=0):
     super(AutoScalingModuleFacade, self).__init__(
         module_configuration=module_configuration,
         host=host,
@@ -142,10 +152,7 @@ class AutoScalingModuleFacade(module.AutoScalingModule):
 
 class ManualScalingModuleFacade(module.ManualScalingModule):
 
-  def __init__(self,
-               module_configuration,
-               host='fakehost',
-               balanced_port=0):
+  def __init__(self, module_configuration, host='fakehost', balanced_port=0):
     super(ManualScalingModuleFacade, self).__init__(
         module_configuration=module_configuration,
         host=host,
@@ -228,34 +235,34 @@ class DispatcherQuitWithoutStartTest(unittest.TestCase):
 class DispatcherTest(unittest.TestCase):
 
   def setUp(self):
+    self.application_id_mock = mock.patch.dict(os.environ,
+                                               {'APPLICATION_ID': 'abc123'})
+    self.application_id_mock.start()
     self.mox = mox.Mox()
     stub_util.setup_test_stubs()
     self.dispatch_config = DispatchConfigurationStub()
     app_config = ApplicationConfigurationStub(MODULE_CONFIGURATIONS)
     self.dispatcher = _make_dispatcher(app_config)
-    self.module1 = AutoScalingModuleFacade(app_config.modules[0],
-                                           balanced_port=1,
-                                           host='localhost')
-    self.module2 = ManualScalingModuleFacade(app_config.modules[0],
-                                             balanced_port=2,
-                                             host='localhost')
-    self.module3 = ManualScalingModuleFacade(app_config.modules[0],
-                                             balanced_port=3,
-                                             host='0.0.0.0')
+    self.module1 = AutoScalingModuleFacade(
+        app_config.modules[0], balanced_port=1, host='localhost')
+    self.module2 = ManualScalingModuleFacade(
+        app_config.modules[0], balanced_port=2, host='localhost')
+    self.module3 = ManualScalingModuleFacade(
+        app_config.modules[0], balanced_port=3, host='0.0.0.0')
 
     self.mox.StubOutWithMock(self.dispatcher, '_create_module')
     self.mox.StubOutWithMock(self.dispatcher._port_registry, 'has')
     self.dispatcher._port_registry.has(1).AndReturn(False)
-    self.dispatcher._create_module(app_config.modules[0], 1, None).AndReturn(
-        self.module1)
+    self.dispatcher._create_module(app_config.modules[0], 1,
+                                   None).AndReturn(self.module1)
     self.dispatcher._port_registry.has(1).AndReturn(True)
     self.dispatcher._port_registry.has(2).AndReturn(False)
-    self.dispatcher._create_module(app_config.modules[1], 2, None).AndReturn(
-        self.module2)
+    self.dispatcher._create_module(app_config.modules[1], 2,
+                                   None).AndReturn(self.module2)
     self.dispatcher._port_registry.has(2).AndReturn(True)
     self.dispatcher._port_registry.has(3).AndReturn(False)
-    self.dispatcher._create_module(app_config.modules[2], 3, None).AndReturn(
-        self.module3)
+    self.dispatcher._create_module(app_config.modules[2], 3,
+                                   None).AndReturn(self.module3)
     self.mox.ReplayAll()
     self.dispatcher.start('localhost', 12345, object())
     app_config.dispatch = self.dispatch_config
@@ -264,11 +271,12 @@ class DispatcherTest(unittest.TestCase):
 
   def tearDown(self):
     self.dispatcher.quit()
+    self.application_id_mock.stop()
     self.mox.UnsetStubs()
 
   def test_get_module_names(self):
-    self.assertItemsEqual(['default', 'other', 'another'],
-                          self.dispatcher.get_module_names())
+    six.assertCountEqual(self, ['default', 'other', 'another'],
+                         self.dispatcher.get_module_names())
 
   def test_get_hostname(self):
     self.assertEqual('localhost:1',
@@ -285,21 +293,17 @@ class DispatcherTest(unittest.TestCase):
                       self.dispatcher.get_hostname, 'other', 'version2',
                       'invalid')
     self.assertRaises(request_info.ModuleDoesNotExistError,
-                      self.dispatcher.get_hostname,
-                      'nomodule',
-                      'version2',
+                      self.dispatcher.get_hostname, 'nomodule', 'version2',
                       None)
     self.assertEqual('%s:3' % socket.gethostname(),
                      self.dispatcher.get_hostname('another', 'version3'))
-    self.assertEqual(
-        '%s:1000' % socket.gethostname(),
-        self.dispatcher.get_hostname('another', 'version3', '0'))
+    self.assertEqual('%s:1000' % socket.gethostname(),
+                     self.dispatcher.get_hostname('another', 'version3', '0'))
 
   def test_get_module_by_name(self):
     self.assertEqual(self.module1,
                      self.dispatcher.get_module_by_name('default'))
-    self.assertEqual(self.module2,
-                     self.dispatcher.get_module_by_name('other'))
+    self.assertEqual(self.module2, self.dispatcher.get_module_by_name('other'))
     self.assertRaises(request_info.ModuleDoesNotExistError,
                       self.dispatcher.get_module_by_name, 'fake')
 
@@ -318,8 +322,8 @@ class DispatcherTest(unittest.TestCase):
   def test_add_event(self):
     self.mox.StubOutWithMock(scheduled_executor.ScheduledExecutor, 'add_event')
     runnable = object()
-    scheduled_executor.ScheduledExecutor.add_event(runnable, 123, ('foo',
-                                                                   'bar'))
+    scheduled_executor.ScheduledExecutor.add_event(runnable, 123,
+                                                   ('foo', 'bar'))
     scheduled_executor.ScheduledExecutor.add_event(runnable, 124, None)
     self.mox.ReplayAll()
     self.dispatcher.add_event(runnable, 123, 'foo', 'bar')
@@ -339,16 +343,18 @@ class DispatcherTest(unittest.TestCase):
     self.mox.StubOutWithMock(dispatcher._THREAD_POOL, 'submit')
     self.dispatcher._module_name_to_module['default'].build_request_environ(
         'PUT', '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
-        'body', '1.2.3.4', 1).AndReturn(
-            dummy_environ)
+        'body', '1.2.3.4', 1).AndReturn(dummy_environ)
     dispatcher._THREAD_POOL.submit(
-        self.dispatcher._handle_request, dummy_environ, mox.IgnoreArg(),
+        self.dispatcher._handle_request,
+        dummy_environ,
+        mox.IgnoreArg(),
         self.dispatcher._module_name_to_module['default'],
-        None, catch_and_log_exceptions=True)
+        None,
+        catch_and_log_exceptions=True)
     self.mox.ReplayAll()
-    self.dispatcher.add_async_request(
-        'PUT', '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
-        'body', '1.2.3.4')
+    self.dispatcher.add_async_request('PUT', '/foo?bar=baz',
+                                      [('Header', 'Value'),
+                                       ('Other', 'Values')], 'body', '1.2.3.4')
     self.mox.VerifyAll()
 
   def test_add_async_request_specific_module(self):
@@ -356,16 +362,21 @@ class DispatcherTest(unittest.TestCase):
     self.mox.StubOutWithMock(dispatcher._THREAD_POOL, 'submit')
     self.dispatcher._module_name_to_module['other'].build_request_environ(
         'PUT', '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
-        'body', '1.2.3.4', 2).AndReturn(
-            dummy_environ)
+        'body', '1.2.3.4', 2).AndReturn(dummy_environ)
     dispatcher._THREAD_POOL.submit(
-        self.dispatcher._handle_request, dummy_environ, mox.IgnoreArg(),
+        self.dispatcher._handle_request,
+        dummy_environ,
+        mox.IgnoreArg(),
         self.dispatcher._module_name_to_module['other'],
-        None, catch_and_log_exceptions=True)
+        None,
+        catch_and_log_exceptions=True)
     self.mox.ReplayAll()
     self.dispatcher.add_async_request(
-        'PUT', '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
-        'body', '1.2.3.4', module_name='other')
+        'PUT',
+        '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
+        'body',
+        '1.2.3.4',
+        module_name='other')
     self.mox.VerifyAll()
 
   def test_add_async_request_soft_routing(self):
@@ -374,16 +385,21 @@ class DispatcherTest(unittest.TestCase):
     self.mox.StubOutWithMock(dispatcher._THREAD_POOL, 'submit')
     self.dispatcher._module_name_to_module['default'].build_request_environ(
         'PUT', '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
-        'body', '1.2.3.4', 1).AndReturn(
-            dummy_environ)
+        'body', '1.2.3.4', 1).AndReturn(dummy_environ)
     dispatcher._THREAD_POOL.submit(
-        self.dispatcher._handle_request, dummy_environ, mox.IgnoreArg(),
+        self.dispatcher._handle_request,
+        dummy_environ,
+        mox.IgnoreArg(),
         self.dispatcher._module_name_to_module['default'],
-        None, catch_and_log_exceptions=True)
+        None,
+        catch_and_log_exceptions=True)
     self.mox.ReplayAll()
     self.dispatcher.add_async_request(
-        'PUT', '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
-        'body', '1.2.3.4', module_name='nomodule')
+        'PUT',
+        '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
+        'body',
+        '1.2.3.4',
+        module_name='nomodule')
     self.mox.VerifyAll()
 
   def test_add_request(self):
@@ -393,49 +409,66 @@ class DispatcherTest(unittest.TestCase):
     self.dispatcher._resolve_target(None, '/foo').AndReturn(
         (self.dispatcher._module_name_to_module['default'], None))
     self.dispatcher._module_name_to_module['default'].build_request_environ(
-        'PUT', '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
-        'body', '1.2.3.4', 1, fake_login=True).AndReturn(
-            dummy_environ)
+        'PUT',
+        '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
+        'body',
+        '1.2.3.4',
+        1,
+        fake_login=True).AndReturn(dummy_environ)
     self.dispatcher._handle_request(
         dummy_environ, mox.IgnoreArg(),
         self.dispatcher._module_name_to_module['default'],
         None).AndReturn(['Hello World'])
     self.mox.ReplayAll()
     response = self.dispatcher.add_request(
-        'PUT', '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
-        'body', '1.2.3.4', fake_login=True)
+        'PUT',
+        '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
+        'body',
+        '1.2.3.4',
+        fake_login=True)
     self.mox.VerifyAll()
-    self.assertEqual('Hello World', response.content)
+    self.assertEqual(b'Hello World', response.content)
 
   def test_add_request_soft_routing(self):
     """Tests soft routing to the default module."""
     dummy_environ = object()
     self.mox.StubOutWithMock(self.dispatcher, '_handle_request')
     self.dispatcher._module_name_to_module['default'].build_request_environ(
-        'PUT', '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
-        'body', '1.2.3.4', 1, fake_login=True).AndReturn(
-            dummy_environ)
+        'PUT',
+        '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
+        'body',
+        '1.2.3.4',
+        1,
+        fake_login=True).AndReturn(dummy_environ)
     self.dispatcher._handle_request(
         dummy_environ, mox.IgnoreArg(),
         self.dispatcher._module_name_to_module['default'],
         None).AndReturn(['Hello World'])
     self.mox.ReplayAll()
     response = self.dispatcher.add_request(
-        'PUT', '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
-        'body', '1.2.3.4', fake_login=True, module_name='nomodule')
+        'PUT',
+        '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
+        'body',
+        '1.2.3.4',
+        fake_login=True,
+        module_name='nomodule')
     self.mox.VerifyAll()
-    self.assertEqual('Hello World', response.content)
+    self.assertEqual(b'Hello World', response.content)
 
   def test_add_request_merged_response(self):
     """Tests handlers which return side-effcting generators."""
     dummy_environ = object()
     self.mox.StubOutWithMock(self.dispatcher, '_handle_request')
     self.dispatcher._module_name_to_module['default'].build_request_environ(
-        'PUT', '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
-        'body', '1.2.3.4', 1, fake_login=True).AndReturn(
-            dummy_environ)
+        'PUT',
+        '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
+        'body',
+        '1.2.3.4',
+        1,
+        fake_login=True).AndReturn(dummy_environ)
 
     start_response_ref = []
+
     def capture_start_response(unused_env, start_response, unused_module,
                                unused_inst):
       start_response_ref.append(start_response)
@@ -444,30 +477,40 @@ class DispatcherTest(unittest.TestCase):
       start_response_ref[0]('200 OK', [('Content-Type', 'text/plain')])
       yield 'Hello World'
 
-    mock = self.dispatcher._handle_request(
+    mock_handle = self.dispatcher._handle_request(
         dummy_environ, mox.IgnoreArg(),
-        self.dispatcher._module_name_to_module['default'],
-        None)
-    mock = mock.WithSideEffects(capture_start_response)
-    mock = mock.AndReturn(side_effecting_handler())
+        self.dispatcher._module_name_to_module['default'], None)
+    mock_handle = mock_handle.WithSideEffects(capture_start_response)
+    mock_handle = mock_handle.AndReturn(side_effecting_handler())
 
     self.mox.ReplayAll()
     response = self.dispatcher.add_request(
-        'PUT', '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
-        'body', '1.2.3.4', fake_login=True, module_name='nomodule')
+        'PUT',
+        '/foo?bar=baz', [('Header', 'Value'), ('Other', 'Values')],
+        'body',
+        '1.2.3.4',
+        fake_login=True,
+        module_name='nomodule')
     self.mox.VerifyAll()
     self.assertEqual('200 OK', response.status)
     self.assertEqual([('Content-Type', 'text/plain')], response.headers)
-    self.assertEqual('Hello World', response.content)
+    self.assertEqual(six.b('Hello World'), response.content)
 
   def test_handle_request(self):
     start_response = object()
     servr = self.dispatcher._module_name_to_module['other']
     self.mox.StubOutWithMock(servr, '_handle_request')
-    servr._handle_request({'foo': 'bar'}, start_response, inst=None,
+    servr._handle_request({
+        'foo': 'bar'
+    },
+                          start_response,
+                          inst=None,
                           request_type=3).AndReturn(['body'])
     self.mox.ReplayAll()
-    self.dispatcher._handle_request({'foo': 'bar'}, start_response, servr, None,
+    self.dispatcher._handle_request({'foo': 'bar'},
+                                    start_response,
+                                    servr,
+                                    None,
                                     request_type=3)
     self.mox.VerifyAll()
 
@@ -489,7 +532,10 @@ class DispatcherTest(unittest.TestCase):
     servr._handle_request({'foo': 'bar'}, start_response).AndRaise(Exception)
     logging.exception('Internal error while handling request.')
     self.mox.ReplayAll()
-    self.dispatcher._handle_request({'foo': 'bar'}, start_response, servr, None,
+    self.dispatcher._handle_request({'foo': 'bar'},
+                                    start_response,
+                                    servr,
+                                    None,
                                     catch_and_log_exceptions=True)
     self.mox.VerifyAll()
 
@@ -508,6 +554,7 @@ class DispatcherTest(unittest.TestCase):
   def test_module_for_request(self):
 
     class FakeDict(dict):
+
       def __contains__(self, key):
         return True
 
@@ -520,12 +567,11 @@ class DispatcherTest(unittest.TestCase):
         (dispatchinfo.ParsedURL('*/other_path/*'), '2'),
         (dispatchinfo.ParsedURL('*/other_path/'), '3'),
         (dispatchinfo.ParsedURL('*/other_path'), '3'),
-        ]
+    ]
     self.assertEqual('1', self.dispatcher._module_for_request('/path'))
     self.assertEqual('2', self.dispatcher._module_for_request('/other_path/'))
     self.assertEqual('2', self.dispatcher._module_for_request('/other_path/a'))
-    self.assertEqual('3',
-                     self.dispatcher._module_for_request('/other_path'))
+    self.assertEqual('3', self.dispatcher._module_for_request('/other_path'))
     self.assertEqual('default',
                      self.dispatcher._module_for_request('/undispatched'))
 
@@ -533,17 +579,16 @@ class DispatcherTest(unittest.TestCase):
     """Tests the _should_use_dispatch_config method."""
     self.assertTrue(self.dispatcher._should_use_dispatch_config('/'))
     self.assertTrue(self.dispatcher._should_use_dispatch_config('/foo/'))
-    self.assertTrue(self.dispatcher._should_use_dispatch_config(
-        '/_ah/queue/deferred'))
-    self.assertTrue(self.dispatcher._should_use_dispatch_config(
-        '/_ah/queue/deferred/blah'))
+    self.assertTrue(
+        self.dispatcher._should_use_dispatch_config('/_ah/queue/deferred'))
+    self.assertTrue(
+        self.dispatcher._should_use_dispatch_config('/_ah/queue/deferred/blah'))
 
     self.assertFalse(self.dispatcher._should_use_dispatch_config('/_ah/'))
     self.assertFalse(self.dispatcher._should_use_dispatch_config('/_ah/foo/'))
-    self.assertFalse(self.dispatcher._should_use_dispatch_config(
-        '/_ah/foo/bar/'))
-    self.assertFalse(self.dispatcher._should_use_dispatch_config(
-        '/_ah/queue/'))
+    self.assertFalse(
+        self.dispatcher._should_use_dispatch_config('/_ah/foo/bar/'))
+    self.assertFalse(self.dispatcher._should_use_dispatch_config('/_ah/queue/'))
 
   def test_resolve_target(self):
     servr = object()
@@ -585,8 +630,8 @@ class DispatcherTest(unittest.TestCase):
     self.mox.StubOutWithMock(self.dispatcher, '_module_for_request')
     self.mox.StubOutWithMock(self.dispatcher, '_get_module_with_soft_routing')
     servr = object()
-    self.dispatcher._get_module_with_soft_routing('backend', None).AndReturn(
-        servr)
+    self.dispatcher._get_module_with_soft_routing('backend',
+                                                  None).AndReturn(servr)
     self.mox.ReplayAll()
     self.assertEqual((servr, None),
                      self.dispatcher._resolve_target('backend.localhost:1',
@@ -597,8 +642,8 @@ class DispatcherTest(unittest.TestCase):
     self.mox.StubOutWithMock(self.dispatcher, '_module_for_request')
     self.mox.StubOutWithMock(self.dispatcher, '_get_module_with_soft_routing')
     servr = object()
-    self.dispatcher._get_module_with_soft_routing('backend', None).AndReturn(
-        servr)
+    self.dispatcher._get_module_with_soft_routing('backend',
+                                                  None).AndReturn(servr)
     self.mox.ReplayAll()
     self.assertEqual((servr, None),
                      self.dispatcher._resolve_target('1.backend.localhost:1',
@@ -609,8 +654,8 @@ class DispatcherTest(unittest.TestCase):
     self.mox.StubOutWithMock(self.dispatcher, '_module_for_request')
     self.mox.StubOutWithMock(self.dispatcher, '_get_module_with_soft_routing')
     servr = object()
-    self.dispatcher._get_module_with_soft_routing('backend', None).AndReturn(
-        servr)
+    self.dispatcher._get_module_with_soft_routing('backend',
+                                                  None).AndReturn(servr)
     self.mox.ReplayAll()
     self.assertEqual((servr, None),
                      self.dispatcher._resolve_target('1.v1.backend.localhost:1',
@@ -621,9 +666,7 @@ class DispatcherTest(unittest.TestCase):
     """Tests the _get_module method with no modules."""
     self.dispatcher._module_name_to_module = {}
     self.assertRaises(request_info.ModuleDoesNotExistError,
-                      self.dispatcher._get_module,
-                      None,
-                      None)
+                      self.dispatcher._get_module, None, None)
 
   def test_get_module_default_module(self):
     """Tests the _get_module method with a default module."""
@@ -636,131 +679,118 @@ class DispatcherTest(unittest.TestCase):
 
     self.dispatcher._module_name_to_module = {'default': self.module1}
     self.assertRaises(request_info.ModuleDoesNotExistError,
-                      self.dispatcher._get_module,
-                      'nondefault',
-                      None)
+                      self.dispatcher._get_module, 'nondefault', None)
     # Test version handling.
     self.dispatcher._module_configurations['default'] = MODULE_CONFIGURATIONS[0]
-    self.assertEqual(self.dispatcher._get_module('default', 'version'),
-                     self.module1)
+    self.assertEqual(
+        self.dispatcher._get_module('default', 'version'), self.module1)
     self.assertRaises(request_info.VersionDoesNotExistError,
-                      self.dispatcher._get_module,
-                      'default',
-                      'version2')
+                      self.dispatcher._get_module, 'default', 'version2')
 
   def test_get_module_non_default(self):
     """Tests the _get_module method with a non-default module."""
-    self.dispatcher._module_name_to_module = {'default': self.module1,
-                                              'other': self.module2}
-    self.assertEqual(self.dispatcher._get_module('other', None),
-                     self.module2)
+    self.dispatcher._module_name_to_module = {
+        'default': self.module1,
+        'other': self.module2
+    }
+    self.assertEqual(self.dispatcher._get_module('other', None), self.module2)
     # Test version handling.
     self.dispatcher._module_configurations['default'] = MODULE_CONFIGURATIONS[0]
     self.dispatcher._module_configurations['other'] = MODULE_CONFIGURATIONS[1]
-    self.assertEqual(self.dispatcher._get_module('other', 'version2'),
-                     self.module2)
+    self.assertEqual(
+        self.dispatcher._get_module('other', 'version2'), self.module2)
     self.assertRaises(request_info.VersionDoesNotExistError,
-                      self.dispatcher._get_module,
-                      'other',
-                      'version3')
+                      self.dispatcher._get_module, 'other', 'version3')
 
   def test_get_module_no_default(self):
     """Tests the _get_module method with no default module."""
     self.dispatcher._module_name_to_module = {'other': self.module1}
-    self.assertEqual(self.dispatcher._get_module('other', None),
-                     self.module1)
+    self.assertEqual(self.dispatcher._get_module('other', None), self.module1)
     self.assertRaises(request_info.ModuleDoesNotExistError,
-                      self.dispatcher._get_module,
-                      None,
-                      None)
+                      self.dispatcher._get_module, None, None)
     # Test version handling.
     self.dispatcher._module_configurations['other'] = MODULE_CONFIGURATIONS[0]
-    self.assertEqual(self.dispatcher._get_module('other', 'version'),
-                     self.module1)
+    self.assertEqual(
+        self.dispatcher._get_module('other', 'version'), self.module1)
     self.assertRaises(request_info.VersionDoesNotExistError,
-                      self.dispatcher._get_module,
-                      'other',
-                      'version2')
+                      self.dispatcher._get_module, 'other', 'version2')
 
   def test_get_module_soft_routing_no_modules(self):
     """Tests the _get_module_soft_routing method with no modules."""
     self.dispatcher._module_name_to_module = {}
     self.assertRaises(request_info.ModuleDoesNotExistError,
-                      self.dispatcher._get_module_with_soft_routing,
-                      None,
-                      None)
+                      self.dispatcher._get_module_with_soft_routing, None, None)
 
   def test_get_module_soft_routing_default_module(self):
     """Tests the _get_module_soft_routing method with a default module."""
     # Test default mopdule is returned for an empty query.
     self.dispatcher._module_name_to_module = {'default': self.module1}
-    self.assertEqual(self.dispatcher._get_module_with_soft_routing(None, None),
-                     self.module1)
+    self.assertEqual(
+        self.dispatcher._get_module_with_soft_routing(None, None), self.module1)
 
     self.dispatcher._module_name_to_module['other'] = self.module2
-    self.assertEqual(self.dispatcher._get_module_with_soft_routing(None, None),
-                     self.module1)
+    self.assertEqual(
+        self.dispatcher._get_module_with_soft_routing(None, None), self.module1)
 
     # Test soft-routing. Querying for a non-existing module should return
     # default.
     self.dispatcher._module_name_to_module = {'default': self.module1}
-    self.assertEqual(self.dispatcher._get_module_with_soft_routing('other',
-                                                                   None),
-                     self.module1)
+    self.assertEqual(
+        self.dispatcher._get_module_with_soft_routing('other', None),
+        self.module1)
 
     # Test version handling.
     self.dispatcher._module_configurations['default'] = MODULE_CONFIGURATIONS[0]
-    self.assertEqual(self.dispatcher._get_module_with_soft_routing('other',
-                                                                   'version'),
-                     self.module1)
-    self.assertEqual(self.dispatcher._get_module_with_soft_routing('default',
-                                                                   'version'),
-                     self.module1)
+    self.assertEqual(
+        self.dispatcher._get_module_with_soft_routing('other', 'version'),
+        self.module1)
+    self.assertEqual(
+        self.dispatcher._get_module_with_soft_routing('default', 'version'),
+        self.module1)
     self.assertRaises(request_info.VersionDoesNotExistError,
-                      self.dispatcher._get_module_with_soft_routing,
-                      'default',
+                      self.dispatcher._get_module_with_soft_routing, 'default',
                       'version2')
     self.assertRaises(request_info.VersionDoesNotExistError,
-                      self.dispatcher._get_module_with_soft_routing,
-                      'other',
+                      self.dispatcher._get_module_with_soft_routing, 'other',
                       'version2')
 
   def test_get_module_soft_routing_non_default(self):
     """Tests the _get_module_soft_routing method with a non-default module."""
-    self.dispatcher._module_name_to_module = {'default': self.module1,
-                                              'other': self.module2}
-    self.assertEqual(self.dispatcher._get_module_with_soft_routing('other',
-                                                                   None),
-                     self.module2)
+    self.dispatcher._module_name_to_module = {
+        'default': self.module1,
+        'other': self.module2
+    }
+    self.assertEqual(
+        self.dispatcher._get_module_with_soft_routing('other', None),
+        self.module2)
     # Test version handling.
     self.dispatcher._module_configurations['default'] = MODULE_CONFIGURATIONS[0]
     self.dispatcher._module_configurations['other'] = MODULE_CONFIGURATIONS[1]
-    self.assertEqual(self.dispatcher._get_module_with_soft_routing('other',
-                                                                   'version2'),
-                     self.module2)
+    self.assertEqual(
+        self.dispatcher._get_module_with_soft_routing('other', 'version2'),
+        self.module2)
     self.assertRaises(request_info.VersionDoesNotExistError,
-                      self.dispatcher._get_module_with_soft_routing,
-                      'other',
+                      self.dispatcher._get_module_with_soft_routing, 'other',
                       'version3')
 
   def test_get_module_soft_routing_no_default(self):
     """Tests the _get_module_soft_routing method with no default module."""
     self.dispatcher._module_name_to_module = {'other': self.module1}
-    self.assertEqual(self.dispatcher._get_module_with_soft_routing('other',
-                                                                   None),
-                     self.module1)
-    self.assertEqual(self.dispatcher._get_module_with_soft_routing('other',
-                                                                   None),
-                     self.module1)
+    self.assertEqual(
+        self.dispatcher._get_module_with_soft_routing('other', None),
+        self.module1)
+    self.assertEqual(
+        self.dispatcher._get_module_with_soft_routing('other', None),
+        self.module1)
     # Test version handling.
     self.dispatcher._module_configurations['other'] = MODULE_CONFIGURATIONS[0]
-    self.assertEqual(self.dispatcher._get_module_with_soft_routing('other',
-                                                                   'version'),
-                     self.module1)
+    self.assertEqual(
+        self.dispatcher._get_module_with_soft_routing('other', 'version'),
+        self.module1)
     self.assertRaises(request_info.VersionDoesNotExistError,
-                      self.dispatcher._get_module_with_soft_routing,
-                      'other',
+                      self.dispatcher._get_module_with_soft_routing, 'other',
                       'version2')
+
 
 if __name__ == '__main__':
   unittest.main()

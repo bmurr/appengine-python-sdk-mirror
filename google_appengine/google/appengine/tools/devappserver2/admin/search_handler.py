@@ -16,9 +16,16 @@
 #
 """Handlers that display full-text search indexes and documents."""
 
-import urllib
+import google
 
-from google.appengine.api import search
+import six
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import search
+else:
+  from google.appengine.api import search
+
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 
 
@@ -119,10 +126,11 @@ class SearchIndexHandler(BaseSearchHandler):
 
     index = search.Index(name=index_name, namespace=namespace)
     index.delete(docs)
-    self.redirect('/search/index?%s' % urllib.urlencode(
-        {'namespace': namespace,
-         'index': index_name,
-         'start': start}))
+    self.redirect('/search/index?%s' % six.moves.urllib.parse.urlencode({
+        'namespace': namespace,
+        'index': index_name,
+        'start': start
+    }))
 
 
 class SearchDocumentHandler(BaseSearchHandler):

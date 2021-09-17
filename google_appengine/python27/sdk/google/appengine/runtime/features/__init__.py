@@ -20,10 +20,7 @@ This module simplifies the access to the appengine feature flags.
 """
 
 import __builtin__
-
-
-
-
+from . import testonly
 
 
 def IsEnabled(feature_name, default=False):

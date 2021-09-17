@@ -28,7 +28,14 @@ import string
 import threading
 import wsgiref.util
 
-from google.appengine.api import request_info
+import google
+import six
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import request_info
+else:
+  from google.appengine.api import request_info
 
 
 def _choose_request_id():

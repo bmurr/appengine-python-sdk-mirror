@@ -27,8 +27,11 @@ that conversion and some validation.
 
 
 
-from google.appengine.tools.devappserver2.endpoints import errors
 
+
+import six
+
+from google.appengine.tools.devappserver2.endpoints import errors
 
 __all__ = ['transform_parameter_value']
 
@@ -47,18 +50,21 @@ def _check_enum(parameter_name, value, parameter_config):
       example 'var' or 'var[2]'.
     value: A string containing the value passed in for the parameter.
     parameter_config: The dictionary containing information specific to the
-      parameter in question. This is retrieved from request.parameters in
-      the method config.
+      parameter in question. This is retrieved from request.parameters in the
+      method config.
 
   Raises:
     EnumRejectionError: If the given value is not among the accepted
       enum values in the field parameter.
   """
-  enum_values = [enum['backendValue']
-                 for enum in parameter_config['enum'].values()
-                 if 'backendValue' in enum]
+  enum_values = [
+      enum['backendValue']
+      for enum in parameter_config['enum'].values()
+      if 'backendValue' in enum
+  ]
   if value not in enum_values:
-    raise errors.EnumRejectionError(parameter_name, value, enum_values)
+    raise errors.EnumRejectionError(
+        six.ensure_text(parameter_name), value, enum_values)
 
 
 def _check_boolean(parameter_name, value, parameter_config):
@@ -76,8 +82,8 @@ def _check_boolean(parameter_name, value, parameter_config):
       example 'var' or 'var[2]'.
     value: A string containing the value passed in for the parameter.
     parameter_config: The dictionary containing information specific to the
-      parameter in question. This is retrieved from request.parameters in
-      the method config.
+      parameter in question. This is retrieved from request.parameters in the
+      method config.
 
   Raises:
     BasicTypeParameterError: If the given value is not a valid boolean
@@ -123,14 +129,14 @@ def _convert_boolean(value):
 # Note that the 'enum' entry is special cased.  Enums have 'type': 'string',
 # so we have special case code to recognize them and use the 'enum' map
 # entry.
-_PARAM_CONVERSION_MAP = {'boolean': (_check_boolean,
-                                     _convert_boolean,
-                                     'boolean'),
-                         'int32': (None, int, 'integer'),
-                         'uint32': (None, int, 'integer'),
-                         'float': (None, float, 'float'),
-                         'double': (None, float, 'double'),
-                         'enum': (_check_enum, None, None)}
+_PARAM_CONVERSION_MAP = {
+    'boolean': (_check_boolean, _convert_boolean, 'boolean'),
+    'int32': (None, int, 'integer'),
+    'uint32': (None, int, 'integer'),
+    'float': (None, float, 'float'),
+    'double': (None, float, 'double'),
+    'enum': (_check_enum, None, None)
+}
 
 
 def _get_parameter_conversion_entry(parameter_config):
@@ -172,8 +178,8 @@ def transform_parameter_value(parameter_name, value, parameter_config):
     parameter_name: A string containing the name of the parameter, which is
       either just a variable name or the name with the index appended, in the
       recursive case. For example 'var' or 'var[2]'.
-    value: A string or list of strings containing the value(s) passed in for
-      the parameter.  These are the values from the request, to be validated,
+    value: A string or list of strings containing the value(s) passed in for the
+      parameter.  These are the values from the request, to be validated,
       transformed, and passed along to the SPI.
     parameter_config: The dictionary containing information specific to the
       parameter in question. This is retrieved from request.parameters in the
@@ -191,9 +197,11 @@ def transform_parameter_value(parameter_name, value, parameter_config):
     # structure.  These recursive calls should preserve it and convert all
     # parameter values.  See the docstring for information about the parameter
     # renaming done here.
-    return [transform_parameter_value('%s[%d]' % (parameter_name, index),
-                                      element, parameter_config)
-            for index, element in enumerate(value)]
+    return [
+        transform_parameter_value('%s[%d]' % (parameter_name, index), element,
+                                  parameter_config)
+        for index, element in enumerate(value)
+    ]
 
   # Validate and convert the parameter value.
   entry = _get_parameter_conversion_entry(parameter_config)

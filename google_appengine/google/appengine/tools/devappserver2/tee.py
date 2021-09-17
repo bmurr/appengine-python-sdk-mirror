@@ -20,6 +20,7 @@
 
 import collections
 import threading
+import six
 
 
 class Tee(threading.Thread):
@@ -35,7 +36,7 @@ class Tee(threading.Thread):
     threading.Thread.__init__(self, name='Tee')
     self.__in = in_f
     self.__out = out_f
-    self.__deque = collections.deque('', Tee._MAX_LINES)
+    self.__deque = collections.deque(six.b(''), Tee._MAX_LINES)
 
   def run(self):
     while True:
@@ -47,4 +48,4 @@ class Tee(threading.Thread):
       self.__deque.append(line)
 
   def get_buf(self):
-    return ''.join(self.__deque)
+    return six.b('').join(self.__deque)

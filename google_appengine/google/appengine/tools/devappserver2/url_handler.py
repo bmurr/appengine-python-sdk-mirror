@@ -21,7 +21,15 @@
 import logging
 import wsgiref.util
 
-from google.appengine.api import appinfo
+import google
+import six
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import appinfo
+else:
+  from google.appengine.api import appinfo
+
 from google.appengine.tools.devappserver2 import constants
 from google.appengine.tools.devappserver2 import login
 
