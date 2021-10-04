@@ -34,8 +34,8 @@ import json
 import logging
 import zlib
 
-import six
-from six.moves import urllib
+from google.appengine._internal import six
+from google.appengine._internal.six.moves import urllib
 
 from google.appengine.tools.devappserver2 import util
 

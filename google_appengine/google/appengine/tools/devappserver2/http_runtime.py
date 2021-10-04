@@ -52,7 +52,7 @@ import threading
 import time
 
 import portpicker
-import six
+from google.appengine._internal import six
 
 from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import http_proxy

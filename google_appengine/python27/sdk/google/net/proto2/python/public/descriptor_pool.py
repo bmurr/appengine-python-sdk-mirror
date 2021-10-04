@@ -195,13 +195,18 @@ class DescriptorPool(object):
     Args:
       serialized_file_desc_proto (bytes): A bytes string, serialization of the
         :class:`FileDescriptorProto` to add.
+
+    Returns:
+      FileDescriptor: Descriptor for the added file.
     """
 
 
     from google.net.proto2.python.internal import descriptor_bootstrap_pb2
     file_desc_proto = descriptor_bootstrap_pb2.FileDescriptorProto.FromString(
         serialized_file_desc_proto)
-    self.Add(file_desc_proto)
+    file_desc = self._ConvertFileProtoToFileDescriptor(file_desc_proto)
+    file_desc.serialized_pb = serialized_file_desc_proto
+    return file_desc
 
 
 
@@ -803,7 +808,6 @@ class DescriptorPool(object):
             self._MakeServiceDescriptor(service_proto, index, scope,
                                         file_proto.package, file_descriptor))
 
-      self.Add(file_proto)
       self._file_descriptors[file_proto.name] = file_descriptor
 
 
@@ -860,11 +864,17 @@ class DescriptorPool(object):
         for index, extension in enumerate(desc_proto.extension)]
     oneofs = [
 
-        descriptor.OneofDescriptor(desc.name, '.'.join((desc_name, desc.name)),
-                                   index, None, [], desc.options,
+        descriptor.OneofDescriptor(
+            desc.name,
+            '.'.join((desc_name, desc.name)),
+            index,
+            None,
+            [],
+            _OptionsOrNone(desc),
 
-                                   create_key=descriptor._internal_create_key)
-        for index, desc in enumerate(desc_proto.oneof_decl)]
+            create_key=descriptor._internal_create_key)
+        for index, desc in enumerate(desc_proto.oneof_decl)
+    ]
     extension_ranges = [(r.start, r.end) for r in desc_proto.extension_range]
     if extension_ranges:
       is_extendable = True
@@ -982,6 +992,11 @@ class DescriptorPool(object):
     else:
       full_name = field_proto.name
 
+    if field_proto.json_name:
+      json_name = field_proto.json_name
+    else:
+      json_name = None
+
     return descriptor.FieldDescriptor(
         name=field_proto.name,
         full_name=full_name,
@@ -998,6 +1013,7 @@ class DescriptorPool(object):
         is_extension=is_extension,
         extension_scope=None,
         options=_OptionsOrNone(field_proto),
+        json_name=json_name,
         file=file_desc,
 
         create_key=descriptor._internal_create_key)
@@ -1101,6 +1117,8 @@ class DescriptorPool(object):
       elif field_proto.type == descriptor.FieldDescriptor.TYPE_BYTES:
         field_desc.default_value = b''
       elif field_proto.type == descriptor.FieldDescriptor.TYPE_MESSAGE:
+        field_desc.default_value = None
+      elif field_proto.type == descriptor.FieldDescriptor.TYPE_GROUP:
         field_desc.default_value = None
       else:
 

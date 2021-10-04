@@ -33,7 +33,7 @@ import wsgiref.util
 
 import google
 import mox
-import six
+from google.appengine._internal import six
 import six.moves.urllib.parse
 import webob.exc
 from google.appengine.tools.devappserver2 import blob_upload

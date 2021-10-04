@@ -20,7 +20,7 @@ import unittest
 
 import google
 import mox
-import six
+from google.appengine._internal import six
 import webapp2
 from webob import multidict
 

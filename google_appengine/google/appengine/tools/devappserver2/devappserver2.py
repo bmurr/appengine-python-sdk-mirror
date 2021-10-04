@@ -23,7 +23,7 @@ import logging
 import os
 import sys
 import time
-import six
+from google.appengine._internal import six
 
 if 'DEVAPPSERVER_EXTRA_IMPORTS' in os.environ:
   extras = os.environ['DEVAPPSERVER_EXTRA_IMPORTS'].split(':')

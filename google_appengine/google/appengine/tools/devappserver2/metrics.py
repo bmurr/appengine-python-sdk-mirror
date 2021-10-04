@@ -59,9 +59,9 @@ import os
 import platform
 import sys
 
-import six
-from six.moves import map
-from six.moves import urllib
+from google.appengine._internal import six
+from google.appengine._internal.six.moves import map
+from google.appengine._internal.six.moves import urllib
 import six.moves.http_client
 
 from google.appengine.tools import sdk_update_checker

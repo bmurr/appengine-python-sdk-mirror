@@ -20,7 +20,7 @@
 
 import collections
 import threading
-import six
+from google.appengine._internal import six
 
 
 class Tee(threading.Thread):

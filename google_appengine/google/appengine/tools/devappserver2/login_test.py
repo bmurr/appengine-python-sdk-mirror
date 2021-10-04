@@ -27,7 +27,7 @@ try:
   import http.cookies as cookies
 except ImportError:
   import Cookie as cookies
-import six
+from google.appengine._internal import six
 import six.moves.urllib
 
 from google.appengine.tools.devappserver2 import login

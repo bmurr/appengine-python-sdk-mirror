@@ -28,8 +28,8 @@ import sys
 import threading
 import wsgiref.headers
 
-import six
-from six.moves import map
+from google.appengine._internal import six
+from google.appengine._internal.six.moves import map
 
 # pylint: disable=g-import-not-at-top
 if six.PY2:

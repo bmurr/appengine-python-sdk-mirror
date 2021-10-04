@@ -16,6 +16,33 @@
 #
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 """A simple wrapper around enum types to expose utility functions.
 
 Instances are created as properties with the same name as the enum they wrap

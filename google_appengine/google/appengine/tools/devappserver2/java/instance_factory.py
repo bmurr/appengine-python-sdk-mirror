@@ -31,7 +31,7 @@ import tempfile
 import threading
 
 import google
-import six
+from google.appengine._internal import six
 
 # pylint: disable=g-import-not-at-top
 if six.PY2:

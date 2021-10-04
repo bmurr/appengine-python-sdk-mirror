@@ -18,7 +18,7 @@
 import os.path
 import sys
 import google
-import six
+from google.appengine._internal import six
 
 filename = ('taskqueue_tasks_handler_py2.py'
             if six.PY2 else 'taskqueue_tasks_handler_py3.py')

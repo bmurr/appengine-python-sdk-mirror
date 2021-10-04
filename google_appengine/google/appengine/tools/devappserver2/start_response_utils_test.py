@@ -21,7 +21,7 @@
 import unittest
 
 import google
-import six
+from google.appengine._internal import six
 
 from google.appengine.tools.devappserver2 import start_response_utils
 

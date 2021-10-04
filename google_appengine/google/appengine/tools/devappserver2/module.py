@@ -37,7 +37,7 @@ import wsgiref.headers
 
 import google
 import py27_urlquote
-import six
+from google.appengine._internal import six
 
 # pylint: disable=g-import-not-at-top
 if six.PY2:

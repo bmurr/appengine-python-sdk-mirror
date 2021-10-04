@@ -18,7 +18,7 @@
 
 
 
-import six
+from google.appengine._internal import six
 
 
 class CapturingStartResponse(object):

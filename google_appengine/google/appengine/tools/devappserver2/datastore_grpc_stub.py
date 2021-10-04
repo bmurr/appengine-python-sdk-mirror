@@ -20,7 +20,7 @@ import pickle
 import threading
 
 import google
-import six
+from google.appengine._internal import six
 
 # pylint: disable=g-import-not-at-top
 if six.PY2:
@@ -121,8 +121,8 @@ class DatastoreGrpcStub(apiproxy_stub.APIProxyStub):
   def Clear(self):
     # api_server.py has _handle_CLEAR() method which requires this interface for
     # reusing api_server between unittests.
-    response = six.moves.urllib.urlopen(
-        six.moves.urllib.Request(
+    response = six.moves.urllib.request.urlopen(
+        six.moves.urllib.request.Request(
             'http://%s/reset' % self.grpc_apiserver_host, data=''))
     if response.code != six.moves.http_client.OK:
       raise IOError('The Cloud Datastore emulator did not reset successfully.')
