@@ -35,7 +35,7 @@ import logging
 import re
 import threading
 
-import six
+from google.appengine._internal import six
 
 from google.appengine.tools.devappserver2.endpoints import discovery_service
 

@@ -26,7 +26,7 @@
 import google
 import gzip
 import json
-import six
+from google.appengine._internal import six
 import unittest
 
 from google.appengine.tools.devappserver2.endpoints import api_request

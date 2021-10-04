@@ -20,7 +20,7 @@
 
 import google
 import unittest
-import six
+from google.appengine._internal import six
 
 from google.appengine.tools.devappserver2 import tee
 

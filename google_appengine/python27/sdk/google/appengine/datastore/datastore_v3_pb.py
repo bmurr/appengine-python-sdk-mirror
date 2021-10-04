@@ -659,10 +659,6 @@ class Query(ProtocolBuffer.ProtocolMessage):
   ancestor_ = None
   has_shallow_ = 0
   shallow_ = 0
-  has_search_query_ = 0
-  search_query_ = ""
-  has_hint_ = 0
-  hint_ = 0
   has_count_ = 0
   count_ = 0
   has_offset_ = 0
@@ -673,14 +669,10 @@ class Query(ProtocolBuffer.ProtocolMessage):
   compiled_cursor_ = None
   has_end_compiled_cursor_ = 0
   end_compiled_cursor_ = None
-  has_require_perfect_plan_ = 0
-  require_perfect_plan_ = 0
   has_keys_only_ = 0
   keys_only_ = 0
   has_transaction_ = 0
   transaction_ = None
-  has_compile_ = 0
-  compile_ = 0
   has_failover_ms_ = 0
   failover_ms_ = 0
   has_strong_ = 0
@@ -689,10 +681,20 @@ class Query(ProtocolBuffer.ProtocolMessage):
   distinct_ = 0
   has_min_safe_time_seconds_ = 0
   min_safe_time_seconds_ = 0
-  has_persist_offset_ = 0
-  persist_offset_ = 1
   has_read_time_us_ = 0
   read_time_us_ = 0
+  has_read_time_epoch_micros_ = 0
+  read_time_epoch_micros_ = 0
+  has_hint_ = 0
+  hint_ = 0
+  has_search_query_ = 0
+  search_query_ = ""
+  has_require_perfect_plan_ = 0
+  require_perfect_plan_ = 0
+  has_compile_ = 0
+  compile_ = 0
+  has_persist_offset_ = 0
+  persist_offset_ = 1
 
   def __init__(self, contents=None):
     self.filter_ = []
@@ -804,19 +806,6 @@ class Query(ProtocolBuffer.ProtocolMessage):
 
   def clear_filter(self):
     self.filter_ = []
-  def search_query(self): return self.search_query_
-
-  def set_search_query(self, x):
-    self.has_search_query_ = 1
-    self.search_query_ = x
-
-  def clear_search_query(self):
-    if self.has_search_query_:
-      self.has_search_query_ = 0
-      self.search_query_ = ""
-
-  def has_search_query(self): return self.has_search_query_
-
   def order_size(self): return len(self.order_)
   def order_list(self): return self.order_
 
@@ -833,19 +822,6 @@ class Query(ProtocolBuffer.ProtocolMessage):
 
   def clear_order(self):
     self.order_ = []
-  def hint(self): return self.hint_
-
-  def set_hint(self, x):
-    self.has_hint_ = 1
-    self.hint_ = x
-
-  def clear_hint(self):
-    if self.has_hint_:
-      self.has_hint_ = 0
-      self.hint_ = 0
-
-  def has_hint(self): return self.has_hint_
-
   def count(self): return self.count_
 
   def set_count(self, x):
@@ -939,19 +915,6 @@ class Query(ProtocolBuffer.ProtocolMessage):
 
   def clear_composite_index(self):
     self.composite_index_ = []
-  def require_perfect_plan(self): return self.require_perfect_plan_
-
-  def set_require_perfect_plan(self, x):
-    self.has_require_perfect_plan_ = 1
-    self.require_perfect_plan_ = x
-
-  def clear_require_perfect_plan(self):
-    if self.has_require_perfect_plan_:
-      self.has_require_perfect_plan_ = 0
-      self.require_perfect_plan_ = 0
-
-  def has_require_perfect_plan(self): return self.has_require_perfect_plan_
-
   def keys_only(self): return self.keys_only_
 
   def set_keys_only(self, x):
@@ -983,19 +946,6 @@ class Query(ProtocolBuffer.ProtocolMessage):
       if self.transaction_ is not None: self.transaction_.Clear()
 
   def has_transaction(self): return self.has_transaction_
-
-  def compile(self): return self.compile_
-
-  def set_compile(self, x):
-    self.has_compile_ = 1
-    self.compile_ = x
-
-  def clear_compile(self):
-    if self.has_compile_:
-      self.has_compile_ = 0
-      self.compile_ = 0
-
-  def has_compile(self): return self.has_compile_
 
   def failover_ms(self): return self.failover_ms_
 
@@ -1094,19 +1044,6 @@ class Query(ProtocolBuffer.ProtocolMessage):
   def clear_safe_replica_name(self):
     self.safe_replica_name_ = []
 
-  def persist_offset(self): return self.persist_offset_
-
-  def set_persist_offset(self, x):
-    self.has_persist_offset_ = 1
-    self.persist_offset_ = x
-
-  def clear_persist_offset(self):
-    if self.has_persist_offset_:
-      self.has_persist_offset_ = 0
-      self.persist_offset_ = 1
-
-  def has_persist_offset(self): return self.has_persist_offset_
-
   def read_time_us(self): return self.read_time_us_
 
   def set_read_time_us(self, x):
@@ -1120,6 +1057,84 @@ class Query(ProtocolBuffer.ProtocolMessage):
 
   def has_read_time_us(self): return self.has_read_time_us_
 
+  def read_time_epoch_micros(self): return self.read_time_epoch_micros_
+
+  def set_read_time_epoch_micros(self, x):
+    self.has_read_time_epoch_micros_ = 1
+    self.read_time_epoch_micros_ = x
+
+  def clear_read_time_epoch_micros(self):
+    if self.has_read_time_epoch_micros_:
+      self.has_read_time_epoch_micros_ = 0
+      self.read_time_epoch_micros_ = 0
+
+  def has_read_time_epoch_micros(self): return self.has_read_time_epoch_micros_
+
+  def hint(self): return self.hint_
+
+  def set_hint(self, x):
+    self.has_hint_ = 1
+    self.hint_ = x
+
+  def clear_hint(self):
+    if self.has_hint_:
+      self.has_hint_ = 0
+      self.hint_ = 0
+
+  def has_hint(self): return self.has_hint_
+
+  def search_query(self): return self.search_query_
+
+  def set_search_query(self, x):
+    self.has_search_query_ = 1
+    self.search_query_ = x
+
+  def clear_search_query(self):
+    if self.has_search_query_:
+      self.has_search_query_ = 0
+      self.search_query_ = ""
+
+  def has_search_query(self): return self.has_search_query_
+
+  def require_perfect_plan(self): return self.require_perfect_plan_
+
+  def set_require_perfect_plan(self, x):
+    self.has_require_perfect_plan_ = 1
+    self.require_perfect_plan_ = x
+
+  def clear_require_perfect_plan(self):
+    if self.has_require_perfect_plan_:
+      self.has_require_perfect_plan_ = 0
+      self.require_perfect_plan_ = 0
+
+  def has_require_perfect_plan(self): return self.has_require_perfect_plan_
+
+  def compile(self): return self.compile_
+
+  def set_compile(self, x):
+    self.has_compile_ = 1
+    self.compile_ = x
+
+  def clear_compile(self):
+    if self.has_compile_:
+      self.has_compile_ = 0
+      self.compile_ = 0
+
+  def has_compile(self): return self.has_compile_
+
+  def persist_offset(self): return self.persist_offset_
+
+  def set_persist_offset(self, x):
+    self.has_persist_offset_ = 1
+    self.persist_offset_ = x
+
+  def clear_persist_offset(self):
+    if self.has_persist_offset_:
+      self.has_persist_offset_ = 0
+      self.persist_offset_ = 1
+
+  def has_persist_offset(self): return self.has_persist_offset_
+
 
   def MergeFrom(self, x):
     assert x is not self
@@ -1130,19 +1145,15 @@ class Query(ProtocolBuffer.ProtocolMessage):
     if (x.has_ancestor()): self.mutable_ancestor().MergeFrom(x.ancestor())
     if (x.has_shallow()): self.set_shallow(x.shallow())
     for i in range(x.filter_size()): self.add_filter().CopyFrom(x.filter(i))
-    if (x.has_search_query()): self.set_search_query(x.search_query())
     for i in range(x.order_size()): self.add_order().CopyFrom(x.order(i))
-    if (x.has_hint()): self.set_hint(x.hint())
     if (x.has_count()): self.set_count(x.count())
     if (x.has_offset()): self.set_offset(x.offset())
     if (x.has_limit()): self.set_limit(x.limit())
     if (x.has_compiled_cursor()): self.mutable_compiled_cursor().MergeFrom(x.compiled_cursor())
     if (x.has_end_compiled_cursor()): self.mutable_end_compiled_cursor().MergeFrom(x.end_compiled_cursor())
     for i in range(x.composite_index_size()): self.add_composite_index().CopyFrom(x.composite_index(i))
-    if (x.has_require_perfect_plan()): self.set_require_perfect_plan(x.require_perfect_plan())
     if (x.has_keys_only()): self.set_keys_only(x.keys_only())
     if (x.has_transaction()): self.mutable_transaction().MergeFrom(x.transaction())
-    if (x.has_compile()): self.set_compile(x.compile())
     if (x.has_failover_ms()): self.set_failover_ms(x.failover_ms())
     if (x.has_strong()): self.set_strong(x.strong())
     for i in range(x.property_name_size()): self.add_property_name(x.property_name(i))
@@ -1150,8 +1161,13 @@ class Query(ProtocolBuffer.ProtocolMessage):
     if (x.has_distinct()): self.set_distinct(x.distinct())
     if (x.has_min_safe_time_seconds()): self.set_min_safe_time_seconds(x.min_safe_time_seconds())
     for i in range(x.safe_replica_name_size()): self.add_safe_replica_name(x.safe_replica_name(i))
-    if (x.has_persist_offset()): self.set_persist_offset(x.persist_offset())
     if (x.has_read_time_us()): self.set_read_time_us(x.read_time_us())
+    if (x.has_read_time_epoch_micros()): self.set_read_time_epoch_micros(x.read_time_epoch_micros())
+    if (x.has_hint()): self.set_hint(x.hint())
+    if (x.has_search_query()): self.set_search_query(x.search_query())
+    if (x.has_require_perfect_plan()): self.set_require_perfect_plan(x.require_perfect_plan())
+    if (x.has_compile()): self.set_compile(x.compile())
+    if (x.has_persist_offset()): self.set_persist_offset(x.persist_offset())
 
   def Equals(self, x):
     if x is self: return 1
@@ -1170,13 +1186,9 @@ class Query(ProtocolBuffer.ProtocolMessage):
     if len(self.filter_) != len(x.filter_): return 0
     for e1, e2 in zip(self.filter_, x.filter_):
       if e1 != e2: return 0
-    if self.has_search_query_ != x.has_search_query_: return 0
-    if self.has_search_query_ and self.search_query_ != x.search_query_: return 0
     if len(self.order_) != len(x.order_): return 0
     for e1, e2 in zip(self.order_, x.order_):
       if e1 != e2: return 0
-    if self.has_hint_ != x.has_hint_: return 0
-    if self.has_hint_ and self.hint_ != x.hint_: return 0
     if self.has_count_ != x.has_count_: return 0
     if self.has_count_ and self.count_ != x.count_: return 0
     if self.has_offset_ != x.has_offset_: return 0
@@ -1190,14 +1202,10 @@ class Query(ProtocolBuffer.ProtocolMessage):
     if len(self.composite_index_) != len(x.composite_index_): return 0
     for e1, e2 in zip(self.composite_index_, x.composite_index_):
       if e1 != e2: return 0
-    if self.has_require_perfect_plan_ != x.has_require_perfect_plan_: return 0
-    if self.has_require_perfect_plan_ and self.require_perfect_plan_ != x.require_perfect_plan_: return 0
     if self.has_keys_only_ != x.has_keys_only_: return 0
     if self.has_keys_only_ and self.keys_only_ != x.keys_only_: return 0
     if self.has_transaction_ != x.has_transaction_: return 0
     if self.has_transaction_ and self.transaction_ != x.transaction_: return 0
-    if self.has_compile_ != x.has_compile_: return 0
-    if self.has_compile_ and self.compile_ != x.compile_: return 0
     if self.has_failover_ms_ != x.has_failover_ms_: return 0
     if self.has_failover_ms_ and self.failover_ms_ != x.failover_ms_: return 0
     if self.has_strong_ != x.has_strong_: return 0
@@ -1215,10 +1223,20 @@ class Query(ProtocolBuffer.ProtocolMessage):
     if len(self.safe_replica_name_) != len(x.safe_replica_name_): return 0
     for e1, e2 in zip(self.safe_replica_name_, x.safe_replica_name_):
       if e1 != e2: return 0
-    if self.has_persist_offset_ != x.has_persist_offset_: return 0
-    if self.has_persist_offset_ and self.persist_offset_ != x.persist_offset_: return 0
     if self.has_read_time_us_ != x.has_read_time_us_: return 0
     if self.has_read_time_us_ and self.read_time_us_ != x.read_time_us_: return 0
+    if self.has_read_time_epoch_micros_ != x.has_read_time_epoch_micros_: return 0
+    if self.has_read_time_epoch_micros_ and self.read_time_epoch_micros_ != x.read_time_epoch_micros_: return 0
+    if self.has_hint_ != x.has_hint_: return 0
+    if self.has_hint_ and self.hint_ != x.hint_: return 0
+    if self.has_search_query_ != x.has_search_query_: return 0
+    if self.has_search_query_ and self.search_query_ != x.search_query_: return 0
+    if self.has_require_perfect_plan_ != x.has_require_perfect_plan_: return 0
+    if self.has_require_perfect_plan_ and self.require_perfect_plan_ != x.require_perfect_plan_: return 0
+    if self.has_compile_ != x.has_compile_: return 0
+    if self.has_compile_ and self.compile_ != x.compile_: return 0
+    if self.has_persist_offset_ != x.has_persist_offset_: return 0
+    if self.has_persist_offset_ and self.persist_offset_ != x.persist_offset_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -1249,10 +1267,8 @@ class Query(ProtocolBuffer.ProtocolMessage):
     if (self.has_shallow_): n += 3
     n += 2 * len(self.filter_)
     for i in range(len(self.filter_)): n += self.filter_[i].ByteSize()
-    if (self.has_search_query_): n += 1 + self.lengthString(len(self.search_query_))
     n += 2 * len(self.order_)
     for i in range(len(self.order_)): n += self.order_[i].ByteSize()
-    if (self.has_hint_): n += 2 + self.lengthVarInt64(self.hint_)
     if (self.has_count_): n += 2 + self.lengthVarInt64(self.count_)
     if (self.has_offset_): n += 1 + self.lengthVarInt64(self.offset_)
     if (self.has_limit_): n += 2 + self.lengthVarInt64(self.limit_)
@@ -1260,10 +1276,8 @@ class Query(ProtocolBuffer.ProtocolMessage):
     if (self.has_end_compiled_cursor_): n += 2 + self.lengthString(self.end_compiled_cursor_.ByteSize())
     n += 2 * len(self.composite_index_)
     for i in range(len(self.composite_index_)): n += self.lengthString(self.composite_index_[i].ByteSize())
-    if (self.has_require_perfect_plan_): n += 3
     if (self.has_keys_only_): n += 3
     if (self.has_transaction_): n += 2 + self.lengthString(self.transaction_.ByteSize())
-    if (self.has_compile_): n += 3
     if (self.has_failover_ms_): n += 2 + self.lengthVarInt64(self.failover_ms_)
     if (self.has_strong_): n += 3
     n += 2 * len(self.property_name_)
@@ -1274,8 +1288,13 @@ class Query(ProtocolBuffer.ProtocolMessage):
     if (self.has_min_safe_time_seconds_): n += 2 + self.lengthVarInt64(self.min_safe_time_seconds_)
     n += 2 * len(self.safe_replica_name_)
     for i in range(len(self.safe_replica_name_)): n += self.lengthString(len(self.safe_replica_name_[i]))
-    if (self.has_persist_offset_): n += 3
     if (self.has_read_time_us_): n += 2 + self.lengthVarInt64(self.read_time_us_)
+    if (self.has_read_time_epoch_micros_): n += 2 + self.lengthVarInt64(self.read_time_epoch_micros_)
+    if (self.has_hint_): n += 2 + self.lengthVarInt64(self.hint_)
+    if (self.has_search_query_): n += 1 + self.lengthString(len(self.search_query_))
+    if (self.has_require_perfect_plan_): n += 3
+    if (self.has_compile_): n += 3
+    if (self.has_persist_offset_): n += 3
     return n + 1
 
   def ByteSizePartial(self):
@@ -1290,10 +1309,8 @@ class Query(ProtocolBuffer.ProtocolMessage):
     if (self.has_shallow_): n += 3
     n += 2 * len(self.filter_)
     for i in range(len(self.filter_)): n += self.filter_[i].ByteSizePartial()
-    if (self.has_search_query_): n += 1 + self.lengthString(len(self.search_query_))
     n += 2 * len(self.order_)
     for i in range(len(self.order_)): n += self.order_[i].ByteSizePartial()
-    if (self.has_hint_): n += 2 + self.lengthVarInt64(self.hint_)
     if (self.has_count_): n += 2 + self.lengthVarInt64(self.count_)
     if (self.has_offset_): n += 1 + self.lengthVarInt64(self.offset_)
     if (self.has_limit_): n += 2 + self.lengthVarInt64(self.limit_)
@@ -1301,10 +1318,8 @@ class Query(ProtocolBuffer.ProtocolMessage):
     if (self.has_end_compiled_cursor_): n += 2 + self.lengthString(self.end_compiled_cursor_.ByteSizePartial())
     n += 2 * len(self.composite_index_)
     for i in range(len(self.composite_index_)): n += self.lengthString(self.composite_index_[i].ByteSizePartial())
-    if (self.has_require_perfect_plan_): n += 3
     if (self.has_keys_only_): n += 3
     if (self.has_transaction_): n += 2 + self.lengthString(self.transaction_.ByteSizePartial())
-    if (self.has_compile_): n += 3
     if (self.has_failover_ms_): n += 2 + self.lengthVarInt64(self.failover_ms_)
     if (self.has_strong_): n += 3
     n += 2 * len(self.property_name_)
@@ -1315,8 +1330,13 @@ class Query(ProtocolBuffer.ProtocolMessage):
     if (self.has_min_safe_time_seconds_): n += 2 + self.lengthVarInt64(self.min_safe_time_seconds_)
     n += 2 * len(self.safe_replica_name_)
     for i in range(len(self.safe_replica_name_)): n += self.lengthString(len(self.safe_replica_name_[i]))
-    if (self.has_persist_offset_): n += 3
     if (self.has_read_time_us_): n += 2 + self.lengthVarInt64(self.read_time_us_)
+    if (self.has_read_time_epoch_micros_): n += 2 + self.lengthVarInt64(self.read_time_epoch_micros_)
+    if (self.has_hint_): n += 2 + self.lengthVarInt64(self.hint_)
+    if (self.has_search_query_): n += 1 + self.lengthString(len(self.search_query_))
+    if (self.has_require_perfect_plan_): n += 3
+    if (self.has_compile_): n += 3
+    if (self.has_persist_offset_): n += 3
     return n
 
   def Clear(self):
@@ -1327,19 +1347,15 @@ class Query(ProtocolBuffer.ProtocolMessage):
     self.clear_ancestor()
     self.clear_shallow()
     self.clear_filter()
-    self.clear_search_query()
     self.clear_order()
-    self.clear_hint()
     self.clear_count()
     self.clear_offset()
     self.clear_limit()
     self.clear_compiled_cursor()
     self.clear_end_compiled_cursor()
     self.clear_composite_index()
-    self.clear_require_perfect_plan()
     self.clear_keys_only()
     self.clear_transaction()
-    self.clear_compile()
     self.clear_failover_ms()
     self.clear_strong()
     self.clear_property_name()
@@ -1347,8 +1363,13 @@ class Query(ProtocolBuffer.ProtocolMessage):
     self.clear_distinct()
     self.clear_min_safe_time_seconds()
     self.clear_safe_replica_name()
-    self.clear_persist_offset()
     self.clear_read_time_us()
+    self.clear_read_time_epoch_micros()
+    self.clear_hint()
+    self.clear_search_query()
+    self.clear_require_perfect_plan()
+    self.clear_compile()
+    self.clear_persist_offset()
 
   def OutputUnchecked(self, out):
     out.putVarInt32(10)
@@ -1444,6 +1465,9 @@ class Query(ProtocolBuffer.ProtocolMessage):
     if (self.has_read_time_us_):
       out.putVarInt32(352)
       out.putVarInt64(self.read_time_us_)
+    if (self.has_read_time_epoch_micros_):
+      out.putVarInt32(360)
+      out.putVarInt64(self.read_time_epoch_micros_)
 
   def OutputPartial(self, out):
     if (self.has_app_):
@@ -1540,6 +1564,9 @@ class Query(ProtocolBuffer.ProtocolMessage):
     if (self.has_read_time_us_):
       out.putVarInt32(352)
       out.putVarInt64(self.read_time_us_)
+    if (self.has_read_time_epoch_micros_):
+      out.putVarInt32(360)
+      out.putVarInt64(self.read_time_epoch_micros_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -1646,6 +1673,9 @@ class Query(ProtocolBuffer.ProtocolMessage):
       if tt == 352:
         self.set_read_time_us(d.getVarInt64())
         continue
+      if tt == 360:
+        self.set_read_time_epoch_micros(d.getVarInt64())
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
@@ -1671,7 +1701,6 @@ class Query(ProtocolBuffer.ProtocolMessage):
       res+=e.__str__(prefix + "  ", printElemNumber)
       res+=prefix+"}\n"
       cnt+=1
-    if self.has_search_query_: res+=prefix+("search_query: %s\n" % self.DebugFormatString(self.search_query_))
     cnt=0
     for e in self.order_:
       elm=""
@@ -1680,7 +1709,6 @@ class Query(ProtocolBuffer.ProtocolMessage):
       res+=e.__str__(prefix + "  ", printElemNumber)
       res+=prefix+"}\n"
       cnt+=1
-    if self.has_hint_: res+=prefix+("hint: %s\n" % self.DebugFormatInt32(self.hint_))
     if self.has_count_: res+=prefix+("count: %s\n" % self.DebugFormatInt32(self.count_))
     if self.has_offset_: res+=prefix+("offset: %s\n" % self.DebugFormatInt32(self.offset_))
     if self.has_limit_: res+=prefix+("limit: %s\n" % self.DebugFormatInt32(self.limit_))
@@ -1700,13 +1728,11 @@ class Query(ProtocolBuffer.ProtocolMessage):
       res+=e.__str__(prefix + "  ", printElemNumber)
       res+=prefix+">\n"
       cnt+=1
-    if self.has_require_perfect_plan_: res+=prefix+("require_perfect_plan: %s\n" % self.DebugFormatBool(self.require_perfect_plan_))
     if self.has_keys_only_: res+=prefix+("keys_only: %s\n" % self.DebugFormatBool(self.keys_only_))
     if self.has_transaction_:
       res+=prefix+"transaction <\n"
       res+=self.transaction_.__str__(prefix + "  ", printElemNumber)
       res+=prefix+">\n"
-    if self.has_compile_: res+=prefix+("compile: %s\n" % self.DebugFormatBool(self.compile_))
     if self.has_failover_ms_: res+=prefix+("failover_ms: %s\n" % self.DebugFormatInt64(self.failover_ms_))
     if self.has_strong_: res+=prefix+("strong: %s\n" % self.DebugFormatBool(self.strong_))
     cnt=0
@@ -1729,8 +1755,13 @@ class Query(ProtocolBuffer.ProtocolMessage):
       if printElemNumber: elm="(%d)" % cnt
       res+=prefix+("safe_replica_name%s: %s\n" % (elm, self.DebugFormatString(e)))
       cnt+=1
-    if self.has_persist_offset_: res+=prefix+("persist_offset: %s\n" % self.DebugFormatBool(self.persist_offset_))
     if self.has_read_time_us_: res+=prefix+("read_time_us: %s\n" % self.DebugFormatInt64(self.read_time_us_))
+    if self.has_read_time_epoch_micros_: res+=prefix+("read_time_epoch_micros: %s\n" % self.DebugFormatInt64(self.read_time_epoch_micros_))
+    if self.has_hint_: res+=prefix+("hint: %s\n" % self.DebugFormatInt32(self.hint_))
+    if self.has_search_query_: res+=prefix+("search_query: %s\n" % self.DebugFormatString(self.search_query_))
+    if self.has_require_perfect_plan_: res+=prefix+("require_perfect_plan: %s\n" % self.DebugFormatBool(self.require_perfect_plan_))
+    if self.has_compile_: res+=prefix+("compile: %s\n" % self.DebugFormatBool(self.compile_))
+    if self.has_persist_offset_: res+=prefix+("persist_offset: %s\n" % self.DebugFormatBool(self.persist_offset_))
     return res
 
 
@@ -1747,21 +1778,17 @@ class Query(ProtocolBuffer.ProtocolMessage):
   kFilterop = 6
   kFilterproperty = 14
   kFiltergeo_region = 40
-  ksearch_query = 8
   kOrderGroup = 9
   kOrderproperty = 10
   kOrderdirection = 11
-  khint = 18
   kcount = 23
   koffset = 12
   klimit = 16
   kcompiled_cursor = 30
   kend_compiled_cursor = 31
   kcomposite_index = 19
-  krequire_perfect_plan = 20
   kkeys_only = 21
   ktransaction = 22
-  kcompile = 25
   kfailover_ms = 26
   kstrong = 32
   kproperty_name = 33
@@ -1769,8 +1796,13 @@ class Query(ProtocolBuffer.ProtocolMessage):
   kdistinct = 24
   kmin_safe_time_seconds = 35
   ksafe_replica_name = 36
-  kpersist_offset = 37
   kread_time_us = 44
+  kread_time_epoch_micros = 45
+  khint = 18
+  ksearch_query = 8
+  krequire_perfect_plan = 20
+  kcompile = 25
+  kpersist_offset = 37
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",
@@ -1808,7 +1840,8 @@ class Query(ProtocolBuffer.ProtocolMessage):
     42: "database_id",
     43: "shallow",
     44: "read_time_us",
-  }, 44)
+    45: "read_time_epoch_micros",
+  }, 45)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -1846,7 +1879,8 @@ class Query(ProtocolBuffer.ProtocolMessage):
     42: ProtocolBuffer.Encoder.STRING,
     43: ProtocolBuffer.Encoder.NUMERIC,
     44: ProtocolBuffer.Encoder.NUMERIC,
-  }, 44, ProtocolBuffer.Encoder.MAX_TYPE)
+    45: ProtocolBuffer.Encoder.NUMERIC,
+  }, 45, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
@@ -4876,6 +4910,8 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
   strong_ = 0
   has_allow_deferred_ = 0
   allow_deferred_ = 0
+  has_read_time_epoch_micros_ = 0
+  read_time_epoch_micros_ = 0
 
   def __init__(self, contents=None):
     self.key_ = []
@@ -4956,6 +4992,19 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
 
   def has_allow_deferred(self): return self.has_allow_deferred_
 
+  def read_time_epoch_micros(self): return self.read_time_epoch_micros_
+
+  def set_read_time_epoch_micros(self, x):
+    self.has_read_time_epoch_micros_ = 1
+    self.read_time_epoch_micros_ = x
+
+  def clear_read_time_epoch_micros(self):
+    if self.has_read_time_epoch_micros_:
+      self.has_read_time_epoch_micros_ = 0
+      self.read_time_epoch_micros_ = 0
+
+  def has_read_time_epoch_micros(self): return self.has_read_time_epoch_micros_
+
 
   def MergeFrom(self, x):
     assert x is not self
@@ -4964,6 +5013,7 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
     if (x.has_failover_ms()): self.set_failover_ms(x.failover_ms())
     if (x.has_strong()): self.set_strong(x.strong())
     if (x.has_allow_deferred()): self.set_allow_deferred(x.allow_deferred())
+    if (x.has_read_time_epoch_micros()): self.set_read_time_epoch_micros(x.read_time_epoch_micros())
 
   def Equals(self, x):
     if x is self: return 1
@@ -4978,6 +5028,8 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
     if self.has_strong_ and self.strong_ != x.strong_: return 0
     if self.has_allow_deferred_ != x.has_allow_deferred_: return 0
     if self.has_allow_deferred_ and self.allow_deferred_ != x.allow_deferred_: return 0
+    if self.has_read_time_epoch_micros_ != x.has_read_time_epoch_micros_: return 0
+    if self.has_read_time_epoch_micros_ and self.read_time_epoch_micros_ != x.read_time_epoch_micros_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -4995,6 +5047,7 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
     if (self.has_failover_ms_): n += 1 + self.lengthVarInt64(self.failover_ms_)
     if (self.has_strong_): n += 2
     if (self.has_allow_deferred_): n += 2
+    if (self.has_read_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.read_time_epoch_micros_)
     return n
 
   def ByteSizePartial(self):
@@ -5005,6 +5058,7 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
     if (self.has_failover_ms_): n += 1 + self.lengthVarInt64(self.failover_ms_)
     if (self.has_strong_): n += 2
     if (self.has_allow_deferred_): n += 2
+    if (self.has_read_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.read_time_epoch_micros_)
     return n
 
   def Clear(self):
@@ -5013,6 +5067,7 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
     self.clear_failover_ms()
     self.clear_strong()
     self.clear_allow_deferred()
+    self.clear_read_time_epoch_micros()
 
   def OutputUnchecked(self, out):
     for i in range(len(self.key_)):
@@ -5032,6 +5087,9 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
     if (self.has_allow_deferred_):
       out.putVarInt32(40)
       out.putBoolean(self.allow_deferred_)
+    if (self.has_read_time_epoch_micros_):
+      out.putVarInt32(48)
+      out.putVarInt64(self.read_time_epoch_micros_)
 
   def OutputPartial(self, out):
     for i in range(len(self.key_)):
@@ -5051,6 +5109,9 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
     if (self.has_allow_deferred_):
       out.putVarInt32(40)
       out.putBoolean(self.allow_deferred_)
+    if (self.has_read_time_epoch_micros_):
+      out.putVarInt32(48)
+      out.putVarInt64(self.read_time_epoch_micros_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -5076,6 +5137,9 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
       if tt == 40:
         self.set_allow_deferred(d.getBoolean())
         continue
+      if tt == 48:
+        self.set_read_time_epoch_micros(d.getVarInt64())
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
@@ -5099,6 +5163,7 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
     if self.has_failover_ms_: res+=prefix+("failover_ms: %s\n" % self.DebugFormatInt64(self.failover_ms_))
     if self.has_strong_: res+=prefix+("strong: %s\n" % self.DebugFormatBool(self.strong_))
     if self.has_allow_deferred_: res+=prefix+("allow_deferred: %s\n" % self.DebugFormatBool(self.allow_deferred_))
+    if self.has_read_time_epoch_micros_: res+=prefix+("read_time_epoch_micros: %s\n" % self.DebugFormatInt64(self.read_time_epoch_micros_))
     return res
 
 
@@ -5110,6 +5175,7 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
   kfailover_ms = 3
   kstrong = 4
   kallow_deferred = 5
+  kread_time_epoch_micros = 6
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",
@@ -5118,7 +5184,8 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
     3: "failover_ms",
     4: "strong",
     5: "allow_deferred",
-  }, 5)
+    6: "read_time_epoch_micros",
+  }, 6)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -5127,7 +5194,8 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
     3: ProtocolBuffer.Encoder.NUMERIC,
     4: ProtocolBuffer.Encoder.NUMERIC,
     5: ProtocolBuffer.Encoder.NUMERIC,
-  }, 5, ProtocolBuffer.Encoder.MAX_TYPE)
+    6: ProtocolBuffer.Encoder.NUMERIC,
+  }, 6, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
@@ -5305,6 +5373,8 @@ class GetResponse_Entity(ProtocolBuffer.ProtocolMessage):
 class GetResponse(ProtocolBuffer.ProtocolMessage):
   has_in_order_ = 0
   in_order_ = 1
+  has_read_time_epoch_micros_ = 0
+  read_time_epoch_micros_ = 0
 
   def __init__(self, contents=None):
     self.entity_ = []
@@ -5356,12 +5426,26 @@ class GetResponse(ProtocolBuffer.ProtocolMessage):
 
   def has_in_order(self): return self.has_in_order_
 
+  def read_time_epoch_micros(self): return self.read_time_epoch_micros_
+
+  def set_read_time_epoch_micros(self, x):
+    self.has_read_time_epoch_micros_ = 1
+    self.read_time_epoch_micros_ = x
+
+  def clear_read_time_epoch_micros(self):
+    if self.has_read_time_epoch_micros_:
+      self.has_read_time_epoch_micros_ = 0
+      self.read_time_epoch_micros_ = 0
+
+  def has_read_time_epoch_micros(self): return self.has_read_time_epoch_micros_
+
 
   def MergeFrom(self, x):
     assert x is not self
     for i in range(x.entity_size()): self.add_entity().CopyFrom(x.entity(i))
     for i in range(x.deferred_size()): self.add_deferred().CopyFrom(x.deferred(i))
     if (x.has_in_order()): self.set_in_order(x.in_order())
+    if (x.has_read_time_epoch_micros()): self.set_read_time_epoch_micros(x.read_time_epoch_micros())
 
   def Equals(self, x):
     if x is self: return 1
@@ -5373,6 +5457,8 @@ class GetResponse(ProtocolBuffer.ProtocolMessage):
       if e1 != e2: return 0
     if self.has_in_order_ != x.has_in_order_: return 0
     if self.has_in_order_ and self.in_order_ != x.in_order_: return 0
+    if self.has_read_time_epoch_micros_ != x.has_read_time_epoch_micros_: return 0
+    if self.has_read_time_epoch_micros_ and self.read_time_epoch_micros_ != x.read_time_epoch_micros_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -5390,6 +5476,7 @@ class GetResponse(ProtocolBuffer.ProtocolMessage):
     n += 1 * len(self.deferred_)
     for i in range(len(self.deferred_)): n += self.lengthString(self.deferred_[i].ByteSize())
     if (self.has_in_order_): n += 2
+    if (self.has_read_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.read_time_epoch_micros_)
     return n
 
   def ByteSizePartial(self):
@@ -5399,12 +5486,14 @@ class GetResponse(ProtocolBuffer.ProtocolMessage):
     n += 1 * len(self.deferred_)
     for i in range(len(self.deferred_)): n += self.lengthString(self.deferred_[i].ByteSizePartial())
     if (self.has_in_order_): n += 2
+    if (self.has_read_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.read_time_epoch_micros_)
     return n
 
   def Clear(self):
     self.clear_entity()
     self.clear_deferred()
     self.clear_in_order()
+    self.clear_read_time_epoch_micros()
 
   def OutputUnchecked(self, out):
     for i in range(len(self.entity_)):
@@ -5418,6 +5507,9 @@ class GetResponse(ProtocolBuffer.ProtocolMessage):
     if (self.has_in_order_):
       out.putVarInt32(48)
       out.putBoolean(self.in_order_)
+    if (self.has_read_time_epoch_micros_):
+      out.putVarInt32(56)
+      out.putVarInt64(self.read_time_epoch_micros_)
 
   def OutputPartial(self, out):
     for i in range(len(self.entity_)):
@@ -5431,6 +5523,9 @@ class GetResponse(ProtocolBuffer.ProtocolMessage):
     if (self.has_in_order_):
       out.putVarInt32(48)
       out.putBoolean(self.in_order_)
+    if (self.has_read_time_epoch_micros_):
+      out.putVarInt32(56)
+      out.putVarInt64(self.read_time_epoch_micros_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -5446,6 +5541,9 @@ class GetResponse(ProtocolBuffer.ProtocolMessage):
         continue
       if tt == 48:
         self.set_in_order(d.getBoolean())
+        continue
+      if tt == 56:
+        self.set_read_time_epoch_micros(d.getVarInt64())
         continue
 
 
@@ -5472,6 +5570,7 @@ class GetResponse(ProtocolBuffer.ProtocolMessage):
       res+=prefix+">\n"
       cnt+=1
     if self.has_in_order_: res+=prefix+("in_order: %s\n" % self.DebugFormatBool(self.in_order_))
+    if self.has_read_time_epoch_micros_: res+=prefix+("read_time_epoch_micros: %s\n" % self.DebugFormatInt64(self.read_time_epoch_micros_))
     return res
 
 
@@ -5484,6 +5583,7 @@ class GetResponse(ProtocolBuffer.ProtocolMessage):
   kEntityversion = 3
   kdeferred = 5
   kin_order = 6
+  kread_time_epoch_micros = 7
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",
@@ -5493,7 +5593,8 @@ class GetResponse(ProtocolBuffer.ProtocolMessage):
     4: "key",
     5: "deferred",
     6: "in_order",
-  }, 6)
+    7: "read_time_epoch_micros",
+  }, 7)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -5503,7 +5604,8 @@ class GetResponse(ProtocolBuffer.ProtocolMessage):
     4: ProtocolBuffer.Encoder.STRING,
     5: ProtocolBuffer.Encoder.STRING,
     6: ProtocolBuffer.Encoder.NUMERIC,
-  }, 6, ProtocolBuffer.Encoder.MAX_TYPE)
+    7: ProtocolBuffer.Encoder.NUMERIC,
+  }, 7, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
@@ -7317,6 +7419,8 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
   compiled_query_ = None
   has_compiled_cursor_ = 0
   compiled_cursor_ = None
+  has_read_time_epoch_micros_ = 0
+  read_time_epoch_micros_ = 0
   has_skipped_results_compiled_cursor_ = 0
   skipped_results_compiled_cursor_ = None
 
@@ -7497,6 +7601,19 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
   def clear_version(self):
     self.version_ = []
 
+  def read_time_epoch_micros(self): return self.read_time_epoch_micros_
+
+  def set_read_time_epoch_micros(self, x):
+    self.has_read_time_epoch_micros_ = 1
+    self.read_time_epoch_micros_ = x
+
+  def clear_read_time_epoch_micros(self):
+    if self.has_read_time_epoch_micros_:
+      self.has_read_time_epoch_micros_ = 0
+      self.read_time_epoch_micros_ = 0
+
+  def has_read_time_epoch_micros(self): return self.has_read_time_epoch_micros_
+
   def result_compiled_cursor_size(self): return len(self.result_compiled_cursor_)
   def result_compiled_cursor_list(self): return self.result_compiled_cursor_
 
@@ -7546,6 +7663,7 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     if (x.has_compiled_cursor()): self.mutable_compiled_cursor().MergeFrom(x.compiled_cursor())
     for i in range(x.index_size()): self.add_index().CopyFrom(x.index(i))
     for i in range(x.version_size()): self.add_version(x.version(i))
+    if (x.has_read_time_epoch_micros()): self.set_read_time_epoch_micros(x.read_time_epoch_micros())
     for i in range(x.result_compiled_cursor_size()): self.add_result_compiled_cursor().CopyFrom(x.result_compiled_cursor(i))
     if (x.has_skipped_results_compiled_cursor()): self.mutable_skipped_results_compiled_cursor().MergeFrom(x.skipped_results_compiled_cursor())
 
@@ -7576,6 +7694,8 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     if len(self.version_) != len(x.version_): return 0
     for e1, e2 in zip(self.version_, x.version_):
       if e1 != e2: return 0
+    if self.has_read_time_epoch_micros_ != x.has_read_time_epoch_micros_: return 0
+    if self.has_read_time_epoch_micros_ and self.read_time_epoch_micros_ != x.read_time_epoch_micros_: return 0
     if len(self.result_compiled_cursor_) != len(x.result_compiled_cursor_): return 0
     for e1, e2 in zip(self.result_compiled_cursor_, x.result_compiled_cursor_):
       if e1 != e2: return 0
@@ -7616,6 +7736,7 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     for i in range(len(self.index_)): n += self.lengthString(self.index_[i].ByteSize())
     n += 1 * len(self.version_)
     for i in range(len(self.version_)): n += self.lengthVarInt64(self.version_[i])
+    if (self.has_read_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.read_time_epoch_micros_)
     n += 1 * len(self.result_compiled_cursor_)
     for i in range(len(self.result_compiled_cursor_)): n += self.lengthString(self.result_compiled_cursor_[i].ByteSize())
     if (self.has_skipped_results_compiled_cursor_): n += 1 + self.lengthString(self.skipped_results_compiled_cursor_.ByteSize())
@@ -7638,6 +7759,7 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     for i in range(len(self.index_)): n += self.lengthString(self.index_[i].ByteSizePartial())
     n += 1 * len(self.version_)
     for i in range(len(self.version_)): n += self.lengthVarInt64(self.version_[i])
+    if (self.has_read_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.read_time_epoch_micros_)
     n += 1 * len(self.result_compiled_cursor_)
     for i in range(len(self.result_compiled_cursor_)): n += self.lengthString(self.result_compiled_cursor_[i].ByteSizePartial())
     if (self.has_skipped_results_compiled_cursor_): n += 1 + self.lengthString(self.skipped_results_compiled_cursor_.ByteSizePartial())
@@ -7655,6 +7777,7 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     self.clear_compiled_cursor()
     self.clear_index()
     self.clear_version()
+    self.clear_read_time_epoch_micros()
     self.clear_result_compiled_cursor()
     self.clear_skipped_results_compiled_cursor()
 
@@ -7704,6 +7827,9 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
       out.putVarInt32(106)
       out.putVarInt32(self.skipped_results_compiled_cursor_.ByteSize())
       self.skipped_results_compiled_cursor_.OutputUnchecked(out)
+    if (self.has_read_time_epoch_micros_):
+      out.putVarInt32(112)
+      out.putVarInt64(self.read_time_epoch_micros_)
 
   def OutputPartial(self, out):
     if (self.has_cursor_):
@@ -7752,6 +7878,9 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
       out.putVarInt32(106)
       out.putVarInt32(self.skipped_results_compiled_cursor_.ByteSizePartial())
       self.skipped_results_compiled_cursor_.OutputPartial(out)
+    if (self.has_read_time_epoch_micros_):
+      out.putVarInt32(112)
+      out.putVarInt64(self.read_time_epoch_micros_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -7816,6 +7945,9 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
         d.skip(length)
         self.mutable_skipped_results_compiled_cursor().TryMerge(tmp)
         continue
+      if tt == 112:
+        self.set_read_time_epoch_micros(d.getVarInt64())
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
@@ -7863,6 +7995,7 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
       if printElemNumber: elm="(%d)" % cnt
       res+=prefix+("version%s: %s\n" % (elm, self.DebugFormatInt64(e)))
       cnt+=1
+    if self.has_read_time_epoch_micros_: res+=prefix+("read_time_epoch_micros: %s\n" % self.DebugFormatInt64(self.read_time_epoch_micros_))
     cnt=0
     for e in self.result_compiled_cursor_:
       elm=""
@@ -7892,6 +8025,7 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
   kcompiled_cursor = 6
   kindex = 8
   kversion = 11
+  kread_time_epoch_micros = 14
   kresult_compiled_cursor = 12
   kskipped_results_compiled_cursor = 13
 
@@ -7910,7 +8044,8 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     11: "version",
     12: "result_compiled_cursor",
     13: "skipped_results_compiled_cursor",
-  }, 13)
+    14: "read_time_epoch_micros",
+  }, 14)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -7927,7 +8062,8 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     11: ProtocolBuffer.Encoder.NUMERIC,
     12: ProtocolBuffer.Encoder.STRING,
     13: ProtocolBuffer.Encoder.STRING,
-  }, 13, ProtocolBuffer.Encoder.MAX_TYPE)
+    14: ProtocolBuffer.Encoder.NUMERIC,
+  }, 14, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""

@@ -31,7 +31,7 @@ import select
 import struct
 import sys
 import threading
-import six
+from google.appengine._internal import six
 
 from google.appengine.tools.devappserver2 import watcher_common
 

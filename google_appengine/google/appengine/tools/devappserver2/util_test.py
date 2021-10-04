@@ -29,7 +29,7 @@ import wsgiref
 import google
 import mock
 import mox
-import six
+from google.appengine._internal import six
 
 from google.appengine.tools import sdk_update_checker
 from google.appengine.tools.devappserver2 import util

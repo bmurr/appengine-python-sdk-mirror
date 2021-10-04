@@ -1195,6 +1195,27 @@ namespace google\appengine_datastore_v3 {
     public function hasReadTimeUs() {
       return isset($this->read_time_us);
     }
+    public function getReadTimeEpochMicros() {
+      if (!isset($this->read_time_epoch_micros)) {
+        return "0";
+      }
+      return $this->read_time_epoch_micros;
+    }
+    public function setReadTimeEpochMicros($val) {
+      if (is_double($val)) {
+        $this->read_time_epoch_micros = sprintf('%0.0F', $val);
+      } else {
+        $this->read_time_epoch_micros = $val;
+      }
+      return $this;
+    }
+    public function clearReadTimeEpochMicros() {
+      unset($this->read_time_epoch_micros);
+      return $this;
+    }
+    public function hasReadTimeEpochMicros() {
+      return isset($this->read_time_epoch_micros);
+    }
     public function clear() {
       $this->clearApp();
       $this->clearKind();
@@ -1225,6 +1246,7 @@ namespace google\appengine_datastore_v3 {
       $this->clearDatabaseId();
       $this->clearShallow();
       $this->clearReadTimeUs();
+      $this->clearReadTimeEpochMicros();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -1342,6 +1364,10 @@ namespace google\appengine_datastore_v3 {
       if (isset($this->read_time_us)) {
         $res += 2;
         $res += $this->lengthVarInt64($this->read_time_us);
+      }
+      if (isset($this->read_time_epoch_micros)) {
+        $res += 2;
+        $res += $this->lengthVarInt64($this->read_time_epoch_micros);
       }
       return $res;
     }
@@ -1475,6 +1501,10 @@ namespace google\appengine_datastore_v3 {
         $out->putVarInt32(352);
         $out->putVarInt64($this->read_time_us);
       }
+      if (isset($this->read_time_epoch_micros)) {
+        $out->putVarInt32(360);
+        $out->putVarInt64($this->read_time_epoch_micros);
+      }
     }
     public function tryMerge($d) {
       while($d->avail() > 0) {
@@ -1598,6 +1628,9 @@ namespace google\appengine_datastore_v3 {
           case 352:
             $this->setReadTimeUs($d->getVarInt64());
             break;
+          case 360:
+            $this->setReadTimeEpochMicros($d->getVarInt64());
+            break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
             break;
@@ -1712,6 +1745,9 @@ namespace google\appengine_datastore_v3 {
       if ($x->hasReadTimeUs()) {
         $this->setReadTimeUs($x->getReadTimeUs());
       }
+      if ($x->hasReadTimeEpochMicros()) {
+        $this->setReadTimeEpochMicros($x->getReadTimeEpochMicros());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -1785,6 +1821,8 @@ namespace google\appengine_datastore_v3 {
       if (isset($this->shallow) && $this->shallow !== $x->shallow) return false;
       if (isset($this->read_time_us) !== isset($x->read_time_us)) return false;
       if (isset($this->read_time_us) && !$this->integerEquals($this->read_time_us, $x->read_time_us)) return false;
+      if (isset($this->read_time_epoch_micros) !== isset($x->read_time_epoch_micros)) return false;
+      if (isset($this->read_time_epoch_micros) && !$this->integerEquals($this->read_time_epoch_micros, $x->read_time_epoch_micros)) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -1875,6 +1913,9 @@ namespace google\appengine_datastore_v3 {
       }
       if (isset($this->read_time_us)) {
         $res .= $prefix . "read_time_us: " . $this->debugFormatInt64($this->read_time_us) . "\n";
+      }
+      if (isset($this->read_time_epoch_micros)) {
+        $res .= $prefix . "read_time_epoch_micros: " . $this->debugFormatInt64($this->read_time_epoch_micros) . "\n";
       }
       return $res;
     }
@@ -4871,12 +4912,34 @@ namespace google\appengine_datastore_v3 {
     public function hasAllowDeferred() {
       return isset($this->allow_deferred);
     }
+    public function getReadTimeEpochMicros() {
+      if (!isset($this->read_time_epoch_micros)) {
+        return "0";
+      }
+      return $this->read_time_epoch_micros;
+    }
+    public function setReadTimeEpochMicros($val) {
+      if (is_double($val)) {
+        $this->read_time_epoch_micros = sprintf('%0.0F', $val);
+      } else {
+        $this->read_time_epoch_micros = $val;
+      }
+      return $this;
+    }
+    public function clearReadTimeEpochMicros() {
+      unset($this->read_time_epoch_micros);
+      return $this;
+    }
+    public function hasReadTimeEpochMicros() {
+      return isset($this->read_time_epoch_micros);
+    }
     public function clear() {
       $this->clearKey();
       $this->clearTransaction();
       $this->clearFailoverMs();
       $this->clearStrong();
       $this->clearAllowDeferred();
+      $this->clearReadTimeEpochMicros();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -4898,6 +4961,10 @@ namespace google\appengine_datastore_v3 {
       }
       if (isset($this->allow_deferred)) {
         $res += 2;
+      }
+      if (isset($this->read_time_epoch_micros)) {
+        $res += 1;
+        $res += $this->lengthVarInt64($this->read_time_epoch_micros);
       }
       return $res;
     }
@@ -4925,6 +4992,10 @@ namespace google\appengine_datastore_v3 {
         $out->putVarInt32(40);
         $out->putBoolean($this->allow_deferred);
       }
+      if (isset($this->read_time_epoch_micros)) {
+        $out->putVarInt32(48);
+        $out->putVarInt64($this->read_time_epoch_micros);
+      }
     }
     public function tryMerge($d) {
       while($d->avail() > 0) {
@@ -4950,6 +5021,9 @@ namespace google\appengine_datastore_v3 {
             break;
           case 40:
             $this->setAllowDeferred($d->getBoolean());
+            break;
+          case 48:
+            $this->setReadTimeEpochMicros($d->getVarInt64());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -4983,6 +5057,9 @@ namespace google\appengine_datastore_v3 {
       if ($x->hasAllowDeferred()) {
         $this->setAllowDeferred($x->getAllowDeferred());
       }
+      if ($x->hasReadTimeEpochMicros()) {
+        $this->setReadTimeEpochMicros($x->getReadTimeEpochMicros());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -4998,6 +5075,8 @@ namespace google\appengine_datastore_v3 {
       if (isset($this->strong) && $this->strong !== $x->strong) return false;
       if (isset($this->allow_deferred) !== isset($x->allow_deferred)) return false;
       if (isset($this->allow_deferred) && $this->allow_deferred !== $x->allow_deferred) return false;
+      if (isset($this->read_time_epoch_micros) !== isset($x->read_time_epoch_micros)) return false;
+      if (isset($this->read_time_epoch_micros) && !$this->integerEquals($this->read_time_epoch_micros, $x->read_time_epoch_micros)) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -5016,6 +5095,9 @@ namespace google\appengine_datastore_v3 {
       }
       if (isset($this->allow_deferred)) {
         $res .= $prefix . "allow_deferred: " . $this->debugFormatBool($this->allow_deferred) . "\n";
+      }
+      if (isset($this->read_time_epoch_micros)) {
+        $res .= $prefix . "read_time_epoch_micros: " . $this->debugFormatInt64($this->read_time_epoch_micros) . "\n";
       }
       return $res;
     }
@@ -5278,10 +5360,32 @@ namespace google\appengine_datastore_v3 {
     public function hasInOrder() {
       return isset($this->in_order);
     }
+    public function getReadTimeEpochMicros() {
+      if (!isset($this->read_time_epoch_micros)) {
+        return "0";
+      }
+      return $this->read_time_epoch_micros;
+    }
+    public function setReadTimeEpochMicros($val) {
+      if (is_double($val)) {
+        $this->read_time_epoch_micros = sprintf('%0.0F', $val);
+      } else {
+        $this->read_time_epoch_micros = $val;
+      }
+      return $this;
+    }
+    public function clearReadTimeEpochMicros() {
+      unset($this->read_time_epoch_micros);
+      return $this;
+    }
+    public function hasReadTimeEpochMicros() {
+      return isset($this->read_time_epoch_micros);
+    }
     public function clear() {
       $this->clearEntity();
       $this->clearDeferred();
       $this->clearInOrder();
+      $this->clearReadTimeEpochMicros();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -5297,6 +5401,10 @@ namespace google\appengine_datastore_v3 {
       }
       if (isset($this->in_order)) {
         $res += 2;
+      }
+      if (isset($this->read_time_epoch_micros)) {
+        $res += 1;
+        $res += $this->lengthVarInt64($this->read_time_epoch_micros);
       }
       return $res;
     }
@@ -5317,6 +5425,10 @@ namespace google\appengine_datastore_v3 {
         $out->putVarInt32(48);
         $out->putBoolean($this->in_order);
       }
+      if (isset($this->read_time_epoch_micros)) {
+        $out->putVarInt32(56);
+        $out->putVarInt64($this->read_time_epoch_micros);
+      }
     }
     public function tryMerge($d) {
       while($d->avail() > 0) {
@@ -5333,6 +5445,9 @@ namespace google\appengine_datastore_v3 {
             break;
           case 48:
             $this->setInOrder($d->getBoolean());
+            break;
+          case 56:
+            $this->setReadTimeEpochMicros($d->getVarInt64());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -5362,6 +5477,9 @@ namespace google\appengine_datastore_v3 {
       if ($x->hasInOrder()) {
         $this->setInOrder($x->getInOrder());
       }
+      if ($x->hasReadTimeEpochMicros()) {
+        $this->setReadTimeEpochMicros($x->getReadTimeEpochMicros());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -5375,6 +5493,8 @@ namespace google\appengine_datastore_v3 {
       }
       if (isset($this->in_order) !== isset($x->in_order)) return false;
       if (isset($this->in_order) && $this->in_order !== $x->in_order) return false;
+      if (isset($this->read_time_epoch_micros) !== isset($x->read_time_epoch_micros)) return false;
+      if (isset($this->read_time_epoch_micros) && !$this->integerEquals($this->read_time_epoch_micros, $x->read_time_epoch_micros)) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -5387,6 +5507,9 @@ namespace google\appengine_datastore_v3 {
       }
       if (isset($this->in_order)) {
         $res .= $prefix . "in_order: " . $this->debugFormatBool($this->in_order) . "\n";
+      }
+      if (isset($this->read_time_epoch_micros)) {
+        $res .= $prefix . "read_time_epoch_micros: " . $this->debugFormatInt64($this->read_time_epoch_micros) . "\n";
       }
       return $res;
     }
@@ -7463,6 +7586,27 @@ namespace google\appengine_datastore_v3 {
     public function hasSkippedResultsCompiledCursor() {
       return isset($this->skipped_results_compiled_cursor);
     }
+    public function getReadTimeEpochMicros() {
+      if (!isset($this->read_time_epoch_micros)) {
+        return "0";
+      }
+      return $this->read_time_epoch_micros;
+    }
+    public function setReadTimeEpochMicros($val) {
+      if (is_double($val)) {
+        $this->read_time_epoch_micros = sprintf('%0.0F', $val);
+      } else {
+        $this->read_time_epoch_micros = $val;
+      }
+      return $this;
+    }
+    public function clearReadTimeEpochMicros() {
+      unset($this->read_time_epoch_micros);
+      return $this;
+    }
+    public function hasReadTimeEpochMicros() {
+      return isset($this->read_time_epoch_micros);
+    }
     public function clear() {
       $this->clearCursor();
       $this->clearResult();
@@ -7477,6 +7621,7 @@ namespace google\appengine_datastore_v3 {
       $this->clearVersion();
       $this->clearResultCompiledCursor();
       $this->clearSkippedResultsCompiledCursor();
+      $this->clearReadTimeEpochMicros();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -7531,6 +7676,10 @@ namespace google\appengine_datastore_v3 {
       if (isset($this->skipped_results_compiled_cursor)) {
         $res += 1;
         $res += $this->lengthString($this->skipped_results_compiled_cursor->byteSizePartial());
+      }
+      if (isset($this->read_time_epoch_micros)) {
+        $res += 1;
+        $res += $this->lengthVarInt64($this->read_time_epoch_micros);
       }
       return $res;
     }
@@ -7598,6 +7747,10 @@ namespace google\appengine_datastore_v3 {
         $out->putVarInt32($this->skipped_results_compiled_cursor->byteSizePartial());
         $this->skipped_results_compiled_cursor->outputPartial($out);
       }
+      if (isset($this->read_time_epoch_micros)) {
+        $out->putVarInt32(112);
+        $out->putVarInt64($this->read_time_epoch_micros);
+      }
     }
     public function tryMerge($d) {
       while($d->avail() > 0) {
@@ -7662,6 +7815,9 @@ namespace google\appengine_datastore_v3 {
             $tmp = new \google\net\Decoder($d->buffer(), $d->pos(), $d->pos() + $length);
             $d->skip($length);
             $this->mutableSkippedResultsCompiledCursor()->tryMerge($tmp);
+            break;
+          case 112:
+            $this->setReadTimeEpochMicros($d->getVarInt64());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -7729,6 +7885,9 @@ namespace google\appengine_datastore_v3 {
       if ($x->hasSkippedResultsCompiledCursor()) {
         $this->mutableSkippedResultsCompiledCursor()->mergeFrom($x->getSkippedResultsCompiledCursor());
       }
+      if ($x->hasReadTimeEpochMicros()) {
+        $this->setReadTimeEpochMicros($x->getReadTimeEpochMicros());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -7766,6 +7925,8 @@ namespace google\appengine_datastore_v3 {
       }
       if (isset($this->skipped_results_compiled_cursor) !== isset($x->skipped_results_compiled_cursor)) return false;
       if (isset($this->skipped_results_compiled_cursor) && !$this->skipped_results_compiled_cursor->equals($x->skipped_results_compiled_cursor)) return false;
+      if (isset($this->read_time_epoch_micros) !== isset($x->read_time_epoch_micros)) return false;
+      if (isset($this->read_time_epoch_micros) && !$this->integerEquals($this->read_time_epoch_micros, $x->read_time_epoch_micros)) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -7808,6 +7969,9 @@ namespace google\appengine_datastore_v3 {
       }
       if (isset($this->skipped_results_compiled_cursor)) {
         $res .= $prefix . "skipped_results_compiled_cursor <\n" . $this->skipped_results_compiled_cursor->shortDebugString($prefix . "  ") . $prefix . ">\n";
+      }
+      if (isset($this->read_time_epoch_micros)) {
+        $res .= $prefix . "read_time_epoch_micros: " . $this->debugFormatInt64($this->read_time_epoch_micros) . "\n";
       }
       return $res;
     }

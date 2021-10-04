@@ -16,6 +16,33 @@
 #
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 """Code for encoding protocol message primitives.
 
 Contains the logic for encoding every logical protocol field type

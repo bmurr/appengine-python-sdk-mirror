@@ -30,7 +30,7 @@ import unittest
 import google
 
 import mox
-import six
+from google.appengine._internal import six
 
 from google.appengine.tools.devappserver2.endpoints import api_config_manager
 from google.appengine.tools.devappserver2.endpoints import discovery_api_proxy

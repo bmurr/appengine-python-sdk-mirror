@@ -25,7 +25,7 @@ import subprocess
 import sys
 import tempfile
 import threading
-import six
+from google.appengine._internal import six
 
 # Subprocess creation is not threadsafe in Python. See
 # http://bugs.python.org/issue1731717.

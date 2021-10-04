@@ -25,7 +25,7 @@
 import json
 import unittest
 
-import six
+from google.appengine._internal import six
 import six.moves.urllib.parse
 
 from google.appengine.tools.devappserver2.endpoints import api_request

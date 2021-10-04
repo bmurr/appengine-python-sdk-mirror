@@ -29,7 +29,7 @@ that conversion and some validation.
 
 
 
-import six
+from google.appengine._internal import six
 
 from google.appengine.tools.devappserver2.endpoints import errors
 

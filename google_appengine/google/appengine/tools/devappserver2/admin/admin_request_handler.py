@@ -24,7 +24,7 @@ import string
 
 import google
 import jinja2
-import six
+from google.appengine._internal import six
 import six.moves.urllib
 import webapp2
 

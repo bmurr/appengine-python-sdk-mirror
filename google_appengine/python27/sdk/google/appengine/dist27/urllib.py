@@ -22,6 +22,9 @@ used to query various info about the object, if available.
 (mimetools.Message objects are queried with the getheader() method.)
 """
 
+# pylint: disable=unused-import
+# pylint: disable=bad-indentation
+
 import string
 import socket
 import os
@@ -134,7 +137,7 @@ class URLopener:
         self.key_file = x509.get('key_file')
         self.cert_file = x509.get('cert_file')
         self.context = context
-        self.addheaders = [('User-Agent', self.version)]
+        self.addheaders = [('User-Agent', self.version), ('Accept', '*/*')]
         self.__tempfiles = []
         self.__unlink = os.unlink # See cleanup()
         self.tempcache = None
@@ -199,7 +202,9 @@ class URLopener:
         name = 'open_' + urltype
         self.type = urltype
         name = name.replace('-', '_')
-        if not hasattr(self, name):
+
+        # bpo-35907: disallow the file reading with the type not allowed
+        if not hasattr(self, name) or name == 'open_local_file':
             if proxy:
                 return self.open_unknown_proxy(proxy, fullurl, data)
             else:
@@ -925,7 +930,13 @@ class ftpwrapper:
         return (ftpobj, retrlen)
 
     def endtransfer(self):
+        if not self.busy:
+            return
         self.busy = 0
+        try:
+            self.ftp.voidresp()
+        except ftperrors():
+            pass
 
     def close(self):
         self.keepalive = False
@@ -1086,8 +1097,7 @@ def splithost(url):
     """splithost('//host[:port]/path') --> 'host[:port]', '/path'."""
     global _hostprog
     if _hostprog is None:
-        import re
-        _hostprog = re.compile('^//([^/?]*)(.*)$')
+        _hostprog = re.compile('//([^/#?]*)(.*)', re.DOTALL)
 
     match = _hostprog.match(url)
     if match:
@@ -1249,9 +1259,7 @@ always_safe = ('ABCDEFGHIJKLMNOPQRSTUVWXYZ'
                '0123456789' '_.-')
 _safe_map = {}
 for i, c in zip(xrange(256), str(bytearray(xrange(256)))):
-    # NOTE(user): The original code here used Python 2.7 syntax, but
-    # in App Engine we want to support Python 2.6 as well.
-    _safe_map[c] = c if (i < 128 and c in always_safe) else '%%%02X' % i
+    _safe_map[c] = c if (i < 128 and c in always_safe) else '%{:02X}'.format(i)
 _safe_quoters = {}
 
 def quote(s, safe='/'):
@@ -1375,12 +1383,21 @@ def getproxies_environment():
     If you need a different way, you can pass a proxies dictionary to the
     [Fancy]URLopener constructor.
     """
+    # Get all variables
     proxies = {}
     for name, value in os.environ.items():
         name = name.lower()
         if value and name[-6:] == '_proxy':
             proxies[name[:-6]] = value
 
+    # CVE-2016-1000110 - If we are running as CGI script, forget HTTP_PROXY
+    # (non-all-lowercase) as it may be set from the web server by a "Proxy:"
+    # header from the client
+    # If "proxy" is lowercase, it will still be used thanks to the next block
+    if 'REQUEST_METHOD' in os.environ:
+        proxies.pop('http', None)
+
+    # Get lowercase variables
     for name, value in os.environ.items():
         if name[-6:] == '_proxy':
             name = name.lower()
@@ -1413,6 +1430,7 @@ def proxy_bypass_environment(host, proxies=None):
     no_proxy_list = [proxy.strip() for proxy in no_proxy.split(',')]
     for name in no_proxy_list:
         if name:
+            name = name.lstrip('.')  # ignore leading dots
             name = re.escape(name)
             pattern = r'(.+\.)?%s$' % name
             if (re.match(pattern, hostonly, re.I)
@@ -1647,66 +1665,7 @@ def test1():
     print repr(qs)
     print repr(uqs)
     print round(t1 - t0, 3), 'sec'
-    reporthook(blocknum, blocksize, totalsize)
 
-# Test program
-def test(args=[]):
-    if not args:
-        args = [
-            '/etc/passwd',
-            'file:/etc/passwd',
-            'file://localhost/etc/passwd',
-            'ftp://ftp.gnu.org/pub/README',
-            'http://www.python.org/index.html',
-            ]
-        if hasattr(URLopener, "open_https"):
-            args.append('https://synergy.as.cmu.edu/~geek/')
-    try:
-        for url in args:
-            print '-'*10, url, '-'*10
-            fn, h = urlretrieve(url, None, reporthook)
-            print fn
-            if h:
-                print '======'
-                for k in h.keys(): print k + ':', h[k]
-                print '======'
-            with open(fn, 'rb') as fp:
-                data = fp.read()
-            if '\r' in data:
-                table = string.maketrans("", "")
-                data = data.translate(table, "\r")
-            print data
-            fn, h = None, None
-        print '-'*40
-    finally:
-        urlcleanup()
-
-def main():
-    import getopt, sys
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "th")
-    except getopt.error, msg:
-        print msg
-        print "Use -h for help"
-        return
-    t = 0
-    for o, a in opts:
-        if o == '-t':
-            t = t + 1
-        if o == '-h':
-            print "Usage: python urllib.py [-t] [url ...]"
-            print "-t runs self-test;",
-            print "otherwise, contents of urls are printed"
-            return
-    if t:
-        if t > 1:
-            test1()
-        test(args)
-    else:
-        if not args:
-            print "Use -h for help"
-        for url in args:
-            print urlopen(url).read(),
 
 def reporthook(blocknum, blocksize, totalsize):
     # Report during remote transfers

@@ -22,7 +22,7 @@ import unittest
 import wsgiref.headers
 
 import google
-import six
+from google.appengine._internal import six
 
 from google.appengine.tools.devappserver2 import request_rewriter
 

@@ -33,7 +33,7 @@ import time
 import wsgiref.handlers
 import zlib
 
-import six
+from google.appengine._internal import six
 import six.moves.http_client
 
 # pylint: disable=g-import-not-at-top

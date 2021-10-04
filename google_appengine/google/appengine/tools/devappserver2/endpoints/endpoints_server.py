@@ -42,7 +42,7 @@ import logging
 import re
 import wsgiref
 
-import six
+from google.appengine._internal import six
 import six.moves.http_client
 
 from google.appengine.tools.devappserver2.endpoints import api_config_manager

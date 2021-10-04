@@ -29,7 +29,7 @@ import unittest
 
 import google
 import mox
-import six
+from google.appengine._internal import six
 import six.moves.http_client
 
 from google.appengine.tools.devappserver2.endpoints import discovery_api_proxy

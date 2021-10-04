@@ -40,9 +40,8 @@ try:
 except ImportError:
   readline = None
 
-from google.appengine.tools import appengine_rpc
-
 from google.appengine.ext.remote_api import remote_api_stub
+from google.appengine.tools import appengine_rpc
 
 
 

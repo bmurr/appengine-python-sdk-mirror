@@ -22,7 +22,7 @@ import unittest
 
 import google
 import mock
-import six
+from google.appengine._internal import six
 import webapp2
 
 from google.appengine.tools.devappserver2 import dispatcher

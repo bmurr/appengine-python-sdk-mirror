@@ -41,7 +41,7 @@ import time
 
 import google
 
-import six
+from google.appengine._internal import six
 import six.moves.urllib.parse
 import webob.exc
 
