@@ -20,10 +20,10 @@ import logging
 import os
 import socket
 import unittest
+from unittest import mock
 
 import google
 
-import mock
 import mox
 from google.appengine._internal import six
 

@@ -300,6 +300,7 @@ namespace google\appengine_datastore_v3\Query\Filter {
     const EXISTS = 7;
     const CONTAINED_IN_REGION = 8;
     const NOT_EQUAL = 9;
+    const NOT_IN = 10;
   }
 }
 namespace google\appengine_datastore_v3\Query {
@@ -5170,10 +5171,32 @@ namespace google\appengine_datastore_v3\GetResponse {
     public function hasKey() {
       return isset($this->key);
     }
+    public function getUpdateTimeEpochMicros() {
+      if (!isset($this->update_time_epoch_micros)) {
+        return "0";
+      }
+      return $this->update_time_epoch_micros;
+    }
+    public function setUpdateTimeEpochMicros($val) {
+      if (is_double($val)) {
+        $this->update_time_epoch_micros = sprintf('%0.0F', $val);
+      } else {
+        $this->update_time_epoch_micros = $val;
+      }
+      return $this;
+    }
+    public function clearUpdateTimeEpochMicros() {
+      unset($this->update_time_epoch_micros);
+      return $this;
+    }
+    public function hasUpdateTimeEpochMicros() {
+      return isset($this->update_time_epoch_micros);
+    }
     public function clear() {
       $this->clearEntity();
       $this->clearVersion();
       $this->clearKey();
+      $this->clearUpdateTimeEpochMicros();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -5188,6 +5211,10 @@ namespace google\appengine_datastore_v3\GetResponse {
       if (isset($this->key)) {
         $res += 1;
         $res += $this->lengthString($this->key->byteSizePartial());
+      }
+      if (isset($this->update_time_epoch_micros)) {
+        $res += 1;
+        $res += $this->lengthVarInt64($this->update_time_epoch_micros);
       }
       return $res;
     }
@@ -5205,6 +5232,10 @@ namespace google\appengine_datastore_v3\GetResponse {
         $out->putVarInt32(34);
         $out->putVarInt32($this->key->byteSizePartial());
         $this->key->outputPartial($out);
+      }
+      if (isset($this->update_time_epoch_micros)) {
+        $out->putVarInt32(64);
+        $out->putVarInt64($this->update_time_epoch_micros);
       }
     }
     public function tryMerge($d) {
@@ -5226,6 +5257,9 @@ namespace google\appengine_datastore_v3\GetResponse {
             $tmp = new \google\net\Decoder($d->buffer(), $d->pos(), $d->pos() + $length);
             $d->skip($length);
             $this->mutableKey()->tryMerge($tmp);
+            break;
+          case 64:
+            $this->setUpdateTimeEpochMicros($d->getVarInt64());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -5251,6 +5285,9 @@ namespace google\appengine_datastore_v3\GetResponse {
       if ($x->hasKey()) {
         $this->mutableKey()->mergeFrom($x->getKey());
       }
+      if ($x->hasUpdateTimeEpochMicros()) {
+        $this->setUpdateTimeEpochMicros($x->getUpdateTimeEpochMicros());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -5260,6 +5297,8 @@ namespace google\appengine_datastore_v3\GetResponse {
       if (isset($this->version) && !$this->integerEquals($this->version, $x->version)) return false;
       if (isset($this->key) !== isset($x->key)) return false;
       if (isset($this->key) && !$this->key->equals($x->key)) return false;
+      if (isset($this->update_time_epoch_micros) !== isset($x->update_time_epoch_micros)) return false;
+      if (isset($this->update_time_epoch_micros) && !$this->integerEquals($this->update_time_epoch_micros, $x->update_time_epoch_micros)) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -5272,6 +5311,9 @@ namespace google\appengine_datastore_v3\GetResponse {
       }
       if (isset($this->key)) {
         $res .= $prefix . "key <\n" . $this->key->shortDebugString($prefix . "  ") . $prefix . ">\n";
+      }
+      if (isset($this->update_time_epoch_micros)) {
+        $res .= $prefix . "update_time_epoch_micros: " . $this->debugFormatInt64($this->update_time_epoch_micros) . "\n";
       }
       return $res;
     }
@@ -5985,6 +6027,7 @@ namespace google\appengine_datastore_v3 {
   class PutResponse extends \google\net\ProtocolMessage {
     private $key = array();
     private $version = array();
+    private $update_time_epoch_micros = array();
     public function getKeySize() {
       return sizeof($this->key);
     }
@@ -6066,10 +6109,39 @@ namespace google\appengine_datastore_v3 {
     public function clearVersion() {
       $this->version = array();
     }
+    public function getUpdateTimeEpochMicrosSize() {
+      return sizeof($this->update_time_epoch_micros);
+    }
+    public function getUpdateTimeEpochMicrosList() {
+      return $this->update_time_epoch_micros;
+    }
+    public function getUpdateTimeEpochMicros($idx) {
+      return $this->update_time_epoch_micros[$idx];
+    }
+    public function setUpdateTimeEpochMicros($idx, $val) {
+      if (is_double($val)) {
+        $this->update_time_epoch_micros[$idx] = sprintf('%0.0F', $val);
+      } else {
+        $this->update_time_epoch_micros[$idx] = $val;
+      }
+      return $this;
+    }
+    public function addUpdateTimeEpochMicros($val) {
+      if (is_double($val)) {
+        $this->update_time_epoch_micros[] = sprintf('%0.0F', $val);
+      } else {
+        $this->update_time_epoch_micros[] = $val;
+      }
+      return $this;
+    }
+    public function clearUpdateTimeEpochMicros() {
+      $this->update_time_epoch_micros = array();
+    }
     public function clear() {
       $this->clearKey();
       $this->clearCost();
       $this->clearVersion();
+      $this->clearUpdateTimeEpochMicros();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -6085,6 +6157,11 @@ namespace google\appengine_datastore_v3 {
       $this->checkProtoArray($this->version);
       $res += 1 * sizeof($this->version);
       foreach ($this->version as $value) {
+        $res += $this->lengthVarInt64($value);
+      }
+      $this->checkProtoArray($this->update_time_epoch_micros);
+      $res += 1 * sizeof($this->update_time_epoch_micros);
+      foreach ($this->update_time_epoch_micros as $value) {
         $res += $this->lengthVarInt64($value);
       }
       return $res;
@@ -6106,6 +6183,11 @@ namespace google\appengine_datastore_v3 {
         $out->putVarInt32(24);
         $out->putVarInt64($value);
       }
+      $this->checkProtoArray($this->update_time_epoch_micros);
+      foreach ($this->update_time_epoch_micros as $value) {
+        $out->putVarInt32(32);
+        $out->putVarInt64($value);
+      }
     }
     public function tryMerge($d) {
       while($d->avail() > 0) {
@@ -6125,6 +6207,9 @@ namespace google\appengine_datastore_v3 {
             break;
           case 24:
             $this->addVersion($d->getVarInt64());
+            break;
+          case 32:
+            $this->addUpdateTimeEpochMicros($d->getVarInt64());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -6152,6 +6237,9 @@ namespace google\appengine_datastore_v3 {
       foreach ($x->getVersionList() as $v) {
         $this->addVersion($v);
       }
+      foreach ($x->getUpdateTimeEpochMicrosList() as $v) {
+        $this->addUpdateTimeEpochMicros($v);
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -6163,6 +6251,10 @@ namespace google\appengine_datastore_v3 {
       if (isset($this->cost) && !$this->cost->equals($x->cost)) return false;
       if (sizeof($this->version) !== sizeof($x->version)) return false;
       foreach (array_map(null, $this->version, $x->version) as $v) {
+        if (!$this->integerEquals($v[0], $v[1])) return false;
+      }
+      if (sizeof($this->update_time_epoch_micros) !== sizeof($x->update_time_epoch_micros)) return false;
+      foreach (array_map(null, $this->update_time_epoch_micros, $x->update_time_epoch_micros) as $v) {
         if (!$this->integerEquals($v[0], $v[1])) return false;
       }
       return true;
@@ -6177,6 +6269,9 @@ namespace google\appengine_datastore_v3 {
       }
       foreach ($this->version as $value) {
         $res .= $prefix . "version: " . $this->debugFormatInt64($value) . "\n";
+      }
+      foreach ($this->update_time_epoch_micros as $value) {
+        $res .= $prefix . "update_time_epoch_micros: " . $this->debugFormatInt64($value) . "\n";
       }
       return $res;
     }
@@ -6956,6 +7051,7 @@ namespace google\appengine_datastore_v3 {
 namespace google\appengine_datastore_v3 {
   class DeleteResponse extends \google\net\ProtocolMessage {
     private $version = array();
+    private $delete_time_epoch_micros = array();
     public function getCost() {
       if (!isset($this->cost)) {
         return new \google\appengine_datastore_v3\Cost();
@@ -7006,9 +7102,38 @@ namespace google\appengine_datastore_v3 {
     public function clearVersion() {
       $this->version = array();
     }
+    public function getDeleteTimeEpochMicrosSize() {
+      return sizeof($this->delete_time_epoch_micros);
+    }
+    public function getDeleteTimeEpochMicrosList() {
+      return $this->delete_time_epoch_micros;
+    }
+    public function getDeleteTimeEpochMicros($idx) {
+      return $this->delete_time_epoch_micros[$idx];
+    }
+    public function setDeleteTimeEpochMicros($idx, $val) {
+      if (is_double($val)) {
+        $this->delete_time_epoch_micros[$idx] = sprintf('%0.0F', $val);
+      } else {
+        $this->delete_time_epoch_micros[$idx] = $val;
+      }
+      return $this;
+    }
+    public function addDeleteTimeEpochMicros($val) {
+      if (is_double($val)) {
+        $this->delete_time_epoch_micros[] = sprintf('%0.0F', $val);
+      } else {
+        $this->delete_time_epoch_micros[] = $val;
+      }
+      return $this;
+    }
+    public function clearDeleteTimeEpochMicros() {
+      $this->delete_time_epoch_micros = array();
+    }
     public function clear() {
       $this->clearCost();
       $this->clearVersion();
+      $this->clearDeleteTimeEpochMicros();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -7019,6 +7144,11 @@ namespace google\appengine_datastore_v3 {
       $this->checkProtoArray($this->version);
       $res += 1 * sizeof($this->version);
       foreach ($this->version as $value) {
+        $res += $this->lengthVarInt64($value);
+      }
+      $this->checkProtoArray($this->delete_time_epoch_micros);
+      $res += 1 * sizeof($this->delete_time_epoch_micros);
+      foreach ($this->delete_time_epoch_micros as $value) {
         $res += $this->lengthVarInt64($value);
       }
       return $res;
@@ -7034,6 +7164,11 @@ namespace google\appengine_datastore_v3 {
         $out->putVarInt32(24);
         $out->putVarInt64($value);
       }
+      $this->checkProtoArray($this->delete_time_epoch_micros);
+      foreach ($this->delete_time_epoch_micros as $value) {
+        $out->putVarInt32(32);
+        $out->putVarInt64($value);
+      }
     }
     public function tryMerge($d) {
       while($d->avail() > 0) {
@@ -7047,6 +7182,9 @@ namespace google\appengine_datastore_v3 {
             break;
           case 24:
             $this->addVersion($d->getVarInt64());
+            break;
+          case 32:
+            $this->addDeleteTimeEpochMicros($d->getVarInt64());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -7068,6 +7206,9 @@ namespace google\appengine_datastore_v3 {
       foreach ($x->getVersionList() as $v) {
         $this->addVersion($v);
       }
+      foreach ($x->getDeleteTimeEpochMicrosList() as $v) {
+        $this->addDeleteTimeEpochMicros($v);
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -7075,6 +7216,10 @@ namespace google\appengine_datastore_v3 {
       if (isset($this->cost) && !$this->cost->equals($x->cost)) return false;
       if (sizeof($this->version) !== sizeof($x->version)) return false;
       foreach (array_map(null, $this->version, $x->version) as $v) {
+        if (!$this->integerEquals($v[0], $v[1])) return false;
+      }
+      if (sizeof($this->delete_time_epoch_micros) !== sizeof($x->delete_time_epoch_micros)) return false;
+      foreach (array_map(null, $this->delete_time_epoch_micros, $x->delete_time_epoch_micros) as $v) {
         if (!$this->integerEquals($v[0], $v[1])) return false;
       }
       return true;
@@ -7086,6 +7231,9 @@ namespace google\appengine_datastore_v3 {
       }
       foreach ($this->version as $value) {
         $res .= $prefix . "version: " . $this->debugFormatInt64($value) . "\n";
+      }
+      foreach ($this->delete_time_epoch_micros as $value) {
+        $res .= $prefix . "delete_time_epoch_micros: " . $this->debugFormatInt64($value) . "\n";
       }
       return $res;
     }
@@ -7292,6 +7440,7 @@ namespace google\appengine_datastore_v3 {
     private $index = array();
     private $version = array();
     private $result_compiled_cursor = array();
+    private $update_time_epoch_micros = array();
     public function getCursor() {
       if (!isset($this->cursor)) {
         return new \google\appengine_datastore_v3\Cursor();
@@ -7607,6 +7756,34 @@ namespace google\appengine_datastore_v3 {
     public function hasReadTimeEpochMicros() {
       return isset($this->read_time_epoch_micros);
     }
+    public function getUpdateTimeEpochMicrosSize() {
+      return sizeof($this->update_time_epoch_micros);
+    }
+    public function getUpdateTimeEpochMicrosList() {
+      return $this->update_time_epoch_micros;
+    }
+    public function getUpdateTimeEpochMicros($idx) {
+      return $this->update_time_epoch_micros[$idx];
+    }
+    public function setUpdateTimeEpochMicros($idx, $val) {
+      if (is_double($val)) {
+        $this->update_time_epoch_micros[$idx] = sprintf('%0.0F', $val);
+      } else {
+        $this->update_time_epoch_micros[$idx] = $val;
+      }
+      return $this;
+    }
+    public function addUpdateTimeEpochMicros($val) {
+      if (is_double($val)) {
+        $this->update_time_epoch_micros[] = sprintf('%0.0F', $val);
+      } else {
+        $this->update_time_epoch_micros[] = $val;
+      }
+      return $this;
+    }
+    public function clearUpdateTimeEpochMicros() {
+      $this->update_time_epoch_micros = array();
+    }
     public function clear() {
       $this->clearCursor();
       $this->clearResult();
@@ -7622,6 +7799,7 @@ namespace google\appengine_datastore_v3 {
       $this->clearResultCompiledCursor();
       $this->clearSkippedResultsCompiledCursor();
       $this->clearReadTimeEpochMicros();
+      $this->clearUpdateTimeEpochMicros();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -7680,6 +7858,11 @@ namespace google\appengine_datastore_v3 {
       if (isset($this->read_time_epoch_micros)) {
         $res += 1;
         $res += $this->lengthVarInt64($this->read_time_epoch_micros);
+      }
+      $this->checkProtoArray($this->update_time_epoch_micros);
+      $res += 1 * sizeof($this->update_time_epoch_micros);
+      foreach ($this->update_time_epoch_micros as $value) {
+        $res += $this->lengthVarInt64($value);
       }
       return $res;
     }
@@ -7751,6 +7934,11 @@ namespace google\appengine_datastore_v3 {
         $out->putVarInt32(112);
         $out->putVarInt64($this->read_time_epoch_micros);
       }
+      $this->checkProtoArray($this->update_time_epoch_micros);
+      foreach ($this->update_time_epoch_micros as $value) {
+        $out->putVarInt32(120);
+        $out->putVarInt64($value);
+      }
     }
     public function tryMerge($d) {
       while($d->avail() > 0) {
@@ -7818,6 +8006,9 @@ namespace google\appengine_datastore_v3 {
             break;
           case 112:
             $this->setReadTimeEpochMicros($d->getVarInt64());
+            break;
+          case 120:
+            $this->addUpdateTimeEpochMicros($d->getVarInt64());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -7888,6 +8079,9 @@ namespace google\appengine_datastore_v3 {
       if ($x->hasReadTimeEpochMicros()) {
         $this->setReadTimeEpochMicros($x->getReadTimeEpochMicros());
       }
+      foreach ($x->getUpdateTimeEpochMicrosList() as $v) {
+        $this->addUpdateTimeEpochMicros($v);
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -7927,6 +8121,10 @@ namespace google\appengine_datastore_v3 {
       if (isset($this->skipped_results_compiled_cursor) && !$this->skipped_results_compiled_cursor->equals($x->skipped_results_compiled_cursor)) return false;
       if (isset($this->read_time_epoch_micros) !== isset($x->read_time_epoch_micros)) return false;
       if (isset($this->read_time_epoch_micros) && !$this->integerEquals($this->read_time_epoch_micros, $x->read_time_epoch_micros)) return false;
+      if (sizeof($this->update_time_epoch_micros) !== sizeof($x->update_time_epoch_micros)) return false;
+      foreach (array_map(null, $this->update_time_epoch_micros, $x->update_time_epoch_micros) as $v) {
+        if (!$this->integerEquals($v[0], $v[1])) return false;
+      }
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -7972,6 +8170,9 @@ namespace google\appengine_datastore_v3 {
       }
       if (isset($this->read_time_epoch_micros)) {
         $res .= $prefix . "read_time_epoch_micros: " . $this->debugFormatInt64($this->read_time_epoch_micros) . "\n";
+      }
+      foreach ($this->update_time_epoch_micros as $value) {
+        $res .= $prefix . "update_time_epoch_micros: " . $this->debugFormatInt64($value) . "\n";
       }
       return $res;
     }
@@ -8988,9 +9189,31 @@ namespace google\appengine_datastore_v3\CommitResponse {
     public function hasVersion() {
       return isset($this->version);
     }
+    public function getUpdateTimeEpochMicros() {
+      if (!isset($this->update_time_epoch_micros)) {
+        return "0";
+      }
+      return $this->update_time_epoch_micros;
+    }
+    public function setUpdateTimeEpochMicros($val) {
+      if (is_double($val)) {
+        $this->update_time_epoch_micros = sprintf('%0.0F', $val);
+      } else {
+        $this->update_time_epoch_micros = $val;
+      }
+      return $this;
+    }
+    public function clearUpdateTimeEpochMicros() {
+      unset($this->update_time_epoch_micros);
+      return $this;
+    }
+    public function hasUpdateTimeEpochMicros() {
+      return isset($this->update_time_epoch_micros);
+    }
     public function clear() {
       $this->clearRootEntityKey();
       $this->clearVersion();
+      $this->clearUpdateTimeEpochMicros();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -9001,6 +9224,10 @@ namespace google\appengine_datastore_v3\CommitResponse {
       if (isset($this->version)) {
         $res += 1;
         $res += $this->lengthVarInt64($this->version);
+      }
+      if (isset($this->update_time_epoch_micros)) {
+        $res += 1;
+        $res += $this->lengthVarInt64($this->update_time_epoch_micros);
       }
       return $res;
     }
@@ -9013,6 +9240,10 @@ namespace google\appengine_datastore_v3\CommitResponse {
       if (isset($this->version)) {
         $out->putVarInt32(40);
         $out->putVarInt64($this->version);
+      }
+      if (isset($this->update_time_epoch_micros)) {
+        $out->putVarInt32(48);
+        $out->putVarInt64($this->update_time_epoch_micros);
       }
     }
     public function tryMerge($d) {
@@ -9028,6 +9259,9 @@ namespace google\appengine_datastore_v3\CommitResponse {
             break;
           case 40:
             $this->setVersion($d->getVarInt64());
+            break;
+          case 48:
+            $this->setUpdateTimeEpochMicros($d->getVarInt64());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -9050,6 +9284,9 @@ namespace google\appengine_datastore_v3\CommitResponse {
       if ($x->hasVersion()) {
         $this->setVersion($x->getVersion());
       }
+      if ($x->hasUpdateTimeEpochMicros()) {
+        $this->setUpdateTimeEpochMicros($x->getUpdateTimeEpochMicros());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -9057,6 +9294,8 @@ namespace google\appengine_datastore_v3\CommitResponse {
       if (isset($this->root_entity_key) && !$this->root_entity_key->equals($x->root_entity_key)) return false;
       if (isset($this->version) !== isset($x->version)) return false;
       if (isset($this->version) && !$this->integerEquals($this->version, $x->version)) return false;
+      if (isset($this->update_time_epoch_micros) !== isset($x->update_time_epoch_micros)) return false;
+      if (isset($this->update_time_epoch_micros) && !$this->integerEquals($this->update_time_epoch_micros, $x->update_time_epoch_micros)) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -9066,6 +9305,9 @@ namespace google\appengine_datastore_v3\CommitResponse {
       }
       if (isset($this->version)) {
         $res .= $prefix . "version: " . $this->debugFormatInt64($this->version) . "\n";
+      }
+      if (isset($this->update_time_epoch_micros)) {
+        $res .= $prefix . "update_time_epoch_micros: " . $this->debugFormatInt64($this->update_time_epoch_micros) . "\n";
       }
       return $res;
     }
@@ -9127,9 +9369,31 @@ namespace google\appengine_datastore_v3 {
     public function clearVersion() {
       $this->version = array();
     }
+    public function getCommitTimeEpochMicros() {
+      if (!isset($this->commit_time_epoch_micros)) {
+        return "0";
+      }
+      return $this->commit_time_epoch_micros;
+    }
+    public function setCommitTimeEpochMicros($val) {
+      if (is_double($val)) {
+        $this->commit_time_epoch_micros = sprintf('%0.0F', $val);
+      } else {
+        $this->commit_time_epoch_micros = $val;
+      }
+      return $this;
+    }
+    public function clearCommitTimeEpochMicros() {
+      unset($this->commit_time_epoch_micros);
+      return $this;
+    }
+    public function hasCommitTimeEpochMicros() {
+      return isset($this->commit_time_epoch_micros);
+    }
     public function clear() {
       $this->clearCost();
       $this->clearVersion();
+      $this->clearCommitTimeEpochMicros();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -9141,6 +9405,10 @@ namespace google\appengine_datastore_v3 {
       $res += 2 * sizeof($this->version);
       foreach ($this->version as $value) {
         $res += $value->byteSizePartial();
+      }
+      if (isset($this->commit_time_epoch_micros)) {
+        $res += 1;
+        $res += $this->lengthVarInt64($this->commit_time_epoch_micros);
       }
       return $res;
     }
@@ -9156,6 +9424,10 @@ namespace google\appengine_datastore_v3 {
         $value->outputPartial($out);
         $out->putVarInt32(28);
       }
+      if (isset($this->commit_time_epoch_micros)) {
+        $out->putVarInt32(56);
+        $out->putVarInt64($this->commit_time_epoch_micros);
+      }
     }
     public function tryMerge($d) {
       while($d->avail() > 0) {
@@ -9169,6 +9441,9 @@ namespace google\appengine_datastore_v3 {
             break;
           case 27:
             $this->addVersion()->tryMerge($d);
+            break;
+          case 56:
+            $this->setCommitTimeEpochMicros($d->getVarInt64());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -9193,6 +9468,9 @@ namespace google\appengine_datastore_v3 {
       foreach ($x->getVersionList() as $v) {
         $this->addVersion()->copyFrom($v);
       }
+      if ($x->hasCommitTimeEpochMicros()) {
+        $this->setCommitTimeEpochMicros($x->getCommitTimeEpochMicros());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -9202,6 +9480,8 @@ namespace google\appengine_datastore_v3 {
       foreach (array_map(null, $this->version, $x->version) as $v) {
         if (!$v[0]->equals($v[1])) return false;
       }
+      if (isset($this->commit_time_epoch_micros) !== isset($x->commit_time_epoch_micros)) return false;
+      if (isset($this->commit_time_epoch_micros) && !$this->integerEquals($this->commit_time_epoch_micros, $x->commit_time_epoch_micros)) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -9211,6 +9491,9 @@ namespace google\appengine_datastore_v3 {
       }
       foreach ($this->version as $value) {
         $res .= $prefix . "Version {\n" . $value->shortDebugString($prefix . "  ") . $prefix . "}\n";
+      }
+      if (isset($this->commit_time_epoch_micros)) {
+        $res .= $prefix . "commit_time_epoch_micros: " . $this->debugFormatInt64($this->commit_time_epoch_micros) . "\n";
       }
       return $res;
     }

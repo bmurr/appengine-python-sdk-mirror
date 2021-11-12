@@ -25,10 +25,10 @@ import socket
 import sys
 import time
 import unittest
+from unittest import mock
 
 import google
 
-import mock
 import mox
 import six.moves.http_client
 import six.moves.urllib

@@ -22,9 +22,9 @@ import datetime
 import errno
 import os.path
 import unittest
+from unittest import mock
 
 import google
-import mock
 from google.appengine._internal import six
 
 # pylint: disable=g-import-not-at-top

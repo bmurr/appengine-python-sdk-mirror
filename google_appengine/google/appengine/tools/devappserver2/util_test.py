@@ -24,10 +24,10 @@ import socket
 import stat
 import tempfile
 import unittest
+from unittest import mock
 import wsgiref
 
 import google
-import mock
 import mox
 from google.appengine._internal import six
 

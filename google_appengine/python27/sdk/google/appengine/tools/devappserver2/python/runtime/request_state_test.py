@@ -21,9 +21,14 @@ import threading
 import unittest
 
 import google
-
+import e2e_test_paths
 import mox
 
+e2e_test_paths.RemoteGoogleModules()
+e2e_test_paths.SetPathToDevappserverE2E()
+
+# pylint: disable=g-import-not-at-top
+# pylint: disable=g-bad-import-order
 from google.appengine.tools.devappserver2.python.runtime import request_state
 
 
@@ -39,6 +44,7 @@ class CtypesComparator(mox.Comparator):
 class RequestStateTest(unittest.TestCase):
 
   def setUp(self):
+    super(RequestStateTest, self).setUp()
     self.mox = mox.Mox()
     self.mox.StubOutWithMock(ctypes.pythonapi, 'PyThreadState_SetAsyncExc')
     self.request_state = request_state.RequestState('id')
@@ -46,14 +52,15 @@ class RequestStateTest(unittest.TestCase):
   def tearDown(self):
     self.mox.UnsetStubs()
     request_state._request_states = {}
+    super(RequestStateTest, self).tearDown()
 
   def test_start_and_end_thread(self):
     self.request_state._threads = set()
     self.request_state.start_thread()
-    self.assertEquals(set([threading.current_thread().ident]),
-                      self.request_state._threads)
+    self.assertEqual(
+        set([threading.current_thread().ident]), self.request_state._threads)
     self.request_state.end_thread()
-    self.assertEquals(set(), self.request_state._threads)
+    self.assertEqual(set(), self.request_state._threads)
 
   def test_inject_exception(self):
     ctypes.pythonapi.PyThreadState_SetAsyncExc(
