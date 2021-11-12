@@ -21,8 +21,14 @@
 import unittest
 
 import google
+import e2e_test_paths
 import mox
 
+e2e_test_paths.RemoteGoogleModules()
+e2e_test_paths.SetPathToDevappserverE2E()
+
+# pylint: disable=g-import-not-at-top
+# pylint: disable=g-bad-import-order
 from google.appengine.ext.remote_api import remote_api_stub
 from google.appengine.tools.devappserver2 import runtime_config_pb2
 from google.appengine.tools.devappserver2.python.runtime import runtime
@@ -31,10 +37,12 @@ from google.appengine.tools.devappserver2.python.runtime import runtime
 class SetupStubsTest(unittest.TestCase):
 
   def setUp(self):
+    super(SetupStubsTest, self).setUp()
     self.mox = mox.Mox()
 
   def tearDown(self):
     self.mox.UnsetStubs()
+    super(SetupStubsTest, self).tearDown()
 
   def test_setup_stubs(self):
     self.mox.StubOutWithMock(remote_api_stub, 'ConfigureRemoteApi')

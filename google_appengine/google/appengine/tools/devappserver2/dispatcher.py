@@ -447,8 +447,9 @@ class Dispatcher(request_info.Dispatcher):
     # Convert to an address that can connect from local and remote machines.
     # TODO: handle IPv6 bind-all address (::).
     try:
-      if socket.inet_pton(socket.AF_INET,
-                          parts[0]) == six.ensure_binary('\0\0\0\0'):
+      if ((six.PY3 and socket.inet_pton(socket.AF_INET, parts[0])
+           == six.ensure_binary('\0\0\0\0')) or
+          (six.PY2 and socket.inet_aton(parts[0]) == '\0\0\0\0')):
         hostname = ':'.join([socket.gethostname()] + parts[1:])
     except socket.error:
       # socket.inet_aton raised an exception so parts[0] is not an IP address.

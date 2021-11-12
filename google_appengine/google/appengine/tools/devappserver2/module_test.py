@@ -24,6 +24,7 @@ import logging
 import os
 import re
 import time
+from unittest import mock
 
 # concurrent.futures must appear after import google. Somehow, the linter
 # expects it to come before the linter.
@@ -31,7 +32,6 @@ import time
 
 import google
 from concurrent import futures
-import mock
 import mox
 from google.appengine._internal import six
 

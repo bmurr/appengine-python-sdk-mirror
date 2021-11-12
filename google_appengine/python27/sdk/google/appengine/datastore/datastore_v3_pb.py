@@ -313,6 +313,7 @@ class Query_Filter(ProtocolBuffer.ProtocolMessage):
   EXISTS       =    7
   CONTAINED_IN_REGION =    8
   NOT_EQUAL    =    9
+  NOT_IN       =   10
 
   _Operator_NAMES = {
     1: "LESS_THAN",
@@ -324,6 +325,7 @@ class Query_Filter(ProtocolBuffer.ProtocolMessage):
     7: "EXISTS",
     8: "CONTAINED_IN_REGION",
     9: "NOT_EQUAL",
+    10: "NOT_IN",
   }
 
   def Operator_Name(cls, x): return cls._Operator_NAMES.get(x, "")
@@ -5208,6 +5210,8 @@ class GetResponse_Entity(ProtocolBuffer.ProtocolMessage):
   key_ = None
   has_version_ = 0
   version_ = 0
+  has_update_time_epoch_micros_ = 0
+  update_time_epoch_micros_ = 0
 
   def __init__(self, contents=None):
     self.lazy_init_lock_ = _Lock()
@@ -5264,12 +5268,26 @@ class GetResponse_Entity(ProtocolBuffer.ProtocolMessage):
 
   def has_version(self): return self.has_version_
 
+  def update_time_epoch_micros(self): return self.update_time_epoch_micros_
+
+  def set_update_time_epoch_micros(self, x):
+    self.has_update_time_epoch_micros_ = 1
+    self.update_time_epoch_micros_ = x
+
+  def clear_update_time_epoch_micros(self):
+    if self.has_update_time_epoch_micros_:
+      self.has_update_time_epoch_micros_ = 0
+      self.update_time_epoch_micros_ = 0
+
+  def has_update_time_epoch_micros(self): return self.has_update_time_epoch_micros_
+
 
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_entity()): self.mutable_entity().MergeFrom(x.entity())
     if (x.has_key()): self.mutable_key().MergeFrom(x.key())
     if (x.has_version()): self.set_version(x.version())
+    if (x.has_update_time_epoch_micros()): self.set_update_time_epoch_micros(x.update_time_epoch_micros())
 
   def Equals(self, x):
     if x is self: return 1
@@ -5279,6 +5297,8 @@ class GetResponse_Entity(ProtocolBuffer.ProtocolMessage):
     if self.has_key_ and self.key_ != x.key_: return 0
     if self.has_version_ != x.has_version_: return 0
     if self.has_version_ and self.version_ != x.version_: return 0
+    if self.has_update_time_epoch_micros_ != x.has_update_time_epoch_micros_: return 0
+    if self.has_update_time_epoch_micros_ and self.update_time_epoch_micros_ != x.update_time_epoch_micros_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -5292,6 +5312,7 @@ class GetResponse_Entity(ProtocolBuffer.ProtocolMessage):
     if (self.has_entity_): n += 1 + self.lengthString(self.entity_.ByteSize())
     if (self.has_key_): n += 1 + self.lengthString(self.key_.ByteSize())
     if (self.has_version_): n += 1 + self.lengthVarInt64(self.version_)
+    if (self.has_update_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.update_time_epoch_micros_)
     return n
 
   def ByteSizePartial(self):
@@ -5299,12 +5320,14 @@ class GetResponse_Entity(ProtocolBuffer.ProtocolMessage):
     if (self.has_entity_): n += 1 + self.lengthString(self.entity_.ByteSizePartial())
     if (self.has_key_): n += 1 + self.lengthString(self.key_.ByteSizePartial())
     if (self.has_version_): n += 1 + self.lengthVarInt64(self.version_)
+    if (self.has_update_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.update_time_epoch_micros_)
     return n
 
   def Clear(self):
     self.clear_entity()
     self.clear_key()
     self.clear_version()
+    self.clear_update_time_epoch_micros()
 
   def OutputUnchecked(self, out):
     if (self.has_entity_):
@@ -5318,6 +5341,9 @@ class GetResponse_Entity(ProtocolBuffer.ProtocolMessage):
       out.putVarInt32(34)
       out.putVarInt32(self.key_.ByteSize())
       self.key_.OutputUnchecked(out)
+    if (self.has_update_time_epoch_micros_):
+      out.putVarInt32(64)
+      out.putVarInt64(self.update_time_epoch_micros_)
 
   def OutputPartial(self, out):
     if (self.has_entity_):
@@ -5331,6 +5357,9 @@ class GetResponse_Entity(ProtocolBuffer.ProtocolMessage):
       out.putVarInt32(34)
       out.putVarInt32(self.key_.ByteSizePartial())
       self.key_.OutputPartial(out)
+    if (self.has_update_time_epoch_micros_):
+      out.putVarInt32(64)
+      out.putVarInt64(self.update_time_epoch_micros_)
 
   def TryMerge(self, d):
     while 1:
@@ -5351,6 +5380,9 @@ class GetResponse_Entity(ProtocolBuffer.ProtocolMessage):
         d.skip(length)
         self.mutable_key().TryMerge(tmp)
         continue
+      if tt == 64:
+        self.set_update_time_epoch_micros(d.getVarInt64())
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
@@ -5368,6 +5400,7 @@ class GetResponse_Entity(ProtocolBuffer.ProtocolMessage):
       res+=self.key_.__str__(prefix + "  ", printElemNumber)
       res+=prefix+">\n"
     if self.has_version_: res+=prefix+("version: %s\n" % self.DebugFormatInt64(self.version_))
+    if self.has_update_time_epoch_micros_: res+=prefix+("update_time_epoch_micros: %s\n" % self.DebugFormatInt64(self.update_time_epoch_micros_))
     return res
 
 class GetResponse(ProtocolBuffer.ProtocolMessage):
@@ -5581,6 +5614,7 @@ class GetResponse(ProtocolBuffer.ProtocolMessage):
   kEntityentity = 2
   kEntitykey = 4
   kEntityversion = 3
+  kEntityupdate_time_epoch_micros = 8
   kdeferred = 5
   kin_order = 6
   kread_time_epoch_micros = 7
@@ -5594,7 +5628,8 @@ class GetResponse(ProtocolBuffer.ProtocolMessage):
     5: "deferred",
     6: "in_order",
     7: "read_time_epoch_micros",
-  }, 7)
+    8: "update_time_epoch_micros",
+  }, 8)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -5605,7 +5640,8 @@ class GetResponse(ProtocolBuffer.ProtocolMessage):
     5: ProtocolBuffer.Encoder.STRING,
     6: ProtocolBuffer.Encoder.NUMERIC,
     7: ProtocolBuffer.Encoder.NUMERIC,
-  }, 7, ProtocolBuffer.Encoder.MAX_TYPE)
+    8: ProtocolBuffer.Encoder.NUMERIC,
+  }, 8, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
@@ -6071,6 +6107,7 @@ class PutResponse(ProtocolBuffer.ProtocolMessage):
   def __init__(self, contents=None):
     self.key_ = []
     self.version_ = []
+    self.update_time_epoch_micros_ = []
     self.lazy_init_lock_ = _Lock()
     if contents is not None: self.MergeFromString(contents)
 
@@ -6124,12 +6161,28 @@ class PutResponse(ProtocolBuffer.ProtocolMessage):
   def clear_version(self):
     self.version_ = []
 
+  def update_time_epoch_micros_size(self): return len(self.update_time_epoch_micros_)
+  def update_time_epoch_micros_list(self): return self.update_time_epoch_micros_
+
+  def update_time_epoch_micros(self, i):
+    return self.update_time_epoch_micros_[i]
+
+  def set_update_time_epoch_micros(self, i, x):
+    self.update_time_epoch_micros_[i] = x
+
+  def add_update_time_epoch_micros(self, x):
+    self.update_time_epoch_micros_.append(x)
+
+  def clear_update_time_epoch_micros(self):
+    self.update_time_epoch_micros_ = []
+
 
   def MergeFrom(self, x):
     assert x is not self
     for i in range(x.key_size()): self.add_key().CopyFrom(x.key(i))
     if (x.has_cost()): self.mutable_cost().MergeFrom(x.cost())
     for i in range(x.version_size()): self.add_version(x.version(i))
+    for i in range(x.update_time_epoch_micros_size()): self.add_update_time_epoch_micros(x.update_time_epoch_micros(i))
 
   def Equals(self, x):
     if x is self: return 1
@@ -6140,6 +6193,9 @@ class PutResponse(ProtocolBuffer.ProtocolMessage):
     if self.has_cost_ and self.cost_ != x.cost_: return 0
     if len(self.version_) != len(x.version_): return 0
     for e1, e2 in zip(self.version_, x.version_):
+      if e1 != e2: return 0
+    if len(self.update_time_epoch_micros_) != len(x.update_time_epoch_micros_): return 0
+    for e1, e2 in zip(self.update_time_epoch_micros_, x.update_time_epoch_micros_):
       if e1 != e2: return 0
     return 1
 
@@ -6157,6 +6213,8 @@ class PutResponse(ProtocolBuffer.ProtocolMessage):
     if (self.has_cost_): n += 1 + self.lengthString(self.cost_.ByteSize())
     n += 1 * len(self.version_)
     for i in range(len(self.version_)): n += self.lengthVarInt64(self.version_[i])
+    n += 1 * len(self.update_time_epoch_micros_)
+    for i in range(len(self.update_time_epoch_micros_)): n += self.lengthVarInt64(self.update_time_epoch_micros_[i])
     return n
 
   def ByteSizePartial(self):
@@ -6166,12 +6224,15 @@ class PutResponse(ProtocolBuffer.ProtocolMessage):
     if (self.has_cost_): n += 1 + self.lengthString(self.cost_.ByteSizePartial())
     n += 1 * len(self.version_)
     for i in range(len(self.version_)): n += self.lengthVarInt64(self.version_[i])
+    n += 1 * len(self.update_time_epoch_micros_)
+    for i in range(len(self.update_time_epoch_micros_)): n += self.lengthVarInt64(self.update_time_epoch_micros_[i])
     return n
 
   def Clear(self):
     self.clear_key()
     self.clear_cost()
     self.clear_version()
+    self.clear_update_time_epoch_micros()
 
   def OutputUnchecked(self, out):
     for i in range(len(self.key_)):
@@ -6185,6 +6246,9 @@ class PutResponse(ProtocolBuffer.ProtocolMessage):
     for i in range(len(self.version_)):
       out.putVarInt32(24)
       out.putVarInt64(self.version_[i])
+    for i in range(len(self.update_time_epoch_micros_)):
+      out.putVarInt32(32)
+      out.putVarInt64(self.update_time_epoch_micros_[i])
 
   def OutputPartial(self, out):
     for i in range(len(self.key_)):
@@ -6198,6 +6262,9 @@ class PutResponse(ProtocolBuffer.ProtocolMessage):
     for i in range(len(self.version_)):
       out.putVarInt32(24)
       out.putVarInt64(self.version_[i])
+    for i in range(len(self.update_time_epoch_micros_)):
+      out.putVarInt32(32)
+      out.putVarInt64(self.update_time_epoch_micros_[i])
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -6216,6 +6283,9 @@ class PutResponse(ProtocolBuffer.ProtocolMessage):
         continue
       if tt == 24:
         self.add_version(d.getVarInt64())
+        continue
+      if tt == 32:
+        self.add_update_time_epoch_micros(d.getVarInt64())
         continue
 
 
@@ -6243,6 +6313,12 @@ class PutResponse(ProtocolBuffer.ProtocolMessage):
       if printElemNumber: elm="(%d)" % cnt
       res+=prefix+("version%s: %s\n" % (elm, self.DebugFormatInt64(e)))
       cnt+=1
+    cnt=0
+    for e in self.update_time_epoch_micros_:
+      elm=""
+      if printElemNumber: elm="(%d)" % cnt
+      res+=prefix+("update_time_epoch_micros%s: %s\n" % (elm, self.DebugFormatInt64(e)))
+      cnt+=1
     return res
 
 
@@ -6252,20 +6328,23 @@ class PutResponse(ProtocolBuffer.ProtocolMessage):
   kkey = 1
   kcost = 2
   kversion = 3
+  kupdate_time_epoch_micros = 4
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",
     1: "key",
     2: "cost",
     3: "version",
-  }, 3)
+    4: "update_time_epoch_micros",
+  }, 4)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
     1: ProtocolBuffer.Encoder.STRING,
     2: ProtocolBuffer.Encoder.STRING,
     3: ProtocolBuffer.Encoder.NUMERIC,
-  }, 3, ProtocolBuffer.Encoder.MAX_TYPE)
+    4: ProtocolBuffer.Encoder.NUMERIC,
+  }, 4, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
@@ -7048,6 +7127,7 @@ class DeleteResponse(ProtocolBuffer.ProtocolMessage):
 
   def __init__(self, contents=None):
     self.version_ = []
+    self.delete_time_epoch_micros_ = []
     self.lazy_init_lock_ = _Lock()
     if contents is not None: self.MergeFromString(contents)
 
@@ -7085,11 +7165,27 @@ class DeleteResponse(ProtocolBuffer.ProtocolMessage):
   def clear_version(self):
     self.version_ = []
 
+  def delete_time_epoch_micros_size(self): return len(self.delete_time_epoch_micros_)
+  def delete_time_epoch_micros_list(self): return self.delete_time_epoch_micros_
+
+  def delete_time_epoch_micros(self, i):
+    return self.delete_time_epoch_micros_[i]
+
+  def set_delete_time_epoch_micros(self, i, x):
+    self.delete_time_epoch_micros_[i] = x
+
+  def add_delete_time_epoch_micros(self, x):
+    self.delete_time_epoch_micros_.append(x)
+
+  def clear_delete_time_epoch_micros(self):
+    self.delete_time_epoch_micros_ = []
+
 
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_cost()): self.mutable_cost().MergeFrom(x.cost())
     for i in range(x.version_size()): self.add_version(x.version(i))
+    for i in range(x.delete_time_epoch_micros_size()): self.add_delete_time_epoch_micros(x.delete_time_epoch_micros(i))
 
   def Equals(self, x):
     if x is self: return 1
@@ -7097,6 +7193,9 @@ class DeleteResponse(ProtocolBuffer.ProtocolMessage):
     if self.has_cost_ and self.cost_ != x.cost_: return 0
     if len(self.version_) != len(x.version_): return 0
     for e1, e2 in zip(self.version_, x.version_):
+      if e1 != e2: return 0
+    if len(self.delete_time_epoch_micros_) != len(x.delete_time_epoch_micros_): return 0
+    for e1, e2 in zip(self.delete_time_epoch_micros_, x.delete_time_epoch_micros_):
       if e1 != e2: return 0
     return 1
 
@@ -7110,6 +7209,8 @@ class DeleteResponse(ProtocolBuffer.ProtocolMessage):
     if (self.has_cost_): n += 1 + self.lengthString(self.cost_.ByteSize())
     n += 1 * len(self.version_)
     for i in range(len(self.version_)): n += self.lengthVarInt64(self.version_[i])
+    n += 1 * len(self.delete_time_epoch_micros_)
+    for i in range(len(self.delete_time_epoch_micros_)): n += self.lengthVarInt64(self.delete_time_epoch_micros_[i])
     return n
 
   def ByteSizePartial(self):
@@ -7117,11 +7218,14 @@ class DeleteResponse(ProtocolBuffer.ProtocolMessage):
     if (self.has_cost_): n += 1 + self.lengthString(self.cost_.ByteSizePartial())
     n += 1 * len(self.version_)
     for i in range(len(self.version_)): n += self.lengthVarInt64(self.version_[i])
+    n += 1 * len(self.delete_time_epoch_micros_)
+    for i in range(len(self.delete_time_epoch_micros_)): n += self.lengthVarInt64(self.delete_time_epoch_micros_[i])
     return n
 
   def Clear(self):
     self.clear_cost()
     self.clear_version()
+    self.clear_delete_time_epoch_micros()
 
   def OutputUnchecked(self, out):
     if (self.has_cost_):
@@ -7131,6 +7235,9 @@ class DeleteResponse(ProtocolBuffer.ProtocolMessage):
     for i in range(len(self.version_)):
       out.putVarInt32(24)
       out.putVarInt64(self.version_[i])
+    for i in range(len(self.delete_time_epoch_micros_)):
+      out.putVarInt32(32)
+      out.putVarInt64(self.delete_time_epoch_micros_[i])
 
   def OutputPartial(self, out):
     if (self.has_cost_):
@@ -7140,6 +7247,9 @@ class DeleteResponse(ProtocolBuffer.ProtocolMessage):
     for i in range(len(self.version_)):
       out.putVarInt32(24)
       out.putVarInt64(self.version_[i])
+    for i in range(len(self.delete_time_epoch_micros_)):
+      out.putVarInt32(32)
+      out.putVarInt64(self.delete_time_epoch_micros_[i])
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -7152,6 +7262,9 @@ class DeleteResponse(ProtocolBuffer.ProtocolMessage):
         continue
       if tt == 24:
         self.add_version(d.getVarInt64())
+        continue
+      if tt == 32:
+        self.add_delete_time_epoch_micros(d.getVarInt64())
         continue
 
 
@@ -7171,6 +7284,12 @@ class DeleteResponse(ProtocolBuffer.ProtocolMessage):
       if printElemNumber: elm="(%d)" % cnt
       res+=prefix+("version%s: %s\n" % (elm, self.DebugFormatInt64(e)))
       cnt+=1
+    cnt=0
+    for e in self.delete_time_epoch_micros_:
+      elm=""
+      if printElemNumber: elm="(%d)" % cnt
+      res+=prefix+("delete_time_epoch_micros%s: %s\n" % (elm, self.DebugFormatInt64(e)))
+      cnt+=1
     return res
 
 
@@ -7179,18 +7298,21 @@ class DeleteResponse(ProtocolBuffer.ProtocolMessage):
 
   kcost = 1
   kversion = 3
+  kdelete_time_epoch_micros = 4
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",
     1: "cost",
     3: "version",
-  }, 3)
+    4: "delete_time_epoch_micros",
+  }, 4)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
     1: ProtocolBuffer.Encoder.STRING,
     3: ProtocolBuffer.Encoder.NUMERIC,
-  }, 3, ProtocolBuffer.Encoder.MAX_TYPE)
+    4: ProtocolBuffer.Encoder.NUMERIC,
+  }, 4, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
@@ -7428,6 +7550,7 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     self.result_ = []
     self.index_ = []
     self.version_ = []
+    self.update_time_epoch_micros_ = []
     self.result_compiled_cursor_ = []
     self.lazy_init_lock_ = _Lock()
     if contents is not None: self.MergeFromString(contents)
@@ -7601,6 +7724,21 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
   def clear_version(self):
     self.version_ = []
 
+  def update_time_epoch_micros_size(self): return len(self.update_time_epoch_micros_)
+  def update_time_epoch_micros_list(self): return self.update_time_epoch_micros_
+
+  def update_time_epoch_micros(self, i):
+    return self.update_time_epoch_micros_[i]
+
+  def set_update_time_epoch_micros(self, i, x):
+    self.update_time_epoch_micros_[i] = x
+
+  def add_update_time_epoch_micros(self, x):
+    self.update_time_epoch_micros_.append(x)
+
+  def clear_update_time_epoch_micros(self):
+    self.update_time_epoch_micros_ = []
+
   def read_time_epoch_micros(self): return self.read_time_epoch_micros_
 
   def set_read_time_epoch_micros(self, x):
@@ -7663,6 +7801,7 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     if (x.has_compiled_cursor()): self.mutable_compiled_cursor().MergeFrom(x.compiled_cursor())
     for i in range(x.index_size()): self.add_index().CopyFrom(x.index(i))
     for i in range(x.version_size()): self.add_version(x.version(i))
+    for i in range(x.update_time_epoch_micros_size()): self.add_update_time_epoch_micros(x.update_time_epoch_micros(i))
     if (x.has_read_time_epoch_micros()): self.set_read_time_epoch_micros(x.read_time_epoch_micros())
     for i in range(x.result_compiled_cursor_size()): self.add_result_compiled_cursor().CopyFrom(x.result_compiled_cursor(i))
     if (x.has_skipped_results_compiled_cursor()): self.mutable_skipped_results_compiled_cursor().MergeFrom(x.skipped_results_compiled_cursor())
@@ -7693,6 +7832,9 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
       if e1 != e2: return 0
     if len(self.version_) != len(x.version_): return 0
     for e1, e2 in zip(self.version_, x.version_):
+      if e1 != e2: return 0
+    if len(self.update_time_epoch_micros_) != len(x.update_time_epoch_micros_): return 0
+    for e1, e2 in zip(self.update_time_epoch_micros_, x.update_time_epoch_micros_):
       if e1 != e2: return 0
     if self.has_read_time_epoch_micros_ != x.has_read_time_epoch_micros_: return 0
     if self.has_read_time_epoch_micros_ and self.read_time_epoch_micros_ != x.read_time_epoch_micros_: return 0
@@ -7736,6 +7878,8 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     for i in range(len(self.index_)): n += self.lengthString(self.index_[i].ByteSize())
     n += 1 * len(self.version_)
     for i in range(len(self.version_)): n += self.lengthVarInt64(self.version_[i])
+    n += 1 * len(self.update_time_epoch_micros_)
+    for i in range(len(self.update_time_epoch_micros_)): n += self.lengthVarInt64(self.update_time_epoch_micros_[i])
     if (self.has_read_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.read_time_epoch_micros_)
     n += 1 * len(self.result_compiled_cursor_)
     for i in range(len(self.result_compiled_cursor_)): n += self.lengthString(self.result_compiled_cursor_[i].ByteSize())
@@ -7759,6 +7903,8 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     for i in range(len(self.index_)): n += self.lengthString(self.index_[i].ByteSizePartial())
     n += 1 * len(self.version_)
     for i in range(len(self.version_)): n += self.lengthVarInt64(self.version_[i])
+    n += 1 * len(self.update_time_epoch_micros_)
+    for i in range(len(self.update_time_epoch_micros_)): n += self.lengthVarInt64(self.update_time_epoch_micros_[i])
     if (self.has_read_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.read_time_epoch_micros_)
     n += 1 * len(self.result_compiled_cursor_)
     for i in range(len(self.result_compiled_cursor_)): n += self.lengthString(self.result_compiled_cursor_[i].ByteSizePartial())
@@ -7777,6 +7923,7 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     self.clear_compiled_cursor()
     self.clear_index()
     self.clear_version()
+    self.clear_update_time_epoch_micros()
     self.clear_read_time_epoch_micros()
     self.clear_result_compiled_cursor()
     self.clear_skipped_results_compiled_cursor()
@@ -7830,6 +7977,9 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     if (self.has_read_time_epoch_micros_):
       out.putVarInt32(112)
       out.putVarInt64(self.read_time_epoch_micros_)
+    for i in range(len(self.update_time_epoch_micros_)):
+      out.putVarInt32(120)
+      out.putVarInt64(self.update_time_epoch_micros_[i])
 
   def OutputPartial(self, out):
     if (self.has_cursor_):
@@ -7881,6 +8031,9 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     if (self.has_read_time_epoch_micros_):
       out.putVarInt32(112)
       out.putVarInt64(self.read_time_epoch_micros_)
+    for i in range(len(self.update_time_epoch_micros_)):
+      out.putVarInt32(120)
+      out.putVarInt64(self.update_time_epoch_micros_[i])
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -7948,6 +8101,9 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
       if tt == 112:
         self.set_read_time_epoch_micros(d.getVarInt64())
         continue
+      if tt == 120:
+        self.add_update_time_epoch_micros(d.getVarInt64())
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
@@ -7995,6 +8151,12 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
       if printElemNumber: elm="(%d)" % cnt
       res+=prefix+("version%s: %s\n" % (elm, self.DebugFormatInt64(e)))
       cnt+=1
+    cnt=0
+    for e in self.update_time_epoch_micros_:
+      elm=""
+      if printElemNumber: elm="(%d)" % cnt
+      res+=prefix+("update_time_epoch_micros%s: %s\n" % (elm, self.DebugFormatInt64(e)))
+      cnt+=1
     if self.has_read_time_epoch_micros_: res+=prefix+("read_time_epoch_micros: %s\n" % self.DebugFormatInt64(self.read_time_epoch_micros_))
     cnt=0
     for e in self.result_compiled_cursor_:
@@ -8025,6 +8187,7 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
   kcompiled_cursor = 6
   kindex = 8
   kversion = 11
+  kupdate_time_epoch_micros = 15
   kread_time_epoch_micros = 14
   kresult_compiled_cursor = 12
   kskipped_results_compiled_cursor = 13
@@ -8045,7 +8208,8 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     12: "result_compiled_cursor",
     13: "skipped_results_compiled_cursor",
     14: "read_time_epoch_micros",
-  }, 14)
+    15: "update_time_epoch_micros",
+  }, 15)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -8063,7 +8227,8 @@ class QueryResult(ProtocolBuffer.ProtocolMessage):
     12: ProtocolBuffer.Encoder.STRING,
     13: ProtocolBuffer.Encoder.STRING,
     14: ProtocolBuffer.Encoder.NUMERIC,
-  }, 14, ProtocolBuffer.Encoder.MAX_TYPE)
+    15: ProtocolBuffer.Encoder.NUMERIC,
+  }, 15, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
@@ -9131,6 +9296,8 @@ class CommitResponse_Version(ProtocolBuffer.ProtocolMessage):
   has_root_entity_key_ = 0
   has_version_ = 0
   version_ = 0
+  has_update_time_epoch_micros_ = 0
+  update_time_epoch_micros_ = 0
 
   def __init__(self, contents=None):
     self.root_entity_key_ = google.appengine.datastore.entity_pb.Reference()
@@ -9157,11 +9324,25 @@ class CommitResponse_Version(ProtocolBuffer.ProtocolMessage):
 
   def has_version(self): return self.has_version_
 
+  def update_time_epoch_micros(self): return self.update_time_epoch_micros_
+
+  def set_update_time_epoch_micros(self, x):
+    self.has_update_time_epoch_micros_ = 1
+    self.update_time_epoch_micros_ = x
+
+  def clear_update_time_epoch_micros(self):
+    if self.has_update_time_epoch_micros_:
+      self.has_update_time_epoch_micros_ = 0
+      self.update_time_epoch_micros_ = 0
+
+  def has_update_time_epoch_micros(self): return self.has_update_time_epoch_micros_
+
 
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_root_entity_key()): self.mutable_root_entity_key().MergeFrom(x.root_entity_key())
     if (x.has_version()): self.set_version(x.version())
+    if (x.has_update_time_epoch_micros()): self.set_update_time_epoch_micros(x.update_time_epoch_micros())
 
   def Equals(self, x):
     if x is self: return 1
@@ -9169,6 +9350,8 @@ class CommitResponse_Version(ProtocolBuffer.ProtocolMessage):
     if self.has_root_entity_key_ and self.root_entity_key_ != x.root_entity_key_: return 0
     if self.has_version_ != x.has_version_: return 0
     if self.has_version_ and self.version_ != x.version_: return 0
+    if self.has_update_time_epoch_micros_ != x.has_update_time_epoch_micros_: return 0
+    if self.has_update_time_epoch_micros_ and self.update_time_epoch_micros_ != x.update_time_epoch_micros_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -9188,6 +9371,7 @@ class CommitResponse_Version(ProtocolBuffer.ProtocolMessage):
     n = 0
     n += self.lengthString(self.root_entity_key_.ByteSize())
     n += self.lengthVarInt64(self.version_)
+    if (self.has_update_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.update_time_epoch_micros_)
     return n + 2
 
   def ByteSizePartial(self):
@@ -9198,11 +9382,13 @@ class CommitResponse_Version(ProtocolBuffer.ProtocolMessage):
     if (self.has_version_):
       n += 1
       n += self.lengthVarInt64(self.version_)
+    if (self.has_update_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.update_time_epoch_micros_)
     return n
 
   def Clear(self):
     self.clear_root_entity_key()
     self.clear_version()
+    self.clear_update_time_epoch_micros()
 
   def OutputUnchecked(self, out):
     out.putVarInt32(34)
@@ -9210,6 +9396,9 @@ class CommitResponse_Version(ProtocolBuffer.ProtocolMessage):
     self.root_entity_key_.OutputUnchecked(out)
     out.putVarInt32(40)
     out.putVarInt64(self.version_)
+    if (self.has_update_time_epoch_micros_):
+      out.putVarInt32(48)
+      out.putVarInt64(self.update_time_epoch_micros_)
 
   def OutputPartial(self, out):
     if (self.has_root_entity_key_):
@@ -9219,6 +9408,9 @@ class CommitResponse_Version(ProtocolBuffer.ProtocolMessage):
     if (self.has_version_):
       out.putVarInt32(40)
       out.putVarInt64(self.version_)
+    if (self.has_update_time_epoch_micros_):
+      out.putVarInt32(48)
+      out.putVarInt64(self.update_time_epoch_micros_)
 
   def TryMerge(self, d):
     while 1:
@@ -9233,6 +9425,9 @@ class CommitResponse_Version(ProtocolBuffer.ProtocolMessage):
       if tt == 40:
         self.set_version(d.getVarInt64())
         continue
+      if tt == 48:
+        self.set_update_time_epoch_micros(d.getVarInt64())
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
@@ -9246,11 +9441,14 @@ class CommitResponse_Version(ProtocolBuffer.ProtocolMessage):
       res+=self.root_entity_key_.__str__(prefix + "  ", printElemNumber)
       res+=prefix+">\n"
     if self.has_version_: res+=prefix+("version: %s\n" % self.DebugFormatInt64(self.version_))
+    if self.has_update_time_epoch_micros_: res+=prefix+("update_time_epoch_micros: %s\n" % self.DebugFormatInt64(self.update_time_epoch_micros_))
     return res
 
 class CommitResponse(ProtocolBuffer.ProtocolMessage):
   has_cost_ = 0
   cost_ = None
+  has_commit_time_epoch_micros_ = 0
+  commit_time_epoch_micros_ = 0
 
   def __init__(self, contents=None):
     self.version_ = []
@@ -9276,6 +9474,19 @@ class CommitResponse(ProtocolBuffer.ProtocolMessage):
 
   def has_cost(self): return self.has_cost_
 
+  def commit_time_epoch_micros(self): return self.commit_time_epoch_micros_
+
+  def set_commit_time_epoch_micros(self, x):
+    self.has_commit_time_epoch_micros_ = 1
+    self.commit_time_epoch_micros_ = x
+
+  def clear_commit_time_epoch_micros(self):
+    if self.has_commit_time_epoch_micros_:
+      self.has_commit_time_epoch_micros_ = 0
+      self.commit_time_epoch_micros_ = 0
+
+  def has_commit_time_epoch_micros(self): return self.has_commit_time_epoch_micros_
+
   def version_size(self): return len(self.version_)
   def version_list(self): return self.version_
 
@@ -9296,12 +9507,15 @@ class CommitResponse(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_cost()): self.mutable_cost().MergeFrom(x.cost())
+    if (x.has_commit_time_epoch_micros()): self.set_commit_time_epoch_micros(x.commit_time_epoch_micros())
     for i in range(x.version_size()): self.add_version().CopyFrom(x.version(i))
 
   def Equals(self, x):
     if x is self: return 1
     if self.has_cost_ != x.has_cost_: return 0
     if self.has_cost_ and self.cost_ != x.cost_: return 0
+    if self.has_commit_time_epoch_micros_ != x.has_commit_time_epoch_micros_: return 0
+    if self.has_commit_time_epoch_micros_ and self.commit_time_epoch_micros_ != x.commit_time_epoch_micros_: return 0
     if len(self.version_) != len(x.version_): return 0
     for e1, e2 in zip(self.version_, x.version_):
       if e1 != e2: return 0
@@ -9317,6 +9531,7 @@ class CommitResponse(ProtocolBuffer.ProtocolMessage):
   def ByteSize(self):
     n = 0
     if (self.has_cost_): n += 1 + self.lengthString(self.cost_.ByteSize())
+    if (self.has_commit_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.commit_time_epoch_micros_)
     n += 2 * len(self.version_)
     for i in range(len(self.version_)): n += self.version_[i].ByteSize()
     return n
@@ -9324,12 +9539,14 @@ class CommitResponse(ProtocolBuffer.ProtocolMessage):
   def ByteSizePartial(self):
     n = 0
     if (self.has_cost_): n += 1 + self.lengthString(self.cost_.ByteSizePartial())
+    if (self.has_commit_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.commit_time_epoch_micros_)
     n += 2 * len(self.version_)
     for i in range(len(self.version_)): n += self.version_[i].ByteSizePartial()
     return n
 
   def Clear(self):
     self.clear_cost()
+    self.clear_commit_time_epoch_micros()
     self.clear_version()
 
   def OutputUnchecked(self, out):
@@ -9341,6 +9558,9 @@ class CommitResponse(ProtocolBuffer.ProtocolMessage):
       out.putVarInt32(27)
       self.version_[i].OutputUnchecked(out)
       out.putVarInt32(28)
+    if (self.has_commit_time_epoch_micros_):
+      out.putVarInt32(56)
+      out.putVarInt64(self.commit_time_epoch_micros_)
 
   def OutputPartial(self, out):
     if (self.has_cost_):
@@ -9351,6 +9571,9 @@ class CommitResponse(ProtocolBuffer.ProtocolMessage):
       out.putVarInt32(27)
       self.version_[i].OutputPartial(out)
       out.putVarInt32(28)
+    if (self.has_commit_time_epoch_micros_):
+      out.putVarInt32(56)
+      out.putVarInt64(self.commit_time_epoch_micros_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -9364,6 +9587,9 @@ class CommitResponse(ProtocolBuffer.ProtocolMessage):
       if tt == 27:
         self.add_version().TryMerge(d)
         continue
+      if tt == 56:
+        self.set_commit_time_epoch_micros(d.getVarInt64())
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
@@ -9376,6 +9602,7 @@ class CommitResponse(ProtocolBuffer.ProtocolMessage):
       res+=prefix+"cost <\n"
       res+=self.cost_.__str__(prefix + "  ", printElemNumber)
       res+=prefix+">\n"
+    if self.has_commit_time_epoch_micros_: res+=prefix+("commit_time_epoch_micros: %s\n" % self.DebugFormatInt64(self.commit_time_epoch_micros_))
     cnt=0
     for e in self.version_:
       elm=""
@@ -9391,9 +9618,11 @@ class CommitResponse(ProtocolBuffer.ProtocolMessage):
     return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
 
   kcost = 1
+  kcommit_time_epoch_micros = 7
   kVersionGroup = 3
   kVersionroot_entity_key = 4
   kVersionversion = 5
+  kVersionupdate_time_epoch_micros = 6
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",
@@ -9401,7 +9630,9 @@ class CommitResponse(ProtocolBuffer.ProtocolMessage):
     3: "Version",
     4: "root_entity_key",
     5: "version",
-  }, 5)
+    6: "update_time_epoch_micros",
+    7: "commit_time_epoch_micros",
+  }, 7)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -9409,7 +9640,9 @@ class CommitResponse(ProtocolBuffer.ProtocolMessage):
     3: ProtocolBuffer.Encoder.STARTGROUP,
     4: ProtocolBuffer.Encoder.STRING,
     5: ProtocolBuffer.Encoder.NUMERIC,
-  }, 5, ProtocolBuffer.Encoder.MAX_TYPE)
+    6: ProtocolBuffer.Encoder.NUMERIC,
+    7: ProtocolBuffer.Encoder.NUMERIC,
+  }, 7, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""

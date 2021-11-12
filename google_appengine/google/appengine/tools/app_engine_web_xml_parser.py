@@ -72,7 +72,7 @@ class AppEngineWebXmlParser(object):
       self.errors = []
       xml_root = ElementTree.fromstring(xml_str)
 
-      for child in xml_root.getchildren():
+      for child in xml_root:
         self.ProcessChildNode(child)
       self.CheckScalingConstraints()
       if self.errors:

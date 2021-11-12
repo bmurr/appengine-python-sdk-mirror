@@ -19,9 +19,9 @@
 import base64
 import email.message
 import unittest
+from unittest import mock
 
 import google
-import mock
 from google.appengine._internal import six
 import webapp2
 

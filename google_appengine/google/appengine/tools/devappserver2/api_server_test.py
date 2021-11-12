@@ -17,6 +17,7 @@
 """Tests for google.apphosting.tools.devappserver2.api_server."""
 
 import argparse
+from unittest import mock
 import cStringIO
 import getpass
 import itertools
@@ -30,7 +31,6 @@ import urllib2
 import wsgiref.util
 
 import google
-import mock
 import mox
 
 from google.appengine.api import apiproxy_stub

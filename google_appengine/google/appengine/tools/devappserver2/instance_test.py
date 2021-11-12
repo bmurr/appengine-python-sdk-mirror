@@ -21,9 +21,9 @@
 import os
 import time
 import unittest
+from unittest import mock
 
 import google
-import mock
 import mox
 
 from google.appengine.tools.devappserver2 import instance

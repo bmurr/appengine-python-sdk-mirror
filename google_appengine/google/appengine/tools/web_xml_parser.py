@@ -60,7 +60,7 @@ class WebXmlParser(object):
       self.web_xml.has_jsps = has_jsps
       self.errors = []
       xml_root = ElementTree.fromstring(xml_str)
-      for node in xml_root.getchildren():
+      for node in xml_root:
         self.ProcessSecondLevelNode(node)
 
       if self.errors:
