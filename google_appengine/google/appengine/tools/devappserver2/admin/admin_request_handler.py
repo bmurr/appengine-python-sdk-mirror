@@ -34,9 +34,9 @@ from google.appengine.tools.devappserver2 import util
 
 def _urlencode_filter(value):
   if isinstance(value, six.string_types):
-    return six.moves.urllib.quote(value)
+    return six.moves.urllib.parse.quote(value)
   else:
-    return six.moves.urllib.urlencode(value)
+    return six.moves.urllib.parse.urlencode(value)
 
 
 def _byte_size_format(value):

@@ -82,15 +82,13 @@ $jscomp.polyfillIsolated = function(target, polyfill, fromLang) {
   if (null != impl) {
     if (isSimpleName) {
       $jscomp.defineProperty($jscomp.polyfills, property, {configurable:!0, writable:!0, value:impl});
-    } else {
-      if (impl !== nativeImpl) {
-        if (void 0 === $jscomp.propertyToPolyfillSymbol[property]) {
-          var BIN_ID = 1e9 * Math.random() >>> 0;
-          $jscomp.propertyToPolyfillSymbol[property] = $jscomp.IS_SYMBOL_NATIVE ? $jscomp.global.Symbol(property) : $jscomp.POLYFILL_PREFIX + BIN_ID + "$" + property;
-        }
-        var obfuscatedName = $jscomp.propertyToPolyfillSymbol[property];
-        $jscomp.defineProperty(ownerObject, obfuscatedName, {configurable:!0, writable:!0, value:impl});
+    } else if (impl !== nativeImpl) {
+      if (void 0 === $jscomp.propertyToPolyfillSymbol[property]) {
+        var BIN_ID = 1E9 * Math.random() >>> 0;
+        $jscomp.propertyToPolyfillSymbol[property] = $jscomp.IS_SYMBOL_NATIVE ? $jscomp.global.Symbol(property) : $jscomp.POLYFILL_PREFIX + BIN_ID + "$" + property;
       }
+      var obfuscatedName = $jscomp.propertyToPolyfillSymbol[property];
+      $jscomp.defineProperty(ownerObject, obfuscatedName, {configurable:!0, writable:!0, value:impl});
     }
   }
 };
@@ -301,7 +299,7 @@ $jscomp.polyfill("Symbol", function(orig) {
   SymbolClass.prototype.toString = function() {
     return this.$jscomp$symbol$id_;
   };
-  var BIN_ID = 1e9 * Math.random() >>> 0, SYMBOL_PREFIX = "jscomp_symbol_" + BIN_ID + "_", counter = 0, symbolPolyfill = function(opt_description) {
+  var BIN_ID = 1E9 * Math.random() >>> 0, SYMBOL_PREFIX = "jscomp_symbol_" + BIN_ID + "_", counter = 0, symbolPolyfill = function(opt_description) {
     if (this instanceof symbolPolyfill) {
       throw new TypeError("Symbol is not a constructor");
     }
@@ -399,24 +397,22 @@ $jscomp.polyfill("Promise", function(NativePromise) {
   PolyfillPromise.prototype.resolveTo_ = function(value) {
     if (value === this) {
       this.reject_(new TypeError("A Promise cannot resolve to itself"));
+    } else if (value instanceof PolyfillPromise) {
+      this.settleSameAsPromise_(value);
     } else {
-      if (value instanceof PolyfillPromise) {
-        this.settleSameAsPromise_(value);
-      } else {
-        a: {
-          switch(typeof value) {
-            case "object":
-              var JSCompiler_inline_result = null != value;
-              break a;
-            case "function":
-              JSCompiler_inline_result = !0;
-              break a;
-            default:
-              JSCompiler_inline_result = !1;
-          }
+      a: {
+        switch(typeof value) {
+          case "object":
+            var JSCompiler_inline_result = null != value;
+            break a;
+          case "function":
+            JSCompiler_inline_result = !0;
+            break a;
+          default:
+            JSCompiler_inline_result = !1;
         }
-        JSCompiler_inline_result ? this.resolveToNonPromiseObj_(value) : this.fulfill_(value);
       }
+      JSCompiler_inline_result ? this.resolveToNonPromiseObj_(value) : this.fulfill_(value);
     }
   };
   PolyfillPromise.prototype.resolveToNonPromiseObj_ = function(obj) {
@@ -1117,12 +1113,10 @@ goog.loadModule = function(moduleDef) {
     var origExports = {}, exports = origExports;
     if ("function" === typeof moduleDef) {
       exports = moduleDef.call(void 0, exports);
+    } else if ("string" === typeof moduleDef) {
+      exports = goog.loadModuleFromSource_.call(void 0, exports, moduleDef);
     } else {
-      if ("string" === typeof moduleDef) {
-        exports = goog.loadModuleFromSource_.call(void 0, exports, moduleDef);
-      } else {
-        throw Error("Invalid module definition");
-      }
+      throw Error("Invalid module definition");
     }
     var moduleName = goog.moduleLoaderState_.moduleName;
     if ("string" === typeof moduleName && moduleName) {
@@ -2193,12 +2187,12 @@ function module$contents$goog$labs$userAgent$util_getNativeUserAgentData() {
   var navigator = goog.global.navigator;
   return navigator ? navigator.userAgentData || null : null;
 }
-var module$contents$goog$labs$userAgent$util_userAgentInternal = module$contents$goog$labs$userAgent$util_getNativeUserAgentString(), module$contents$goog$labs$userAgent$util_userAgentDataInternal = module$contents$goog$labs$userAgent$util_getNativeUserAgentData();
+var module$contents$goog$labs$userAgent$util_userAgentInternal = null, module$contents$goog$labs$userAgent$util_userAgentDataInternal = module$contents$goog$labs$userAgent$util_getNativeUserAgentData();
 function module$contents$goog$labs$userAgent$util_setUserAgent(userAgent) {
   module$contents$goog$labs$userAgent$util_userAgentInternal = "string" === typeof userAgent ? userAgent : module$contents$goog$labs$userAgent$util_getNativeUserAgentString();
 }
 function module$contents$goog$labs$userAgent$util_getUserAgent() {
-  return module$contents$goog$labs$userAgent$util_userAgentInternal;
+  return null == module$contents$goog$labs$userAgent$util_userAgentInternal ? module$contents$goog$labs$userAgent$util_getNativeUserAgentString() : module$contents$goog$labs$userAgent$util_userAgentInternal;
 }
 function module$contents$goog$labs$userAgent$util_setUserAgentData(userAgentData) {
   module$contents$goog$labs$userAgent$util_userAgentDataInternal = userAgentData;
@@ -2217,11 +2211,11 @@ function module$contents$goog$labs$userAgent$util_matchUserAgentDataBrand(str) {
   }) : !1;
 }
 function module$contents$goog$labs$userAgent$util_matchUserAgent(str) {
-  var userAgent = module$contents$goog$labs$userAgent$util_userAgentInternal;
+  var userAgent = module$contents$goog$labs$userAgent$util_getUserAgent();
   return (0,goog.string.internal.contains)(userAgent, str);
 }
 function module$contents$goog$labs$userAgent$util_matchUserAgentIgnoreCase(str) {
-  var userAgent = module$contents$goog$labs$userAgent$util_userAgentInternal;
+  var userAgent = module$contents$goog$labs$userAgent$util_getUserAgent();
   return (0,goog.string.internal.caseInsensitiveContains)(userAgent, str);
 }
 function module$contents$goog$labs$userAgent$util_extractVersionTuples(userAgent) {
@@ -2295,7 +2289,18 @@ module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.HighEntropyValue
 module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.Version = function(versionString) {
   this.versionString_ = versionString;
 };
-var module$exports$goog$labs$userAgent$highEntropy$highEntropyData = {};
+module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.Version.prototype.isAtLeast = function(version) {
+  return 0 <= (0,goog.string.internal.compareVersions)(this.versionString_, version);
+};
+var module$exports$goog$labs$userAgent$highEntropy$highEntropyData = {}, module$contents$goog$labs$userAgent$highEntropy$highEntropyData_fullVersionListAvailable = !1;
+function module$contents$goog$labs$userAgent$highEntropy$highEntropyData_hasFullVersionList() {
+  return module$contents$goog$labs$userAgent$highEntropy$highEntropyData_fullVersionListAvailable;
+}
+module$exports$goog$labs$userAgent$highEntropy$highEntropyData.hasFullVersionList = module$contents$goog$labs$userAgent$highEntropy$highEntropyData_hasFullVersionList;
+function module$contents$goog$labs$userAgent$highEntropy$highEntropyData_setHasFullVersionListForTesting(value) {
+  module$contents$goog$labs$userAgent$highEntropy$highEntropyData_fullVersionListAvailable = value;
+}
+module$exports$goog$labs$userAgent$highEntropy$highEntropyData.setHasFullVersionListForTesting = module$contents$goog$labs$userAgent$highEntropy$highEntropyData_setHasFullVersionListForTesting;
 module$exports$goog$labs$userAgent$highEntropy$highEntropyData.fullVersionList = new module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.HighEntropyValue("fullVersionList");
 module$exports$goog$labs$userAgent$highEntropy$highEntropyData.platformVersion = new module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.HighEntropyValue("platformVersion");
 function module$contents$goog$labs$userAgent$highEntropy$highEntropyData_resetAllForTesting() {
@@ -2306,40 +2311,40 @@ module$exports$goog$labs$userAgent$highEntropy$highEntropyData.resetAllForTestin
 goog.labs.userAgent.browser = {};
 var module$contents$goog$labs$userAgent$browser_Brand = {ANDROID_BROWSER:"Android Browser", CHROMIUM:"Chromium", EDGE:"Microsoft Edge", FIREFOX:"Firefox", IE:"Internet Explorer", OPERA:"Opera", SAFARI:"Safari", SILK:"Silk",};
 goog.labs.userAgent.browser.Brand = module$contents$goog$labs$userAgent$browser_Brand;
-function module$contents$goog$labs$userAgent$browser_useUserAgentBrand() {
+function module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand() {
   var userAgentData = module$contents$goog$labs$userAgent$util_userAgentDataInternal;
   return !!userAgentData && 0 < userAgentData.brands.length;
 }
 function module$contents$goog$labs$userAgent$browser_matchOpera() {
-  return module$contents$goog$labs$userAgent$util_userAgentDataInternal ? !1 : module$contents$goog$labs$userAgent$util_matchUserAgent("Opera");
+  return module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand() ? !1 : module$contents$goog$labs$userAgent$util_matchUserAgent("Opera");
 }
 function module$contents$goog$labs$userAgent$browser_matchIE() {
-  return module$contents$goog$labs$userAgent$util_userAgentDataInternal ? !1 : module$contents$goog$labs$userAgent$util_matchUserAgent("Trident") || module$contents$goog$labs$userAgent$util_matchUserAgent("MSIE");
+  return module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand() ? !1 : module$contents$goog$labs$userAgent$util_matchUserAgent("Trident") || module$contents$goog$labs$userAgent$util_matchUserAgent("MSIE");
 }
 function module$contents$goog$labs$userAgent$browser_matchEdgeHtml() {
-  return module$contents$goog$labs$userAgent$util_userAgentDataInternal ? !1 : module$contents$goog$labs$userAgent$util_matchUserAgent("Edge");
+  return module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand() ? !1 : module$contents$goog$labs$userAgent$util_matchUserAgent("Edge");
 }
 function module$contents$goog$labs$userAgent$browser_matchEdgeChromium() {
-  return module$contents$goog$labs$userAgent$browser_useUserAgentBrand() ? module$contents$goog$labs$userAgent$util_matchUserAgentDataBrand(module$contents$goog$labs$userAgent$browser_Brand.EDGE) : module$contents$goog$labs$userAgent$util_matchUserAgent("Edg/");
+  return module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand() ? module$contents$goog$labs$userAgent$util_matchUserAgentDataBrand(module$contents$goog$labs$userAgent$browser_Brand.EDGE) : module$contents$goog$labs$userAgent$util_matchUserAgent("Edg/");
 }
 function module$contents$goog$labs$userAgent$browser_matchOperaChromium() {
-  return module$contents$goog$labs$userAgent$browser_useUserAgentBrand() ? module$contents$goog$labs$userAgent$util_matchUserAgentDataBrand(module$contents$goog$labs$userAgent$browser_Brand.OPERA) : module$contents$goog$labs$userAgent$util_matchUserAgent("OPR");
+  return module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand() ? module$contents$goog$labs$userAgent$util_matchUserAgentDataBrand(module$contents$goog$labs$userAgent$browser_Brand.OPERA) : module$contents$goog$labs$userAgent$util_matchUserAgent("OPR");
 }
 function module$contents$goog$labs$userAgent$browser_matchFirefox() {
-  return module$contents$goog$labs$userAgent$util_userAgentDataInternal ? !1 : module$contents$goog$labs$userAgent$util_matchUserAgent("Firefox") || module$contents$goog$labs$userAgent$util_matchUserAgent("FxiOS");
+  return module$contents$goog$labs$userAgent$util_matchUserAgent("Firefox") || module$contents$goog$labs$userAgent$util_matchUserAgent("FxiOS");
 }
 function module$contents$goog$labs$userAgent$browser_matchSafari() {
-  return module$contents$goog$labs$userAgent$browser_useUserAgentBrand() ? !1 : module$contents$goog$labs$userAgent$util_matchUserAgent("Safari") && !(module$contents$goog$labs$userAgent$browser_matchChrome() || module$contents$goog$labs$userAgent$browser_matchCoast() || module$contents$goog$labs$userAgent$browser_matchOpera() || module$contents$goog$labs$userAgent$browser_matchEdgeHtml() || module$contents$goog$labs$userAgent$browser_matchEdgeChromium() || module$contents$goog$labs$userAgent$browser_matchOperaChromium() || 
-  module$contents$goog$labs$userAgent$browser_matchFirefox() || module$contents$goog$labs$userAgent$browser_isSilk() || module$contents$goog$labs$userAgent$util_matchUserAgent("Android"));
+  return module$contents$goog$labs$userAgent$util_matchUserAgent("Safari") && !(module$contents$goog$labs$userAgent$browser_matchChrome() || module$contents$goog$labs$userAgent$browser_matchCoast() || module$contents$goog$labs$userAgent$browser_matchOpera() || module$contents$goog$labs$userAgent$browser_matchEdgeHtml() || module$contents$goog$labs$userAgent$browser_matchEdgeChromium() || module$contents$goog$labs$userAgent$browser_matchOperaChromium() || module$contents$goog$labs$userAgent$browser_matchFirefox() || 
+  module$contents$goog$labs$userAgent$browser_isSilk() || module$contents$goog$labs$userAgent$util_matchUserAgent("Android"));
 }
 function module$contents$goog$labs$userAgent$browser_matchCoast() {
-  return module$contents$goog$labs$userAgent$util_userAgentDataInternal ? !1 : module$contents$goog$labs$userAgent$util_matchUserAgent("Coast");
+  return module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand() ? !1 : module$contents$goog$labs$userAgent$util_matchUserAgent("Coast");
 }
 function module$contents$goog$labs$userAgent$browser_matchIosWebview() {
-  return module$contents$goog$labs$userAgent$util_userAgentDataInternal ? !1 : (module$contents$goog$labs$userAgent$util_matchUserAgent("iPad") || module$contents$goog$labs$userAgent$util_matchUserAgent("iPhone")) && !module$contents$goog$labs$userAgent$browser_matchSafari() && !module$contents$goog$labs$userAgent$browser_matchChrome() && !module$contents$goog$labs$userAgent$browser_matchCoast() && !module$contents$goog$labs$userAgent$browser_matchFirefox() && module$contents$goog$labs$userAgent$util_matchUserAgent("AppleWebKit");
+  return (module$contents$goog$labs$userAgent$util_matchUserAgent("iPad") || module$contents$goog$labs$userAgent$util_matchUserAgent("iPhone")) && !module$contents$goog$labs$userAgent$browser_matchSafari() && !module$contents$goog$labs$userAgent$browser_matchChrome() && !module$contents$goog$labs$userAgent$browser_matchCoast() && !module$contents$goog$labs$userAgent$browser_matchFirefox() && module$contents$goog$labs$userAgent$util_matchUserAgent("AppleWebKit");
 }
 function module$contents$goog$labs$userAgent$browser_matchChrome() {
-  return module$contents$goog$labs$userAgent$browser_useUserAgentBrand() ? module$contents$goog$labs$userAgent$util_matchUserAgentDataBrand(module$contents$goog$labs$userAgent$browser_Brand.CHROMIUM) : (module$contents$goog$labs$userAgent$util_matchUserAgent("Chrome") || module$contents$goog$labs$userAgent$util_matchUserAgent("CriOS")) && !module$contents$goog$labs$userAgent$browser_matchEdgeHtml() || module$contents$goog$labs$userAgent$browser_isSilk();
+  return module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand() ? module$contents$goog$labs$userAgent$util_matchUserAgentDataBrand(module$contents$goog$labs$userAgent$browser_Brand.CHROMIUM) : (module$contents$goog$labs$userAgent$util_matchUserAgent("Chrome") || module$contents$goog$labs$userAgent$util_matchUserAgent("CriOS")) && !module$contents$goog$labs$userAgent$browser_matchEdgeHtml() || module$contents$goog$labs$userAgent$browser_isSilk();
 }
 function module$contents$goog$labs$userAgent$browser_matchAndroidBrowser() {
   return module$contents$goog$labs$userAgent$util_matchUserAgent("Android") && !(module$contents$goog$labs$userAgent$browser_matchChrome() || module$contents$goog$labs$userAgent$browser_matchFirefox() || module$contents$goog$labs$userAgent$browser_matchOpera() || module$contents$goog$labs$userAgent$browser_isSilk());
@@ -2372,7 +2377,7 @@ function module$contents$goog$labs$userAgent$browser_createVersionMap(versionTup
   };
 }
 function module$contents$goog$labs$userAgent$browser_getVersion() {
-  var userAgentString = module$contents$goog$labs$userAgent$util_userAgentInternal;
+  var userAgentString = module$contents$goog$labs$userAgent$util_getUserAgent();
   if (module$contents$goog$labs$userAgent$browser_matchIE()) {
     return module$contents$goog$labs$userAgent$browser_getIEVersion(userAgentString);
   }
@@ -2433,7 +2438,7 @@ function module$contents$goog$labs$userAgent$browser_getIEVersion(userAgent) {
   return version;
 }
 function module$contents$goog$labs$userAgent$browser_getFullVersionFromUserAgentString(browser) {
-  var userAgentString = module$contents$goog$labs$userAgent$util_userAgentInternal;
+  var userAgentString = module$contents$goog$labs$userAgent$util_getUserAgent();
   if (browser === module$contents$goog$labs$userAgent$browser_Brand.IE) {
     return module$contents$goog$labs$userAgent$browser_matchIE() ? module$contents$goog$labs$userAgent$browser_getIEVersion(userAgentString) : "";
   }
@@ -2467,7 +2472,7 @@ function module$contents$goog$labs$userAgent$browser_getFullVersionFromUserAgent
   return "";
 }
 function module$contents$goog$labs$userAgent$browser_versionOf(browser) {
-  if (module$contents$goog$labs$userAgent$browser_useUserAgentBrand() && browser !== module$contents$goog$labs$userAgent$browser_Brand.SILK) {
+  if (module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand() && browser !== module$contents$goog$labs$userAgent$browser_Brand.SILK) {
     var data = module$contents$goog$labs$userAgent$util_userAgentDataInternal, matchingBrand = data.brands.find(function($jscomp$destructuring$var2) {
       var $jscomp$destructuring$var3 = $jscomp$destructuring$var2, brand = $jscomp$destructuring$var3.brand;
       return brand === browser;
@@ -2490,6 +2495,16 @@ function module$contents$goog$labs$userAgent$browser_versionOf(browser) {
   return Number(majorVersion);
 }
 goog.labs.userAgent.browser.versionOf = module$contents$goog$labs$userAgent$browser_versionOf;
+function module$contents$goog$labs$userAgent$browser_isAtLeast(brand, majorVersion) {
+  goog.asserts.assert(Math.floor(majorVersion) === majorVersion, "Major version must be an integer");
+  return module$contents$goog$labs$userAgent$browser_versionOf(brand) >= majorVersion;
+}
+goog.labs.userAgent.browser.isAtLeast = module$contents$goog$labs$userAgent$browser_isAtLeast;
+function module$contents$goog$labs$userAgent$browser_isAtMost(brand, majorVersion) {
+  goog.asserts.assert(Math.floor(majorVersion) === majorVersion, "Major version must be an integer");
+  return module$contents$goog$labs$userAgent$browser_versionOf(brand) <= majorVersion;
+}
+goog.labs.userAgent.browser.isAtMost = module$contents$goog$labs$userAgent$browser_isAtMost;
 var module$contents$goog$labs$userAgent$browser_HighEntropyBrandVersion = function(brand) {
   this.brand_ = brand;
 };
@@ -2531,20 +2546,26 @@ module$contents$goog$labs$userAgent$browser_UserAgentStringFallbackBrandVersion.
     return $jscomp$generator$context.return($jscomp$async$this.version_);
   });
 };
+function module$contents$goog$labs$userAgent$browser_loadFullVersions() {
+  return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context) {
+    return module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand() && module$contents$goog$labs$userAgent$highEntropy$highEntropyData_fullVersionListAvailable ? $jscomp$generator$context.yield(module$exports$goog$labs$userAgent$highEntropy$highEntropyData.fullVersionList.load(), 0) : $jscomp$generator$context.jumpTo(0);
+  });
+}
+goog.labs.userAgent.browser.loadFullVersions = module$contents$goog$labs$userAgent$browser_loadFullVersions;
 function module$contents$goog$labs$userAgent$browser_fullVersionOf(browser) {
-  if (!module$contents$goog$labs$userAgent$browser_useUserAgentBrand() || 101 > module$contents$goog$labs$userAgent$browser_versionOf(module$contents$goog$labs$userAgent$browser_Brand.CHROMIUM)) {
-    var fullVersionFromUserAgentString = module$contents$goog$labs$userAgent$browser_getFullVersionFromUserAgentString(browser);
-    return "" === fullVersionFromUserAgentString ? void 0 : new module$contents$goog$labs$userAgent$browser_UserAgentStringFallbackBrandVersion(fullVersionFromUserAgentString);
+  if (module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand() && module$contents$goog$labs$userAgent$highEntropy$highEntropyData_fullVersionListAvailable) {
+    var data = module$contents$goog$labs$userAgent$util_userAgentDataInternal;
+    return data.brands.find(function($jscomp$destructuring$var8) {
+      var $jscomp$destructuring$var9 = $jscomp$destructuring$var8, brand = $jscomp$destructuring$var9.brand;
+      return brand === browser;
+    }) ? new module$contents$goog$labs$userAgent$browser_HighEntropyBrandVersion(browser) : void 0;
   }
-  var data = module$contents$goog$labs$userAgent$util_userAgentDataInternal;
-  return data.brands.find(function($jscomp$destructuring$var8) {
-    var $jscomp$destructuring$var9 = $jscomp$destructuring$var8, brand = $jscomp$destructuring$var9.brand;
-    return brand === browser;
-  }) ? new module$contents$goog$labs$userAgent$browser_HighEntropyBrandVersion(browser) : void 0;
+  var fullVersionFromUserAgentString = module$contents$goog$labs$userAgent$browser_getFullVersionFromUserAgentString(browser);
+  return "" === fullVersionFromUserAgentString ? void 0 : new module$contents$goog$labs$userAgent$browser_UserAgentStringFallbackBrandVersion(fullVersionFromUserAgentString);
 }
 goog.labs.userAgent.browser.fullVersionOf = module$contents$goog$labs$userAgent$browser_fullVersionOf;
 function module$contents$goog$labs$userAgent$browser_getVersionStringForLogging(browser) {
-  if (module$contents$goog$labs$userAgent$browser_useUserAgentBrand()) {
+  if (module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand()) {
     var fullVersionObj = module$contents$goog$labs$userAgent$browser_fullVersionOf(browser);
     if (fullVersionObj) {
       var fullVersion = fullVersionObj.getIfLoaded();
@@ -2580,7 +2601,7 @@ function module$contents$goog$labs$userAgent$engine_isGecko() {
   return module$contents$goog$labs$userAgent$util_matchUserAgent("Gecko") && !module$contents$goog$labs$userAgent$engine_isWebKit() && !module$contents$goog$labs$userAgent$engine_isTrident() && !module$contents$goog$labs$userAgent$engine_isEdge();
 }
 function module$contents$goog$labs$userAgent$engine_getVersion() {
-  var userAgentString = module$contents$goog$labs$userAgent$util_userAgentInternal;
+  var userAgentString = module$contents$goog$labs$userAgent$util_getUserAgent();
   if (userAgentString) {
     var tuples = module$contents$goog$labs$userAgent$util_extractVersionTuples(userAgentString);
     a: {
@@ -2628,8 +2649,12 @@ goog.labs.userAgent.engine.isTrident = module$contents$goog$labs$userAgent$engin
 goog.labs.userAgent.engine.isVersionOrHigher = module$contents$goog$labs$userAgent$engine_isVersionOrHigher;
 goog.labs.userAgent.engine.isWebKit = module$contents$goog$labs$userAgent$engine_isWebKit;
 goog.labs.userAgent.platform = {};
+function module$contents$goog$labs$userAgent$platform_useUserAgentDataPlatform() {
+  var userAgentData = module$contents$goog$labs$userAgent$util_userAgentDataInternal;
+  return !!userAgentData && !!userAgentData.platform;
+}
 function module$contents$goog$labs$userAgent$platform_isAndroid() {
-  return module$contents$goog$labs$userAgent$util_matchUserAgent("Android");
+  return module$contents$goog$labs$userAgent$platform_useUserAgentDataPlatform() ? "Android" === module$contents$goog$labs$userAgent$util_userAgentDataInternal.platform : module$contents$goog$labs$userAgent$util_matchUserAgent("Android");
 }
 function module$contents$goog$labs$userAgent$platform_isIpod() {
   return module$contents$goog$labs$userAgent$util_matchUserAgent("iPod");
@@ -2644,16 +2669,16 @@ function module$contents$goog$labs$userAgent$platform_isIos() {
   return module$contents$goog$labs$userAgent$platform_isIphone() || module$contents$goog$labs$userAgent$platform_isIpad() || module$contents$goog$labs$userAgent$platform_isIpod();
 }
 function module$contents$goog$labs$userAgent$platform_isMacintosh() {
-  return module$contents$goog$labs$userAgent$util_matchUserAgent("Macintosh");
+  return module$contents$goog$labs$userAgent$platform_useUserAgentDataPlatform() ? "macOS" === module$contents$goog$labs$userAgent$util_userAgentDataInternal.platform : module$contents$goog$labs$userAgent$util_matchUserAgent("Macintosh");
 }
 function module$contents$goog$labs$userAgent$platform_isLinux() {
-  return module$contents$goog$labs$userAgent$util_matchUserAgent("Linux");
+  return module$contents$goog$labs$userAgent$platform_useUserAgentDataPlatform() ? "Linux" === module$contents$goog$labs$userAgent$util_userAgentDataInternal.platform : module$contents$goog$labs$userAgent$util_matchUserAgent("Linux");
 }
 function module$contents$goog$labs$userAgent$platform_isWindows() {
-  return module$contents$goog$labs$userAgent$util_matchUserAgent("Windows");
+  return module$contents$goog$labs$userAgent$platform_useUserAgentDataPlatform() ? "Windows" === module$contents$goog$labs$userAgent$util_userAgentDataInternal.platform : module$contents$goog$labs$userAgent$util_matchUserAgent("Windows");
 }
 function module$contents$goog$labs$userAgent$platform_isChromeOS() {
-  return module$contents$goog$labs$userAgent$util_matchUserAgent("CrOS");
+  return module$contents$goog$labs$userAgent$platform_useUserAgentDataPlatform() ? "Chrome OS" === module$contents$goog$labs$userAgent$util_userAgentDataInternal.platform : module$contents$goog$labs$userAgent$util_matchUserAgent("CrOS");
 }
 function module$contents$goog$labs$userAgent$platform_isChromecast() {
   return module$contents$goog$labs$userAgent$util_matchUserAgent("CrKey");
@@ -2662,41 +2687,31 @@ function module$contents$goog$labs$userAgent$platform_isKaiOS() {
   return module$contents$goog$labs$userAgent$util_matchUserAgentIgnoreCase("KaiOS");
 }
 function module$contents$goog$labs$userAgent$platform_getVersion() {
-  var userAgentString = module$contents$goog$labs$userAgent$util_userAgentInternal, version = "";
+  var userAgentString = module$contents$goog$labs$userAgent$util_getUserAgent(), version = "";
   if (module$contents$goog$labs$userAgent$platform_isWindows()) {
     var re = /Windows (?:NT|Phone) ([0-9.]+)/;
     var match = re.exec(userAgentString);
     version = match ? match[1] : "0.0";
-  } else {
-    if (module$contents$goog$labs$userAgent$platform_isIos()) {
-      re = /(?:iPhone|iPod|iPad|CPU)\s+OS\s+(\S+)/;
-      var match$10 = re.exec(userAgentString);
-      version = match$10 && match$10[1].replace(/_/g, ".");
-    } else {
-      if (module$contents$goog$labs$userAgent$platform_isMacintosh()) {
-        re = /Mac OS X ([0-9_.]+)/;
-        var match$11 = re.exec(userAgentString);
-        version = match$11 ? match$11[1].replace(/_/g, ".") : "10";
-      } else {
-        if (module$contents$goog$labs$userAgent$platform_isKaiOS()) {
-          re = /(?:KaiOS)\/(\S+)/i;
-          var match$12 = re.exec(userAgentString);
-          version = match$12 && match$12[1];
-        } else {
-          if (module$contents$goog$labs$userAgent$platform_isAndroid()) {
-            re = /Android\s+([^\);]+)(\)|;)/;
-            var match$13 = re.exec(userAgentString);
-            version = match$13 && match$13[1];
-          } else {
-            if (module$contents$goog$labs$userAgent$platform_isChromeOS()) {
-              re = /(?:CrOS\s+(?:i686|x86_64)\s+([0-9.]+))/;
-              var match$14 = re.exec(userAgentString);
-              version = match$14 && match$14[1];
-            }
-          }
-        }
-      }
-    }
+  } else if (module$contents$goog$labs$userAgent$platform_isIos()) {
+    re = /(?:iPhone|iPod|iPad|CPU)\s+OS\s+(\S+)/;
+    var match$10 = re.exec(userAgentString);
+    version = match$10 && match$10[1].replace(/_/g, ".");
+  } else if (module$contents$goog$labs$userAgent$platform_isMacintosh()) {
+    re = /Mac OS X ([0-9_.]+)/;
+    var match$11 = re.exec(userAgentString);
+    version = match$11 ? match$11[1].replace(/_/g, ".") : "10";
+  } else if (module$contents$goog$labs$userAgent$platform_isKaiOS()) {
+    re = /(?:KaiOS)\/(\S+)/i;
+    var match$12 = re.exec(userAgentString);
+    version = match$12 && match$12[1];
+  } else if (module$contents$goog$labs$userAgent$platform_isAndroid()) {
+    re = /Android\s+([^\);]+)(\)|;)/;
+    var match$13 = re.exec(userAgentString);
+    version = match$13 && match$13[1];
+  } else if (module$contents$goog$labs$userAgent$platform_isChromeOS()) {
+    re = /(?:CrOS\s+(?:i686|x86_64)\s+([0-9.]+))/;
+    var match$14 = re.exec(userAgentString);
+    version = match$14 && match$14[1];
   }
   return version || "";
 }
@@ -2776,7 +2791,7 @@ goog.userAgent.ASSUME_OPERA = !1;
 goog.userAgent.ASSUME_ANY_VERSION = !1;
 goog.userAgent.BROWSER_KNOWN_ = goog.userAgent.ASSUME_IE || goog.userAgent.ASSUME_EDGE || goog.userAgent.ASSUME_GECKO || goog.userAgent.ASSUME_MOBILE_WEBKIT || goog.userAgent.ASSUME_WEBKIT || goog.userAgent.ASSUME_OPERA;
 goog.userAgent.getUserAgentString = function() {
-  return module$contents$goog$labs$userAgent$util_userAgentInternal;
+  return module$contents$goog$labs$userAgent$util_getUserAgent();
 };
 goog.userAgent.getNavigatorTyped = function() {
   return goog.global.navigator || null;
@@ -4089,17 +4104,13 @@ function module$contents$goog$html$SafeStyle_hasBalancedSquareBrackets(value) {
         return !1;
       }
       outside = !0;
-    } else {
-      if ("[" == c) {
-        if (!outside) {
-          return !1;
-        }
-        outside = !1;
-      } else {
-        if (!outside && !tokenRe.test(c)) {
-          return !1;
-        }
+    } else if ("[" == c) {
+      if (!outside) {
+        return !1;
       }
+      outside = !1;
+    } else if (!outside && !tokenRe.test(c)) {
+      return !1;
     }
   }
   return outside;
@@ -4266,36 +4277,30 @@ module$contents$goog$html$SafeHtml_SafeHtml.stringifyAttributes = function(tagNa
           var JSCompiler_temp_const = result, tagName = tagName$jscomp$0, name$jscomp$0 = name, value$jscomp$0 = value;
           if (value$jscomp$0 instanceof goog.string.Const) {
             value$jscomp$0 = goog.string.Const.unwrap(value$jscomp$0);
-          } else {
-            if ("style" == name$jscomp$0.toLowerCase()) {
-              if (module$contents$goog$html$SafeHtml_SafeHtml.SUPPORT_STYLE_ATTRIBUTE) {
-                var value$jscomp$1 = value$jscomp$0;
-                if (!goog.isObject(value$jscomp$1)) {
-                  throw Error(module$contents$goog$html$SafeHtml_SafeHtml.ENABLE_ERROR_MESSAGES ? 'The "style" attribute requires goog.html.SafeStyle or map of style properties, ' + typeof value$jscomp$1 + " given: " + value$jscomp$1 : "");
-                }
-                value$jscomp$1 instanceof module$contents$goog$html$SafeStyle_SafeStyle || (value$jscomp$1 = module$contents$goog$html$SafeStyle_SafeStyle.create(value$jscomp$1));
-                value$jscomp$0 = module$contents$goog$html$SafeStyle_SafeStyle.unwrap(value$jscomp$1);
-              } else {
-                throw Error(module$contents$goog$html$SafeHtml_SafeHtml.ENABLE_ERROR_MESSAGES ? 'Attribute "style" not supported.' : "");
+          } else if ("style" == name$jscomp$0.toLowerCase()) {
+            if (module$contents$goog$html$SafeHtml_SafeHtml.SUPPORT_STYLE_ATTRIBUTE) {
+              var value$jscomp$1 = value$jscomp$0;
+              if (!goog.isObject(value$jscomp$1)) {
+                throw Error(module$contents$goog$html$SafeHtml_SafeHtml.ENABLE_ERROR_MESSAGES ? 'The "style" attribute requires goog.html.SafeStyle or map of style properties, ' + typeof value$jscomp$1 + " given: " + value$jscomp$1 : "");
               }
+              value$jscomp$1 instanceof module$contents$goog$html$SafeStyle_SafeStyle || (value$jscomp$1 = module$contents$goog$html$SafeStyle_SafeStyle.create(value$jscomp$1));
+              value$jscomp$0 = module$contents$goog$html$SafeStyle_SafeStyle.unwrap(value$jscomp$1);
             } else {
-              if (/^on/i.test(name$jscomp$0)) {
-                throw Error(module$contents$goog$html$SafeHtml_SafeHtml.ENABLE_ERROR_MESSAGES ? 'Attribute "' + name$jscomp$0 + '" requires goog.string.Const value, "' + value$jscomp$0 + '" given.' : "");
-              }
-              if (name$jscomp$0.toLowerCase() in module$contents$goog$html$SafeHtml_URL_ATTRIBUTES) {
-                if (value$jscomp$0 instanceof goog.html.TrustedResourceUrl) {
-                  value$jscomp$0 = goog.html.TrustedResourceUrl.unwrap(value$jscomp$0);
-                } else {
-                  if (value$jscomp$0 instanceof goog.html.SafeUrl) {
-                    value$jscomp$0 = goog.html.SafeUrl.unwrap(value$jscomp$0);
-                  } else {
-                    if ("string" === typeof value$jscomp$0) {
-                      value$jscomp$0 = goog.html.SafeUrl.sanitize(value$jscomp$0).getTypedStringValue();
-                    } else {
-                      throw Error(module$contents$goog$html$SafeHtml_SafeHtml.ENABLE_ERROR_MESSAGES ? 'Attribute "' + name$jscomp$0 + '" on tag "' + tagName + '" requires goog.html.SafeUrl, goog.string.Const, or string, value "' + value$jscomp$0 + '" given.' : "");
-                    }
-                  }
-                }
+              throw Error(module$contents$goog$html$SafeHtml_SafeHtml.ENABLE_ERROR_MESSAGES ? 'Attribute "style" not supported.' : "");
+            }
+          } else {
+            if (/^on/i.test(name$jscomp$0)) {
+              throw Error(module$contents$goog$html$SafeHtml_SafeHtml.ENABLE_ERROR_MESSAGES ? 'Attribute "' + name$jscomp$0 + '" requires goog.string.Const value, "' + value$jscomp$0 + '" given.' : "");
+            }
+            if (name$jscomp$0.toLowerCase() in module$contents$goog$html$SafeHtml_URL_ATTRIBUTES) {
+              if (value$jscomp$0 instanceof goog.html.TrustedResourceUrl) {
+                value$jscomp$0 = goog.html.TrustedResourceUrl.unwrap(value$jscomp$0);
+              } else if (value$jscomp$0 instanceof goog.html.SafeUrl) {
+                value$jscomp$0 = goog.html.SafeUrl.unwrap(value$jscomp$0);
+              } else if ("string" === typeof value$jscomp$0) {
+                value$jscomp$0 = goog.html.SafeUrl.sanitize(value$jscomp$0).getTypedStringValue();
+              } else {
+                throw Error(module$contents$goog$html$SafeHtml_SafeHtml.ENABLE_ERROR_MESSAGES ? 'Attribute "' + name$jscomp$0 + '" on tag "' + tagName + '" requires goog.html.SafeUrl, goog.string.Const, or string, value "' + value$jscomp$0 + '" given.' : "");
               }
             }
           }
@@ -4955,12 +4960,10 @@ goog.string.truncateMiddle = function(str, chars, opt_protectEscapedCharacters, 
     opt_trailingChars > chars && (opt_trailingChars = chars);
     var endPoint = str.length - opt_trailingChars, startPoint = chars - opt_trailingChars;
     str = str.substring(0, startPoint) + "..." + str.substring(endPoint);
-  } else {
-    if (str.length > chars) {
-      var half = Math.floor(chars / 2), endPos = str.length - half;
-      half += chars % 2;
-      str = str.substring(0, half) + "..." + str.substring(endPos);
-    }
+  } else if (str.length > chars) {
+    var half = Math.floor(chars / 2), endPos = str.length - half;
+    half += chars % 2;
+    str = str.substring(0, half) + "..." + str.substring(endPos);
   }
   opt_protectEscapedCharacters && (str = goog.string.htmlEscape(str));
   return str;
@@ -5640,21 +5643,17 @@ goog.dom.setTextContent = function(node, text) {
   goog.asserts.assert(null != node, "goog.dom.setTextContent expects a non-null value for node");
   if ("textContent" in node) {
     node.textContent = text;
-  } else {
-    if (node.nodeType == goog.dom.NodeType.TEXT) {
-      node.data = String(text);
-    } else {
-      if (node.firstChild && node.firstChild.nodeType == goog.dom.NodeType.TEXT) {
-        for (; node.lastChild != node.firstChild;) {
-          node.removeChild(goog.asserts.assert(node.lastChild));
-        }
-        node.firstChild.data = String(text);
-      } else {
-        goog.dom.removeChildren(node);
-        var doc = goog.dom.getOwnerDocument(node);
-        node.appendChild(doc.createTextNode(String(text)));
-      }
+  } else if (node.nodeType == goog.dom.NodeType.TEXT) {
+    node.data = String(text);
+  } else if (node.firstChild && node.firstChild.nodeType == goog.dom.NodeType.TEXT) {
+    for (; node.lastChild != node.firstChild;) {
+      node.removeChild(goog.asserts.assert(node.lastChild));
     }
+    node.firstChild.data = String(text);
+  } else {
+    goog.dom.removeChildren(node);
+    var doc = goog.dom.getOwnerDocument(node);
+    node.appendChild(doc.createTextNode(String(text)));
   }
 };
 goog.dom.getOuterHtml = function(element) {
@@ -5762,13 +5761,11 @@ goog.dom.getTextContent_ = function(node, buf, normalizeWhitespace) {
   if (!(node.nodeName in goog.dom.TAGS_TO_IGNORE_)) {
     if (node.nodeType == goog.dom.NodeType.TEXT) {
       normalizeWhitespace ? buf.push(String(node.nodeValue).replace(/(\r\n|\r|\n)/g, "")) : buf.push(node.nodeValue);
+    } else if (node.nodeName in goog.dom.PREDEFINED_TAG_VALUES_) {
+      buf.push(goog.dom.PREDEFINED_TAG_VALUES_[node.nodeName]);
     } else {
-      if (node.nodeName in goog.dom.PREDEFINED_TAG_VALUES_) {
-        buf.push(goog.dom.PREDEFINED_TAG_VALUES_[node.nodeName]);
-      } else {
-        for (var child = node.firstChild; child;) {
-          goog.dom.getTextContent_(child, buf, normalizeWhitespace), child = child.nextSibling;
-        }
+      for (var child = node.firstChild; child;) {
+        goog.dom.getTextContent_(child, buf, normalizeWhitespace), child = child.nextSibling;
       }
     }
   }
@@ -5791,13 +5788,11 @@ goog.dom.getNodeAtOffset = function(parent, offset, opt_result) {
       if (cur.nodeType == goog.dom.NodeType.TEXT) {
         var text = cur.nodeValue.replace(/(\r\n|\r|\n)/g, "").replace(/ +/g, " ");
         pos += text.length;
+      } else if (cur.nodeName in goog.dom.PREDEFINED_TAG_VALUES_) {
+        pos += goog.dom.PREDEFINED_TAG_VALUES_[cur.nodeName].length;
       } else {
-        if (cur.nodeName in goog.dom.PREDEFINED_TAG_VALUES_) {
-          pos += goog.dom.PREDEFINED_TAG_VALUES_[cur.nodeName].length;
-        } else {
-          for (var i = cur.childNodes.length - 1; 0 <= i; i--) {
-            stack.push(cur.childNodes[i]);
-          }
+        for (var i = cur.childNodes.length - 1; 0 <= i; i--) {
+          stack.push(cur.childNodes[i]);
         }
       }
     }
@@ -6289,38 +6284,30 @@ goog.debug.deepExpose = function(obj$jscomp$0, opt_showFn) {
     try {
       if (void 0 === obj) {
         str.push("undefined");
-      } else {
-        if (null === obj) {
-          str.push("NULL");
+      } else if (null === obj) {
+        str.push("NULL");
+      } else if ("string" === typeof obj) {
+        str.push('"' + obj.replace(/\n/g, "\n" + space) + '"');
+      } else if ("function" === typeof obj) {
+        str.push(String(obj).replace(/\n/g, "\n" + space));
+      } else if (goog.isObject(obj)) {
+        goog.hasUid(obj) || uidsToCleanup.push(obj);
+        var uid = goog.getUid(obj);
+        if (ancestorUids[uid]) {
+          str.push("*** reference loop detected (id=" + uid + ") ***");
         } else {
-          if ("string" === typeof obj) {
-            str.push('"' + obj.replace(/\n/g, "\n" + space) + '"');
-          } else {
-            if ("function" === typeof obj) {
-              str.push(String(obj).replace(/\n/g, "\n" + space));
-            } else {
-              if (goog.isObject(obj)) {
-                goog.hasUid(obj) || uidsToCleanup.push(obj);
-                var uid = goog.getUid(obj);
-                if (ancestorUids[uid]) {
-                  str.push("*** reference loop detected (id=" + uid + ") ***");
-                } else {
-                  ancestorUids[uid] = !0;
-                  str.push("{");
-                  for (var x in obj) {
-                    if (opt_showFn || "function" !== typeof obj[x]) {
-                      str.push("\n"), str.push(nestspace), str.push(x + " = "), helper(obj[x], nestspace);
-                    }
-                  }
-                  str.push("\n" + space + "}");
-                  delete ancestorUids[uid];
-                }
-              } else {
-                str.push(obj);
-              }
+          ancestorUids[uid] = !0;
+          str.push("{");
+          for (var x in obj) {
+            if (opt_showFn || "function" !== typeof obj[x]) {
+              str.push("\n"), str.push(nestspace), str.push(x + " = "), helper(obj[x], nestspace);
             }
           }
+          str.push("\n" + space + "}");
+          delete ancestorUids[uid];
         }
+      } else {
+        str.push(obj);
       }
     } catch (e) {
       str.push("*** " + e + " ***");
@@ -6465,44 +6452,42 @@ goog.debug.getStacktraceHelper_ = function(fn, visited) {
   var sb = [];
   if (module$contents$goog$array_contains(visited, fn)) {
     sb.push("[...circular reference...]");
-  } else {
-    if (fn && visited.length < goog.debug.MAX_STACK_DEPTH) {
-      sb.push(goog.debug.getFunctionName(fn) + "(");
-      for (var args = fn.arguments, i = 0; args && i < args.length; i++) {
-        0 < i && sb.push(", ");
-        var arg = args[i];
-        switch(typeof arg) {
-          case "object":
-            var argDesc = arg ? "object" : "null";
-            break;
-          case "string":
-            argDesc = arg;
-            break;
-          case "number":
-            argDesc = String(arg);
-            break;
-          case "boolean":
-            argDesc = arg ? "true" : "false";
-            break;
-          case "function":
-            argDesc = (argDesc = goog.debug.getFunctionName(arg)) ? argDesc : "[fn]";
-            break;
-          default:
-            argDesc = typeof arg;
-        }
-        40 < argDesc.length && (argDesc = argDesc.substr(0, 40) + "...");
-        sb.push(argDesc);
+  } else if (fn && visited.length < goog.debug.MAX_STACK_DEPTH) {
+    sb.push(goog.debug.getFunctionName(fn) + "(");
+    for (var args = fn.arguments, i = 0; args && i < args.length; i++) {
+      0 < i && sb.push(", ");
+      var arg = args[i];
+      switch(typeof arg) {
+        case "object":
+          var argDesc = arg ? "object" : "null";
+          break;
+        case "string":
+          argDesc = arg;
+          break;
+        case "number":
+          argDesc = String(arg);
+          break;
+        case "boolean":
+          argDesc = arg ? "true" : "false";
+          break;
+        case "function":
+          argDesc = (argDesc = goog.debug.getFunctionName(arg)) ? argDesc : "[fn]";
+          break;
+        default:
+          argDesc = typeof arg;
       }
-      visited.push(fn);
-      sb.push(")\n");
-      try {
-        sb.push(goog.debug.getStacktraceHelper_(fn.caller, visited));
-      } catch (e) {
-        sb.push("[exception trying to get caller]\n");
-      }
-    } else {
-      fn ? sb.push("[...long stack...]") : sb.push("[end]");
+      40 < argDesc.length && (argDesc = argDesc.substr(0, 40) + "...");
+      sb.push(argDesc);
     }
+    visited.push(fn);
+    sb.push(")\n");
+    try {
+      sb.push(goog.debug.getStacktraceHelper_(fn.caller, visited));
+    } catch (e) {
+      sb.push("[exception trying to get caller]\n");
+    }
+  } else {
+    fn ? sb.push("[...long stack...]") : sb.push("[end]");
   }
   return sb.join("");
 };
@@ -6894,16 +6879,12 @@ goog.events.listen_ = function(src, type, listener, callOnce, opt_options, opt_h
   proxy.listener = listenerObj;
   if (src.addEventListener) {
     goog.events.BrowserFeature.PASSIVE_EVENTS || (opt_options = capture), void 0 === opt_options && (opt_options = !1), src.addEventListener(type.toString(), proxy, opt_options);
+  } else if (src.attachEvent) {
+    src.attachEvent(goog.events.getOnString_(type.toString()), proxy);
+  } else if (src.addListener && src.removeListener) {
+    goog.asserts.assert("change" === type, "MediaQueryList only has a change event"), src.addListener(proxy);
   } else {
-    if (src.attachEvent) {
-      src.attachEvent(goog.events.getOnString_(type.toString()), proxy);
-    } else {
-      if (src.addListener && src.removeListener) {
-        goog.asserts.assert("change" === type, "MediaQueryList only has a change event"), src.addListener(proxy);
-      } else {
-        throw Error("addEventListener and attachEvent are unavailable.");
-      }
-    }
+    throw Error("addEventListener and attachEvent are unavailable.");
   }
   goog.events.listenerCountEstimate_++;
   return listenerObj;
@@ -7198,14 +7179,12 @@ goog.events.EventTarget.dispatchEventInternal_ = function(target, e, opt_ancesto
   var type = e.type || e;
   if ("string" === typeof e) {
     e = new goog.events.Event(e, target);
+  } else if (e instanceof goog.events.Event) {
+    e.target = e.target || target;
   } else {
-    if (e instanceof goog.events.Event) {
-      e.target = e.target || target;
-    } else {
-      var oldEvent = e;
-      e = new goog.events.Event(type, target);
-      module$contents$goog$object_extend(e, oldEvent);
-    }
+    var oldEvent = e;
+    e = new goog.events.Event(type, target);
+    module$contents$goog$object_extend(e, oldEvent);
   }
   var rv = !0;
   if (opt_ancestorsTree) {
@@ -7729,8 +7708,9 @@ goog.net.DefaultXmlHttpFactory.prototype.getProgId_ = function() {
 };
 goog.net.XmlHttp.setGlobalFactory(new goog.net.DefaultXmlHttpFactory());
 goog.promise = {};
-goog.promise.Resolver = function() {
+var module$contents$goog$promise$Resolver_Resolver = function() {
 };
+goog.promise.Resolver = module$contents$goog$promise$Resolver_Resolver;
 goog.Thenable = function() {
 };
 goog.Thenable.prototype.then = function() {
@@ -7906,6 +7886,7 @@ goog.Promise.prototype.thenCatch = function(onRejected, opt_context) {
   goog.Promise.LONG_STACK_TRACES && this.addStackTrace_(Error("thenCatch"));
   return this.addChildPromise_(null, onRejected, opt_context);
 };
+goog.Promise.prototype.catch = goog.Promise.prototype.thenCatch;
 goog.Promise.prototype.cancel = function(opt_message) {
   if (this.state_ == goog.Promise.State_.PENDING) {
     var err = new goog.Promise.CancellationError(opt_message);
@@ -8072,11 +8053,9 @@ goog.Promise.prototype.removeUnhandledRejection_ = function() {
     for (var p = this; p && p.unhandledRejectionId_; p = p.parent_) {
       goog.global.clearTimeout(p.unhandledRejectionId_), p.unhandledRejectionId_ = 0;
     }
-  } else {
-    if (0 == goog.Promise.UNHANDLED_REJECTION_DELAY) {
-      for (p = this; p && p.hadUnhandledRejection_; p = p.parent_) {
-        p.hadUnhandledRejection_ = !1;
-      }
+  } else if (0 == goog.Promise.UNHANDLED_REJECTION_DELAY) {
+    for (p = this; p && p.hadUnhandledRejection_; p = p.parent_) {
+      p.hadUnhandledRejection_ = !1;
     }
   }
 };
@@ -8146,12 +8125,10 @@ goog.Timer.TICK = "tick";
 goog.Timer.callOnce = function(listener, opt_delay, opt_handler) {
   if ("function" === typeof listener) {
     opt_handler && (listener = goog.bind(listener, opt_handler));
+  } else if (listener && "function" == typeof listener.handleEvent) {
+    listener = goog.bind(listener.handleEvent, listener);
   } else {
-    if (listener && "function" == typeof listener.handleEvent) {
-      listener = goog.bind(listener.handleEvent, listener);
-    } else {
-      throw Error("Invalid listener argument");
-    }
+    throw Error("Invalid listener argument");
   }
   return Number(opt_delay) > goog.Timer.MAX_TIMEOUT_ ? goog.Timer.INVALID_TIMEOUT_ID_ : goog.Timer.defaultTimerObject.setTimeout(listener, opt_delay || 0);
 };
@@ -8507,15 +8484,13 @@ goog.net.XhrIo.prototype.send = function(url, opt_method, opt_content, opt_heade
       for (var key in opt_headers) {
         headers.set(key, opt_headers[key]);
       }
-    } else {
-      if ("function" === typeof opt_headers.keys && "function" === typeof opt_headers.get) {
-        for (var $jscomp$iter$5 = $jscomp.makeIterator(opt_headers.keys()), $jscomp$key$key = $jscomp$iter$5.next(); !$jscomp$key$key.done; $jscomp$key$key = $jscomp$iter$5.next()) {
-          var key$27 = $jscomp$key$key.value;
-          headers.set(key$27, opt_headers.get(key$27));
-        }
-      } else {
-        throw Error("Unknown input type for opt_headers: " + String(opt_headers));
+    } else if ("function" === typeof opt_headers.keys && "function" === typeof opt_headers.get) {
+      for (var $jscomp$iter$5 = $jscomp.makeIterator(opt_headers.keys()), $jscomp$key$key = $jscomp$iter$5.next(); !$jscomp$key$key.done; $jscomp$key$key = $jscomp$iter$5.next()) {
+        var key$27 = $jscomp$key$key.value;
+        headers.set(key$27, opt_headers.get(key$27));
       }
+    } else {
+      throw Error("Unknown input type for opt_headers: " + String(opt_headers));
     }
   }
   var contentTypeKey = Array.from(headers.keys()).find(function(header) {
@@ -8729,13 +8704,11 @@ goog.structs.clear = function(col) {
 goog.structs.forEach = function(col, f, opt_obj) {
   if (col.forEach && "function" == typeof col.forEach) {
     col.forEach(f, opt_obj);
+  } else if (goog.isArrayLike(col) || "string" === typeof col) {
+    Array.prototype.forEach.call(col, f, opt_obj);
   } else {
-    if (goog.isArrayLike(col) || "string" === typeof col) {
-      Array.prototype.forEach.call(col, f, opt_obj);
-    } else {
-      for (var keys = goog.structs.getKeys(col), values = goog.structs.getValues(col), l = values.length, i = 0; i < l; i++) {
-        f.call(opt_obj, values[i], keys && keys[i], col);
-      }
+    for (var keys = goog.structs.getKeys(col), values = goog.structs.getValues(col), l = values.length, i = 0; i < l; i++) {
+      f.call(opt_obj, values[i], keys && keys[i], col);
     }
   }
 };
