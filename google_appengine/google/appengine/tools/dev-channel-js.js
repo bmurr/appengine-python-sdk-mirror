@@ -4215,7 +4215,7 @@ module$contents$goog$html$SafeHtml_SafeHtml.createScript = function(script, attr
   for (var attr in attributes) {
     if (Object.prototype.hasOwnProperty.call(attributes, attr)) {
       var attrLower = attr.toLowerCase();
-      if ("language" == attrLower || "src" == attrLower || "text" == attrLower || "type" == attrLower) {
+      if ("language" == attrLower || "src" == attrLower || "text" == attrLower) {
         throw Error(module$contents$goog$html$SafeHtml_SafeHtml.ENABLE_ERROR_MESSAGES ? 'Cannot set "' + attrLower + '" attribute' : "");
       }
     }
@@ -4968,7 +4968,7 @@ goog.string.truncateMiddle = function(str, chars, opt_protectEscapedCharacters, 
   opt_protectEscapedCharacters && (str = goog.string.htmlEscape(str));
   return str;
 };
-goog.string.specialEscapeChars_ = {"\x00":"\\0", "\b":"\\b", "\f":"\\f", "\n":"\\n", "\r":"\\r", "\t":"\\t", "\x0B":"\\x0B", '"':'\\"', "\\":"\\\\", "<":"\\u003C"};
+goog.string.specialEscapeChars_ = {"\x00":"\\0", "\b":"\\b", "\f":"\\f", "\n":"\\n", "\r":"\\r", "\t":"\\t", "\v":"\\x0B", '"':'\\"', "\\":"\\\\", "<":"\\u003C"};
 goog.string.jsEscapeCache_ = {"'":"\\'"};
 goog.string.quote = function(s) {
   s = String(s);
@@ -5048,9 +5048,6 @@ goog.string.padNumber = function(num, length, opt_precision) {
 };
 goog.string.makeSafe = function(obj) {
   return null == obj ? "" : String(obj);
-};
-goog.string.buildString = function(var_args) {
-  return Array.prototype.join.call(arguments, "");
 };
 goog.string.getRandomString = function() {
   return Math.floor(2147483648 * Math.random()).toString(36) + Math.abs(Math.floor(2147483648 * Math.random()) ^ goog.now()).toString(36);
@@ -7281,7 +7278,7 @@ goog.json.Serializer.prototype.serializeInternal = function(object, sb) {
     }
   }
 };
-goog.json.Serializer.charToJsonCharCache_ = {'"':'\\"', "\\":"\\\\", "/":"\\/", "\b":"\\b", "\f":"\\f", "\n":"\\n", "\r":"\\r", "\t":"\\t", "\x0B":"\\u000b"};
+goog.json.Serializer.charToJsonCharCache_ = {'"':'\\"', "\\":"\\\\", "/":"\\/", "\b":"\\b", "\f":"\\f", "\n":"\\n", "\r":"\\r", "\t":"\\t", "\v":"\\u000b"};
 goog.json.Serializer.charsToReplace_ = /\uffff/.test("\uffff") ? /[\\"\x00-\x1f\x7f-\uffff]/g : /[\\"\x00-\x1f\x7f-\xff]/g;
 goog.json.Serializer.prototype.serializeString_ = function(s, sb) {
   sb.push('"', s.replace(goog.json.Serializer.charsToReplace_, function(c) {

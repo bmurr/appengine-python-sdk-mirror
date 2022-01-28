@@ -29,11 +29,18 @@ information. Java, PHP and Python map types in inconsistent ways, see:
 
 import datetime
 import logging
+from google.appengine._internal import six
 import urllib
 
-from google.appengine.api import apiproxy_stub_map
-from google.appengine.api import memcache
-from google.appengine.api.memcache import memcache_service_pb
+if six.PY2:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import memcache
+  from google.appengine.api.memcache import memcache_service_pb
+else:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import memcache
+  from google.appengine.api.memcache import memcache_service_pb2
+
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 
 
@@ -64,7 +71,11 @@ class StringValueConverter(object):
     # As we don't know what encoding the bytes are, we string escape so any
     # byte sequence is legal ASCII. Once we have a legal ASCII byte sequence
     # we can safely convert to a unicode/text string.
-    return cache_value.encode('string-escape').decode('ascii')
+    if six.PY2:
+      return cache_value.encode('string-escape').decode('ascii')
+    else:
+      return cache_value.decode('latin1').encode('unicode-escape').decode(
+          'ascii')
 
   @staticmethod
   def to_cache(display_value):
@@ -90,7 +101,10 @@ class StringValueConverter(object):
 
     # Since we don't know how they want their Unicode encoded, this will raise
     # an exception (which will be displayed nicely) if they include non-ASCII.
-    return display_value.encode('ascii').decode('string-escape')
+    if six.PY2:
+      return display_value.encode('ascii').decode('string-escape')
+    else:
+      return display_value.encode('ascii').decode('unicode-escape')
 
 
 class UnicodeValueConverter(object):
@@ -177,10 +191,17 @@ class MemcacheViewerRequestHandler(admin_request_handler.AdminRequestHandler):
 
   def _get_memcache_value_and_flags(self, key):
     """Return a 2-tuple containing a memcache value and its flags."""
-    request = memcache_service_pb.MemcacheGetRequest()
-    response = memcache_service_pb.MemcacheGetResponse()
+    if six.PY2:
+      request = memcache_service_pb.MemcacheGetRequest()
+      response = memcache_service_pb.MemcacheGetResponse()
 
-    request.add_key(key)
+      request.add_key(key)
+    else:
+      request = memcache_service_pb2.MemcacheGetRequest()
+      response = memcache_service_pb2.MemcacheGetResponse()
+
+      request.key.add(key)
+
     apiproxy_stub_map.MakeSyncCall('memcache', 'Get', request, response)
     assert response.item_size() < 2
     if response.item_size() == 0:
@@ -190,17 +211,30 @@ class MemcacheViewerRequestHandler(admin_request_handler.AdminRequestHandler):
 
   def _set_memcache_value(self, key, value, flags):
     """Store a value in memcache."""
-    request = memcache_service_pb.MemcacheSetRequest()
-    response = memcache_service_pb.MemcacheSetResponse()
+    if six.PY2:
+      request = memcache_service_pb.MemcacheSetRequest()
+      response = memcache_service_pb.MemcacheSetResponse()
 
-    item = request.add_item()
-    item.set_key(key)
-    item.set_value(value)
-    item.set_flags(flags)
+      item = request.add_item()
+      item.set_key(key)
+      item.set_value(value)
+      item.set_flags(flags)
 
-    apiproxy_stub_map.MakeSyncCall('memcache', 'Set', request, response)
-    return (response.set_status(0) ==
-            memcache_service_pb.MemcacheSetResponse.STORED)
+      apiproxy_stub_map.MakeSyncCall('memcache', 'Set', request, response)
+      return (response.set_status(0) ==
+              memcache_service_pb.MemcacheSetResponse.STORED)
+    else:
+      request = memcache_service_pb2.MemcacheSetRequest()
+      response = memcache_service_pb2.MemcacheSetResponse()
+
+      item = request.item.add()
+      item.key = key
+      item.value = value
+      item.flags = flags
+
+      apiproxy_stub_map.MakeSyncCall('memcache', 'Set', request, response)
+      return (response.set_status[0] ==
+              memcache_service_pb.MemcacheSetResponse.STORED)
 
   def get(self):
     """Show template and prepare stats and/or key+value to display/edit."""

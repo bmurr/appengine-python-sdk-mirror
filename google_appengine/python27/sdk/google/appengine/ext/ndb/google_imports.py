@@ -41,7 +41,13 @@ from google.appengine.datastore import entity_pb
 from google.appengine.ext import db
 from google.appengine.ext import gql
 from google.appengine.ext.blobstore import blobstore as ext_blobstore
-from google.appengine.runtime import apiproxy as callback
+try:
+  from google.appengine.runtime import apiproxy as callback
+  # Python 2.5 and dev_appserver is not supported.
+  if not hasattr(callback, 'SetRequestEndCallback'):
+    callback = None
+except ImportError:
+  callback = None
 from google.appengine.runtime import apiproxy_errors
 from google.net.proto import ProtocolBuffer
 

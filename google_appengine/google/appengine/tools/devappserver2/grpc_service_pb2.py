@@ -19,10 +19,9 @@
 # source: apphosting/tools/devappserver2/grpc_service.proto
 """Generated protocol buffer code."""
 import google
+from google.net.proto2.python.internal import builder as _builder
 from google.net.proto2.python.public import descriptor as _descriptor
 from google.net.proto2.python.public import descriptor_pool as _descriptor_pool
-from google.net.proto2.python.public import message as _message
-from google.net.proto2.python.public import reflection as _reflection
 from google.net.proto2.python.public import symbol_database as _symbol_database
 # @@protoc_insertion_point(imports)
 
@@ -33,42 +32,8 @@ _sym_db = _symbol_database.Default()
 
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n1apphosting/tools/devappserver2/grpc_service.proto\x12\x1e\x61pphosting.tools.devappserver2\"|\n\x07Request\x12\x14\n\x0cservice_name\x18\x02 \x01(\t\x12\x0e\n\x06method\x18\x03 \x01(\t\x12\x0f\n\x07request\x18\x04 \x01(\x0c\x12\x12\n\nrequest_id\x18\x05 \x01(\t\x12&\n\x1etxn_add_task_callback_hostport\x18\x06 \x01(\t\"\xd1\x01\n\x08Response\x12\x10\n\x08response\x18\x01 \x01(\x0c\x12\x11\n\texception\x18\x02 \x01(\x0c\x12K\n\x11\x61pplication_error\x18\x03 \x01(\x0b\x32\x30.apphosting.tools.devappserver2.ApplicationError\x12\x16\n\x0ejava_exception\x18\x04 \x01(\x0c\x12;\n\trpc_error\x18\x05 \x01(\x0b\x32(.apphosting.tools.devappserver2.RpcError\"0\n\x10\x41pplicationError\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12\x0e\n\x06\x64\x65tail\x18\x02 \x01(\t\"\xb7\x02\n\x08RpcError\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12\x0e\n\x06\x64\x65tail\x18\x02 \x01(\t\"\x8c\x02\n\tErrorCode\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x12\n\x0e\x43\x41LL_NOT_FOUND\x10\x01\x12\x0f\n\x0bPARSE_ERROR\x10\x02\x12\x16\n\x12SECURITY_VIOLATION\x10\x03\x12\x0e\n\nOVER_QUOTA\x10\x04\x12\x15\n\x11REQUEST_TOO_LARGE\x10\x05\x12\x17\n\x13\x43\x41PABILITY_DISABLED\x10\x06\x12\x14\n\x10\x46\x45\x41TURE_DISABLED\x10\x07\x12\x0f\n\x0b\x42\x41\x44_REQUEST\x10\x08\x12\x16\n\x12RESPONSE_TOO_LARGE\x10\t\x12\r\n\tCANCELLED\x10\n\x12\x10\n\x0cREPLAY_ERROR\x10\x0b\x12\x15\n\x11\x44\x45\x41\x44LINE_EXCEEDED\x10\x0c\x32p\n\x0b\x43\x61llHandler\x12\x61\n\nHandleCall\x12\'.apphosting.tools.devappserver2.Request\x1a(.apphosting.tools.devappserver2.Response\"\x00\x62\x06proto3')
 
-
-
-_REQUEST = DESCRIPTOR.message_types_by_name['Request']
-_RESPONSE = DESCRIPTOR.message_types_by_name['Response']
-_APPLICATIONERROR = DESCRIPTOR.message_types_by_name['ApplicationError']
-_RPCERROR = DESCRIPTOR.message_types_by_name['RpcError']
-_RPCERROR_ERRORCODE = _RPCERROR.enum_types_by_name['ErrorCode']
-Request = _reflection.GeneratedProtocolMessageType('Request', (_message.Message,), {
-  'DESCRIPTOR' : _REQUEST,
-  '__module__' : 'google.appengine.tools.devappserver2.grpc_service_pb2'
-  # @@protoc_insertion_point(class_scope:apphosting.tools.devappserver2.Request)
-  })
-_sym_db.RegisterMessage(Request)
-
-Response = _reflection.GeneratedProtocolMessageType('Response', (_message.Message,), {
-  'DESCRIPTOR' : _RESPONSE,
-  '__module__' : 'google.appengine.tools.devappserver2.grpc_service_pb2'
-  # @@protoc_insertion_point(class_scope:apphosting.tools.devappserver2.Response)
-  })
-_sym_db.RegisterMessage(Response)
-
-ApplicationError = _reflection.GeneratedProtocolMessageType('ApplicationError', (_message.Message,), {
-  'DESCRIPTOR' : _APPLICATIONERROR,
-  '__module__' : 'google.appengine.tools.devappserver2.grpc_service_pb2'
-  # @@protoc_insertion_point(class_scope:apphosting.tools.devappserver2.ApplicationError)
-  })
-_sym_db.RegisterMessage(ApplicationError)
-
-RpcError = _reflection.GeneratedProtocolMessageType('RpcError', (_message.Message,), {
-  'DESCRIPTOR' : _RPCERROR,
-  '__module__' : 'google.appengine.tools.devappserver2.grpc_service_pb2'
-  # @@protoc_insertion_point(class_scope:apphosting.tools.devappserver2.RpcError)
-  })
-_sym_db.RegisterMessage(RpcError)
-
-_CALLHANDLER = DESCRIPTOR.services_by_name['CallHandler']
+_builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
+_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'google.appengine.tools.devappserver2.grpc_service_pb2', globals())
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None

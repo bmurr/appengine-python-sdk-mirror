@@ -15,5 +15,10 @@
 # limitations under the License.
 #
 """Cloud Endpoints module."""
+import sys
 
-from endpoints_server import *
+# pylint: disable=g-import-not-at-top
+if sys.version_info[0] == 2:
+  from endpoints_server import *
+else:
+  from google.appengine.tools.devappserver2.endpoints.endpoints_server import *

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Serves the stub App Engine APIs (e.g. memcache, datastore) over HTTP.
+"""Serves the stub App Engine APIs (eg memcache, datastore) over HTTP.
 
 The Remote API protocol is used for communication with the API stubs.
 
@@ -92,13 +92,13 @@ GLOBAL_API_LOCK = threading.RLock()
 # providing the context of a specific application.
 DEFAULT_API_SERVER_APP_ID = 'dev~app-id'
 
-
 GO_WORMHOLE_RUNTIME_PATTERN = re.compile('go1([0-9]{2})')
 PYTHON_WORMHOLE_RUNTIME_PATTERN = re.compile('python3([0-9]+)')
 PHP_WORMHOLE_RUNTIME_PATTERN = re.compile('php7([0-9]+)')
 
 WORMHOLE_SERVICES = [
-    'datastore_v3', 'datastore_v4', 'logservice', 'memcache', 'urlfetch']
+    'datastore_v3', 'datastore_v4', 'logservice', 'memcache', 'urlfetch'
+]
 
 ENABLE_APP_ENGINE_APIS_MSG_TEMPLATE = (
     'App Engine APIs are not enabled, for module %s please '
@@ -117,7 +117,7 @@ def _execute_request(request, use_proto3=False):
 
   Args:
     request: A remote_api_pb.Request object representing the API call e.g. a
-        call to memcache.Get.
+      call to memcache.Get.
     use_proto3: A boolean representing is request is in proto3.
 
   Returns:
@@ -156,8 +156,8 @@ def _execute_request(request, use_proto3=False):
 
   request_class, response_class = service_methods.get(method, (None, None))
   if not request_class:
-    raise apiproxy_errors.CallNotFoundError('%s.%s does not exist' % (service,
-                                                                      method))
+    raise apiproxy_errors.CallNotFoundError('%s.%s does not exist' %
+                                            (service, method))
 
   request_data = request_class()
   request_data.ParseFromString(request.request)
@@ -165,10 +165,7 @@ def _execute_request(request, use_proto3=False):
   service_stub = apiproxy_stub_map.apiproxy.GetStub(service)
 
   def make_request():
-    service_stub.MakeSyncCall(service,
-                              method,
-                              request_data,
-                              response_data,
+    service_stub.MakeSyncCall(service, method, request_data, response_data,
                               request_id)
 
   # If the service has not declared itself as threadsafe acquire
@@ -196,9 +193,10 @@ class _LocalJavaAppDispatcher(request_info_lib._LocalFakeDispatcher):  # pylint:
                module_name_to_default_versions=None,
                module_name_to_version_to_hostname=None,
                java_app_base_url=None):
-    super(_LocalJavaAppDispatcher, self).__init__(
-        module_names, module_name_to_versions, module_name_to_default_versions,
-        module_name_to_version_to_hostname)
+    super(_LocalJavaAppDispatcher,
+          self).__init__(module_names, module_name_to_versions,
+                         module_name_to_default_versions,
+                         module_name_to_version_to_hostname)
     self.java_app_base_url = java_app_base_url
 
   def add_request(self,
@@ -295,17 +293,22 @@ def _verify_wormhole_usage(request_info, request):
 
   service = request.service_name
   if service not in WORMHOLE_SERVICES:
-    raise apiproxy_errors.CallNotFoundError(
-        NON_WORMHOLE_SERVICE_MSG_TEMPLATE % (service, runtime))
+    raise apiproxy_errors.CallNotFoundError(NON_WORMHOLE_SERVICE_MSG_TEMPLATE %
+                                            (service, runtime))
 
 
 class APIServer(wsgi_server.WsgiServer):
   """Serves API calls over HTTP and GRPC(optional)."""
 
-  def __init__(
-      self, host, port, app_id, use_grpc=False, grpc_api_port=0,
-      enable_host_checking=True, gcd_emulator_launching_thread=None,
-      request_info=None):
+  def __init__(self,
+               host,
+               port,
+               app_id,
+               use_grpc=False,
+               grpc_api_port=0,
+               enable_host_checking=True,
+               gcd_emulator_launching_thread=None,
+               request_info=None):
     self._app_id = app_id
     self._host = host
 
@@ -324,9 +327,9 @@ class APIServer(wsgi_server.WsgiServer):
 
   def _start_grpc_server(self):
     """Starts gRPC API server."""
-    grpc_service_pb2 = __import__('google.appengine.tools.devappserver2.'
-                                  'grpc_service_pb2', globals(), locals(),
-                                  ['grpc_service_pb2'])
+    grpc_service_pb2 = __import__(
+        'google.appengine.tools.devappserver2.'
+        'grpc_service_pb2', globals(), locals(), ['grpc_service_pb2'])
 
     class CallHandler(grpc_service_pb2.BetaCallHandlerServicer):
       """Handles gRPC method calls."""
@@ -354,8 +357,8 @@ class APIServer(wsgi_server.WsgiServer):
 
     datastore_v3_stub = apiproxy_stub_map.apiproxy.GetStub('datastore_v3')
     if isinstance(datastore_v3_stub, datastore_grpc_stub.DatastoreGrpcStub):
-      datastore_v3_stub.SetTxnAddTaskCallbackHostPort(
-          'localhost:%d' % self._grpc_api_port)
+      datastore_v3_stub.SetTxnAddTaskCallbackHostPort('localhost:%d' %
+                                                      self._grpc_api_port)
 
     # We set this GRPC_PORT in environment variable as it is only accessed by
     # the devappserver process.
@@ -370,8 +373,8 @@ class APIServer(wsgi_server.WsgiServer):
     if self._gcd_emulator_launching_thread:
       self._gcd_emulator_launching_thread.join()
     super(APIServer, self).start()
-    logging.info('%s: http://%s:%d',
-                 constants.API_SERVER_STARTING_MSG, self._host, self.port)
+    logging.info('%s: http://%s:%d', constants.API_SERVER_STARTING_MSG,
+                 self._host, self.port)
     if self._use_grpc:
       self._start_grpc_server()
 
@@ -382,7 +385,9 @@ class APIServer(wsgi_server.WsgiServer):
     stub_util.cleanup_stubs()
 
   def set_balanced_address(self, balanced_address):
-    """Sets the balanced address from the dispatcher (e.g. "localhost:8080").
+    """Sets the balanced address from the dispatcher (e.g.
+
+    "localhost:8080").
 
     This is used to enable APIs to build valid URLs.
 
@@ -435,8 +440,8 @@ class APIServer(wsgi_server.WsgiServer):
         response = service_stub.MakeSyncCallForRemoteApi(request)
         metrics.GetMetricsLogger().LogOnceOnStop(
             metrics.API_STUB_USAGE_CATEGORY,
-            metrics.API_STUB_USAGE_ACTION_TEMPLATE
-            % 'datastore_v3_with_cloud_datastore_emulator')
+            metrics.API_STUB_USAGE_ACTION_TEMPLATE %
+            'datastore_v3_with_cloud_datastore_emulator')
       else:
         if request.HasField('request_id'):
           request_id = request.request_id
@@ -467,7 +472,8 @@ class APIServer(wsgi_server.WsgiServer):
           e = RuntimeError(repr(e))
       # While not strictly necessary for ApplicationError, do this to limit
       # differences with remote_api:handler.py.
-      response.exception = pickle.dumps(e)
+
+      response.exception = pickle.dumps(e, protocol=2)
 
 
 
@@ -487,8 +493,7 @@ class APIServer(wsgi_server.WsgiServer):
     rtok = params.get('rtok', ['0'])[0]
 
     start_response('200 OK', [('Content-Type', 'text/plain')])
-    return [yaml.dump({'app_id': self._app_id,
-                       'rtok': rtok})]
+    return [yaml.dump({'app_id': self._app_id, 'rtok': rtok})]
 
   def _handle_CLEAR(self, environ, start_response):
     """Clear the stateful content from the API server."""
@@ -526,8 +531,8 @@ class APIServer(wsgi_server.WsgiServer):
     """
     start_response('200 OK', [('Content-Type', 'text/plain')])
     status = {
-        'datastore_emulator_host': os.environ.get(
-            'DATASTORE_EMULATOR_HOST', 'None')
+        'datastore_emulator_host':
+            os.environ.get('DATASTORE_EMULATOR_HOST', 'None')
     }
 
     return json.dumps(status)
@@ -546,10 +551,16 @@ class APIServer(wsgi_server.WsgiServer):
       return []
 
 
-def _launch_gcd_emulator(
-    app_id=None, emulator_port=0, silent=True, index_file='',
-    require_indexes=False, datastore_path='', stub_type=None, cmd=None,
-    is_test=False, auto_id_policy=datastore_stub_util.SEQUENTIAL):
+def _launch_gcd_emulator(app_id=None,
+                         emulator_port=0,
+                         silent=True,
+                         index_file='',
+                         require_indexes=False,
+                         datastore_path='',
+                         stub_type=None,
+                         cmd=None,
+                         is_test=False,
+                         auto_id_policy=datastore_stub_util.SEQUENTIAL):
   """Launch Cloud Datastore emulator asynchronously.
 
   If datastore_path is sqlite stub data, rename it and convert into emulator
@@ -581,8 +592,9 @@ def _launch_gcd_emulator(
   launching_thread = None
   emulator_manager = cloud_emulator_manager.DatastoreEmulatorManager(
       cmd=cmd, is_test=is_test)
-  emulator_manager.CheckOptions(index_file=index_file,
-                                storage_file=datastore_path)
+  emulator_manager.CheckOptions(
+      index_file=index_file, storage_file=datastore_path)
+
   def _launch(need_conversion):
     """Launch the emulator and convert SQLite data if needed.
 
@@ -591,8 +603,8 @@ def _launch_gcd_emulator(
     """
     emulator_manager.Launch(
         emulator_port, silent, index_file, require_indexes, datastore_path,
-        ('SEQUENTIAL' if auto_id_policy == datastore_stub_util.SEQUENTIAL
-         else 'SCATTERED'))
+        ('SEQUENTIAL'
+         if auto_id_policy == datastore_stub_util.SEQUENTIAL else 'SCATTERED'))
     if need_conversion:
       logging.info(
           'Converting datastore_sqlite_stub data in %s to Cloud Datastore '
@@ -614,8 +626,7 @@ def _launch_gcd_emulator(
   return launching_thread
 
 
-def create_api_server(
-    request_info, storage_path, options, app_id, app_root):
+def create_api_server(request_info, storage_path, options, app_id, app_root):
   """Creates an API server.
 
   Args:
@@ -625,9 +636,9 @@ def create_api_server(
     options: An instance of argparse.Namespace containing command line flags.
     app_id: String representing an application ID, used for configuring paths
       and string constants in API stubs.
-    app_root: The path to the directory containing the user's
-      application e.g. "/home/joe/myapp", used for locating application yaml
-      files, eg index.yaml for the datastore stub.
+    app_root: The path to the directory containing the user's application e.g.
+      "/home/joe/myapp", used for locating application yaml files, eg index.yaml
+      for the datastore stub.
 
   Returns:
     An instance of APIServer.
@@ -641,8 +652,7 @@ def create_api_server(
   logs_path = options.logs_path or os.path.join(storage_path, 'logs.db')
   search_index_path = options.search_indexes_path or os.path.join(
       storage_path, 'search_indexes')
-  blobstore_path = options.blobstore_path or os.path.join(
-      storage_path, 'blobs')
+  blobstore_path = options.blobstore_path or os.path.join(storage_path, 'blobs')
 
   if options.clear_datastore:
     _clear_datastore_storage(datastore_path)
@@ -650,16 +660,16 @@ def create_api_server(
     _clear_search_indexes_storage(search_index_path)
   if options.auto_id_policy == datastore_stub_util.SEQUENTIAL:
     logging.warn("--auto_id_policy='sequential' is deprecated. This option "
-                 "will be removed in a future release.")
+                 'will be removed in a future release.')
 
   application_address = '%s' % options.host
   if options.port and options.port != 80:
     application_address += ':' + str(options.port)
 
-  user_login_url = '/%s?%s=%%s' % (
-      login.LOGIN_URL_RELATIVE, login.CONTINUE_PARAM)
-  user_logout_url = '/%s?%s=%%s' % (
-      login.LOGOUT_URL_RELATIVE, login.CONTINUE_PARAM)
+  user_login_url = '/%s?%s=%%s' % (login.LOGIN_URL_RELATIVE,
+                                   login.CONTINUE_PARAM)
+  user_logout_url = '/%s?%s=%%s' % (login.LOGOUT_URL_RELATIVE,
+                                    login.CONTINUE_PARAM)
 
   if options.datastore_consistency_policy == 'time':
     consistency = datastore_stub_util.TimeBasedHRConsistencyPolicy()
@@ -671,8 +681,9 @@ def create_api_server(
     assert 0, ('unknown consistency policy: %r' %
                options.datastore_consistency_policy)
 
-  stub_type = (datastore_converter.get_stub_type(datastore_path)
-               if os.path.exists(datastore_path) else None)
+  stub_type = (
+      datastore_converter.get_stub_type(datastore_path)
+      if os.path.exists(datastore_path) else None)
   gcd_emulator_launching_thread = None
   if options.support_datastore_emulator:
     if stub_type == datastore_converter.StubTypes.PYTHON_FILE_STUB:
@@ -749,10 +760,8 @@ def create_api_server(
       user_logout_url=user_logout_url,
       default_gcs_bucket_name=options.default_gcs_bucket_name,
       appidentity_oauth_url=options.appidentity_oauth_url,
-      datastore_grpc_stub_class=(
-          datastore_grpc_stub.DatastoreGrpcStub
-          if options.support_datastore_emulator else None)
-  )
+      datastore_grpc_stub_class=(datastore_grpc_stub.DatastoreGrpcStub if
+                                 options.support_datastore_emulator else None))
   return APIServer(
       options.api_host, options.api_port, app_id,
       options.api_server_supports_grpc or options.support_datastore_emulator,
@@ -767,8 +776,8 @@ def _clear_datastore_storage(datastore_path):
     try:
       os.remove(datastore_path)
     except OSError as err:
-      logging.warning(
-          'Failed to remove datastore file %r: %s', datastore_path, err)
+      logging.warning('Failed to remove datastore file %r: %s', datastore_path,
+                      err)
 
 
 def _clear_search_indexes_storage(search_index_path):
@@ -778,8 +787,8 @@ def _clear_search_indexes_storage(search_index_path):
     try:
       os.remove(search_index_path)
     except OSError as err:
-      logging.warning(
-          'Failed to remove search indexes file %r: %s', search_index_path, err)
+      logging.warning('Failed to remove search indexes file %r: %s',
+                      search_index_path, err)
 
 
 def get_storage_path(path, app_id):
@@ -868,8 +877,9 @@ def main():
     app_id = app_config.app_id
     app_root = app_config.modules[0].application_root
   else:
-    app_id = (options.app_id_prefix + options.app_id if
-              options.app_id else DEFAULT_API_SERVER_APP_ID)
+    app_id = (
+        options.app_id_prefix +
+        options.app_id if options.app_id else DEFAULT_API_SERVER_APP_ID)
     app_root = tempfile.mkdtemp()
   util.setup_environ(app_id)
 
@@ -901,7 +911,9 @@ def main():
   server = create_api_server(
       request_info=request_info,
       storage_path=get_storage_path(options.storage_path, app_id),
-      options=options, app_id=app_id, app_root=app_root)
+      options=options,
+      app_id=app_id,
+      app_root=app_root)
 
   try:
     server.start()
