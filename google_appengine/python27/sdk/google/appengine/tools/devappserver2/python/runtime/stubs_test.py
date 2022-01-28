@@ -18,6 +18,7 @@
 
 
 
+from distutils import util
 import errno
 import locale
 import logging
@@ -28,11 +29,15 @@ import sys
 import tempfile
 import unittest
 
-import google
-
-from distutils import util
 import mock
 import mox
+
+# pylint: disable=g-import-not-at-top
+# pylint: disable=g-bad-import-order
+import e2e_test_paths
+e2e_test_paths.RemoteGoogleModules()
+e2e_test_paths.SetPathToDevappserverE2E()
+os.environ['PYTHONPATH'] = os.pathsep.join(sys.path)
 
 from google.appengine.tools.devappserver2.python.runtime import stubs
 
@@ -69,7 +74,7 @@ class StubsTest(unittest.TestCase):
     self.assertEqual(('Linux', '', '', '', ''), stubs.fake_uname())
 
   def test_fake_listdir_in(self):
-    my_dir = os.path.dirname(__file__)
+    my_dir = os.path.dirname(os.path.abspath(__file__))
     stubs.FakeFile.is_file_accessible(my_dir, False).AndReturn(
         stubs.FakeFile.Visibility.OK)
     for f in os.listdir(my_dir):
@@ -78,17 +83,17 @@ class StubsTest(unittest.TestCase):
           stubs.FakeFile.Visibility.OK)
     self.mox.ReplayAll()
     fake_listdir = stubs.make_fake_listdir(os.listdir)
-    files = fake_listdir(os.path.dirname(__file__))
+    files = fake_listdir(my_dir)
     self.assertIn(os.path.basename(__file__), files)
     self.mox.VerifyAll()
 
   def test_fake_listdir_out(self):
-    my_dir = os.path.dirname(__file__)
+    my_dir = os.path.dirname(os.path.abspath(__file__))
     stubs.FakeFile.is_file_accessible(my_dir, False).AndReturn(
         stubs.FakeFile.Visibility.OK)
     for f in os.listdir(my_dir):
       p = os.path.join(my_dir, f)
-      if p != __file__:
+      if p != os.path.abspath(__file__):
         stubs.FakeFile.is_file_accessible(p).AndReturn(
             stubs.FakeFile.Visibility.OK)
       else:
@@ -96,7 +101,7 @@ class StubsTest(unittest.TestCase):
             stubs.FakeFile.Visibility.SKIP_BLOCK)
     self.mox.ReplayAll()
     fake_listdir = stubs.make_fake_listdir(os.listdir)
-    files = fake_listdir(os.path.dirname(__file__))
+    files = fake_listdir(my_dir)
     self.assertNotIn(os.path.basename(__file__), files)
     self.mox.VerifyAll()
 

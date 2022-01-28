@@ -14,17 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Lint as: python2, python3
 """Handles dynamic serving of images from blobstore."""
 
-import httplib
 import logging
 import re
 
-from google.appengine.api import apiproxy_stub_map
-from google.appengine.api import datastore
-from google.appengine.api import datastore_errors
-from google.appengine.api.images import images_service_pb
-from google.appengine.ext import blobstore
+from google.appengine._internal import six
+
+# pylint: disable=g-import-not-at-top
+if six.PY2:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import datastore
+  from google.appengine.api import datastore_errors
+  from google.appengine.api.images import images_service_pb
+  from google.appengine.ext import blobstore
+else:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import datastore
+  from google.appengine.api import datastore_errors
+  from google.appengine.api.images import images_service_pb2
+  from google.appengine.ext import blobstore
+
 from google.appengine.tools.devappserver2 import blob_download
 from google.appengine.tools.devappserver2 import request_rewriter
 
@@ -34,9 +45,19 @@ _DEFAULT_SERVING_SIZE = 512
 _SIZE_LIMIT = 1600
 _OPTIONS_RE = re.compile(r'^s(\d+)(-c)?')
 _PATH_RE = re.compile(r'/_ah/img/([-\w:]+)([=]*)([-\w]+)?')
-_MIME_TYPE_MAP = {images_service_pb.OutputSettings.JPEG: 'image/jpeg',
-                  images_service_pb.OutputSettings.PNG: 'image/png',
-                  images_service_pb.OutputSettings.WEBP: 'image/webp'}
+
+if six.PY2:
+  _MIME_TYPE_MAP = {
+      images_service_pb.OutputSettings.JPEG: 'image/jpeg',
+      images_service_pb.OutputSettings.PNG: 'image/png',
+      images_service_pb.OutputSettings.WEBP: 'image/webp'
+  }
+else:
+  _MIME_TYPE_MAP = {
+      images_service_pb2.OutputSettings.JPEG: 'image/jpeg',
+      images_service_pb2.OutputSettings.PNG: 'image/png',
+      images_service_pb2.OutputSettings.WEBP: 'image/webp'
+  }
 
 # Check there's a working images stub.
 try:
@@ -61,66 +82,128 @@ class InvalidRequestError(Error):
 
 class Application(object):
   """A WSGI application that handles image serving requests."""
+  if six.PY2:
 
-  def _transform_image(self, blob_key, resize=None, crop=False):
-    """Construct and execute a transform request using the images stub.
+    def _transform_image(self, blob_key, resize=None, crop=False):
+      """Construct and execute a transform request using the images stub.
 
-    Args:
-      blob_key: A str containing the blob_key of the image to transform.
-      resize: An integer for the size of the resulting image.
-      crop: A boolean determining if the image should be cropped or resized.
+      Args:
+        blob_key: A str containing the blob_key of the image to transform.
+        resize: An integer for the size of the resulting image.
+        crop: A boolean determining if the image should be cropped or resized.
 
-    Returns:
-      A str containing the tranformed (if necessary) image.
-    """
-    image_data = images_service_pb.ImageData()
-    image_data.set_blob_key(blob_key)
-    image = _get_images_stub()._OpenImageData(image_data)
-    original_mime_type = image.format
-    width, height = image.size
+      Returns:
+        A str containing the tranformed (if necessary) image.
+      """
+      image_data = images_service_pb.ImageData()
+      image_data.set_blob_key(blob_key)
+      image = _get_images_stub()._OpenImageData(image_data)
+      original_mime_type = image.format
+      width, height = image.size
 
-    # Crop to square if necessary
-    if crop:
-      crop_xform = None
-      if width > height:
-        # landscape: slice the sides
-        crop_xform = images_service_pb.Transform()
-        delta = (width - height) / (width * 2.0)
-        crop_xform.set_crop_left_x(delta)
-        crop_xform.set_crop_right_x(1.0 - delta)
-      elif width < height:
-        # portrait: slice the top and bottom with bias
-        crop_xform = images_service_pb.Transform()
-        delta = (height - width) / (height * 2.0)
-        top_delta = max(0.0, delta - 0.25)
-        bottom_delta = 1.0 - (2.0 * delta) + top_delta
-        crop_xform.set_crop_top_y(top_delta)
-        crop_xform.set_crop_bottom_y(bottom_delta)
-      if crop_xform:
-        image = _get_images_stub()._Crop(image, crop_xform)
+      # Crop to square if necessary
+      if crop:
+        crop_xform = None
+        if width > height:
+          # landscape: slice the sides
+          crop_xform = images_service_pb.Transform()
+          delta = (width - height) / (width * 2.0)
+          crop_xform.set_crop_left_x(delta)
+          crop_xform.set_crop_right_x(1.0 - delta)
+        elif width < height:
+          # portrait: slice the top and bottom with bias
+          crop_xform = images_service_pb.Transform()
+          delta = (height - width) / (height * 2.0)
+          top_delta = max(0.0, delta - 0.25)
+          bottom_delta = 1.0 - (2.0 * delta) + top_delta
+          crop_xform.set_crop_top_y(top_delta)
+          crop_xform.set_crop_bottom_y(bottom_delta)
+        if crop_xform:
+          image = _get_images_stub()._Crop(image, crop_xform)
 
-    # Resize
-    if resize is None:
-      if width > _DEFAULT_SERVING_SIZE or height > _DEFAULT_SERVING_SIZE:
-        resize = _DEFAULT_SERVING_SIZE
+      # Resize
+      if resize is None:
+        if width > _DEFAULT_SERVING_SIZE or height > _DEFAULT_SERVING_SIZE:
+          resize = _DEFAULT_SERVING_SIZE
 
-    # resize value of 0 is valid and translates to 'serve at original size'.
-    if resize:
-      # Note that resize transform maintains the image aspect ratio.
-      resize_xform = images_service_pb.Transform()
-      resize_xform.set_width(resize)
-      resize_xform.set_height(resize)
-      image = _get_images_stub()._Resize(image, resize_xform)
+      # resize value of 0 is valid and translates to 'serve at original size'.
+      if resize:
+        # Note that resize transform maintains the image aspect ratio.
+        resize_xform = images_service_pb.Transform()
+        resize_xform.set_width(resize)
+        resize_xform.set_height(resize)
+        image = _get_images_stub()._Resize(image, resize_xform)
 
-    output_settings = images_service_pb.OutputSettings()
-    # EncodeImage only saves out to JPEG or PNG. All image formats other than
-    # GIF or PNG, will be served as a JPEG.
-    output_mime_type = images_service_pb.OutputSettings.JPEG
-    if original_mime_type in ['PNG', 'GIF']:
-      output_mime_type = images_service_pb.OutputSettings.PNG
-    output_settings.set_mime_type(output_mime_type)
-    return (_get_images_stub()._EncodeImage(image, output_settings),
-            _MIME_TYPE_MAP[output_mime_type])
+      output_settings = images_service_pb.OutputSettings()
+      # EncodeImage only saves out to JPEG or PNG. All image formats other than
+      # GIF or PNG, will be served as a JPEG.
+      output_mime_type = images_service_pb.OutputSettings.JPEG
+      if original_mime_type in ['PNG', 'GIF']:
+        output_mime_type = images_service_pb.OutputSettings.PNG
+      output_settings.set_mime_type(output_mime_type)
+      return (_get_images_stub()._EncodeImage(image, output_settings),
+              _MIME_TYPE_MAP[output_mime_type])
+  else:
+
+    def _transform_image(self, blob_key, resize=None, crop=False):
+      """Construct and execute a transform request using the images stub.
+
+      Args:
+        blob_key: A str containing the blob_key of the image to transform.
+        resize: An integer for the size of the resulting image.
+        crop: A boolean determining if the image should be cropped or resized.
+
+      Returns:
+        A str containing the tranformed (if necessary) image.
+      """
+      image_data = images_service_pb2.ImageData()
+      image_data.blob_key = blob_key
+      image = _get_images_stub()._OpenImageData(image_data)
+      original_mime_type = image.format
+      width, height = image.size
+
+      # Crop to square if necessary
+      if crop:
+        crop_xform = None
+        if width > height:
+          # landscape: slice the sides
+          crop_xform = images_service_pb2.Transform()
+          delta = (width - height) / (width * 2.0)
+          crop_xform.crop_left_x = delta
+          crop_xform.crop_right_x = 1.0 - delta
+        elif width < height:
+          # portrait: slice the top and bottom with bias
+          crop_xform = images_service_pb2.Transform()
+          delta = (height - width) / (height * 2.0)
+          top_delta = max(0.0, delta - 0.25)
+          bottom_delta = 1.0 - (2.0 * delta) + top_delta
+          crop_xform.crop_top_y = top_delta
+          crop_xform.crop_bottom_y = bottom_delta
+        if crop_xform:
+          image = _get_images_stub()._Crop(image, crop_xform)
+
+      # Resize
+      if resize is None:
+        if width > _DEFAULT_SERVING_SIZE or height > _DEFAULT_SERVING_SIZE:
+          resize = _DEFAULT_SERVING_SIZE
+
+      # resize value of 0 is valid and translates to 'serve at original size'.
+      if resize:
+        # Note that resize transform maintains the image aspect ratio.
+        resize_xform = images_service_pb2.Transform()
+        resize_xform.width = resize
+        resize_xform.height = resize
+        image = _get_images_stub()._Resize(image, resize_xform)
+
+      output_settings = images_service_pb2.OutputSettings()
+      # EncodeImage only saves out to JPEG or PNG. All image formats other than
+      # GIF or PNG, will be served as a JPEG.
+      output_mime_type = images_service_pb2.OutputSettings.JPEG
+      if original_mime_type in ['PNG', 'GIF']:
+        output_mime_type = images_service_pb2.OutputSettings.PNG
+      output_settings.mime_type = output_mime_type
+      return (_get_images_stub()._EncodeImage(image, output_settings),
+              _MIME_TYPE_MAP[output_mime_type])
 
   def _parse_options(self, options):
     """Parse an options string into a tuple containing the options.
@@ -179,10 +262,10 @@ class Application(object):
 
   def serve_unresized_image(self, blobkey, environ, start_response):
     """Use blob_download to rewrite and serve unresized image directly."""
-    state = request_rewriter.RewriterState(environ, '200 OK', [
-        (blobstore.BLOB_KEY_HEADER, blobkey)], [])
+    state = request_rewriter.RewriterState(
+        environ, '200 OK', [(blobstore.BLOB_KEY_HEADER, blobkey)], [])
     blob_download.blobstore_download_rewriter(state)
-    start_response(state.status, state.headers.items())
+    start_response(state.status, list(state.headers.items()))
     return state.body
 
   def serve_image(self, environ, start_response):
@@ -194,10 +277,11 @@ class Application(object):
     try:
       datastore.Get(key)
     except datastore_errors.EntityNotFoundError:
-      logging.error('The blobkey %s has not registered for image '
-                    'serving. Please ensure get_serving_url is '
-                    'called before attempting to serve blobs.', blobkey)
-      start_response('404 %s' % httplib.responses[404], [])
+      logging.error(
+          'The blobkey %s has not registered for image '
+          'serving. Please ensure get_serving_url is '
+          'called before attempting to serve blobs.', blobkey)
+      start_response('404 %s' % six.moves.http_client.responses[404], [])
       return []
 
     resize, crop = self._parse_options(options)
@@ -211,17 +295,17 @@ class Application(object):
     else:
       # Use Images service to transform blob.
       image, mime_type = self._transform_image(blobkey, resize, crop)
-      start_response('200 OK', [
-          ('Content-Type', mime_type),
-          ('Cache-Control', 'public, max-age=600, no-transform')])
+      start_response('200 OK',
+                     [('Content-Type', mime_type),
+                      ('Cache-Control', 'public, max-age=600, no-transform')])
       return [image]
 
   def __call__(self, environ, start_response):
     if environ['REQUEST_METHOD'] != 'GET':
-      start_response('405 %s' % httplib.responses[405], [])
+      start_response('405 %s' % six.moves.http_client.responses[405], [])
       return []
     try:
       return self.serve_image(environ, start_response)
     except InvalidRequestError:
-      start_response('400 %s' % httplib.responses[400], [])
+      start_response('400 %s' % six.moves.http_client.responses[400], [])
       return []

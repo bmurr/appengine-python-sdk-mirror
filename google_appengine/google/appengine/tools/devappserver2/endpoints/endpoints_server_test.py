@@ -231,19 +231,34 @@ class DevAppserverEndpointsServerTest(test_utils.TestsWithStartResponse):
     response = self.server.dispatch(request, self.start_response)
     self.mox.VerifyAll()
 
-    expected_response = ('{\n'
-                         ' "error": {\n'
-                         '  "code": 404, \n'
-                         '  "errors": [\n'
-                         '   {\n'
-                         '    "domain": "global", \n'
-                         '    "message": "Test error", \n'
-                         '    "reason": "notFound"\n'
-                         '   }\n'
-                         '  ], \n'
-                         '  "message": "Test error"\n'
-                         ' }\n'
-                         '}')
+    if six.PY2:
+      expected_response = ('{\n'
+                           ' "error": {\n'
+                           '  "code": 404, \n'
+                           '  "errors": [\n'
+                           '   {\n'
+                           '    "domain": "global", \n'
+                           '    "message": "Test error", \n'
+                           '    "reason": "notFound"\n'
+                           '   }\n'
+                           '  ], \n'
+                           '  "message": "Test error"\n'
+                           ' }\n'
+                           '}')
+    else:
+      expected_response = ('{\n'
+                           ' "error": {\n'
+                           '  "code": 404,\n'
+                           '  "errors": [\n'
+                           '   {\n'
+                           '    "domain": "global",\n'
+                           '    "message": "Test error",\n'
+                           '    "reason": "notFound"\n'
+                           '   }\n'
+                           '  ],\n'
+                           '  "message": "Test error"\n'
+                           ' }\n'
+                           '}')
     response = ''.join(response)
     self.assert_http_json_match(
         response, '404 Not Found',

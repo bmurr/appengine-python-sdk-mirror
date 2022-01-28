@@ -23,26 +23,45 @@ from __future__ import print_function
 import logging
 import os
 import sys
-from google.appengine.api import apiproxy_stub_map
-from google.appengine.api import mail_stub
-from google.appengine.api import urlfetch_stub
-from google.appengine.api import user_service_stub
-from google.appengine.api.app_identity import app_identity_stub
-from google.appengine.api.blobstore import blobstore_stub
-from google.appengine.api.blobstore import file_blob_storage
-from google.appengine.api.capabilities import capability_stub
-from google.appengine.api.logservice import logservice_stub
-from google.appengine.api.memcache import memcache_stub
-from google.appengine.api.modules import modules_stub
-from google.appengine.api.search import simple_search_stub
-from google.appengine.api.system import system_stub
-from google.appengine.api.taskqueue import taskqueue_stub
-from google.appengine.datastore import datastore_stub_util
-from google.appengine.datastore import datastore_v4_stub
 
 PY2 = sys.version_info[0] == 2
 
 # pylint: disable=g-import-not-at-top
+if PY2:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import mail_stub
+  from google.appengine.api import urlfetch_stub
+  from google.appengine.api import user_service_stub
+  from google.appengine.api.app_identity import app_identity_stub
+  from google.appengine.api.blobstore import blobstore_stub
+  from google.appengine.api.blobstore import file_blob_storage
+  from google.appengine.api.capabilities import capability_stub
+  from google.appengine.api.logservice import logservice_stub
+  from google.appengine.api.memcache import memcache_stub
+  from google.appengine.api.modules import modules_stub
+  from google.appengine.api.search import simple_search_stub
+  from google.appengine.api.system import system_stub
+  from google.appengine.api.taskqueue import taskqueue_stub
+  from google.appengine.datastore import datastore_stub_util
+  from google.appengine.datastore import datastore_v4_stub
+else:
+  from google.appengine.api import apiproxy_stub_map
+  from google.appengine.api import mail_stub
+  from google.appengine.api import urlfetch_stub
+  from google.appengine.api import user_service_stub
+  from google.appengine.api.app_identity import app_identity_stub
+  from google.appengine.api.blobstore import blobstore_stub
+  from google.appengine.api.blobstore import file_blob_storage
+  from google.appengine.api.capabilities import capability_stub
+  from google.appengine.api.logservice import logservice_stub
+  from google.appengine.api.memcache import memcache_stub
+  from google.appengine.api.modules import modules_stub
+  from google.appengine.api.search import simple_search_stub
+  from google.appengine.api.system import system_stub
+  from google.appengine.api.taskqueue import taskqueue_stub
+  from google.appengine.datastore import datastore_stub_util
+  from google.appengine.datastore import datastore_v4_stub
+
 if PY2:
   from google.appengine.datastore import datastore_v4_pb
 
@@ -194,7 +213,10 @@ def setup_stubs(request_data,
         datastore_grpc_stub_class(os.environ['DATASTORE_EMULATOR_HOST']))
   else:
     if datastore_local_stub_class is None:
-      from google.appengine.datastore import datastore_sqlite_stub
+      if PY2:
+        from google.appengine.datastore import datastore_sqlite_stub
+      else:
+        from google.appengine.datastore import datastore_sqlite_stub
       datastore_local_stub_class = datastore_sqlite_stub.DatastoreSqliteStub
     apiproxy_stub_map.apiproxy.ReplaceStub(
         'datastore_v3',
@@ -212,14 +234,20 @@ def setup_stubs(request_data,
 
   # pylint: disable=import-not-at-top
   try:
-    from google.appengine.api.images import images_stub
+    if PY2:
+      from google.appengine.api.images import images_stub
+    else:
+      from google.appengine.api.images import images_stub
   except ImportError:
 
 
 
 
     # We register a stub which throws a NotImplementedError for most RPCs.
-    from google.appengine.api.images import images_not_implemented_stub
+    if PY2:
+      from google.appengine.api.images import images_not_implemented_stub
+    else:
+      from google.appengine.api.images import images_not_implemented_stub
     apiproxy_stub_map.apiproxy.RegisterStub(
         'images',
         images_not_implemented_stub.ImagesNotImplementedServiceStub(

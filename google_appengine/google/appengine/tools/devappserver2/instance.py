@@ -567,7 +567,7 @@ class ModernInstanceFactoryMixin(object):
     instance_start_time = datetime.datetime.now().strftime('%Y%m%dt%H%M%S')
     runtime_environ = {
         'GAE_ENV': 'localdev',
-        'GAE_INSTANCE': instance_id,
+        'GAE_INSTANCE': str(instance_id),
         'GAE_MEMORY_MB': str(self._module_configuration.memory_limit),
         'GAE_RUNTIME': self._module_configuration.runtime,
         'GAE_SERVICE': self._module_configuration.module_name,

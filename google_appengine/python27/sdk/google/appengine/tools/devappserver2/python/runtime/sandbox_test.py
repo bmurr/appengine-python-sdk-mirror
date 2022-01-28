@@ -27,7 +27,13 @@ import types
 import unittest
 import urllib
 
-import google
+import e2e_test_paths
+
+e2e_test_paths.RemoteGoogleModules()
+e2e_test_paths.SetPathToDevappserverE2E()
+e2e_test_paths.AddLxmlPath()
+e2e_test_paths.AddPilPath()
+os.environ['PYTHONPATH'] = os.pathsep.join(sys.path)
 
 # pylint: disable=g-import-not-at-top
 try:
@@ -43,6 +49,7 @@ except ImportError:
 
 import mox
 
+import google
 from google.appengine.tools.devappserver2 import runtime_config_pb2
 from google.appengine.tools.devappserver2.python.runtime import sandbox
 from google.appengine.tools.devappserver2.python.runtime import stubs
@@ -315,10 +322,10 @@ class PathOverrideImportHookTest(unittest.TestCase):
     self.assertEqual(hooked_lxml.__file__, lxml.__file__)
     self.assertEqual(hooked_lxml.__path__, lxml.__path__)
     self.assertEqual(hooked_lxml.__loader__, hook)
-    self.assertItemsEqual([
-        os.path.dirname(self.saved_lxml.__file__),
-        os.path.dirname(self.saved_cssselect.__file__)
-    ], hook.extra_accessible_paths)
+    self.assertEqual([os.path.dirname(self.saved_lxml.__file__)],
+                     hook.extra_accessible_paths)
+    self.assertEqual([os.path.dirname(self.saved_cssselect.__file__)],
+                     hook.extra_accessible_paths)
     self.assertFalse(hook.extra_sys_paths)
 
   def test_package_success_pil_in_sys_path(self):
