@@ -35,6 +35,7 @@ import mox
 # pylint: disable=g-import-not-at-top
 # pylint: disable=g-bad-import-order
 import e2e_test_paths
+
 e2e_test_paths.RemoteGoogleModules()
 e2e_test_paths.SetPathToDevappserverE2E()
 os.environ['PYTHONPATH'] = os.pathsep.join(sys.path)

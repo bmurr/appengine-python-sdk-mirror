@@ -137,8 +137,9 @@ class BlobImageTest(wsgi_test_utils.WSGITestCase):
       output_settings = images_service_pb.OutputSettings()
       output_settings.set_mime_type(mime_type)
       self._images_stub._EncodeImage(mox.IsA(MockImage),
-                                    output_settings).AndReturn(data)
+                                     output_settings).AndReturn(data)
   else:
+
     def expect_open_image(self,
                           blob_key,
                           dimensions=None,
@@ -191,7 +192,7 @@ class BlobImageTest(wsgi_test_utils.WSGITestCase):
       output_settings = images_service_pb2.OutputSettings()
       output_settings.mime_type = mime_type
       self._images_stub._EncodeImage(mox.IsA(MockImage),
-                                    output_settings).AndReturn(data)
+                                     output_settings).AndReturn(data)
 
   def expect_datatore_lookup(self, blob_key, expected_result):
     """Setup a mox expectation to datastore.Get."""

@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Handles requests GCS API requests.
 
 Includes a WSGI application that forwards Google Cloud Storage API requests

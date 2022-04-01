@@ -1267,11 +1267,6 @@ goog.partial = function(fn, var_args) {
     return fn.apply(this, newArgs);
   };
 };
-goog.mixin = function(target, source) {
-  for (var x in source) {
-    target[x] = source[x];
-  }
-};
 goog.now = function() {
   return Date.now();
 };
@@ -1404,23 +1399,22 @@ goog.dom = {};
 goog.dom.NodeType = {ELEMENT:1, ATTRIBUTE:2, TEXT:3, CDATA_SECTION:4, ENTITY_REFERENCE:5, ENTITY:6, PROCESSING_INSTRUCTION:7, COMMENT:8, DOCUMENT:9, DOCUMENT_TYPE:10, DOCUMENT_FRAGMENT:11, NOTATION:12};
 goog.asserts = {};
 goog.asserts.ENABLE_ASSERTS = goog.DEBUG;
-goog.asserts.AssertionError = function(messagePattern, messageArgs) {
-  module$contents$goog$debug$Error_DebugError.call(this, goog.asserts.subs_(messagePattern, messageArgs));
-};
-goog.inherits(goog.asserts.AssertionError, module$contents$goog$debug$Error_DebugError);
-goog.asserts.AssertionError.prototype.name = "AssertionError";
-goog.asserts.DEFAULT_ERROR_HANDLER = function(e) {
-  throw e;
-};
-goog.asserts.errorHandler_ = goog.asserts.DEFAULT_ERROR_HANDLER;
-goog.asserts.subs_ = function(pattern, subs) {
-  for (var splitParts = pattern.split("%s"), returnString = "", subLast = splitParts.length - 1, i = 0; i < subLast; i++) {
+function module$contents$goog$asserts_AssertionError(messagePattern, messageArgs) {
+  for (var JSCompiler_temp_const = module$contents$goog$debug$Error_DebugError, JSCompiler_temp_const$jscomp$0 = JSCompiler_temp_const.call, JSCompiler_inline_result, subs = messageArgs, splitParts = messagePattern.split("%s"), returnString = "", subLast = splitParts.length - 1, i = 0; i < subLast; i++) {
     var sub = i < subs.length ? subs[i] : "%s";
     returnString += splitParts[i] + sub;
   }
-  return returnString + splitParts[subLast];
+  JSCompiler_inline_result = returnString + splitParts[subLast];
+  JSCompiler_temp_const$jscomp$0.call(JSCompiler_temp_const, this, JSCompiler_inline_result);
+}
+goog.inherits(module$contents$goog$asserts_AssertionError, module$contents$goog$debug$Error_DebugError);
+goog.asserts.AssertionError = module$contents$goog$asserts_AssertionError;
+module$contents$goog$asserts_AssertionError.prototype.name = "AssertionError";
+goog.asserts.DEFAULT_ERROR_HANDLER = function(e) {
+  throw e;
 };
-goog.asserts.doAssertFailure_ = function(defaultMessage, defaultArgs, givenMessage, givenArgs) {
+var module$contents$goog$asserts_errorHandler_ = goog.asserts.DEFAULT_ERROR_HANDLER;
+function module$contents$goog$asserts_doAssertFailure(defaultMessage, defaultArgs, givenMessage, givenArgs) {
   var message = "Assertion failed";
   if (givenMessage) {
     message += ": " + givenMessage;
@@ -1428,63 +1422,63 @@ goog.asserts.doAssertFailure_ = function(defaultMessage, defaultArgs, givenMessa
   } else {
     defaultMessage && (message += ": " + defaultMessage, args = defaultArgs);
   }
-  var e = new goog.asserts.AssertionError("" + message, args || []);
-  goog.asserts.errorHandler_(e);
-};
+  var e = new module$contents$goog$asserts_AssertionError("" + message, args || []);
+  module$contents$goog$asserts_errorHandler_(e);
+}
 goog.asserts.setErrorHandler = function(errorHandler) {
-  goog.asserts.ENABLE_ASSERTS && (goog.asserts.errorHandler_ = errorHandler);
+  goog.asserts.ENABLE_ASSERTS && (module$contents$goog$asserts_errorHandler_ = errorHandler);
 };
 goog.asserts.assert = function(condition, opt_message, var_args) {
-  goog.asserts.ENABLE_ASSERTS && !condition && goog.asserts.doAssertFailure_("", null, opt_message, Array.prototype.slice.call(arguments, 2));
+  goog.asserts.ENABLE_ASSERTS && !condition && module$contents$goog$asserts_doAssertFailure("", null, opt_message, Array.prototype.slice.call(arguments, 2));
   return condition;
 };
 goog.asserts.assertExists = function(value, opt_message, var_args) {
-  goog.asserts.ENABLE_ASSERTS && null == value && goog.asserts.doAssertFailure_("Expected to exist: %s.", [value], opt_message, Array.prototype.slice.call(arguments, 2));
+  goog.asserts.ENABLE_ASSERTS && null == value && module$contents$goog$asserts_doAssertFailure("Expected to exist: %s.", [value], opt_message, Array.prototype.slice.call(arguments, 2));
   return value;
 };
 goog.asserts.fail = function(opt_message, var_args) {
-  goog.asserts.ENABLE_ASSERTS && goog.asserts.errorHandler_(new goog.asserts.AssertionError("Failure" + (opt_message ? ": " + opt_message : ""), Array.prototype.slice.call(arguments, 1)));
+  goog.asserts.ENABLE_ASSERTS && module$contents$goog$asserts_errorHandler_(new module$contents$goog$asserts_AssertionError("Failure" + (opt_message ? ": " + opt_message : ""), Array.prototype.slice.call(arguments, 1)));
 };
 goog.asserts.assertNumber = function(value, opt_message, var_args) {
-  goog.asserts.ENABLE_ASSERTS && "number" !== typeof value && goog.asserts.doAssertFailure_("Expected number but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2));
+  goog.asserts.ENABLE_ASSERTS && "number" !== typeof value && module$contents$goog$asserts_doAssertFailure("Expected number but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2));
   return value;
 };
 goog.asserts.assertString = function(value, opt_message, var_args) {
-  goog.asserts.ENABLE_ASSERTS && "string" !== typeof value && goog.asserts.doAssertFailure_("Expected string but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2));
+  goog.asserts.ENABLE_ASSERTS && "string" !== typeof value && module$contents$goog$asserts_doAssertFailure("Expected string but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2));
   return value;
 };
 goog.asserts.assertFunction = function(value, opt_message, var_args) {
-  goog.asserts.ENABLE_ASSERTS && "function" !== typeof value && goog.asserts.doAssertFailure_("Expected function but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2));
+  goog.asserts.ENABLE_ASSERTS && "function" !== typeof value && module$contents$goog$asserts_doAssertFailure("Expected function but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2));
   return value;
 };
 goog.asserts.assertObject = function(value, opt_message, var_args) {
-  goog.asserts.ENABLE_ASSERTS && !goog.isObject(value) && goog.asserts.doAssertFailure_("Expected object but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2));
+  goog.asserts.ENABLE_ASSERTS && !goog.isObject(value) && module$contents$goog$asserts_doAssertFailure("Expected object but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2));
   return value;
 };
 goog.asserts.assertArray = function(value, opt_message, var_args) {
-  goog.asserts.ENABLE_ASSERTS && !Array.isArray(value) && goog.asserts.doAssertFailure_("Expected array but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2));
+  goog.asserts.ENABLE_ASSERTS && !Array.isArray(value) && module$contents$goog$asserts_doAssertFailure("Expected array but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2));
   return value;
 };
 goog.asserts.assertBoolean = function(value, opt_message, var_args) {
-  goog.asserts.ENABLE_ASSERTS && "boolean" !== typeof value && goog.asserts.doAssertFailure_("Expected boolean but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2));
+  goog.asserts.ENABLE_ASSERTS && "boolean" !== typeof value && module$contents$goog$asserts_doAssertFailure("Expected boolean but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2));
   return value;
 };
 goog.asserts.assertElement = function(value, opt_message, var_args) {
-  !goog.asserts.ENABLE_ASSERTS || goog.isObject(value) && value.nodeType == goog.dom.NodeType.ELEMENT || goog.asserts.doAssertFailure_("Expected Element but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2));
+  !goog.asserts.ENABLE_ASSERTS || goog.isObject(value) && value.nodeType == goog.dom.NodeType.ELEMENT || module$contents$goog$asserts_doAssertFailure("Expected Element but got %s: %s.", [goog.typeOf(value), value], opt_message, Array.prototype.slice.call(arguments, 2));
   return value;
 };
 goog.asserts.assertInstanceof = function(value, type, opt_message, var_args) {
-  !goog.asserts.ENABLE_ASSERTS || value instanceof type || goog.asserts.doAssertFailure_("Expected instanceof %s but got %s.", [goog.asserts.getType_(type), goog.asserts.getType_(value)], opt_message, Array.prototype.slice.call(arguments, 3));
+  !goog.asserts.ENABLE_ASSERTS || value instanceof type || module$contents$goog$asserts_doAssertFailure("Expected instanceof %s but got %s.", [module$contents$goog$asserts_getType(type), module$contents$goog$asserts_getType(value)], opt_message, Array.prototype.slice.call(arguments, 3));
   return value;
 };
 goog.asserts.assertFinite = function(value, opt_message, var_args) {
-  !goog.asserts.ENABLE_ASSERTS || "number" == typeof value && isFinite(value) || goog.asserts.doAssertFailure_("Expected %s to be a finite number but it is not.", [value], opt_message, Array.prototype.slice.call(arguments, 2));
+  !goog.asserts.ENABLE_ASSERTS || "number" == typeof value && isFinite(value) || module$contents$goog$asserts_doAssertFailure("Expected %s to be a finite number but it is not.", [value], opt_message, Array.prototype.slice.call(arguments, 2));
   return value;
 };
-goog.asserts.getType_ = function(value) {
+function module$contents$goog$asserts_getType(value) {
   return value instanceof Function ? value.displayName || value.name || "unknown type name" : value instanceof Object ? value.constructor.displayName || value.constructor.name || Object.prototype.toString.call(value) : null === value ? "null" : typeof value;
-};
-goog.array = {};
+}
+;goog.array = {};
 goog.NATIVE_ARRAY_PROTOTYPES = goog.TRUSTED_SITE;
 var module$contents$goog$array_ASSUME_NATIVE_FUNCTIONS = 2012 < goog.FEATURESET_YEAR;
 goog.array.ASSUME_NATIVE_FUNCTIONS = module$contents$goog$array_ASSUME_NATIVE_FUNCTIONS;
@@ -2080,9 +2074,9 @@ goog.dom.asserts.getWindow_ = function(o) {
   }
   return null;
 };
-var module$exports$goog$labs$userAgent = {}, JSCompiler_inline_result$jscomp$33;
-JSCompiler_inline_result$jscomp$33 = !1;
-module$exports$goog$labs$userAgent.USE_CLIENT_HINTS = JSCompiler_inline_result$jscomp$33;
+var module$exports$goog$labs$userAgent = {}, JSCompiler_inline_result$jscomp$36;
+JSCompiler_inline_result$jscomp$36 = !1;
+module$exports$goog$labs$userAgent.USE_CLIENT_HINTS = JSCompiler_inline_result$jscomp$36;
 goog.string = {};
 goog.string.internal = {};
 goog.string.internal.startsWith = function(str, prefix) {
@@ -2889,20 +2883,20 @@ goog.userAgent.isDocumentModeOrHigher = function(documentMode) {
   return Number(goog.userAgent.DOCUMENT_MODE) >= documentMode;
 };
 goog.userAgent.isDocumentMode = goog.userAgent.isDocumentModeOrHigher;
-var JSCompiler_inline_result$jscomp$61;
-var doc$jscomp$inline_67 = goog.global.document;
-if (doc$jscomp$inline_67 && goog.userAgent.IE) {
-  var documentMode$jscomp$inline_68 = goog.userAgent.getDocumentMode_();
-  if (documentMode$jscomp$inline_68) {
-    JSCompiler_inline_result$jscomp$61 = documentMode$jscomp$inline_68;
+var JSCompiler_inline_result$jscomp$72;
+var doc$jscomp$inline_78 = goog.global.document;
+if (doc$jscomp$inline_78 && goog.userAgent.IE) {
+  var documentMode$jscomp$inline_79 = goog.userAgent.getDocumentMode_();
+  if (documentMode$jscomp$inline_79) {
+    JSCompiler_inline_result$jscomp$72 = documentMode$jscomp$inline_79;
   } else {
-    var ieVersion$jscomp$inline_69 = parseInt(goog.userAgent.VERSION, 10);
-    JSCompiler_inline_result$jscomp$61 = ieVersion$jscomp$inline_69 || void 0;
+    var ieVersion$jscomp$inline_80 = parseInt(goog.userAgent.VERSION, 10);
+    JSCompiler_inline_result$jscomp$72 = ieVersion$jscomp$inline_80 || void 0;
   }
 } else {
-  JSCompiler_inline_result$jscomp$61 = void 0;
+  JSCompiler_inline_result$jscomp$72 = void 0;
 }
-goog.userAgent.DOCUMENT_MODE = JSCompiler_inline_result$jscomp$61;
+goog.userAgent.DOCUMENT_MODE = JSCompiler_inline_result$jscomp$72;
 goog.dom.BrowserFeature = {};
 goog.dom.BrowserFeature.ASSUME_NO_OFFSCREEN_CANVAS = !1;
 goog.dom.BrowserFeature.ASSUME_OFFSCREEN_CANVAS = !1;
@@ -3521,11 +3515,12 @@ goog.dom.tags.isVoidTag = function(tagName) {
 };
 goog.html = {};
 goog.html.trustedtypes = {};
+goog.html.trustedtypes.POLICY_NAME = goog.TRUSTED_TYPES_POLICY_NAME ? goog.TRUSTED_TYPES_POLICY_NAME + "#html" : "";
 goog.html.trustedtypes.getPolicyPrivateDoNotAccessOrElse = function() {
-  if (!goog.TRUSTED_TYPES_POLICY_NAME) {
+  if (!goog.html.trustedtypes.POLICY_NAME) {
     return null;
   }
-  void 0 === goog.html.trustedtypes.cachedPolicy_ && (goog.html.trustedtypes.cachedPolicy_ = goog.createTrustedTypesPolicy(goog.TRUSTED_TYPES_POLICY_NAME + "#html"));
+  void 0 === goog.html.trustedtypes.cachedPolicy_ && (goog.html.trustedtypes.cachedPolicy_ = goog.createTrustedTypesPolicy(goog.html.trustedtypes.POLICY_NAME));
   return goog.html.trustedtypes.cachedPolicy_;
 };
 goog.string.TypedString = function() {
@@ -3903,8 +3898,8 @@ goog.html.SafeUrl.fromMediaSource = function(mediaSource) {
 goog.html.DATA_URL_PATTERN_ = /^data:(.*);base64,[a-z0-9+\/]+=*$/i;
 goog.html.SafeUrl.tryFromDataUrl = function(dataUrl) {
   dataUrl = String(dataUrl);
-  var filteredDataUrl = dataUrl.replace(/(%0A|%0D)/g, ""), match = filteredDataUrl.match(goog.html.DATA_URL_PATTERN_), valid = match && goog.html.SafeUrl.isSafeMimeType(match[1]);
-  return valid ? goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(filteredDataUrl) : null;
+  var filteredDataUrl = dataUrl.replace(/(%0A|%0D)/g, ""), match = filteredDataUrl.match(goog.html.DATA_URL_PATTERN_);
+  return match ? goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(filteredDataUrl) : null;
 };
 goog.html.SafeUrl.fromDataUrl = function(dataUrl) {
   return goog.html.SafeUrl.tryFromDataUrl(dataUrl) || goog.html.SafeUrl.INNOCUOUS_URL;
@@ -4070,7 +4065,7 @@ function module$contents$goog$html$SafeStyle_sanitizePropertyValue(value) {
   }
   var result = value instanceof goog.string.Const ? goog.string.Const.unwrap(value) : module$contents$goog$html$SafeStyle_sanitizePropertyValueString(String(value));
   if (/[{;}]/.test(result)) {
-    throw new goog.asserts.AssertionError("Value does not allow [{;}], got: %s.", [result]);
+    throw new module$contents$goog$asserts_AssertionError("Value does not allow [{;}], got: %s.", [result]);
   }
   return result;
 }
@@ -4115,8 +4110,8 @@ function module$contents$goog$html$SafeStyle_hasBalancedSquareBrackets(value) {
   }
   return outside;
 }
-var module$contents$goog$html$SafeStyle_VALUE_RE = RegExp("^[-,.\"'%_!#/ a-zA-Z0-9\\[\\]]+$"), module$contents$goog$html$SafeStyle_URL_RE = RegExp("\\b(url\\([ \t\n]*)('[ -&(-\\[\\]-~]*'|\"[ !#-\\[\\]-~]*\"|[!#-&*-\\[\\]-~]*)([ \t\n]*\\))", "g"), module$contents$goog$html$SafeStyle_ALLOWED_FUNCTIONS = "calc cubic-bezier fit-content hsl hsla linear-gradient matrix minmax repeat rgb rgba (rotate|scale|translate)(X|Y|Z|3d)? var".split(" "), module$contents$goog$html$SafeStyle_FUNCTIONS_RE = new RegExp("\\b(" + 
-module$contents$goog$html$SafeStyle_ALLOWED_FUNCTIONS.join("|") + ")\\([-+*/0-9a-zA-Z.%#\\[\\], ]+\\)", "g"), module$contents$goog$html$SafeStyle_COMMENT_RE = /\/\*/;
+var module$contents$goog$html$SafeStyle_VALUE_RE = RegExp("^[-,.\"'%_!#/ a-zA-Z0-9\\[\\]]+$"), module$contents$goog$html$SafeStyle_URL_RE = RegExp("\\b(url\\([ \t\n]*)('[ -&(-\\[\\]-~]*'|\"[ !#-\\[\\]-~]*\"|[!#-&*-\\[\\]-~]*)([ \t\n]*\\))", "g"), module$contents$goog$html$SafeStyle_ALLOWED_FUNCTIONS = "calc cubic-bezier fit-content hsl hsla linear-gradient matrix minmax radial-gradient repeat rgb rgba (rotate|scale|translate)(X|Y|Z|3d)? var".split(" "), module$contents$goog$html$SafeStyle_FUNCTIONS_RE = 
+new RegExp("\\b(" + module$contents$goog$html$SafeStyle_ALLOWED_FUNCTIONS.join("|") + ")\\([-+*/0-9a-zA-Z.%#\\[\\], ]+\\)", "g"), module$contents$goog$html$SafeStyle_COMMENT_RE = /\/\*/;
 function module$contents$goog$html$SafeStyle_sanitizeUrl(value) {
   return value.replace(module$contents$goog$html$SafeStyle_URL_RE, function(match$jscomp$0, before, url, after) {
     var quote = "";
@@ -4483,13 +4478,13 @@ goog.dom.safe.setObjectData = function(object, url) {
 };
 goog.dom.safe.setScriptSrc = function(script, url) {
   goog.dom.asserts.assertIsHTMLScriptElement(script);
-  script.src = goog.html.TrustedResourceUrl.unwrapTrustedScriptURL(url);
   goog.dom.safe.setNonceForScriptElement_(script);
+  script.src = goog.html.TrustedResourceUrl.unwrapTrustedScriptURL(url);
 };
 goog.dom.safe.setScriptContent = function(script, content) {
   goog.dom.asserts.assertIsHTMLScriptElement(script);
-  script.textContent = module$contents$goog$html$SafeScript_SafeScript.unwrapTrustedScript(content);
   goog.dom.safe.setNonceForScriptElement_(script);
+  script.textContent = module$contents$goog$html$SafeScript_SafeScript.unwrapTrustedScript(content);
 };
 goog.dom.safe.setNonceForScriptElement_ = function(script) {
   var win = script.ownerDocument && script.ownerDocument.defaultView, nonce = goog.dom.safe.getScriptNonce(win);
@@ -6600,8 +6595,7 @@ goog.events.Event.stopPropagation = function(e) {
 goog.events.Event.preventDefault = function(e) {
   e.preventDefault();
 };
-goog.events.BrowserFeature = {HAS_W3C_BUTTON:!0, HAS_W3C_EVENT_SUPPORT:!0, SET_KEY_CODE_TO_PREVENT_DEFAULT:!1, HAS_NAVIGATOR_ONLINE_PROPERTY:!0, HAS_HTML5_NETWORK_EVENT_SUPPORT:!0, HTML5_NETWORK_EVENTS_FIRE_ON_BODY:!1, TOUCH_ENABLED:"ontouchstart" in goog.global || !!(goog.global.document && document.documentElement && "ontouchstart" in document.documentElement) || !(!goog.global.navigator || !goog.global.navigator.maxTouchPoints && !goog.global.navigator.msMaxTouchPoints), POINTER_EVENTS:"PointerEvent" in 
-goog.global, MSPOINTER_EVENTS:"MSPointerEvent" in goog.global && !(!goog.global.navigator || !goog.global.navigator.msPointerEnabled), PASSIVE_EVENTS:function() {
+goog.events.BrowserFeature = {TOUCH_ENABLED:"ontouchstart" in goog.global || !!(goog.global.document && document.documentElement && "ontouchstart" in document.documentElement) || !(!goog.global.navigator || !goog.global.navigator.maxTouchPoints && !goog.global.navigator.msMaxTouchPoints), POINTER_EVENTS:"PointerEvent" in goog.global, MSPOINTER_EVENTS:"MSPointerEvent" in goog.global && !(!goog.global.navigator || !goog.global.navigator.msPointerEnabled), PASSIVE_EVENTS:function() {
   if (!goog.global.addEventListener || !Object.defineProperty) {
     return !1;
   }
@@ -6609,7 +6603,9 @@ goog.global, MSPOINTER_EVENTS:"MSPointerEvent" in goog.global && !(!goog.global.
     passive = !0;
   }});
   try {
-    goog.global.addEventListener("test", goog.nullFunction, options), goog.global.removeEventListener("test", goog.nullFunction, options);
+    goog.global.addEventListener("test", function() {
+    }, options), goog.global.removeEventListener("test", function() {
+    }, options);
   } catch (e) {
   }
   return passive;
@@ -7733,7 +7729,7 @@ goog.Promise = function(resolver, opt_context) {
   this.executing_ = !1;
   0 < goog.Promise.UNHANDLED_REJECTION_DELAY ? this.unhandledRejectionId_ = 0 : 0 == goog.Promise.UNHANDLED_REJECTION_DELAY && (this.hadUnhandledRejection_ = !1);
   goog.Promise.LONG_STACK_TRACES && (this.stack_ = [], this.addStackTrace_(Error("created")), this.currentStep_ = 0);
-  if (resolver != goog.nullFunction) {
+  if (resolver != goog.functions.UNDEFINED) {
     try {
       var self = this;
       resolver.call(opt_context, function(value) {
@@ -7786,7 +7782,7 @@ goog.Promise.resolve = function(opt_value) {
   if (opt_value instanceof goog.Promise) {
     return opt_value;
   }
-  var promise = new goog.Promise(goog.nullFunction);
+  var promise = new goog.Promise(goog.functions.UNDEFINED);
   promise.resolve_(goog.Promise.State_.FULFILLED, opt_value);
   return promise;
 };
@@ -7877,7 +7873,7 @@ goog.Promise.prototype.thenVoid = function(opt_onFulfilled, opt_onRejected, opt_
   null != opt_onFulfilled && goog.asserts.assertFunction(opt_onFulfilled, "opt_onFulfilled should be a function.");
   null != opt_onRejected && goog.asserts.assertFunction(opt_onRejected, "opt_onRejected should be a function. Did you pass opt_context as the second argument instead of the third?");
   goog.Promise.LONG_STACK_TRACES && this.addStackTrace_(Error("then"));
-  this.addCallbackEntry_(goog.Promise.getCallbackEntry_(opt_onFulfilled || goog.nullFunction, opt_onRejected || null, opt_context));
+  this.addCallbackEntry_(goog.Promise.getCallbackEntry_(opt_onFulfilled || goog.functions.UNDEFINED, opt_onRejected || null, opt_context));
 };
 goog.Promise.prototype.thenCatch = function(onRejected, opt_context) {
   goog.Promise.LONG_STACK_TRACES && this.addStackTrace_(Error("thenCatch"));
@@ -8584,7 +8580,8 @@ goog.net.XhrIo.buildProgressEvent_ = function(e, eventType) {
 goog.net.XhrIo.prototype.cleanUpXhr_ = function(opt_fromDispose) {
   if (this.xhr_) {
     this.cleanUpTimeoutTimer_();
-    var xhr = this.xhr_, clearedOnReadyStateChange = this.xhrOptions_[goog.net.XmlHttp.OptionType.USE_NULL_FUNCTION] ? goog.nullFunction : null;
+    var xhr = this.xhr_, clearedOnReadyStateChange = this.xhrOptions_[goog.net.XmlHttp.OptionType.USE_NULL_FUNCTION] ? function() {
+    } : null;
     this.xhrOptions_ = this.xhr_ = null;
     opt_fromDispose || this.dispatchEvent(goog.net.EventType.READY);
     try {

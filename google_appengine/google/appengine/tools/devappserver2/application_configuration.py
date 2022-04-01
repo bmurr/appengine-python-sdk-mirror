@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Stores application configuration taken from e.g. app.yaml, index.yaml."""
 
 from __future__ import absolute_import

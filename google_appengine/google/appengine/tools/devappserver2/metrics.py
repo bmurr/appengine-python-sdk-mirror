@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Provides a logger for logging devappserver2 metrics to Google Analytics.
 
 The MetricsLogger is a singleton class which can be used directly in

@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Handles login/logout pages and dealing with user cookies.
 
 Includes a WSGI application that serves the login page and handles login and
@@ -44,6 +43,9 @@ from google.appengine._internal.six.moves import urllib
 import six.moves.http_cookies
 import webapp2
 
+if six.PY3:
+  import html  # pylint: disable=g-import-not-at-top
+
 
 
 
@@ -63,6 +65,13 @@ LOGIN_ACTION = 'login'
 
 # Name of the cookie that stores the user info.
 _COOKIE_NAME = 'dev_appserver_login'
+
+
+def _escape_with_quote(s):
+  if six.PY2:
+    return cgi.escape(s, quote=True)  # pylint: disable=deprecated-method
+  else:
+    return html.escape(s, quote=False).replace('"', '&quot;')
 
 
 def get_user_info(http_cookie, cookie_name=_COOKIE_NAME):
@@ -226,11 +235,11 @@ def _render_login_template(login_url, continue_url, email, admin):
   admin_checked = 'checked' if admin else ''
 
   template_dict = {
-      'email': cgi.escape(email, quote=True),
+      'email': _escape_with_quote(email),
       'admin_checked': admin_checked,
       'login_message': login_message,
-      'login_url': cgi.escape(login_url, quote=True),
-      'continue_url': cgi.escape(continue_url, quote=True),
+      'login_url': _escape_with_quote(login_url),
+      'continue_url': _escape_with_quote(continue_url),
   }
 
   return _LOGIN_TEMPLATE % template_dict

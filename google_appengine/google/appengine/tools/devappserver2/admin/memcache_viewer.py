@@ -29,8 +29,10 @@ information. Java, PHP and Python map types in inconsistent ways, see:
 
 import datetime
 import logging
-from google.appengine._internal import six
 import urllib
+from google.appengine._internal import six
+
+# pylint: disable=g-import-not-at-top
 
 if six.PY2:
   from google.appengine.api import apiproxy_stub_map

@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Tests for google.apphosting.tools.devappserver2.module."""
 
 
@@ -387,7 +386,7 @@ class BuildRequestEnvironTest(stub_testing.StubTestCase):
                                                  ('Other', 'Values')], 'body',
                                                 '1.2.3.4', 8080)
     self.assertEqual('', environ.pop('wsgi.errors').getvalue())
-    self.assertEqual('body', environ.pop('wsgi.input').getvalue())
+    self.assertEqual(six.b('body'), environ.pop('wsgi.input').getvalue())
     self.assertEqual(expected_environ, environ)
 
   def test_build_request_environ_fake_is_logged_in(self):
@@ -418,7 +417,7 @@ class BuildRequestEnvironTest(stub_testing.StubTestCase):
         8080,
         fake_login=True)
     self.assertEqual('', environ.pop('wsgi.errors').getvalue())
-    self.assertEqual('body', environ.pop('wsgi.input').getvalue())
+    self.assertEqual(six.b('body'), environ.pop('wsgi.input').getvalue())
     self.assertEqual(expected_environ, environ)
 
   def test_build_request_environ_unicode_body(self):
@@ -445,7 +444,34 @@ class BuildRequestEnvironTest(stub_testing.StubTestCase):
                                                  ('Other', 'Values')], u'body',
                                                 '1.2.3.4', 80)
     self.assertEqual('', environ.pop('wsgi.errors').getvalue())
-    self.assertEqual('body', environ.pop('wsgi.input').getvalue())
+    self.assertEqual(six.b('body'), environ.pop('wsgi.input').getvalue())
+    self.assertEqual(expected_environ, environ)
+
+  def test_build_request_environ_bytes_body(self):
+    expected_environ = {
+        constants.FAKE_IS_ADMIN_HEADER: '1',
+        'HTTP_HOST': 'fakehost',
+        'HTTP_HEADER': 'Value',
+        'HTTP_OTHER': 'Values',
+        'CONTENT_LENGTH': '4',
+        'PATH_INFO': '/foo',
+        'QUERY_STRING': 'bar=baz',
+        'REQUEST_METHOD': 'PUT',
+        'REMOTE_ADDR': '1.2.3.4',
+        'SERVER_NAME': 'fakehost',
+        'SERVER_PORT': '80',
+        'SERVER_PROTOCOL': 'HTTP/1.1',
+        'wsgi.version': (1, 0),
+        'wsgi.url_scheme': 'http',
+        'wsgi.multithread': True,
+        'wsgi.multiprocess': True
+    }
+    environ = self.module.build_request_environ('PUT', '/foo?bar=baz',
+                                                [('Header', 'Value'),
+                                                 ('Other', 'Values')],
+                                                six.b('body'), '1.2.3.4', 80)
+    self.assertEqual('', environ.pop('wsgi.errors').getvalue())
+    self.assertEqual(six.b('body'), environ.pop('wsgi.input').getvalue())
     self.assertEqual(expected_environ, environ)
 
 

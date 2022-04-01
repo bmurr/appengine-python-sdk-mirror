@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Helper for Cloud Endpoints API server in the development app server.
 
 This is a fake apiserver proxy that does simple transforms on requests that

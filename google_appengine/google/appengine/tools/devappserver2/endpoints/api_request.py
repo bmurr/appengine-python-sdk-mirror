@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Cloud Endpoints API request-related data and functions."""
 
 from __future__ import absolute_import
@@ -75,7 +74,11 @@ class ApiRequest(object):
       raise ValueError('Invalid request path: %s' % self.path)
     self.path = self.path[len(self._API_PREFIX):]
     if self.query:
-      self.parameters = cgi.parse_qs(self.query, keep_blank_values=True)
+      if six.PY2:
+        self.parameters = cgi.parse_qs(self.query, keep_blank_values=True)
+      else:
+        self.parameters = urllib.parse.parse_qs(
+            self.query, keep_blank_values=True)
     else:
       self.parameters = {}
     self.body_json = json.loads(self.body) if self.body else {}
