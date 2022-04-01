@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """A thread-safe wrapper for the subprocess module."""
 
 from __future__ import absolute_import
@@ -130,8 +129,6 @@ def start_process_file(args, input_string, env, cwd, stdin=None, stdout=None,
 
   child_in.write(six.ensure_binary(input_string))
   child_in.close()
-
-  # pylint: disable=g-no-augmented-assignment
   # += modifies the original args which we don't want.
   args = args + [child_in.name, child_out.name]
 

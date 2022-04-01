@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Provides WSGI middleware for rewriting HTTP responses from the runtime.
 
 The rewriting is used for various sanitisation and processing of the response

@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Serves content for "script" handlers using an HTTP runtime.
 
 http_runtime supports two ways to start the runtime instance.

@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Handles blob store uploading and serving in the front-end.
 
 Includes a WSGI application that handles upload requests and inserts the

@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Provides a GoRuntimeInstanceFactory for Go runtime instances.
 
 The instances serve content for "script" handlers. In the case that an errant

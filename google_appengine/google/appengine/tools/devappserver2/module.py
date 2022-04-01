@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Manage the lifecycle of runtime processes and dispatch requests to them."""
 
 from __future__ import absolute_import
@@ -47,6 +46,7 @@ if six.PY2:
   from google.appengine.api import request_info
   from google.appengine.api.logservice import log_service_pb
 else:
+  import html
   from google.appengine.api import api_base_pb2
   from google.appengine.api import apiproxy_stub_map
   from google.appengine.api import appinfo
@@ -153,6 +153,13 @@ def _static_files_regex_from_handlers(handlers):
       patterns.append('(%s%s%s)' %
                       (stripped_dir, re.escape(os.path.sep), r'.*'))
   return r'^%s$' % '|'.join(patterns)
+
+
+def _escape(s):
+  if six.PY2:
+    return cgi.escape(s)  # pylint: disable=deprecated-method
+  else:
+    return html.escape(s, quote=False)
 
 
 class InteractiveCommandError(errors.Error):
@@ -760,7 +767,7 @@ class Module(object):
     return [
         '<html><head><title>Not Found</title></head>',
         ('<body>The url "%s" does not match any handlers.</body></html>' %
-         cgi.escape(environ['PATH_INFO']))
+         _escape(environ['PATH_INFO']))
     ]
 
   def _error_response(self, environ, start_response, status, body=None):
@@ -1246,7 +1253,7 @@ class Module(object):
         'wsgi.errors': six.StringIO(),
         'wsgi.multithread': True,
         'wsgi.multiprocess': True,
-        'wsgi.input': six.StringIO(six.ensure_text(body))
+        'wsgi.input': six.BytesIO(body)
     }
     if fake_login:
       environ[constants.FAKE_LOGGED_IN_HEADER] = '1'

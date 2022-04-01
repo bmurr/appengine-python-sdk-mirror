@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Serves content for "script" handlers using the PHP runtime."""
 
 
@@ -102,6 +101,10 @@ class _PHPBinaryError(Exception):
 
 
 class _PHPEnvironmentError(Exception):
+  pass
+
+
+class _ComposerBinaryError(Exception):
   pass
 
 
@@ -360,7 +363,10 @@ class PHPRuntimeInstanceFactory(instance.InstanceFactory,
     if composer_file_path:
       php_config = self._GenerateConfigForRuntime().php_config
       php_composer_path = php_config.php_composer_path
-
+      if not php_composer_path:
+        raise _ComposerBinaryError(
+            ('file {} was present but Composer binary was not found. Please ' +
+             'provide --php_composer_path flag.').format(_COMPOSER_FILE))
       composer_file_dir = os.path.dirname(composer_file_path)
       if self._composer_lock_path:
         args = (php_composer_path, 'update')

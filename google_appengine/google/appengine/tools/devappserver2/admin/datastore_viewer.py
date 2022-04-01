@@ -50,6 +50,17 @@ else:
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 
 
+def _escape(s, quote=False):
+  if six.PY2:
+    return cgi.escape(s, quote)  # pylint: disable=deprecated-method
+  else:
+    escaped = html.escape(s, quote=False)
+    if quote:
+      return escaped.replace('"', '&quot;')
+    else:
+      return escaped
+
+
 def _format_datastore_key(key):
   """Return a nicely formatted decomposition of a datastore key.
 
@@ -178,7 +189,7 @@ class DataType(object):
   @classmethod
   def get_placholder_attribute(cls):
     if cls.PLACEHOLDER:
-      return 'placeholder="%s"' % cgi.escape(cls.PLACEHOLDER)
+      return 'placeholder="%s"' % _escape(cls.PLACEHOLDER)
     else:
       return ''
 
@@ -199,10 +210,10 @@ class DataType(object):
     string_value = self.format(value) if value else ''
     return (
         '<input class="%s" name="%s" type="text" size="%d" value="%s" %s/>' % (
-            cgi.escape(self.name()),
-            cgi.escape(name),
+            _escape(self.name()),
+            _escape(name),
             self.input_field_size(),
-            cgi.escape(string_value, True),
+            _escape(string_value, True),
             self.get_placholder_attribute()))
 
   def input_field_size(self):
@@ -224,9 +235,9 @@ class StringType(DataType):
           break
     if multiline:
       return '<textarea name="%s" rows="5" cols="50" %s>%s</textarea>' % (
-          cgi.escape(name),
+          _escape(name),
           self.get_placholder_attribute(),
-          cgi.escape(string_value))
+          _escape(string_value))
     else:
       return DataType.input_field(self, name, value, sample_values, back_uri)
 
@@ -247,9 +258,9 @@ class TextType(StringType):
   def input_field(self, name, value, sample_values, back_uri):
     string_value = self.format(value) if value else ''
     return '<textarea name="%s" rows="5" cols="50" %s>%s</textarea>' % (
-        cgi.escape(name),
+        _escape(name),
         self.get_placholder_attribute(),
-        cgi.escape(string_value))
+        _escape(string_value))
 
   def parse(self, value):
     return datastore_types.Text(value)
@@ -325,7 +336,7 @@ class ListType(DataType):
 
   def input_field(self, name, value, sample_values, back_uri):
     string_value = self.format(value) if value else ''
-    return cgi.escape(string_value)
+    return _escape(string_value)
 
 
 class BoolType(DataType):
@@ -339,7 +350,7 @@ class BoolType(DataType):
     <option %s value=''></option>
     <option %s value='0'>False</option>
     <option %s value='1'>True</option></select>""" % (
-        cgi.escape(self.name()), cgi.escape(name), selected[None],
+        _escape(self.name()), _escape(name), selected[None],
         selected[False], selected[True])
 
   def parse(self, value):

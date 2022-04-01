@@ -21,6 +21,15 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import sys
+
+
+def _GetChildrenForIter(node):
+  if sys.version_info[0] == 2:
+    return node.getchildren()
+  else:
+    return node
+
 
 def GetTag(node):
   """Strips namespace prefix."""
@@ -29,7 +38,7 @@ def GetTag(node):
 
 def GetChild(node, tag):
   """Returns first child of node with tag."""
-  for child in node.getchildren():
+  for child in _GetChildrenForIter(node):
     if GetTag(child) == tag:
       return child
 
@@ -45,7 +54,7 @@ def GetAttribute(node, attr):
 
 def GetChildNodeText(node, child_tag, default=''):
   """Finds child xml node with desired tag and returns its text."""
-  for child in node.getchildren():
+  for child in _GetChildrenForIter(node):
     if GetTag(child) == child_tag:
       return GetNodeText(child) or default
   return default
@@ -59,4 +68,5 @@ def GetNodeText(node):
 
 def GetNodes(node, match_tag):
   """Gets all children of a node with the desired tag."""
-  return (child for child in node.getchildren() if GetTag(child) == match_tag)
+  return (child for child in _GetChildrenForIter(node)
+          if GetTag(child) == match_tag)

@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Lint as: python2, python3
 """Manage the lifecycle of modules and dispatch requests to them."""
 
 from __future__ import absolute_import
@@ -447,6 +446,7 @@ class Dispatcher(request_info.Dispatcher):
     # Convert to an address that can connect from local and remote machines.
     # TODO: handle IPv6 bind-all address (::).
     try:
+      # pylint: disable=g-socket-inet-aton
       if ((six.PY3 and socket.inet_pton(socket.AF_INET, parts[0])
            == six.ensure_binary('\0\0\0\0')) or
           (six.PY2 and socket.inet_aton(parts[0]) == '\0\0\0\0')):
