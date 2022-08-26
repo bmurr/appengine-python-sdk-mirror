@@ -17,19 +17,13 @@
 
 
 
-
 from google.net.proto import ProtocolBuffer
 import abc
 import array
-import base64
 try:
   from thread import allocate_lock as _Lock
 except ImportError:
   from threading import Lock as _Lock
-try:
-  _net_proto___parse__python = None
-except ImportError:
-  _net_proto___parse__python = None
 
 if hasattr(__builtins__, 'xrange'): range = xrange
 
@@ -66,33 +60,6 @@ class SystemServiceError(ProtocolBuffer.ProtocolMessage):
 
   def MergeFrom(self, x):
     assert x is not self
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.SystemServiceError', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.SystemServiceError')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.SystemServiceError')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.SystemServiceError', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.SystemServiceError', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.SystemServiceError', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -149,13 +116,6 @@ class SystemServiceError(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.SystemServiceError'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KHWFwcGhvc3RpbmcuU3lzdGVtU2VydmljZUVycm9yc3oJRXJyb3JDb2RliwGSAQJPS5gBAIwBiwGSAQ5JTlRFUk5BTF9FUlJPUpgBAYwBiwGSARBCQUNLRU5EX1JFUVVJUkVEmAECjAGLAZIBDUxJTUlUX1JFQUNIRUSYAQOMAXQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class SystemStat(ProtocolBuffer.ProtocolMessage):
   has_current_ = 0
   current_ = 0.0
@@ -260,33 +220,6 @@ class SystemStat(ProtocolBuffer.ProtocolMessage):
     if (x.has_total()): self.set_total(x.total())
     if (x.has_rate1m()): self.set_rate1m(x.rate1m())
     if (x.has_rate10m()): self.set_rate10m(x.rate10m())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.SystemStat', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.SystemStat')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.SystemStat')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.SystemStat', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.SystemStat', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.SystemStat', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -448,13 +381,6 @@ class SystemStat(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.SystemStat'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KFWFwcGhvc3RpbmcuU3lzdGVtU3RhdBMaB2N1cnJlbnQgASgBMAE4ARQTGglhdmVyYWdlMW0gAygBMAE4ARQTGgphdmVyYWdlMTBtIAQoATABOAEUExoFdG90YWwgAigBMAE4ARQTGgZyYXRlMW0gBSgBMAE4ARQTGgdyYXRlMTBtIAYoATABOAEU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class GetSystemStatsRequest(ProtocolBuffer.ProtocolMessage):
 
   def __init__(self, contents=None):
@@ -464,33 +390,6 @@ class GetSystemStatsRequest(ProtocolBuffer.ProtocolMessage):
 
   def MergeFrom(self, x):
     assert x is not self
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.GetSystemStatsRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.GetSystemStatsRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.GetSystemStatsRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.GetSystemStatsRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.GetSystemStatsRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.GetSystemStatsRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -547,13 +446,6 @@ class GetSystemStatsRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.GetSystemStatsRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KIGFwcGhvc3RpbmcuR2V0U3lzdGVtU3RhdHNSZXF1ZXN0"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class GetSystemStatsResponse(ProtocolBuffer.ProtocolMessage):
   has_cpu_ = 0
   cpu_ = None
@@ -607,33 +499,6 @@ class GetSystemStatsResponse(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     if (x.has_cpu()): self.mutable_cpu().MergeFrom(x.cpu())
     if (x.has_memory()): self.mutable_memory().MergeFrom(x.memory())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.GetSystemStatsResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.GetSystemStatsResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.GetSystemStatsResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.GetSystemStatsResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.GetSystemStatsResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.GetSystemStatsResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -741,13 +606,6 @@ class GetSystemStatsResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.GetSystemStatsResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KIWFwcGhvc3RpbmcuR2V0U3lzdGVtU3RhdHNSZXNwb25zZRMaA2NwdSABKAIwCzgBShVhcHBob3N0aW5nLlN5c3RlbVN0YXSjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoGbWVtb3J5IAIoAjALOAFKFWFwcGhvc3RpbmcuU3lzdGVtU3RhdKMBqgEFY3R5cGWyAQZwcm90bzKkARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class StartBackgroundRequestRequest(ProtocolBuffer.ProtocolMessage):
 
   def __init__(self, contents=None):
@@ -757,33 +615,6 @@ class StartBackgroundRequestRequest(ProtocolBuffer.ProtocolMessage):
 
   def MergeFrom(self, x):
     assert x is not self
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.StartBackgroundRequestRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.StartBackgroundRequestRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.StartBackgroundRequestRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.StartBackgroundRequestRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.StartBackgroundRequestRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.StartBackgroundRequestRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -840,13 +671,6 @@ class StartBackgroundRequestRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.StartBackgroundRequestRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KKGFwcGhvc3RpbmcuU3RhcnRCYWNrZ3JvdW5kUmVxdWVzdFJlcXVlc3Q="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class StartBackgroundRequestResponse(ProtocolBuffer.ProtocolMessage):
   has_request_id_ = 0
   request_id_ = ""
@@ -871,33 +695,6 @@ class StartBackgroundRequestResponse(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_request_id()): self.set_request_id(x.request_id())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.StartBackgroundRequestResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.StartBackgroundRequestResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.StartBackgroundRequestResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.StartBackgroundRequestResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.StartBackgroundRequestResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.StartBackgroundRequestResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -969,13 +766,6 @@ class StartBackgroundRequestResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.StartBackgroundRequestResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WiphcHBob3N0aW5nL2FwaS9zeXN0ZW0vc3lzdGVtX3NlcnZpY2UucHJvdG8KKWFwcGhvc3RpbmcuU3RhcnRCYWNrZ3JvdW5kUmVxdWVzdFJlc3BvbnNlExoKcmVxdWVzdF9pZCABKAIwCTgBFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 if _extension_runtime:
   pass
 

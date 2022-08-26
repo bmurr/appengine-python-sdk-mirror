@@ -27,6 +27,7 @@ from google.appengine._internal import six
 import webapp2
 
 from google.appengine.tools.devappserver2 import dispatcher
+from google.appengine.tools.devappserver2 import errors
 from google.appengine.tools.devappserver2 import module
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 from google.appengine.tools.devappserver2.admin import console
@@ -108,7 +109,7 @@ class ConsoleRequestHandlerTest(unittest.TestCase):
     admin_request_handler.AdminRequestHandler(handler).post()
     handler.dispatcher = self.dispatcher
     self.interactive_command_module.send_interactive_command(
-        'print 5+5').AndRaise(module.InteractiveCommandError('restart'))
+        'print 5+5').AndRaise(errors.InteractiveCommandError('restart'))
 
     self.mox.ReplayAll()
     handler.post()

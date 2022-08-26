@@ -17,19 +17,13 @@
 
 
 
-
 from google.net.proto import ProtocolBuffer
 import abc
 import array
-import base64
 try:
   from thread import allocate_lock as _Lock
 except ImportError:
   from threading import Lock as _Lock
-try:
-  _net_proto___parse__python = None
-except ImportError:
-  _net_proto___parse__python = None
 
 if hasattr(__builtins__, 'xrange'): range = xrange
 
@@ -76,33 +70,6 @@ class BlobstoreServiceError(ProtocolBuffer.ProtocolMessage):
 
   def MergeFrom(self, x):
     assert x is not self
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.BlobstoreServiceError', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.BlobstoreServiceError')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.BlobstoreServiceError')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.BlobstoreServiceError', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.BlobstoreServiceError', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.BlobstoreServiceError', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -159,13 +126,6 @@ class BlobstoreServiceError(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.BlobstoreServiceError'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9ibG9ic3RvcmUvYmxvYnN0b3JlX3NlcnZpY2UucHJvdG8KIGFwcGhvc3RpbmcuQmxvYnN0b3JlU2VydmljZUVycm9yc3oJRXJyb3JDb2RliwGSAQJPS5gBAIwBiwGSAQ5JTlRFUk5BTF9FUlJPUpgBAYwBiwGSAQxVUkxfVE9PX0xPTkeYAQKMAYsBkgERUEVSTUlTU0lPTl9ERU5JRUSYAQOMAYsBkgEOQkxPQl9OT1RfRk9VTkSYAQSMAYsBkgEXREFUQV9JTkRFWF9PVVRfT0ZfUkFOR0WYAQWMAYsBkgEZQkxPQl9GRVRDSF9TSVpFX1RPT19MQVJHRZgBBowBiwGSARVBUkdVTUVOVF9PVVRfT0ZfUkFOR0WYAQiMAYsBkgEQSU5WQUxJRF9CTE9CX0tFWZgBCYwBdA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class CreateUploadURLRequest(ProtocolBuffer.ProtocolMessage):
   has_success_path_ = 0
   success_path_ = ""
@@ -254,33 +214,6 @@ class CreateUploadURLRequest(ProtocolBuffer.ProtocolMessage):
     if (x.has_max_upload_size_per_blob_bytes()): self.set_max_upload_size_per_blob_bytes(x.max_upload_size_per_blob_bytes())
     if (x.has_gs_bucket_name()): self.set_gs_bucket_name(x.gs_bucket_name())
     if (x.has_url_expiry_time_seconds()): self.set_url_expiry_time_seconds(x.url_expiry_time_seconds())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.CreateUploadURLRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.CreateUploadURLRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.CreateUploadURLRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.CreateUploadURLRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.CreateUploadURLRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.CreateUploadURLRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -429,13 +362,6 @@ class CreateUploadURLRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.CreateUploadURLRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9ibG9ic3RvcmUvYmxvYnN0b3JlX3NlcnZpY2UucHJvdG8KIWFwcGhvc3RpbmcuQ3JlYXRlVXBsb2FkVVJMUmVxdWVzdBMaDHN1Y2Nlc3NfcGF0aCABKAIwCTgCFBMaFW1heF91cGxvYWRfc2l6ZV9ieXRlcyACKAAwAzgBFBMaHm1heF91cGxvYWRfc2l6ZV9wZXJfYmxvYl9ieXRlcyADKAAwAzgBFBMaDmdzX2J1Y2tldF9uYW1lIAQoAjAJOAEUExoXdXJsX2V4cGlyeV90aW1lX3NlY29uZHMgBSgAMAU4ARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class CreateUploadURLResponse(ProtocolBuffer.ProtocolMessage):
   has_url_ = 0
   url_ = ""
@@ -460,33 +386,6 @@ class CreateUploadURLResponse(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_url()): self.set_url(x.url())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.CreateUploadURLResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.CreateUploadURLResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.CreateUploadURLResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.CreateUploadURLResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.CreateUploadURLResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.CreateUploadURLResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -563,13 +462,6 @@ class CreateUploadURLResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.CreateUploadURLResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9ibG9ic3RvcmUvYmxvYnN0b3JlX3NlcnZpY2UucHJvdG8KImFwcGhvc3RpbmcuQ3JlYXRlVXBsb2FkVVJMUmVzcG9uc2UTGgN1cmwgASgCMAk4AhQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class DeleteBlobRequest(ProtocolBuffer.ProtocolMessage):
   has_token_ = 0
   token_ = ""
@@ -611,33 +503,6 @@ class DeleteBlobRequest(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     for i in range(x.blob_key_size()): self.add_blob_key(x.blob_key(i))
     if (x.has_token()): self.set_token(x.token())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.DeleteBlobRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.DeleteBlobRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.DeleteBlobRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.DeleteBlobRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.DeleteBlobRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.DeleteBlobRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -735,13 +600,6 @@ class DeleteBlobRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.DeleteBlobRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9ibG9ic3RvcmUvYmxvYnN0b3JlX3NlcnZpY2UucHJvdG8KHGFwcGhvc3RpbmcuRGVsZXRlQmxvYlJlcXVlc3QTGghibG9iX2tleSABKAIwCTgDFBMaBXRva2VuIAIoAjAJOAEU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class FetchDataRequest(ProtocolBuffer.ProtocolMessage):
   has_blob_key_ = 0
   blob_key_ = ""
@@ -798,33 +656,6 @@ class FetchDataRequest(ProtocolBuffer.ProtocolMessage):
     if (x.has_blob_key()): self.set_blob_key(x.blob_key())
     if (x.has_start_index()): self.set_start_index(x.start_index())
     if (x.has_end_index()): self.set_end_index(x.end_index())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.FetchDataRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.FetchDataRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.FetchDataRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.FetchDataRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.FetchDataRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.FetchDataRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -947,13 +778,6 @@ class FetchDataRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.FetchDataRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9ibG9ic3RvcmUvYmxvYnN0b3JlX3NlcnZpY2UucHJvdG8KG2FwcGhvc3RpbmcuRmV0Y2hEYXRhUmVxdWVzdBMaCGJsb2Jfa2V5IAEoAjAJOAIUExoLc3RhcnRfaW5kZXggAigAMAM4AhQTGgllbmRfaW5kZXggAygAMAM4AhQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class FetchDataResponse(ProtocolBuffer.ProtocolMessage):
   has_data_ = 0
   data_ = ""
@@ -978,33 +802,6 @@ class FetchDataResponse(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_data()): self.set_data(x.data())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.FetchDataResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.FetchDataResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.FetchDataResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.FetchDataResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.FetchDataResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.FetchDataResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1081,13 +878,6 @@ class FetchDataResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.FetchDataResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9ibG9ic3RvcmUvYmxvYnN0b3JlX3NlcnZpY2UucHJvdG8KHGFwcGhvc3RpbmcuRmV0Y2hEYXRhUmVzcG9uc2UTGgRkYXRhIOgHKAIwCTgCowGqAQVjdHlwZbIBBENvcmSkARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class CloneBlobRequest(ProtocolBuffer.ProtocolMessage):
   has_blob_key_ = 0
   blob_key_ = ""
@@ -1144,33 +934,6 @@ class CloneBlobRequest(ProtocolBuffer.ProtocolMessage):
     if (x.has_blob_key()): self.set_blob_key(x.blob_key())
     if (x.has_mime_type()): self.set_mime_type(x.mime_type())
     if (x.has_target_app_id()): self.set_target_app_id(x.target_app_id())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.CloneBlobRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.CloneBlobRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.CloneBlobRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.CloneBlobRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.CloneBlobRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.CloneBlobRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1293,13 +1056,6 @@ class CloneBlobRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.CloneBlobRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9ibG9ic3RvcmUvYmxvYnN0b3JlX3NlcnZpY2UucHJvdG8KG2FwcGhvc3RpbmcuQ2xvbmVCbG9iUmVxdWVzdBMaCGJsb2Jfa2V5IAEoAjAJOAIUExoJbWltZV90eXBlIAIoAjAJOAIUExoNdGFyZ2V0X2FwcF9pZCADKAIwCTgCFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class CloneBlobResponse(ProtocolBuffer.ProtocolMessage):
   has_blob_key_ = 0
   blob_key_ = ""
@@ -1324,33 +1080,6 @@ class CloneBlobResponse(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_blob_key()): self.set_blob_key(x.blob_key())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.CloneBlobResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.CloneBlobResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.CloneBlobResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.CloneBlobResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.CloneBlobResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.CloneBlobResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1427,13 +1156,6 @@ class CloneBlobResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.CloneBlobResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9ibG9ic3RvcmUvYmxvYnN0b3JlX3NlcnZpY2UucHJvdG8KHGFwcGhvc3RpbmcuQ2xvbmVCbG9iUmVzcG9uc2UTGghibG9iX2tleSABKAIwCTgCFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class DecodeBlobKeyRequest(ProtocolBuffer.ProtocolMessage):
 
   def __init__(self, contents=None):
@@ -1459,33 +1181,6 @@ class DecodeBlobKeyRequest(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     for i in range(x.blob_key_size()): self.add_blob_key(x.blob_key(i))
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.DecodeBlobKeyRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.DecodeBlobKeyRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.DecodeBlobKeyRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.DecodeBlobKeyRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.DecodeBlobKeyRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.DecodeBlobKeyRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1565,13 +1260,6 @@ class DecodeBlobKeyRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.DecodeBlobKeyRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9ibG9ic3RvcmUvYmxvYnN0b3JlX3NlcnZpY2UucHJvdG8KH2FwcGhvc3RpbmcuRGVjb2RlQmxvYktleVJlcXVlc3QTGghibG9iX2tleSABKAIwCTgDFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class DecodeBlobKeyResponse(ProtocolBuffer.ProtocolMessage):
 
   def __init__(self, contents=None):
@@ -1597,33 +1285,6 @@ class DecodeBlobKeyResponse(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     for i in range(x.decoded_size()): self.add_decoded(x.decoded(i))
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.DecodeBlobKeyResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.DecodeBlobKeyResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.DecodeBlobKeyResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.DecodeBlobKeyResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.DecodeBlobKeyResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.DecodeBlobKeyResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1703,13 +1364,6 @@ class DecodeBlobKeyResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.DecodeBlobKeyResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9ibG9ic3RvcmUvYmxvYnN0b3JlX3NlcnZpY2UucHJvdG8KIGFwcGhvc3RpbmcuRGVjb2RlQmxvYktleVJlc3BvbnNlExoHZGVjb2RlZCABKAIwCTgDFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class CreateEncodedGoogleStorageKeyRequest(ProtocolBuffer.ProtocolMessage):
   has_filename_ = 0
   filename_ = ""
@@ -1734,33 +1388,6 @@ class CreateEncodedGoogleStorageKeyRequest(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_filename()): self.set_filename(x.filename())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.CreateEncodedGoogleStorageKeyRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.CreateEncodedGoogleStorageKeyRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.CreateEncodedGoogleStorageKeyRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.CreateEncodedGoogleStorageKeyRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.CreateEncodedGoogleStorageKeyRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.CreateEncodedGoogleStorageKeyRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1837,13 +1464,6 @@ class CreateEncodedGoogleStorageKeyRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.CreateEncodedGoogleStorageKeyRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9ibG9ic3RvcmUvYmxvYnN0b3JlX3NlcnZpY2UucHJvdG8KL2FwcGhvc3RpbmcuQ3JlYXRlRW5jb2RlZEdvb2dsZVN0b3JhZ2VLZXlSZXF1ZXN0ExoIZmlsZW5hbWUgASgCMAk4AhQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class CreateEncodedGoogleStorageKeyResponse(ProtocolBuffer.ProtocolMessage):
   has_blob_key_ = 0
   blob_key_ = ""
@@ -1868,33 +1488,6 @@ class CreateEncodedGoogleStorageKeyResponse(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_blob_key()): self.set_blob_key(x.blob_key())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.CreateEncodedGoogleStorageKeyResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.CreateEncodedGoogleStorageKeyResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.CreateEncodedGoogleStorageKeyResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.CreateEncodedGoogleStorageKeyResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.CreateEncodedGoogleStorageKeyResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.CreateEncodedGoogleStorageKeyResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1971,13 +1564,6 @@ class CreateEncodedGoogleStorageKeyResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.CreateEncodedGoogleStorageKeyResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjBhcHBob3N0aW5nL2FwaS9ibG9ic3RvcmUvYmxvYnN0b3JlX3NlcnZpY2UucHJvdG8KMGFwcGhvc3RpbmcuQ3JlYXRlRW5jb2RlZEdvb2dsZVN0b3JhZ2VLZXlSZXNwb25zZRMaCGJsb2Jfa2V5IAEoAjAJOAIU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 if _extension_runtime:
   pass
 

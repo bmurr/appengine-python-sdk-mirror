@@ -224,14 +224,15 @@ class DevelopmentServer(object):
       self.java_major_version = dep_manager.java_major_version
 
     # Adjust logic based on whether dependencies are satisfied
-    if explicitly_support and not dep_manager.satisfied:
-      raise RuntimeError(dep_manager.error_hint)
-    if selected:
-      if dep_manager.satisfied:
-        # Store the decision result in options.support_datastore_emulator
-        self._options.support_datastore_emulator = True
-      else:
-        logging.debug(dep_manager.error_hint)
+    if dep_manager is not None:
+      if explicitly_support and not dep_manager.satisfied:
+        raise RuntimeError(dep_manager.error_hint)
+      if selected:
+        if dep_manager.satisfied:
+          # Store the decision result in options.support_datastore_emulator
+          self._options.support_datastore_emulator = True
+        else:
+          logging.debug(dep_manager.error_hint)
 
     if self._options.support_datastore_emulator:
       # TODO: When rollout is 100%, remove the message.
@@ -305,9 +306,9 @@ class DevelopmentServer(object):
         env_variables=parsed_env_variables)
     all_module_runtimes = {module.runtime for module in configuration.modules}
 
-    storage_path = api_server.get_storage_path(
+    storage_path = api_server.get_storage_path(  # pytype: disable=module-attr
         options.storage_path, configuration.app_id)
-    datastore_path = api_server.get_datastore_path(
+    datastore_path = api_server.get_datastore_path(  # pytype: disable=module-attr
         storage_path, options.datastore_path)
     datastore_data_type = (datastore_converter.get_stub_type(datastore_path)
                            if os.path.isfile(datastore_path) else None)
@@ -390,7 +391,7 @@ class DevelopmentServer(object):
 
     wsgi_request_info_ = wsgi_request_info.WSGIRequestInfo(self._dispatcher)
 
-    apiserver = api_server.create_api_server(
+    apiserver = api_server.create_api_server(  # pytype: disable=module-attr
         wsgi_request_info_, storage_path, options, configuration.app_id,
         configuration.modules[0].application_root)
     apiserver.start()
@@ -427,15 +428,15 @@ class DevelopmentServer(object):
       # when computing avg_time.
       if watcher_results:
         zipped = zip(*watcher_results)
-        total_time = sum(zipped[0])
-        total_changes = sum(zipped[1])
+        total_time = sum(zipped[0])  # pytype: disable=unsupported-operands
+        total_changes = sum(zipped[1])  # pytype: disable=unsupported-operands
 
         # Google Analytics Event value cannot be float numbers, so we round the
         # value into integers, and measure in microseconds to ensure accuracy.
         avg_time = int(1000000*total_time/total_changes)
 
         # watcher_class is same on all modules.
-        watcher_class = zipped[2][0]
+        watcher_class = zipped[2][0]  # pytype: disable=unsupported-operands
         kwargs = {
             metrics.GOOGLE_ANALYTICS_DIMENSIONS['FileWatcherType']:
             watcher_class,

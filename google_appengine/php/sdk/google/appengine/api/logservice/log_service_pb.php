@@ -1490,6 +1490,23 @@ namespace google\appengine {
     public function hasTraceId() {
       return isset($this->trace_id);
     }
+    public function getSpanId() {
+      if (!isset($this->span_id)) {
+        return '';
+      }
+      return $this->span_id;
+    }
+    public function setSpanId($val) {
+      $this->span_id = $val;
+      return $this;
+    }
+    public function clearSpanId() {
+      unset($this->span_id);
+      return $this;
+    }
+    public function hasSpanId() {
+      return isset($this->span_id);
+    }
     public function clear() {
       $this->clearAppId();
       $this->clearVersionId();
@@ -1530,6 +1547,7 @@ namespace google\appengine {
       $this->clearModuleId();
       $this->clearAppEngineRelease();
       $this->clearTraceId();
+      $this->clearSpanId();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -1683,6 +1701,10 @@ namespace google\appengine {
       if (isset($this->trace_id)) {
         $res += 2;
         $res += $this->lengthString(strlen($this->trace_id));
+      }
+      if (isset($this->span_id)) {
+        $res += 2;
+        $res += $this->lengthString(strlen($this->span_id));
       }
       return $res;
     }
@@ -1845,6 +1867,10 @@ namespace google\appengine {
       if (isset($this->trace_id)) {
         $out->putVarInt32(314);
         $out->putPrefixedString($this->trace_id);
+      }
+      if (isset($this->span_id)) {
+        $out->putVarInt32(322);
+        $out->putPrefixedString($this->span_id);
       }
     }
     public function tryMerge($d) {
@@ -2014,6 +2040,11 @@ namespace google\appengine {
             $this->setTraceId(substr($d->buffer(), $d->pos(), $length));
             $d->skip($length);
             break;
+          case 322:
+            $length = $d->getVarInt32();
+            $this->setSpanId(substr($d->buffer(), $d->pos(), $length));
+            $d->skip($length);
+            break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
             break;
@@ -2163,6 +2194,9 @@ namespace google\appengine {
       if ($x->hasTraceId()) {
         $this->setTraceId($x->getTraceId());
       }
+      if ($x->hasSpanId()) {
+        $this->setSpanId($x->getSpanId());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -2246,6 +2280,8 @@ namespace google\appengine {
       if (isset($this->app_engine_release) && $this->app_engine_release !== $x->app_engine_release) return false;
       if (isset($this->trace_id) !== isset($x->trace_id)) return false;
       if (isset($this->trace_id) && $this->trace_id !== $x->trace_id) return false;
+      if (isset($this->span_id) !== isset($x->span_id)) return false;
+      if (isset($this->span_id) && $this->span_id !== $x->span_id) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -2366,6 +2402,9 @@ namespace google\appengine {
       }
       if (isset($this->trace_id)) {
         $res .= $prefix . "trace_id: " . $this->debugFormatString($this->trace_id) . "\n";
+      }
+      if (isset($this->span_id)) {
+        $res .= $prefix . "span_id: " . $this->debugFormatString($this->span_id) . "\n";
       }
       return $res;
     }

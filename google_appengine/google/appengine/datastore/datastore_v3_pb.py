@@ -4906,14 +4906,14 @@ class Cost(ProtocolBuffer.ProtocolMessage):
 class GetRequest(ProtocolBuffer.ProtocolMessage):
   has_transaction_ = 0
   transaction_ = None
-  has_failover_ms_ = 0
-  failover_ms_ = 0
   has_strong_ = 0
   strong_ = 0
   has_allow_deferred_ = 0
   allow_deferred_ = 0
   has_read_time_epoch_micros_ = 0
   read_time_epoch_micros_ = 0
+  has_failover_ms_ = 0
+  failover_ms_ = 0
 
   def __init__(self, contents=None):
     self.key_ = []
@@ -4955,19 +4955,6 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
 
   def has_transaction(self): return self.has_transaction_
 
-  def failover_ms(self): return self.failover_ms_
-
-  def set_failover_ms(self, x):
-    self.has_failover_ms_ = 1
-    self.failover_ms_ = x
-
-  def clear_failover_ms(self):
-    if self.has_failover_ms_:
-      self.has_failover_ms_ = 0
-      self.failover_ms_ = 0
-
-  def has_failover_ms(self): return self.has_failover_ms_
-
   def strong(self): return self.strong_
 
   def set_strong(self, x):
@@ -5007,15 +4994,28 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
 
   def has_read_time_epoch_micros(self): return self.has_read_time_epoch_micros_
 
+  def failover_ms(self): return self.failover_ms_
+
+  def set_failover_ms(self, x):
+    self.has_failover_ms_ = 1
+    self.failover_ms_ = x
+
+  def clear_failover_ms(self):
+    if self.has_failover_ms_:
+      self.has_failover_ms_ = 0
+      self.failover_ms_ = 0
+
+  def has_failover_ms(self): return self.has_failover_ms_
+
 
   def MergeFrom(self, x):
     assert x is not self
     for i in range(x.key_size()): self.add_key().CopyFrom(x.key(i))
     if (x.has_transaction()): self.mutable_transaction().MergeFrom(x.transaction())
-    if (x.has_failover_ms()): self.set_failover_ms(x.failover_ms())
     if (x.has_strong()): self.set_strong(x.strong())
     if (x.has_allow_deferred()): self.set_allow_deferred(x.allow_deferred())
     if (x.has_read_time_epoch_micros()): self.set_read_time_epoch_micros(x.read_time_epoch_micros())
+    if (x.has_failover_ms()): self.set_failover_ms(x.failover_ms())
 
   def Equals(self, x):
     if x is self: return 1
@@ -5024,14 +5024,14 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
       if e1 != e2: return 0
     if self.has_transaction_ != x.has_transaction_: return 0
     if self.has_transaction_ and self.transaction_ != x.transaction_: return 0
-    if self.has_failover_ms_ != x.has_failover_ms_: return 0
-    if self.has_failover_ms_ and self.failover_ms_ != x.failover_ms_: return 0
     if self.has_strong_ != x.has_strong_: return 0
     if self.has_strong_ and self.strong_ != x.strong_: return 0
     if self.has_allow_deferred_ != x.has_allow_deferred_: return 0
     if self.has_allow_deferred_ and self.allow_deferred_ != x.allow_deferred_: return 0
     if self.has_read_time_epoch_micros_ != x.has_read_time_epoch_micros_: return 0
     if self.has_read_time_epoch_micros_ and self.read_time_epoch_micros_ != x.read_time_epoch_micros_: return 0
+    if self.has_failover_ms_ != x.has_failover_ms_: return 0
+    if self.has_failover_ms_ and self.failover_ms_ != x.failover_ms_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -5046,10 +5046,10 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
     n += 1 * len(self.key_)
     for i in range(len(self.key_)): n += self.lengthString(self.key_[i].ByteSize())
     if (self.has_transaction_): n += 1 + self.lengthString(self.transaction_.ByteSize())
-    if (self.has_failover_ms_): n += 1 + self.lengthVarInt64(self.failover_ms_)
     if (self.has_strong_): n += 2
     if (self.has_allow_deferred_): n += 2
     if (self.has_read_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.read_time_epoch_micros_)
+    if (self.has_failover_ms_): n += 1 + self.lengthVarInt64(self.failover_ms_)
     return n
 
   def ByteSizePartial(self):
@@ -5057,19 +5057,19 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
     n += 1 * len(self.key_)
     for i in range(len(self.key_)): n += self.lengthString(self.key_[i].ByteSizePartial())
     if (self.has_transaction_): n += 1 + self.lengthString(self.transaction_.ByteSizePartial())
-    if (self.has_failover_ms_): n += 1 + self.lengthVarInt64(self.failover_ms_)
     if (self.has_strong_): n += 2
     if (self.has_allow_deferred_): n += 2
     if (self.has_read_time_epoch_micros_): n += 1 + self.lengthVarInt64(self.read_time_epoch_micros_)
+    if (self.has_failover_ms_): n += 1 + self.lengthVarInt64(self.failover_ms_)
     return n
 
   def Clear(self):
     self.clear_key()
     self.clear_transaction()
-    self.clear_failover_ms()
     self.clear_strong()
     self.clear_allow_deferred()
     self.clear_read_time_epoch_micros()
+    self.clear_failover_ms()
 
   def OutputUnchecked(self, out):
     for i in range(len(self.key_)):
@@ -5162,10 +5162,10 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
       res+=prefix+"transaction <\n"
       res+=self.transaction_.__str__(prefix + "  ", printElemNumber)
       res+=prefix+">\n"
-    if self.has_failover_ms_: res+=prefix+("failover_ms: %s\n" % self.DebugFormatInt64(self.failover_ms_))
     if self.has_strong_: res+=prefix+("strong: %s\n" % self.DebugFormatBool(self.strong_))
     if self.has_allow_deferred_: res+=prefix+("allow_deferred: %s\n" % self.DebugFormatBool(self.allow_deferred_))
     if self.has_read_time_epoch_micros_: res+=prefix+("read_time_epoch_micros: %s\n" % self.DebugFormatInt64(self.read_time_epoch_micros_))
+    if self.has_failover_ms_: res+=prefix+("failover_ms: %s\n" % self.DebugFormatInt64(self.failover_ms_))
     return res
 
 
@@ -5174,10 +5174,10 @@ class GetRequest(ProtocolBuffer.ProtocolMessage):
 
   kkey = 1
   ktransaction = 2
-  kfailover_ms = 3
   kstrong = 4
   kallow_deferred = 5
   kread_time_epoch_micros = 6
+  kfailover_ms = 3
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",

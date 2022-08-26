@@ -23,7 +23,7 @@ import sys
 
 import google
 
-import yaml
+from google.appengine._internal.ruamel import yaml
 
 
 

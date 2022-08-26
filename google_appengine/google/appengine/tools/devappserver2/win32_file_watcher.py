@@ -92,7 +92,7 @@ def _parse_file_notification_information(buff, offset):
       ctypes.POINTER(FileNotifyInformationShort)).contents
   # This is a variable length structure so we need to do a 2 steps parse to
   # create a perfectly matching result.
-  chr_len = notify_information_short.FileNameLength // _WCHAR_BYTESIZE
+  chr_len = notify_information_short.FileNameLength // _WCHAR_BYTESIZE  # pytype: disable=attribute-error
 
   class FileNotifyInformation(ctypes.Structure):
     _fields_ = (
@@ -113,10 +113,10 @@ def _parse_buffer(buff):
   offset = 0
   while True:
     notify_information = _parse_file_notification_information(buff, offset)
-    response.add(notify_information.FileName)
-    if notify_information.NextEntryOffset == 0:
+    response.add(notify_information.FileName)  # pytype: disable=attribute-error
+    if notify_information.NextEntryOffset == 0:  # pytype: disable=attribute-error
       return response
-    offset += notify_information.NextEntryOffset
+    offset += notify_information.NextEntryOffset  # pytype: disable=attribute-error
 
 
 class Win32FileWatcher(object):
@@ -141,7 +141,7 @@ class Win32FileWatcher(object):
 
   def start(self):
     """Start watching the directory for changes."""
-    self._directory_handle = ctypes.windll.kernel32.CreateFileW(
+    self._directory_handle = ctypes.windll.kernel32.CreateFileW(  # pytype: disable=module-attr
         ctypes.c_wchar_p(self._directory),
         ctypes.c_ulong(_FILE_LIST_DIRECTORY),
         ctypes.c_ulong(_FILE_SHARE_READ |
@@ -152,7 +152,7 @@ class Win32FileWatcher(object):
         ctypes.c_ulong(_FILE_FLAG_BACKUP_SEMANTICS),
         None)
     if self._directory_handle == _INVALID_HANDLE_VALUE:
-      raise ctypes.WinError()
+      raise ctypes.WinError()  # pytype: disable=module-attr
     self._thread = threading.Thread(
         target=self._monitor, name='Win32 File Watcher')
     self._thread.start()
@@ -161,9 +161,9 @@ class Win32FileWatcher(object):
     """Stop watching the directory for changes."""
     self._stop.set()
     # Note: this will unlock the blocking ReadDirectoryChangesW call.
-    ctypes.windll.kernel32.CancelIoEx(self._directory_handle, None)
+    ctypes.windll.kernel32.CancelIoEx(self._directory_handle, None)  # pytype: disable=module-attr
     self._thread.join()
-    ctypes.windll.kernel32.CloseHandle(self._directory_handle)
+    ctypes.windll.kernel32.CloseHandle(self._directory_handle)  # pytype: disable=module-attr
 
   def changes(self, timeout_ms=0):
     """Returns the paths changed in the watched directory since the last call.
@@ -191,7 +191,7 @@ class Win32FileWatcher(object):
     buff = ctypes.create_string_buffer(_BUFF_SIZE)
     while not self._stop.isSet():
       size_returned = ctypes.c_ulong(0)
-      result = ctypes.windll.kernel32.ReadDirectoryChangesW(
+      result = ctypes.windll.kernel32.ReadDirectoryChangesW(  # pytype: disable=module-attr
           self._directory_handle,
           buff,
           ctypes.c_ulong(_BUFF_SIZE),
@@ -200,7 +200,7 @@ class Win32FileWatcher(object):
           ctypes.byref(size_returned),
           None,
           None)  # this is a blocking call.
-      if result == 0 and ctypes.GetLastError() == _ERROR_NOTIFY_ENUM_DIR:
+      if result == 0 and ctypes.GetLastError() == _ERROR_NOTIFY_ENUM_DIR:  # pytype: disable=module-attr
         logging.warning('Buffer overflow while monitoring for file changes.')
         # we need to notify that something changed anyway
         with self._lock:

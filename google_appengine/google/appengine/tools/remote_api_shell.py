@@ -35,14 +35,6 @@ import optparse
 import os
 import sys
 
-try:
-  import readline
-except ImportError:
-  readline = None
-
-from google.appengine.ext.remote_api import remote_api_stub
-from google.appengine.tools import appengine_rpc
-
 
 
 from google.appengine.api import memcache
@@ -50,7 +42,14 @@ from google.appengine.api import urlfetch
 from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext import ndb
+from google.appengine.ext.remote_api import remote_api_stub
 
+from google.appengine.tools import appengine_rpc
+
+try:
+  import readline
+except ImportError:
+  readline = None
 
 HISTORY_PATH = os.path.expanduser('~/.remote_api_shell_history')
 DEFAULT_PATH = '/_ah/remote_api'
@@ -61,7 +60,7 @@ The db, ndb, users, urlfetch, and memcache modules are imported.\
 
 
 def auth_func():
-  return (raw_input('Email: '), getpass.getpass('Password: '))
+  return (input('Email: '), getpass.getpass('Password: '))
 
 
 def remote_api_shell(servername, appid, path, secure,
@@ -128,9 +127,9 @@ def main(_):
       or (options.path and len(args) > 1)):
     parser.print_usage(sys.stderr)
     if len(args) > 2:
-      print >> sys.stderr, 'Unexpected arguments: %s' % args[2:]
+      print('Unexpected arguments: %s' % args[2:], file=sys.stderr)
     elif options.path and len(args) > 1:
-      print >> sys.stderr, 'Path specified twice.'
+      print(sys.stderr, 'Path specified twice.', file=sys.stderr)
     sys.exit(1)
 
 

@@ -17,19 +17,13 @@
 
 
 
-
 from google.net.proto import ProtocolBuffer
 import abc
 import array
-import base64
 try:
   from thread import allocate_lock as _Lock
 except ImportError:
   from threading import Lock as _Lock
-try:
-  _net_proto___parse__python = None
-except ImportError:
-  _net_proto___parse__python = None
 
 if hasattr(__builtins__, 'xrange'): range = xrange
 
@@ -98,33 +92,6 @@ class Error(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
 
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.Error', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.Error')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.Error')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.Error', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.Error', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.Error', s)
-
-
   def Equals(self, x):
     if x is self: return 1
     return 1
@@ -180,13 +147,6 @@ class Error(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.Error'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KHWFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkVycm9yc3oJRXJyb3JDb2RliwGSAQtCQURfUkVRVUVTVJgBAYwBiwGSARZDT05DVVJSRU5UX1RSQU5TQUNUSU9OmAECjAGLAZIBDklOVEVSTkFMX0VSUk9SmAEDjAGLAZIBCk5FRURfSU5ERViYAQSMAYsBkgEHVElNRU9VVJgBBYwBiwGSARFQRVJNSVNTSU9OX0RFTklFRJgBBowBiwGSAQ5CSUdUQUJMRV9FUlJPUpgBB4wBiwGSARxDT01NSVRURURfQlVUX1NUSUxMX0FQUExZSU5HmAEIjAGLAZIBE0NBUEFCSUxJVFlfRElTQUJMRUSYAQmMAYsBkgEVVFJZX0FMVEVSTkFURV9CQUNLRU5EmAEKjAGLAZIBEVNBRkVfVElNRV9UT09fT0xEmAELjAGLAZIBElJFU09VUkNFX0VYSEFVU1RFRJgBDIwBiwGSARhTTkFQU0hPVF9WRVJTSU9OX1RPT19PTESYARKMAYsBkgEJTk9UX0ZPVU5EmAENjAGLAZIBDkFMUkVBRFlfRVhJU1RTmAEOjAGLAZIBE0ZBSUxFRF9QUkVDT05ESVRJT06YAQ+MAYsBkgEPVU5BVVRIRU5USUNBVEVEmAEQjAGLAZIBB0FCT1JURUSYARGMAXQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class EntityResult(ProtocolBuffer.ProtocolMessage):
 
 
@@ -253,33 +213,6 @@ class EntityResult(ProtocolBuffer.ProtocolMessage):
     if (x.has_entity()): self.mutable_entity().MergeFrom(x.entity())
     if (x.has_version()): self.set_version(x.version())
     if (x.has_cursor()): self.set_cursor(x.cursor())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.EntityResult', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.EntityResult')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.EntityResult')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.EntityResult', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.EntityResult', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.EntityResult', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -401,13 +334,6 @@ class EntityResult(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.EntityResult'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KJGFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkVudGl0eVJlc3VsdBMaBmVudGl0eSABKAIwCzgCSh5hcHBob3N0aW5nLmRhdGFzdG9yZS52NC5FbnRpdHmjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoHdmVyc2lvbiACKAAwAzgBFBMaBmN1cnNvciADKAIwCTgBFHN6ClJlc3VsdFR5cGWLAZIBBEZVTEyYAQGMAYsBkgEKUFJPSkVDVElPTpgBAowBiwGSAQhLRVlfT05MWZgBA4wBdA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class Query(ProtocolBuffer.ProtocolMessage):
   has_filter_ = 0
   filter_ = None
@@ -575,33 +501,6 @@ class Query(ProtocolBuffer.ProtocolMessage):
     if (x.has_end_cursor()): self.set_end_cursor(x.end_cursor())
     if (x.has_offset()): self.set_offset(x.offset())
     if (x.has_limit()): self.set_limit(x.limit())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.Query', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.Query')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.Query')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.Query', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.Query', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.Query', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -894,13 +793,6 @@ class Query(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.Query'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KHWFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlF1ZXJ5ExoKcHJvamVjdGlvbiACKAIwCzgDSiphcHBob3N0aW5nLmRhdGFzdG9yZS52NC5Qcm9wZXJ0eUV4cHJlc3Npb26jAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoEa2luZCADKAIwCzgDSiZhcHBob3N0aW5nLmRhdGFzdG9yZS52NC5LaW5kRXhwcmVzc2lvbqMBqgEFY3R5cGWyAQZwcm90bzKkARQTGgZmaWx0ZXIgBCgCMAs4AUoeYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuRmlsdGVyowGqAQVjdHlwZbIBBnByb3RvMqQBFBMaBW9yZGVyIAUoAjALOANKJWFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlByb3BlcnR5T3JkZXKjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoIZ3JvdXBfYnkgBigCMAs4A0opYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuUHJvcGVydHlSZWZlcmVuY2WjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoMc3RhcnRfY3Vyc29yIAcoAjAJOAEUExoKZW5kX2N1cnNvciAIKAIwCTgBFBMaBm9mZnNldCAKKAAwBTgBQgEwowGqAQdkZWZhdWx0sgEBMKQBFBMaBWxpbWl0IAsoADAFOAEU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class KindExpression(ProtocolBuffer.ProtocolMessage):
   has_name_ = 0
   name_ = ""
@@ -925,33 +817,6 @@ class KindExpression(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_name()): self.set_name(x.name())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.KindExpression', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.KindExpression')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.KindExpression')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.KindExpression', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.KindExpression', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.KindExpression', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1028,13 +893,6 @@ class KindExpression(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.KindExpression'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KJmFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LktpbmRFeHByZXNzaW9uExoEbmFtZSABKAIwCTgCFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class PropertyReference(ProtocolBuffer.ProtocolMessage):
   has_name_ = 0
   name_ = ""
@@ -1059,33 +917,6 @@ class PropertyReference(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_name()): self.set_name(x.name())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.PropertyReference', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.PropertyReference')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.PropertyReference')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.PropertyReference', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.PropertyReference', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.PropertyReference', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1162,13 +993,6 @@ class PropertyReference(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.PropertyReference'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KKWFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlByb3BlcnR5UmVmZXJlbmNlExoEbmFtZSACKAIwCTgCFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class PropertyExpression(ProtocolBuffer.ProtocolMessage):
 
 
@@ -1215,33 +1039,6 @@ class PropertyExpression(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     if (x.has_property()): self.mutable_property().MergeFrom(x.property())
     if (x.has_aggregation_function()): self.set_aggregation_function(x.aggregation_function())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.PropertyExpression', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.PropertyExpression')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.PropertyExpression')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.PropertyExpression', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.PropertyExpression', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.PropertyExpression', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1345,13 +1142,6 @@ class PropertyExpression(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.PropertyExpression'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KKmFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlByb3BlcnR5RXhwcmVzc2lvbhMaCHByb3BlcnR5IAEoAjALOAJKKWFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlByb3BlcnR5UmVmZXJlbmNlowGqAQVjdHlwZbIBBnByb3RvMqQBFBMaFGFnZ3JlZ2F0aW9uX2Z1bmN0aW9uIAIoADAFOAFoABRzehNBZ2dyZWdhdGlvbkZ1bmN0aW9uiwGSAQVGSVJTVJgBAYwBdA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class PropertyOrder(ProtocolBuffer.ProtocolMessage):
 
 
@@ -1400,33 +1190,6 @@ class PropertyOrder(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     if (x.has_property()): self.mutable_property().MergeFrom(x.property())
     if (x.has_direction()): self.set_direction(x.direction())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.PropertyOrder', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.PropertyOrder')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.PropertyOrder')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.PropertyOrder', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.PropertyOrder', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.PropertyOrder', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1530,13 +1293,6 @@ class PropertyOrder(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.PropertyOrder'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KJWFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlByb3BlcnR5T3JkZXITGghwcm9wZXJ0eSABKAIwCzgCSilhcHBob3N0aW5nLmRhdGFzdG9yZS52NC5Qcm9wZXJ0eVJlZmVyZW5jZaMBqgEFY3R5cGWyAQZwcm90bzKkARQTGglkaXJlY3Rpb24gAigAMAU4AUIBMWgAowGqAQdkZWZhdWx0sgEJQVNDRU5ESU5HpAEUc3oJRGlyZWN0aW9uiwGSAQlBU0NFTkRJTkeYAQGMAYsBkgEKREVTQ0VORElOR5gBAowBdA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class Filter(ProtocolBuffer.ProtocolMessage):
   has_composite_filter_ = 0
   composite_filter_ = None
@@ -1590,33 +1346,6 @@ class Filter(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     if (x.has_composite_filter()): self.mutable_composite_filter().MergeFrom(x.composite_filter())
     if (x.has_property_filter()): self.mutable_property_filter().MergeFrom(x.property_filter())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.Filter', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.Filter')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.Filter')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.Filter', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.Filter', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.Filter', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1724,13 +1453,6 @@ class Filter(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.Filter'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KHmFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkZpbHRlchMaEGNvbXBvc2l0ZV9maWx0ZXIgASgCMAs4AUonYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuQ29tcG9zaXRlRmlsdGVyowGqAQVjdHlwZbIBBnByb3RvMqQBFBMaD3Byb3BlcnR5X2ZpbHRlciACKAIwCzgBSiZhcHBob3N0aW5nLmRhdGFzdG9yZS52NC5Qcm9wZXJ0eUZpbHRlcqMBqgEFY3R5cGWyAQZwcm90bzKkARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class CompositeFilter(ProtocolBuffer.ProtocolMessage):
 
 
@@ -1784,33 +1506,6 @@ class CompositeFilter(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     if (x.has_operator()): self.set_operator(x.operator())
     for i in range(x.filter_size()): self.add_filter().CopyFrom(x.filter(i))
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.CompositeFilter', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.CompositeFilter')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.CompositeFilter')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.CompositeFilter', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.CompositeFilter', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.CompositeFilter', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1922,13 +1617,6 @@ class CompositeFilter(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.CompositeFilter'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KJ2FwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkNvbXBvc2l0ZUZpbHRlchMaCG9wZXJhdG9yIAEoADAFOAJoABQTGgZmaWx0ZXIgAigCMAs4A0oeYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuRmlsdGVyowGqAQVjdHlwZbIBBnByb3RvMqQBFHN6CE9wZXJhdG9yiwGSAQNBTkSYAQGMAXQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class PropertyFilter(ProtocolBuffer.ProtocolMessage):
 
 
@@ -1996,33 +1684,6 @@ class PropertyFilter(ProtocolBuffer.ProtocolMessage):
     if (x.has_property()): self.mutable_property().MergeFrom(x.property())
     if (x.has_operator()): self.set_operator(x.operator())
     if (x.has_value()): self.mutable_value().MergeFrom(x.value())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.PropertyFilter', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.PropertyFilter')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.PropertyFilter')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.PropertyFilter', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.PropertyFilter', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.PropertyFilter', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -2163,13 +1824,6 @@ class PropertyFilter(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.PropertyFilter'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KJmFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlByb3BlcnR5RmlsdGVyExoIcHJvcGVydHkgASgCMAs4AkopYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuUHJvcGVydHlSZWZlcmVuY2WjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoIb3BlcmF0b3IgAigAMAU4AmgAFBMaBXZhbHVlIAMoAjALOAJKHWFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlZhbHVlowGqAQVjdHlwZbIBBnByb3RvMqQBFHN6CE9wZXJhdG9yiwGSAQlMRVNTX1RIQU6YAQGMAYsBkgESTEVTU19USEFOX09SX0VRVUFMmAECjAGLAZIBDEdSRUFURVJfVEhBTpgBA4wBiwGSARVHUkVBVEVSX1RIQU5fT1JfRVFVQUyYAQSMAYsBkgEFRVFVQUyYAQWMAYsBkgEMSEFTX0FOQ0VTVE9SmAELjAF0"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class GqlQuery(ProtocolBuffer.ProtocolMessage):
   has_query_string_ = 0
   query_string_ = ""
@@ -2246,33 +1900,6 @@ class GqlQuery(ProtocolBuffer.ProtocolMessage):
     if (x.has_allow_literal()): self.set_allow_literal(x.allow_literal())
     for i in range(x.name_arg_size()): self.add_name_arg().CopyFrom(x.name_arg(i))
     for i in range(x.number_arg_size()): self.add_number_arg().CopyFrom(x.number_arg(i))
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.GqlQuery', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.GqlQuery')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.GqlQuery')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.GqlQuery', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.GqlQuery', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.GqlQuery', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -2437,13 +2064,6 @@ class GqlQuery(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.GqlQuery'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KIGFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkdxbFF1ZXJ5ExoMcXVlcnlfc3RyaW5nIAEoAjAJOAIUExoNYWxsb3dfbGl0ZXJhbCACKAAwCDgBQgVmYWxzZaMBqgEHZGVmYXVsdLIBBWZhbHNlpAEUExoIbmFtZV9hcmcgAygCMAs4A0ojYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuR3FsUXVlcnlBcmejAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoKbnVtYmVyX2FyZyAEKAIwCzgDSiNhcHBob3N0aW5nLmRhdGFzdG9yZS52NC5HcWxRdWVyeUFyZ6MBqgEFY3R5cGWyAQZwcm90bzKkARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class GqlQueryArg(ProtocolBuffer.ProtocolMessage):
   has_name_ = 0
   name_ = ""
@@ -2507,33 +2127,6 @@ class GqlQueryArg(ProtocolBuffer.ProtocolMessage):
     if (x.has_name()): self.set_name(x.name())
     if (x.has_value()): self.mutable_value().MergeFrom(x.value())
     if (x.has_cursor()): self.set_cursor(x.cursor())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.GqlQueryArg', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.GqlQueryArg')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.GqlQueryArg')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.GqlQueryArg', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.GqlQueryArg', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.GqlQueryArg', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -2650,13 +2243,6 @@ class GqlQueryArg(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.GqlQueryArg'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KI2FwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkdxbFF1ZXJ5QXJnExoEbmFtZSABKAIwCTgBFBMaBXZhbHVlIAIoAjALOAFKHWFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlZhbHVlowGqAQVjdHlwZbIBBnByb3RvMqQBFBMaBmN1cnNvciADKAIwCTgBFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class QueryResultBatch(ProtocolBuffer.ProtocolMessage):
 
 
@@ -2794,33 +2380,6 @@ class QueryResultBatch(ProtocolBuffer.ProtocolMessage):
     if (x.has_more_results()): self.set_more_results(x.more_results())
     if (x.has_skipped_results()): self.set_skipped_results(x.skipped_results())
     if (x.has_snapshot_version()): self.set_snapshot_version(x.snapshot_version())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.QueryResultBatch', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.QueryResultBatch')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.QueryResultBatch')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.QueryResultBatch', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.QueryResultBatch', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.QueryResultBatch', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -3027,13 +2586,6 @@ class QueryResultBatch(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.QueryResultBatch'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KKGFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlF1ZXJ5UmVzdWx0QmF0Y2gTGhJlbnRpdHlfcmVzdWx0X3R5cGUgASgAMAU4AhQTGg1lbnRpdHlfcmVzdWx0IAIoAjALOANKJGFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkVudGl0eVJlc3VsdKMBqgEFY3R5cGWyAQZwcm90bzKkARQTGg5za2lwcGVkX2N1cnNvciADKAIwCTgBFBMaCmVuZF9jdXJzb3IgBCgCMAk4ARQTGgxtb3JlX3Jlc3VsdHMgBSgAMAU4AmgAFBMaD3NraXBwZWRfcmVzdWx0cyAGKAAwBTgBQgEwowGqAQdkZWZhdWx0sgEBMKQBFBMaEHNuYXBzaG90X3ZlcnNpb24gBygAMAM4ARRzeg9Nb3JlUmVzdWx0c1R5cGWLAZIBDE5PVF9GSU5JU0hFRJgBAYwBiwGSARhNT1JFX1JFU1VMVFNfQUZURVJfTElNSVSYAQKMAYsBkgEPTk9fTU9SRV9SRVNVTFRTmAEDjAF0"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class Mutation(ProtocolBuffer.ProtocolMessage):
 
 
@@ -3122,33 +2674,6 @@ class Mutation(ProtocolBuffer.ProtocolMessage):
     if (x.has_op()): self.set_op(x.op())
     if (x.has_key()): self.mutable_key().MergeFrom(x.key())
     if (x.has_entity()): self.mutable_entity().MergeFrom(x.entity())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.Mutation', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.Mutation')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.Mutation')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.Mutation', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.Mutation', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.Mutation', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -3274,13 +2799,6 @@ class Mutation(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.Mutation'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KIGFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0Lk11dGF0aW9uExoCb3AgASgAMAU4AUIBMGgAowGqAQdkZWZhdWx0sgEHVU5LTk9XTqQBFBMaA2tleSACKAIwCzgBShthcHBob3N0aW5nLmRhdGFzdG9yZS52NC5LZXmjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoGZW50aXR5IAMoAjALOAFKHmFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkVudGl0eaMBqgEFY3R5cGWyAQZwcm90bzKkARRzeglPcGVyYXRpb26LAZIBB1VOS05PV06YAQCMAYsBkgEGSU5TRVJUmAEBjAGLAZIBBlVQREFURZgBAowBiwGSAQZVUFNFUlSYAQOMAYsBkgEGREVMRVRFmAEEjAF0"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class MutationResult(ProtocolBuffer.ProtocolMessage):
   has_key_ = 0
   key_ = None
@@ -3328,33 +2846,6 @@ class MutationResult(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     if (x.has_key()): self.mutable_key().MergeFrom(x.key())
     if (x.has_new_version()): self.set_new_version(x.new_version())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.MutationResult', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.MutationResult')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.MutationResult')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.MutationResult', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.MutationResult', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.MutationResult', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -3453,13 +2944,6 @@ class MutationResult(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.MutationResult'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KJmFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0Lk11dGF0aW9uUmVzdWx0ExoDa2V5IAMoAjALOAFKG2FwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LktleaMBqgEFY3R5cGWyAQZwcm90bzKkARQTGgtuZXdfdmVyc2lvbiAEKAAwAzgBQgEwowGqAQdkZWZhdWx0sgEBMKQBFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class DeprecatedMutation(ProtocolBuffer.ProtocolMessage):
   has_force_ = 0
   force_ = 0
@@ -3574,33 +3058,6 @@ class DeprecatedMutation(ProtocolBuffer.ProtocolMessage):
     for i in range(x.insert_auto_id_size()): self.add_insert_auto_id().CopyFrom(x.insert_auto_id(i))
     for i in range(x.delete_size()): self.add_delete().CopyFrom(x.delete(i))
     if (x.has_force()): self.set_force(x.force())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.DeprecatedMutation', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.DeprecatedMutation')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.DeprecatedMutation')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.DeprecatedMutation', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.DeprecatedMutation', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.DeprecatedMutation', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -3847,13 +3304,6 @@ class DeprecatedMutation(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.DeprecatedMutation'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KKmFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkRlcHJlY2F0ZWRNdXRhdGlvbhMaBnVwc2VydCABKAIwCzgDSh5hcHBob3N0aW5nLmRhdGFzdG9yZS52NC5FbnRpdHmjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoGdXBkYXRlIAIoAjALOANKHmFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkVudGl0eaMBqgEFY3R5cGWyAQZwcm90bzKkARQTGgZpbnNlcnQgAygCMAs4A0oeYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuRW50aXR5owGqAQVjdHlwZbIBBnByb3RvMqQBFBMaDmluc2VydF9hdXRvX2lkIAQoAjALOANKHmFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkVudGl0eaMBqgEFY3R5cGWyAQZwcm90bzKkARQTGgZkZWxldGUgBSgCMAs4A0obYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuS2V5owGqAQVjdHlwZbIBBnByb3RvMqQBFBMaBWZvcmNlIAYoADAIOAEU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class DeprecatedMutationResult(ProtocolBuffer.ProtocolMessage):
   has_index_updates_ = 0
   index_updates_ = 0
@@ -3981,33 +3431,6 @@ class DeprecatedMutationResult(ProtocolBuffer.ProtocolMessage):
     for i in range(x.insert_version_size()): self.add_insert_version(x.insert_version(i))
     for i in range(x.insert_auto_id_version_size()): self.add_insert_auto_id_version(x.insert_auto_id_version(i))
     for i in range(x.delete_version_size()): self.add_delete_version(x.delete_version(i))
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.DeprecatedMutationResult', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.DeprecatedMutationResult')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.DeprecatedMutationResult')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.DeprecatedMutationResult', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.DeprecatedMutationResult', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.DeprecatedMutationResult', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -4249,13 +3672,6 @@ class DeprecatedMutationResult(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.DeprecatedMutationResult'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KMGFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkRlcHJlY2F0ZWRNdXRhdGlvblJlc3VsdBMaDWluZGV4X3VwZGF0ZXMgASgAMAU4AhQTGhJpbnNlcnRfYXV0b19pZF9rZXkgAigCMAs4A0obYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuS2V5owGqAQVjdHlwZbIBBnByb3RvMqQBFBMaDnVwc2VydF92ZXJzaW9uIAMoADADOAMUExoOdXBkYXRlX3ZlcnNpb24gBCgAMAM4AxQTGg5pbnNlcnRfdmVyc2lvbiAFKAAwAzgDFBMaFmluc2VydF9hdXRvX2lkX3ZlcnNpb24gBigAMAM4AxQTGg5kZWxldGVfdmVyc2lvbiAHKAAwAzgDFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class ReadOptions(ProtocolBuffer.ProtocolMessage):
 
 
@@ -4311,33 +3727,6 @@ class ReadOptions(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     if (x.has_read_consistency()): self.set_read_consistency(x.read_consistency())
     if (x.has_transaction()): self.set_transaction(x.transaction())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.ReadOptions', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.ReadOptions')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.ReadOptions')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.ReadOptions', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.ReadOptions', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.ReadOptions', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -4427,13 +3816,6 @@ class ReadOptions(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.ReadOptions'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KI2FwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlJlYWRPcHRpb25zExoQcmVhZF9jb25zaXN0ZW5jeSABKAAwBTgBQgEwaACjAaoBB2RlZmF1bHSyAQdERUZBVUxUpAEUExoLdHJhbnNhY3Rpb24gAigCMAk4ARRzeg9SZWFkQ29uc2lzdGVuY3mLAZIBB0RFRkFVTFSYAQCMAYsBkgEGU1RST05HmAEBjAGLAZIBCEVWRU5UVUFMmAECjAF0"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class LookupRequest(ProtocolBuffer.ProtocolMessage):
   has_read_options_ = 0
   read_options_ = None
@@ -4483,33 +3865,6 @@ class LookupRequest(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     if (x.has_read_options()): self.mutable_read_options().MergeFrom(x.read_options())
     for i in range(x.key_size()): self.add_key().CopyFrom(x.key(i))
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.LookupRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.LookupRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.LookupRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.LookupRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.LookupRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.LookupRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -4625,13 +3980,6 @@ class LookupRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.LookupRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KJWFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0Lkxvb2t1cFJlcXVlc3QTGgxyZWFkX29wdGlvbnMgASgCMAs4AUojYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuUmVhZE9wdGlvbnOjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoDa2V5IAMoAjALOANKG2FwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LktleaMBqgEFY3R5cGWyAQZwcm90bzKkARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class LookupResponse(ProtocolBuffer.ProtocolMessage):
 
   def __init__(self, contents=None):
@@ -4694,33 +4042,6 @@ class LookupResponse(ProtocolBuffer.ProtocolMessage):
     for i in range(x.found_size()): self.add_found().CopyFrom(x.found(i))
     for i in range(x.missing_size()): self.add_missing().CopyFrom(x.missing(i))
     for i in range(x.deferred_size()): self.add_deferred().CopyFrom(x.deferred(i))
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.LookupResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.LookupResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.LookupResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.LookupResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.LookupResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.LookupResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -4879,13 +4200,6 @@ class LookupResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.LookupResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KJmFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0Lkxvb2t1cFJlc3BvbnNlExoFZm91bmQgASgCMAs4A0okYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuRW50aXR5UmVzdWx0owGqAQVjdHlwZbIBBnByb3RvMqQBFBMaB21pc3NpbmcgAigCMAs4A0okYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuRW50aXR5UmVzdWx0owGqAQVjdHlwZbIBBnByb3RvMqQBFBMaCGRlZmVycmVkIAMoAjALOANKG2FwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LktleaMBqgEFY3R5cGWyAQZwcm90bzKkARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class RunQueryRequest(ProtocolBuffer.ProtocolMessage):
   has_read_options_ = 0
   read_options_ = None
@@ -5015,33 +4329,6 @@ class RunQueryRequest(ProtocolBuffer.ProtocolMessage):
     if (x.has_gql_query()): self.mutable_gql_query().MergeFrom(x.gql_query())
     if (x.has_min_safe_time_seconds()): self.set_min_safe_time_seconds(x.min_safe_time_seconds())
     if (x.has_suggested_batch_size()): self.set_suggested_batch_size(x.suggested_batch_size())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.RunQueryRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.RunQueryRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.RunQueryRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.RunQueryRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.RunQueryRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.RunQueryRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -5239,13 +4526,6 @@ class RunQueryRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.RunQueryRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KJ2FwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlJ1blF1ZXJ5UmVxdWVzdBMaDHJlYWRfb3B0aW9ucyABKAIwCzgBSiNhcHBob3N0aW5nLmRhdGFzdG9yZS52NC5SZWFkT3B0aW9uc6MBqgEFY3R5cGWyAQZwcm90bzKkARQTGgxwYXJ0aXRpb25faWQgAigCMAs4AUojYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuUGFydGl0aW9uSWSjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoFcXVlcnkgAygCMAs4AUodYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuUXVlcnmjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoJZ3FsX3F1ZXJ5IAcoAjALOAFKIGFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkdxbFF1ZXJ5owGqAQVjdHlwZbIBBnByb3RvMqQBFBMaFW1pbl9zYWZlX3RpbWVfc2Vjb25kcyAEKAAwAzgBFBMaFHN1Z2dlc3RlZF9iYXRjaF9zaXplIAUoADAFOAEU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class RunQueryResponse(ProtocolBuffer.ProtocolMessage):
   has_batch_ = 0
   has_query_handle_ = 0
@@ -5281,33 +4561,6 @@ class RunQueryResponse(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     if (x.has_batch()): self.mutable_batch().MergeFrom(x.batch())
     if (x.has_query_handle()): self.set_query_handle(x.query_handle())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.RunQueryResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.RunQueryResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.RunQueryResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.RunQueryResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.RunQueryResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.RunQueryResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -5411,13 +4664,6 @@ class RunQueryResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.RunQueryResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KKGFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlJ1blF1ZXJ5UmVzcG9uc2UTGgViYXRjaCABKAIwCzgCSihhcHBob3N0aW5nLmRhdGFzdG9yZS52NC5RdWVyeVJlc3VsdEJhdGNoowGqAQVjdHlwZbIBBnByb3RvMqQBFBMaDHF1ZXJ5X2hhbmRsZSACKAIwCTgBFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class ContinueQueryRequest(ProtocolBuffer.ProtocolMessage):
   has_query_handle_ = 0
   query_handle_ = ""
@@ -5442,33 +4688,6 @@ class ContinueQueryRequest(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_query_handle()): self.set_query_handle(x.query_handle())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.ContinueQueryRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.ContinueQueryRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.ContinueQueryRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.ContinueQueryRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.ContinueQueryRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.ContinueQueryRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -5545,13 +4764,6 @@ class ContinueQueryRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.ContinueQueryRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KLGFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkNvbnRpbnVlUXVlcnlSZXF1ZXN0ExoMcXVlcnlfaGFuZGxlIAEoAjAJOAIU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class ContinueQueryResponse(ProtocolBuffer.ProtocolMessage):
   has_batch_ = 0
 
@@ -5571,33 +4783,6 @@ class ContinueQueryResponse(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_batch()): self.mutable_batch().MergeFrom(x.batch())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.ContinueQueryResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.ContinueQueryResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.ContinueQueryResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.ContinueQueryResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.ContinueQueryResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.ContinueQueryResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -5683,13 +4868,6 @@ class ContinueQueryResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.ContinueQueryResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KLWFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkNvbnRpbnVlUXVlcnlSZXNwb25zZRMaBWJhdGNoIAEoAjALOAJKKGFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlF1ZXJ5UmVzdWx0QmF0Y2ijAaoBBWN0eXBlsgEGcHJvdG8ypAEU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class BeginTransactionRequest(ProtocolBuffer.ProtocolMessage):
   has_cross_group_ = 0
   cross_group_ = 0
@@ -5730,33 +4908,6 @@ class BeginTransactionRequest(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     if (x.has_cross_group()): self.set_cross_group(x.cross_group())
     if (x.has_cross_request()): self.set_cross_request(x.cross_request())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.BeginTransactionRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.BeginTransactionRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.BeginTransactionRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.BeginTransactionRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.BeginTransactionRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.BeginTransactionRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -5846,13 +4997,6 @@ class BeginTransactionRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.BeginTransactionRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KL2FwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkJlZ2luVHJhbnNhY3Rpb25SZXF1ZXN0ExoLY3Jvc3NfZ3JvdXAgASgAMAg4AUIFZmFsc2WjAaoBB2RlZmF1bHSyAQVmYWxzZaQBFBMaDWNyb3NzX3JlcXVlc3QgAigAMAg4AUIFZmFsc2WjAaoBB2RlZmF1bHSyAQVmYWxzZaQBFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class BeginTransactionResponse(ProtocolBuffer.ProtocolMessage):
   has_transaction_ = 0
   transaction_ = ""
@@ -5877,33 +5021,6 @@ class BeginTransactionResponse(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_transaction()): self.set_transaction(x.transaction())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.BeginTransactionResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.BeginTransactionResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.BeginTransactionResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.BeginTransactionResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.BeginTransactionResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.BeginTransactionResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -5980,13 +5097,6 @@ class BeginTransactionResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.BeginTransactionResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KMGFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkJlZ2luVHJhbnNhY3Rpb25SZXNwb25zZRMaC3RyYW5zYWN0aW9uIAEoAjAJOAIU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class RollbackRequest(ProtocolBuffer.ProtocolMessage):
   has_transaction_ = 0
   transaction_ = ""
@@ -6011,33 +5121,6 @@ class RollbackRequest(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_transaction()): self.set_transaction(x.transaction())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.RollbackRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.RollbackRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.RollbackRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.RollbackRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.RollbackRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.RollbackRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -6114,13 +5197,6 @@ class RollbackRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.RollbackRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KJ2FwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlJvbGxiYWNrUmVxdWVzdBMaC3RyYW5zYWN0aW9uIAEoAjAJOAIU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class RollbackResponse(ProtocolBuffer.ProtocolMessage):
 
   def __init__(self, contents=None):
@@ -6130,33 +5206,6 @@ class RollbackResponse(ProtocolBuffer.ProtocolMessage):
 
   def MergeFrom(self, x):
     assert x is not self
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.RollbackResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.RollbackResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.RollbackResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.RollbackResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.RollbackResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.RollbackResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -6213,13 +5262,6 @@ class RollbackResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.RollbackResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KKGFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LlJvbGxiYWNrUmVzcG9uc2U="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class CommitRequest(ProtocolBuffer.ProtocolMessage):
 
 
@@ -6330,33 +5372,6 @@ class CommitRequest(ProtocolBuffer.ProtocolMessage):
     if (x.has_deprecated_mutation()): self.mutable_deprecated_mutation().MergeFrom(x.deprecated_mutation())
     if (x.has_mode()): self.set_mode(x.mode())
     if (x.has_ignore_read_only()): self.set_ignore_read_only(x.ignore_read_only())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.CommitRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.CommitRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.CommitRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.CommitRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.CommitRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.CommitRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -6526,13 +5541,6 @@ class CommitRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.CommitRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KJWFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkNvbW1pdFJlcXVlc3QTGgt0cmFuc2FjdGlvbiABKAIwCTgBFBMaCG11dGF0aW9uIAUoAjALOANKIGFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0Lk11dGF0aW9uowGqAQVjdHlwZbIBBnByb3RvMqQBFBMaE2RlcHJlY2F0ZWRfbXV0YXRpb24gAigCMAs4AUoqYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuRGVwcmVjYXRlZE11dGF0aW9uowGqAQVjdHlwZbIBBnByb3RvMqQBFBMaBG1vZGUgBCgAMAU4AUIBMWgAowGqAQdkZWZhdWx0sgENVFJBTlNBQ1RJT05BTKQBFBMaEGlnbm9yZV9yZWFkX29ubHkgBigAMAg4AUIFZmFsc2WjAaoBB2RlZmF1bHSyAQVmYWxzZaQBFHN6BE1vZGWLAZIBDVRSQU5TQUNUSU9OQUyYAQGMAYsBkgERTk9OX1RSQU5TQUNUSU9OQUyYAQKMAXQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class CommitResponse(ProtocolBuffer.ProtocolMessage):
   has_deprecated_mutation_result_ = 0
   deprecated_mutation_result_ = None
@@ -6598,33 +5606,6 @@ class CommitResponse(ProtocolBuffer.ProtocolMessage):
     for i in range(x.mutation_result_size()): self.add_mutation_result().CopyFrom(x.mutation_result(i))
     if (x.has_deprecated_mutation_result()): self.mutable_deprecated_mutation_result().MergeFrom(x.deprecated_mutation_result())
     if (x.has_index_updates()): self.set_index_updates(x.index_updates())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.CommitResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.CommitResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.CommitResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.CommitResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.CommitResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.CommitResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -6758,13 +5739,6 @@ class CommitResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.CommitResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KJmFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkNvbW1pdFJlc3BvbnNlExoPbXV0YXRpb25fcmVzdWx0IAMoAjALOANKJmFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0Lk11dGF0aW9uUmVzdWx0owGqAQVjdHlwZbIBBnByb3RvMqQBFBMaGmRlcHJlY2F0ZWRfbXV0YXRpb25fcmVzdWx0IAEoAjALOAFKMGFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkRlcHJlY2F0ZWRNdXRhdGlvblJlc3VsdKMBqgEFY3R5cGWyAQZwcm90bzKkARQTGg1pbmRleF91cGRhdGVzIAQoADAFOAEU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class AllocateIdsRequest(ProtocolBuffer.ProtocolMessage):
 
   def __init__(self, contents=None):
@@ -6809,33 +5783,6 @@ class AllocateIdsRequest(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     for i in range(x.allocate_size()): self.add_allocate().CopyFrom(x.allocate(i))
     for i in range(x.reserve_size()): self.add_reserve().CopyFrom(x.reserve(i))
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.AllocateIdsRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.AllocateIdsRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.AllocateIdsRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.AllocateIdsRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.AllocateIdsRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.AllocateIdsRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -6959,13 +5906,6 @@ class AllocateIdsRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.AllocateIdsRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KKmFwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkFsbG9jYXRlSWRzUmVxdWVzdBMaCGFsbG9jYXRlIAEoAjALOANKG2FwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LktleaMBqgEFY3R5cGWyAQZwcm90bzKkARQTGgdyZXNlcnZlIAIoAjALOANKG2FwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LktleaMBqgEFY3R5cGWyAQZwcm90bzKkARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class AllocateIdsResponse(ProtocolBuffer.ProtocolMessage):
 
   def __init__(self, contents=None):
@@ -6992,33 +5932,6 @@ class AllocateIdsResponse(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     for i in range(x.allocated_size()): self.add_allocated().CopyFrom(x.allocated(i))
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.datastore.v4.AllocateIdsResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.datastore.v4.AllocateIdsResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.datastore.v4.AllocateIdsResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.datastore.v4.AllocateIdsResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.datastore.v4.AllocateIdsResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.datastore.v4.AllocateIdsResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -7107,13 +6020,6 @@ class AllocateIdsResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.datastore.v4.AllocateIdsResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WidhcHBob3N0aW5nL2RhdGFzdG9yZS9kYXRhc3RvcmVfdjQucHJvdG8KK2FwcGhvc3RpbmcuZGF0YXN0b3JlLnY0LkFsbG9jYXRlSWRzUmVzcG9uc2UTGglhbGxvY2F0ZWQgASgCMAs4A0obYXBwaG9zdGluZy5kYXRhc3RvcmUudjQuS2V5owGqAQVjdHlwZbIBBnByb3RvMqQBFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 
 
 

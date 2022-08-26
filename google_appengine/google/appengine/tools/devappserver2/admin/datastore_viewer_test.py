@@ -77,7 +77,7 @@ class GetEntitiesTest(unittest.TestCase):
 
   def setUp(self):
     self.app_id = 'myapp'
-    os.environ['APPLICATION_ID'] = self.app_id
+    os.environ['GAE_APPLICATION'] = self.app_id
     # Use a consistent replication strategy so the puts done in the test code
     # are seen immediately by the queries under test.
     consistent_policy = datastore_stub_util.MasterSlaveConsistencyPolicy()
@@ -138,7 +138,7 @@ class GetEntitiesTest(unittest.TestCase):
 class GetEntityTemplateDataTest(unittest.TestCase):
   def setUp(self):
     self.app_id = 'myapp'
-    os.environ['APPLICATION_ID'] = self.app_id
+    os.environ['GAE_APPLICATION'] = self.app_id
     # Use a consistent replication strategy so the puts done in the test code
     # are seen immediately by the queries under test.
     consistent_policy = datastore_stub_util.MasterSlaveConsistencyPolicy()
@@ -221,7 +221,7 @@ class DatastoreRequestHandlerGetTest(unittest.TestCase):
 
   def setUp(self):
     self.app_id = 'myapp'
-    os.environ['APPLICATION_ID'] = self.app_id
+    os.environ['GAE_APPLICATION'] = self.app_id
     stub_util.setup_test_stubs(app_id=self.app_id)
 
     self.mox = mox.Mox()
@@ -426,7 +426,7 @@ class DatastoreEditRequestHandlerTest(unittest.TestCase):
 
   def setUp(self):
     self.app_id = 'myapp'
-    os.environ['APPLICATION_ID'] = self.app_id
+    os.environ['GAE_APPLICATION'] = self.app_id
 
     # Use a consistent replication strategy so that the test can use queries
     # to verify that an entity was written.

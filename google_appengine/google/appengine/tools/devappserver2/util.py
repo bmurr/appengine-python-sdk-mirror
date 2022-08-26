@@ -150,7 +150,7 @@ def setup_environ(app_id):
   Args:
     app_id: The id of the application.
   """
-  os.environ['APPLICATION_ID'] = app_id
+  os.environ['GAE_APPLICATION'] = app_id
   # Purge _DATASTORE_PROJECT_ID_ENV from dev_appserver process. Otherwise the
   # logics for datastore rpc would be tricked to use Cloud Datastore mode.
   # If necessary, users can still pass this environment variable to local

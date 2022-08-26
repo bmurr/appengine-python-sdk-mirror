@@ -17,8 +17,6 @@
 """Tests for google.apphosting.tools.devappserver2.api_server."""
 
 import argparse
-from unittest import mock
-import cStringIO
 import getpass
 import itertools
 import os
@@ -26,18 +24,17 @@ import pickle
 import sys
 import tempfile
 import unittest
+from unittest import mock
 import urllib
-import urllib2
 import wsgiref.util
 
 import google
-import mox
 
 from google.appengine.api import apiproxy_stub
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import mail_stub
-from google.appengine.api import urlfetch_service_pb
-from google.appengine.api import user_service_pb
+from google.appengine.api import urlfetch_service_pb2
+from google.appengine.api import user_service_pb2
 from google.appengine.api.app_identity import app_identity_stub
 from google.appengine.api.capabilities import capability_stub
 from google.appengine.api.logservice import logservice_stub
@@ -46,10 +43,12 @@ from google.appengine.api.taskqueue import taskqueue_stub
 from google.appengine.datastore import datastore_pb
 from google.appengine.datastore import datastore_sqlite_stub
 from google.appengine.datastore import datastore_stub_util
-from google.appengine.datastore import datastore_v4_pb
 from google.appengine.datastore import datastore_v4_pb2
-from google.appengine.ext.remote_api import remote_api_pb
+from google.appengine.ext.remote_api import remote_api_bytes_pb2
 from google.appengine.runtime import apiproxy_errors
+import mox
+from google.appengine._internal import six
+
 from google.appengine.tools.devappserver2 import api_server
 from google.appengine.tools.devappserver2 import datastore_grpc_stub
 from google.appengine.tools.devappserver2 import metrics
@@ -91,9 +90,9 @@ class FakeURLFetchServiceStub(apiproxy_stub.APIProxyStub):
         'urlfetch', request_data=my_request_data)
 
   def _Dynamic_Fetch(self, request, unused_response):
-    if request.url() == 'exception':
+    if request.Url == 'exception':
       raise IOError('the remote error')
-    elif request.url() == 'application_error':
+    elif request.Url == 'application_error':
       raise apiproxy_errors.ApplicationError(23, 'details')
 
 
@@ -104,7 +103,7 @@ class FakeDatastoreV4ServiceStub(apiproxy_stub.APIProxyStub):
         'datastore_v4', request_data=my_request_data)
 
   def _Dynamic_BeginTransaction(self, request, response):
-    response.set_transaction('whatever')
+    response.transaction = 'whatever'
 
 
 def setup_stubs():
@@ -141,10 +140,13 @@ class APIServerTestBase(wsgi_test_utils.WSGITestCase):
 
   def setUp(self):
     super(APIServerTestBase, self).setUp()
+    self.env_patcher = mock.patch.dict(os.environ, {'APPLICATION_ID': APP_ID})
+    self.env_patcher.start()
     setup_stubs()
     self.server = api_server.APIServer('localhost', 0, APP_ID)
 
   def tearDown(self):
+    self.env_patcher.stop()
     stub_util.cleanup_stubs()
     super(APIServerTestBase, self).tearDown()
 
@@ -162,93 +164,73 @@ class APIServerTestBase(wsgi_test_utils.WSGITestCase):
     wsgiref.util.setup_testing_defaults(request_environ)
 
     with request_data.request(request_environ, None) as request_id:
-      remote_request = remote_api_pb.Request()
-      remote_request.set_service_name(service)
-      remote_request.set_method(method)
-      remote_request.set_request(stub_request.Encode())
-      remote_request.set_request_id(request_id)
-      remote_payload = remote_request.Encode()
+      remote_request = remote_api_bytes_pb2.Request()
+      remote_request.service_name = service
+      remote_request.method = method
+      remote_request.request = stub_request.SerializeToString()
+      remote_request.request_id = request_id
+      remote_payload = remote_request.SerializeToString()
 
       environ = {
           'CONTENT_LENGTH': len(remote_payload),
           'REQUEST_METHOD': 'POST',
-          'wsgi.input': cStringIO.StringIO(remote_payload)
+          'wsgi.input': six.BytesIO(remote_payload)
       }
 
       expected_headers = {'Content-Type': 'application/octet-stream'}
       self.assertResponse('200 OK', expected_headers,
-                          expected_remote_response.Encode(), self.server,
-                          environ)
+                          expected_remote_response.SerializeToString(),
+                          self.server, environ)
 
 
 class TestAPIServer(APIServerTestBase):
 
   def test_user_api_call(self):
-    logout_response = user_service_pb.CreateLogoutURLResponse()
-    logout_response.set_logout_url(
-        USER_LOGOUT_URL % urllib.quote('http://machine:8080/crazy_logout'))
+    logout_response = user_service_pb2.CreateLogoutURLResponse()
+    logout_response.logout_url = (
+        USER_LOGOUT_URL %
+        six.moves.urllib.parse.quote('http://machine:8080/crazy_logout'))
 
-    expected_remote_response = remote_api_pb.Response()
-    expected_remote_response.set_response(logout_response.Encode())
+    expected_remote_response = remote_api_bytes_pb2.Response()
+    expected_remote_response.response = logout_response.SerializeToString()
 
-    logout_request = user_service_pb.CreateLogoutURLRequest()
-    logout_request.set_destination_url('/crazy_logout')
+    logout_request = user_service_pb2.CreateLogoutURLRequest()
+    logout_request.destination_url = '/crazy_logout'
 
     self._assert_remote_call(expected_remote_response, logout_request, 'user',
                              'CreateLogoutURL')
 
-  def test_datastore_v4_api_call(self):
-    begin_transaction_response = datastore_v4_pb.BeginTransactionResponse()
-    begin_transaction_response.set_transaction('whatever')
-
-    expected_remote_response = remote_api_pb.Response()
-    expected_remote_response.set_response(begin_transaction_response.Encode())
-
-    begin_transaction_request = datastore_v4_pb.BeginTransactionRequest()
-
-    self._assert_remote_call(expected_remote_response,
-                             begin_transaction_request, 'datastore_v4',
-                             'BeginTransaction')
-
-  def test_datastore_v4_api_calls_handled(self):
-    deprecated = ['Get', 'Write']
-    methods = {
-        method_name for method_name in _DATASTORE_V4_SERVICE_METHOD_NAMES
-        if method_name not in deprecated
-    }
-    self.assertSetEqual(methods, frozenset(stub_util.DATASTORE_V4_METHODS))
-
   def test_GET(self):
     environ = {'REQUEST_METHOD': 'GET', 'QUERY_STRING': 'rtok=23'}
     self.assertResponse('200 OK', {'Content-Type': 'text/plain'},
-                        "{app_id: test, rtok: '23'}\n", self.server, environ)
+                        b"{app_id: test, rtok: '23'}\n", self.server, environ)
 
   def test_unsupported_method(self):
     environ = {'REQUEST_METHOD': 'HEAD', 'QUERY_STRING': 'rtok=23'}
-    self.assertResponse('405 Method Not Allowed', {}, '', self.server, environ)
+    self.assertResponse('405 Method Not Allowed', {}, b'', self.server, environ)
 
   def test_exception(self):
-    urlfetch_request = urlfetch_service_pb.URLFetchRequest()
-    urlfetch_request.set_url('exception')
-    urlfetch_request.set_method(urlfetch_service_pb.URLFetchRequest.GET)
+    urlfetch_request = urlfetch_service_pb2.URLFetchRequest()
+    urlfetch_request.Url = 'exception'
+    urlfetch_request.Method = urlfetch_service_pb2.URLFetchRequest.GET
 
-    expected_remote_response = remote_api_pb.Response()
-    expected_remote_response.set_exception(
-        pickle.dumps(RuntimeError(repr(IOError('the remote error')))))
+    expected_remote_response = remote_api_bytes_pb2.Response()
+    expected_remote_response.exception = pickle.dumps(
+        RuntimeError(repr(IOError('the remote error'))), protocol=2)
 
     self._assert_remote_call(expected_remote_response, urlfetch_request,
                              'urlfetch', 'Fetch')
 
   def test_application_error(self):
-    urlfetch_request = urlfetch_service_pb.URLFetchRequest()
-    urlfetch_request.set_url('application_error')
-    urlfetch_request.set_method(urlfetch_service_pb.URLFetchRequest.GET)
+    urlfetch_request = urlfetch_service_pb2.URLFetchRequest()
+    urlfetch_request.Url = 'application_error'
+    urlfetch_request.Method = urlfetch_service_pb2.URLFetchRequest.GET
 
-    expected_remote_response = remote_api_pb.Response()
-    expected_remote_response.mutable_application_error().set_code(23)
-    expected_remote_response.mutable_application_error().set_detail('details')
-    expected_remote_response.set_exception(
-        pickle.dumps(apiproxy_errors.ApplicationError(23, 'details')))
+    expected_remote_response = remote_api_bytes_pb2.Response()
+    expected_remote_response.application_error.code = 23
+    expected_remote_response.application_error.detail = 'details'
+    expected_remote_response.exception = pickle.dumps(
+        apiproxy_errors.ApplicationError(23, 'details'), protocol=2)
 
     self._assert_remote_call(expected_remote_response, urlfetch_request,
                              'urlfetch', 'Fetch')
@@ -263,15 +245,18 @@ class TestAPIServerWithEmulator(APIServerTestBase):
         'datastore_v3', datastore_grpc_stub.DatastoreGrpcStub(''))
 
   def test_datastore_emulator_request_too_large(self):
-    fake_put_request = datastore_pb.PutRequest()
-    fake_put_request.Encode = lambda: 'x' * (apiproxy_stub.MAX_REQUEST_SIZE + 1)
+    fake_put_request = mock.Mock(
+        spec=datastore_pb.PutRequest, wraps=datastore_pb.PutRequest())
+    fake_put_request.SerializeToString.side_effect = (
+        lambda: six.ensure_binary('x' * (apiproxy_stub.MAX_REQUEST_SIZE + 1)))
 
-    expected_remote_response = remote_api_pb.Response()
-    expected_remote_response.set_exception(
-        pickle.dumps(
-            apiproxy_errors.RequestTooLargeError(
-                apiproxy_stub.REQ_SIZE_EXCEEDS_LIMIT_MSG_TEMPLATE %
-                ('datastore_v3', 'Put'))))
+    expected_remote_response = remote_api_bytes_pb2.Response()
+
+    expected_remote_response.exception = pickle.dumps(
+        apiproxy_errors.RequestTooLargeError(
+            six.ensure_text(apiproxy_stub.REQ_SIZE_EXCEEDS_LIMIT_MSG_TEMPLATE %
+                            ('datastore_v3', 'Put'))),
+        protocol=2)
     self._assert_remote_call(expected_remote_response, fake_put_request,
                              'datastore_v3', 'Put')
 
@@ -351,14 +336,14 @@ class VerifyWormholeUsageTest(unittest.TestCase):
     self._request_id = 'request_id_1'
 
   def _create_request(self, request_id=None, service=None):
-    remote_request = remote_api_pb.Request()
+    remote_request = remote_api_bytes_pb2.Request()
     if service is None:
       service = self._service
 
-    remote_request.set_service_name(service)
-    remote_request.set_method(self._method)
+    remote_request.service_name = service
+    remote_request.method = self._method
     if request_id:
-      remote_request.set_request_id(request_id)
+      remote_request.request_id = request_id
 
     return remote_request
 
@@ -428,6 +413,9 @@ class MustEnableWormholeForRuntimeTest(unittest.TestCase):
 
   def test_python39_returns_yes(self):
     self.assertTrue(api_server._must_enable_wormhole_for_runtime('python39'))
+
+  def test_python310_returns_yes(self):
+    self.assertTrue(api_server._must_enable_wormhole_for_runtime('python310'))
 
   def test_python27_returns_no(self):
     self.assertFalse(api_server._must_enable_wormhole_for_runtime('python27'))
@@ -630,16 +618,16 @@ class LocalJavaAppDispatcherTest(unittest.TestCase):
     body = 'body'
     headers = [('X-Header', 'x-header-value')]
 
-    self.mox.StubOutWithMock(urllib2, 'urlopen')
-    self.mox.StubOutClassWithMocks(urllib2, 'Request')
+    self.mox.StubOutWithMock(urllib.request, 'urlopen')
+    self.mox.StubOutClassWithMocks(urllib.request, 'Request')
 
-    urllib2_mock_request = urllib2.Request(
+    urllib_mock_request = urllib.request.Request(
         url=java_app_base_url + relative_url, data=body, headers=dict(headers))
 
-    urllib2_mock_response = self.mox.CreateMock(urllib2.addinfourl)
-    urllib2_mock_response.getcode().AndReturn(200)
+    urllib_mock_response = self.mox.CreateMock(urllib.request.addinfourl)
+    urllib_mock_response.getcode().AndReturn(200)
 
-    urllib2.urlopen(urllib2_mock_request).AndReturn(urllib2_mock_response)
+    urllib.request.urlopen(urllib_mock_request).AndReturn(urllib_mock_response)
 
     dispatcher = api_server._LocalJavaAppDispatcher(
         java_app_base_url=java_app_base_url)

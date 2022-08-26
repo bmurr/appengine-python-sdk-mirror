@@ -17,19 +17,13 @@
 
 
 
-
 from google.net.proto import ProtocolBuffer
 import abc
 import array
-import base64
 try:
   from thread import allocate_lock as _Lock
 except ImportError:
   from threading import Lock as _Lock
-try:
-  _net_proto___parse__python = None
-except ImportError:
-  _net_proto___parse__python = None
 
 if hasattr(__builtins__, 'xrange'): range = xrange
 
@@ -76,33 +70,6 @@ class AppIdentityServiceError(ProtocolBuffer.ProtocolMessage):
 
   def MergeFrom(self, x):
     assert x is not self
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.AppIdentityServiceError', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.AppIdentityServiceError')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.AppIdentityServiceError')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.AppIdentityServiceError', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.AppIdentityServiceError', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.AppIdentityServiceError', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -159,13 +126,6 @@ class AppIdentityServiceError(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.AppIdentityServiceError'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjZhcHBob3N0aW5nL2FwaS9hcHBfaWRlbnRpdHkvYXBwX2lkZW50aXR5X3NlcnZpY2UucHJvdG8KImFwcGhvc3RpbmcuQXBwSWRlbnRpdHlTZXJ2aWNlRXJyb3JzeglFcnJvckNvZGWLAZIBB1NVQ0NFU1OYAQCMAYsBkgENVU5LTk9XTl9TQ09QRZgBCYwBiwGSAQ5CTE9CX1RPT19MQVJHRZgB6AeMAYsBkgERREVBRExJTkVfRVhDRUVERUSYAekHjAGLAZIBD05PVF9BX1ZBTElEX0FQUJgB6geMAYsBkgENVU5LTk9XTl9FUlJPUpgB6weMAYsBkgEZR0FJQU1JTlRfTk9UX0lOSVRJQUlMSVpFRJgB7AeMAYsBkgELTk9UX0FMTE9XRUSYAe0HjAGLAZIBD05PVF9JTVBMRU1FTlRFRJgB7geMAXQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class SignForAppRequest(ProtocolBuffer.ProtocolMessage):
   has_bytes_to_sign_ = 0
   bytes_to_sign_ = ""
@@ -190,33 +150,6 @@ class SignForAppRequest(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_bytes_to_sign()): self.set_bytes_to_sign(x.bytes_to_sign())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.SignForAppRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.SignForAppRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.SignForAppRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.SignForAppRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.SignForAppRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.SignForAppRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -288,13 +221,6 @@ class SignForAppRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.SignForAppRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjZhcHBob3N0aW5nL2FwaS9hcHBfaWRlbnRpdHkvYXBwX2lkZW50aXR5X3NlcnZpY2UucHJvdG8KHGFwcGhvc3RpbmcuU2lnbkZvckFwcFJlcXVlc3QTGg1ieXRlc190b19zaWduIAEoAjAJOAEU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class SignForAppResponse(ProtocolBuffer.ProtocolMessage):
   has_key_name_ = 0
   key_name_ = ""
@@ -335,33 +261,6 @@ class SignForAppResponse(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     if (x.has_key_name()): self.set_key_name(x.key_name())
     if (x.has_signature_bytes()): self.set_signature_bytes(x.signature_bytes())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.SignForAppResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.SignForAppResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.SignForAppResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.SignForAppResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.SignForAppResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.SignForAppResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -451,13 +350,6 @@ class SignForAppResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.SignForAppResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjZhcHBob3N0aW5nL2FwaS9hcHBfaWRlbnRpdHkvYXBwX2lkZW50aXR5X3NlcnZpY2UucHJvdG8KHWFwcGhvc3RpbmcuU2lnbkZvckFwcFJlc3BvbnNlExoIa2V5X25hbWUgASgCMAk4ARQTGg9zaWduYXR1cmVfYnl0ZXMgAigCMAk4ARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class GetPublicCertificateForAppRequest(ProtocolBuffer.ProtocolMessage):
 
   def __init__(self, contents=None):
@@ -467,33 +359,6 @@ class GetPublicCertificateForAppRequest(ProtocolBuffer.ProtocolMessage):
 
   def MergeFrom(self, x):
     assert x is not self
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.GetPublicCertificateForAppRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.GetPublicCertificateForAppRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.GetPublicCertificateForAppRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.GetPublicCertificateForAppRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.GetPublicCertificateForAppRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.GetPublicCertificateForAppRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -550,13 +415,6 @@ class GetPublicCertificateForAppRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.GetPublicCertificateForAppRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjZhcHBob3N0aW5nL2FwaS9hcHBfaWRlbnRpdHkvYXBwX2lkZW50aXR5X3NlcnZpY2UucHJvdG8KLGFwcGhvc3RpbmcuR2V0UHVibGljQ2VydGlmaWNhdGVGb3JBcHBSZXF1ZXN0"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class PublicCertificate(ProtocolBuffer.ProtocolMessage):
   has_key_name_ = 0
   key_name_ = ""
@@ -597,33 +455,6 @@ class PublicCertificate(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     if (x.has_key_name()): self.set_key_name(x.key_name())
     if (x.has_x509_certificate_pem()): self.set_x509_certificate_pem(x.x509_certificate_pem())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.PublicCertificate', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.PublicCertificate')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.PublicCertificate')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.PublicCertificate', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.PublicCertificate', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.PublicCertificate', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -713,13 +544,6 @@ class PublicCertificate(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.PublicCertificate'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjZhcHBob3N0aW5nL2FwaS9hcHBfaWRlbnRpdHkvYXBwX2lkZW50aXR5X3NlcnZpY2UucHJvdG8KHGFwcGhvc3RpbmcuUHVibGljQ2VydGlmaWNhdGUTGghrZXlfbmFtZSABKAIwCTgBFBMaFHg1MDlfY2VydGlmaWNhdGVfcGVtIAIoAjAJOAEU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class GetPublicCertificateForAppResponse(ProtocolBuffer.ProtocolMessage):
   has_max_client_cache_time_in_second_ = 0
   max_client_cache_time_in_second_ = 0
@@ -762,33 +586,6 @@ class GetPublicCertificateForAppResponse(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     for i in range(x.public_certificate_list_size()): self.add_public_certificate_list().CopyFrom(x.public_certificate_list(i))
     if (x.has_max_client_cache_time_in_second()): self.set_max_client_cache_time_in_second(x.max_client_cache_time_in_second())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.GetPublicCertificateForAppResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.GetPublicCertificateForAppResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.GetPublicCertificateForAppResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.GetPublicCertificateForAppResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.GetPublicCertificateForAppResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.GetPublicCertificateForAppResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -895,13 +692,6 @@ class GetPublicCertificateForAppResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.GetPublicCertificateForAppResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjZhcHBob3N0aW5nL2FwaS9hcHBfaWRlbnRpdHkvYXBwX2lkZW50aXR5X3NlcnZpY2UucHJvdG8KLWFwcGhvc3RpbmcuR2V0UHVibGljQ2VydGlmaWNhdGVGb3JBcHBSZXNwb25zZRMaF3B1YmxpY19jZXJ0aWZpY2F0ZV9saXN0IAEoAjALOANKHGFwcGhvc3RpbmcuUHVibGljQ2VydGlmaWNhdGWjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExofbWF4X2NsaWVudF9jYWNoZV90aW1lX2luX3NlY29uZCACKAAwAzgBFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class GetServiceAccountNameRequest(ProtocolBuffer.ProtocolMessage):
 
   def __init__(self, contents=None):
@@ -911,33 +701,6 @@ class GetServiceAccountNameRequest(ProtocolBuffer.ProtocolMessage):
 
   def MergeFrom(self, x):
     assert x is not self
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.GetServiceAccountNameRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.GetServiceAccountNameRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.GetServiceAccountNameRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.GetServiceAccountNameRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.GetServiceAccountNameRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.GetServiceAccountNameRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -994,13 +757,6 @@ class GetServiceAccountNameRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.GetServiceAccountNameRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjZhcHBob3N0aW5nL2FwaS9hcHBfaWRlbnRpdHkvYXBwX2lkZW50aXR5X3NlcnZpY2UucHJvdG8KJ2FwcGhvc3RpbmcuR2V0U2VydmljZUFjY291bnROYW1lUmVxdWVzdA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class GetServiceAccountNameResponse(ProtocolBuffer.ProtocolMessage):
   has_service_account_name_ = 0
   service_account_name_ = ""
@@ -1025,33 +781,6 @@ class GetServiceAccountNameResponse(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_service_account_name()): self.set_service_account_name(x.service_account_name())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.GetServiceAccountNameResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.GetServiceAccountNameResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.GetServiceAccountNameResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.GetServiceAccountNameResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.GetServiceAccountNameResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.GetServiceAccountNameResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1123,13 +852,6 @@ class GetServiceAccountNameResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.GetServiceAccountNameResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjZhcHBob3N0aW5nL2FwaS9hcHBfaWRlbnRpdHkvYXBwX2lkZW50aXR5X3NlcnZpY2UucHJvdG8KKGFwcGhvc3RpbmcuR2V0U2VydmljZUFjY291bnROYW1lUmVzcG9uc2UTGhRzZXJ2aWNlX2FjY291bnRfbmFtZSABKAIwCTgBFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class GetAccessTokenRequest(ProtocolBuffer.ProtocolMessage):
   has_service_account_id_ = 0
   service_account_id_ = 0
@@ -1187,33 +909,6 @@ class GetAccessTokenRequest(ProtocolBuffer.ProtocolMessage):
     for i in range(x.scope_size()): self.add_scope(x.scope(i))
     if (x.has_service_account_id()): self.set_service_account_id(x.service_account_id())
     if (x.has_service_account_name()): self.set_service_account_name(x.service_account_name())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.GetAccessTokenRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.GetAccessTokenRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.GetAccessTokenRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.GetAccessTokenRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.GetAccessTokenRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.GetAccessTokenRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1329,13 +1024,6 @@ class GetAccessTokenRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.GetAccessTokenRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjZhcHBob3N0aW5nL2FwaS9hcHBfaWRlbnRpdHkvYXBwX2lkZW50aXR5X3NlcnZpY2UucHJvdG8KIGFwcGhvc3RpbmcuR2V0QWNjZXNzVG9rZW5SZXF1ZXN0ExoFc2NvcGUgASgCMAk4AxQTGhJzZXJ2aWNlX2FjY291bnRfaWQgAigAMAM4ARQTGhRzZXJ2aWNlX2FjY291bnRfbmFtZSADKAIwCTgB0AEBFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class GetAccessTokenResponse(ProtocolBuffer.ProtocolMessage):
   has_access_token_ = 0
   access_token_ = ""
@@ -1376,33 +1064,6 @@ class GetAccessTokenResponse(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     if (x.has_access_token()): self.set_access_token(x.access_token())
     if (x.has_expiration_time()): self.set_expiration_time(x.expiration_time())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.GetAccessTokenResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.GetAccessTokenResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.GetAccessTokenResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.GetAccessTokenResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.GetAccessTokenResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.GetAccessTokenResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1492,13 +1153,6 @@ class GetAccessTokenResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.GetAccessTokenResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjZhcHBob3N0aW5nL2FwaS9hcHBfaWRlbnRpdHkvYXBwX2lkZW50aXR5X3NlcnZpY2UucHJvdG8KIWFwcGhvc3RpbmcuR2V0QWNjZXNzVG9rZW5SZXNwb25zZRMaDGFjY2Vzc190b2tlbiABKAIwCTgBFBMaD2V4cGlyYXRpb25fdGltZSACKAAwAzgBFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class GetDefaultGcsBucketNameRequest(ProtocolBuffer.ProtocolMessage):
 
   def __init__(self, contents=None):
@@ -1508,33 +1162,6 @@ class GetDefaultGcsBucketNameRequest(ProtocolBuffer.ProtocolMessage):
 
   def MergeFrom(self, x):
     assert x is not self
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.GetDefaultGcsBucketNameRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.GetDefaultGcsBucketNameRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.GetDefaultGcsBucketNameRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.GetDefaultGcsBucketNameRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.GetDefaultGcsBucketNameRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.GetDefaultGcsBucketNameRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1591,13 +1218,6 @@ class GetDefaultGcsBucketNameRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.GetDefaultGcsBucketNameRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjZhcHBob3N0aW5nL2FwaS9hcHBfaWRlbnRpdHkvYXBwX2lkZW50aXR5X3NlcnZpY2UucHJvdG8KKWFwcGhvc3RpbmcuR2V0RGVmYXVsdEdjc0J1Y2tldE5hbWVSZXF1ZXN0"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class GetDefaultGcsBucketNameResponse(ProtocolBuffer.ProtocolMessage):
   has_default_gcs_bucket_name_ = 0
   default_gcs_bucket_name_ = ""
@@ -1622,33 +1242,6 @@ class GetDefaultGcsBucketNameResponse(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_default_gcs_bucket_name()): self.set_default_gcs_bucket_name(x.default_gcs_bucket_name())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.GetDefaultGcsBucketNameResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.GetDefaultGcsBucketNameResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.GetDefaultGcsBucketNameResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.GetDefaultGcsBucketNameResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.GetDefaultGcsBucketNameResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.GetDefaultGcsBucketNameResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1720,13 +1313,6 @@ class GetDefaultGcsBucketNameResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.GetDefaultGcsBucketNameResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjZhcHBob3N0aW5nL2FwaS9hcHBfaWRlbnRpdHkvYXBwX2lkZW50aXR5X3NlcnZpY2UucHJvdG8KKmFwcGhvc3RpbmcuR2V0RGVmYXVsdEdjc0J1Y2tldE5hbWVSZXNwb25zZRMaF2RlZmF1bHRfZ2NzX2J1Y2tldF9uYW1lIAEoAjAJOAEU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 if _extension_runtime:
   pass
 

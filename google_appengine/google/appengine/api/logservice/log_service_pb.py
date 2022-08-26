@@ -17,19 +17,13 @@
 
 
 
-
 from google.net.proto import ProtocolBuffer
 import abc
 import array
-import base64
 try:
   from thread import allocate_lock as _Lock
 except ImportError:
   from threading import Lock as _Lock
-try:
-  _net_proto___parse__python = None
-except ImportError:
-  _net_proto___parse__python = None
 
 if hasattr(__builtins__, 'xrange'): range = xrange
 
@@ -67,33 +61,6 @@ class LogServiceError(ProtocolBuffer.ProtocolMessage):
 
   def MergeFrom(self, x):
     assert x is not self
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.LogServiceError', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.LogServiceError')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.LogServiceError')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.LogServiceError', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.LogServiceError', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.LogServiceError', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -150,13 +117,6 @@ class LogServiceError(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogServiceError'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChphcHBob3N0aW5nLkxvZ1NlcnZpY2VFcnJvcnN6CUVycm9yQ29kZYsBkgECT0uYAQCMAYsBkgEPSU5WQUxJRF9SRVFVRVNUmAEBjAGLAZIBDVNUT1JBR0VfRVJST1KYAQKMAXQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class UserAppLogLine(ProtocolBuffer.ProtocolMessage):
   has_timestamp_usec_ = 0
   timestamp_usec_ = 0
@@ -236,33 +196,6 @@ class UserAppLogLine(ProtocolBuffer.ProtocolMessage):
     if (x.has_level()): self.set_level(x.level())
     if (x.has_message()): self.set_message(x.message())
     if (x.has_source_location()): self.mutable_source_location().MergeFrom(x.source_location())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.UserAppLogLine', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.UserAppLogLine')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.UserAppLogLine')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.UserAppLogLine', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.UserAppLogLine', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.UserAppLogLine', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -412,13 +345,6 @@ class UserAppLogLine(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.UserAppLogLine'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChlhcHBob3N0aW5nLlVzZXJBcHBMb2dMaW5lExoOdGltZXN0YW1wX3VzZWMgASgAMAM4AhQTGgVsZXZlbCACKAAwAzgCFBMaB21lc3NhZ2UgAygCMAk4AhQTGg9zb3VyY2VfbG9jYXRpb24gBCgCMAs4AUoZYXBwaG9zdGluZy5Tb3VyY2VMb2NhdGlvbqMBqgEFY3R5cGWyAQZwcm90bzKkARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class UserAppLogGroup(ProtocolBuffer.ProtocolMessage):
 
   def __init__(self, contents=None):
@@ -445,33 +371,6 @@ class UserAppLogGroup(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     for i in range(x.log_line_size()): self.add_log_line().CopyFrom(x.log_line(i))
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.UserAppLogGroup', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.UserAppLogGroup')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.UserAppLogGroup')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.UserAppLogGroup', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.UserAppLogGroup', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.UserAppLogGroup', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -560,13 +459,6 @@ class UserAppLogGroup(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.UserAppLogGroup'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChphcHBob3N0aW5nLlVzZXJBcHBMb2dHcm91cBMaCGxvZ19saW5lIAIoAjALOANKGWFwcGhvc3RpbmcuVXNlckFwcExvZ0xpbmWjAaoBBWN0eXBlsgEGcHJvdG8ypAEU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class FlushRequest(ProtocolBuffer.ProtocolMessage):
   has_logs_ = 0
   logs_ = ""
@@ -591,33 +483,6 @@ class FlushRequest(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_logs()): self.set_logs(x.logs())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.FlushRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.FlushRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.FlushRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.FlushRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.FlushRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.FlushRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -689,13 +554,6 @@ class FlushRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.FlushRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChdhcHBob3N0aW5nLkZsdXNoUmVxdWVzdBMaBGxvZ3MgASgCMAk4ARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class LogOffset(ProtocolBuffer.ProtocolMessage):
   has_request_id_ = 0
   request_id_ = ""
@@ -736,33 +594,6 @@ class LogOffset(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     if (x.has_request_id()): self.set_request_id(x.request_id())
     if (x.has_deprecated_request_id_set()): self.set_deprecated_request_id_set(x.deprecated_request_id_set())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.LogOffset', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.LogOffset')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.LogOffset')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.LogOffset', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.LogOffset', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.LogOffset', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -852,13 +683,6 @@ class LogOffset(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogOffset'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChRhcHBob3N0aW5nLkxvZ09mZnNldBMaCnJlcXVlc3RfaWQgASgCMAk4ARQTGhlkZXByZWNhdGVkX3JlcXVlc3RfaWRfc2V0IGUoADAIOAEU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class LogLine(ProtocolBuffer.ProtocolMessage):
   has_time_ = 0
   time_ = 0
@@ -938,33 +762,6 @@ class LogLine(ProtocolBuffer.ProtocolMessage):
     if (x.has_level()): self.set_level(x.level())
     if (x.has_log_message()): self.set_log_message(x.log_message())
     if (x.has_source_location()): self.mutable_source_location().MergeFrom(x.source_location())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.LogLine', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.LogLine')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.LogLine')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.LogLine', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.LogLine', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.LogLine', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1114,13 +911,6 @@ class LogLine(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogLine'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChJhcHBob3N0aW5nLkxvZ0xpbmUTGgR0aW1lIAEoADADOAIUExoFbGV2ZWwgAigAMAU4AhQTGgtsb2dfbWVzc2FnZSADKAIwCTgCFBMaD3NvdXJjZV9sb2NhdGlvbiAEKAIwCzgBShlhcHBob3N0aW5nLlNvdXJjZUxvY2F0aW9uowGqAQVjdHlwZbIBBnByb3RvMqQBFA=="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class RequestLog(ProtocolBuffer.ProtocolMessage):
   has_app_id_ = 0
   app_id_ = ""
@@ -1188,6 +978,8 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
   app_engine_release_ = ""
   has_trace_id_ = 0
   trace_id_ = ""
+  has_span_id_ = 0
+  span_id_ = ""
   has_exit_reason_ = 0
   exit_reason_ = 0
   has_was_throttled_for_time_ = 0
@@ -1655,6 +1447,19 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
 
   def has_trace_id(self): return self.has_trace_id_
 
+  def span_id(self): return self.span_id_
+
+  def set_span_id(self, x):
+    self.has_span_id_ = 1
+    self.span_id_ = x
+
+  def clear_span_id(self):
+    if self.has_span_id_:
+      self.has_span_id_ = 0
+      self.span_id_ = ""
+
+  def has_span_id(self): return self.has_span_id_
+
   def exit_reason(self): return self.exit_reason_
 
   def set_exit_reason(self, x):
@@ -1757,38 +1562,12 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if (x.has_lines_incomplete()): self.set_lines_incomplete(x.lines_incomplete())
     if (x.has_app_engine_release()): self.set_app_engine_release(x.app_engine_release())
     if (x.has_trace_id()): self.set_trace_id(x.trace_id())
+    if (x.has_span_id()): self.set_span_id(x.span_id())
     if (x.has_exit_reason()): self.set_exit_reason(x.exit_reason())
     if (x.has_was_throttled_for_time()): self.set_was_throttled_for_time(x.was_throttled_for_time())
     if (x.has_was_throttled_for_requests()): self.set_was_throttled_for_requests(x.was_throttled_for_requests())
     if (x.has_throttled_time()): self.set_throttled_time(x.throttled_time())
     if (x.has_server_name()): self.set_server_name(x.server_name())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.RequestLog', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.RequestLog')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.RequestLog')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.RequestLog', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.RequestLog', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.RequestLog', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -1861,6 +1640,8 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if self.has_app_engine_release_ and self.app_engine_release_ != x.app_engine_release_: return 0
     if self.has_trace_id_ != x.has_trace_id_: return 0
     if self.has_trace_id_ and self.trace_id_ != x.trace_id_: return 0
+    if self.has_span_id_ != x.has_span_id_: return 0
+    if self.has_span_id_ and self.span_id_ != x.span_id_: return 0
     if self.has_exit_reason_ != x.has_exit_reason_: return 0
     if self.has_exit_reason_ and self.exit_reason_ != x.exit_reason_: return 0
     if self.has_was_throttled_for_time_ != x.has_was_throttled_for_time_: return 0
@@ -1977,6 +1758,7 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if (self.has_lines_incomplete_): n += 3
     if (self.has_app_engine_release_): n += 2 + self.lengthString(len(self.app_engine_release_))
     if (self.has_trace_id_): n += 2 + self.lengthString(len(self.trace_id_))
+    if (self.has_span_id_): n += 2 + self.lengthString(len(self.span_id_))
     if (self.has_exit_reason_): n += 2 + self.lengthVarInt64(self.exit_reason_)
     if (self.has_was_throttled_for_time_): n += 3
     if (self.has_was_throttled_for_requests_): n += 3
@@ -2051,6 +1833,7 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if (self.has_lines_incomplete_): n += 3
     if (self.has_app_engine_release_): n += 2 + self.lengthString(len(self.app_engine_release_))
     if (self.has_trace_id_): n += 2 + self.lengthString(len(self.trace_id_))
+    if (self.has_span_id_): n += 2 + self.lengthString(len(self.span_id_))
     if (self.has_exit_reason_): n += 2 + self.lengthVarInt64(self.exit_reason_)
     if (self.has_was_throttled_for_time_): n += 3
     if (self.has_was_throttled_for_requests_): n += 3
@@ -2093,6 +1876,7 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     self.clear_lines_incomplete()
     self.clear_app_engine_release()
     self.clear_trace_id()
+    self.clear_span_id()
     self.clear_exit_reason()
     self.clear_was_throttled_for_time()
     self.clear_was_throttled_for_requests()
@@ -2204,6 +1988,9 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if (self.has_trace_id_):
       out.putVarInt32(314)
       out.putPrefixedString(self.trace_id_)
+    if (self.has_span_id_):
+      out.putVarInt32(322)
+      out.putPrefixedString(self.span_id_)
 
   def OutputPartial(self, out):
     if (self.has_app_id_):
@@ -2325,6 +2112,9 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if (self.has_trace_id_):
       out.putVarInt32(314)
       out.putPrefixedString(self.trace_id_)
+    if (self.has_span_id_):
+      out.putVarInt32(322)
+      out.putPrefixedString(self.span_id_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -2452,6 +2242,9 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
       if tt == 314:
         self.set_trace_id(d.getPrefixedString())
         continue
+      if tt == 322:
+        self.set_span_id(d.getPrefixedString())
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
@@ -2504,6 +2297,7 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if self.has_lines_incomplete_: res+=prefix+("lines_incomplete: %s\n" % self.DebugFormatBool(self.lines_incomplete_))
     if self.has_app_engine_release_: res+=prefix+("app_engine_release: %s\n" % self.DebugFormatString(self.app_engine_release_))
     if self.has_trace_id_: res+=prefix+("trace_id: %s\n" % self.DebugFormatString(self.trace_id_))
+    if self.has_span_id_: res+=prefix+("span_id: %s\n" % self.DebugFormatString(self.span_id_))
     if self.has_exit_reason_: res+=prefix+("exit_reason: %s\n" % self.DebugFormatInt32(self.exit_reason_))
     if self.has_was_throttled_for_time_: res+=prefix+("was_throttled_for_time: %s\n" % self.DebugFormatBool(self.was_throttled_for_time_))
     if self.has_was_throttled_for_requests_: res+=prefix+("was_throttled_for_requests: %s\n" % self.DebugFormatBool(self.was_throttled_for_requests_))
@@ -2549,6 +2343,7 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
   klines_incomplete = 36
   kapp_engine_release = 38
   ktrace_id = 39
+  kspan_id = 40
   kexit_reason = 30
   kwas_throttled_for_time = 31
   kwas_throttled_for_requests = 32
@@ -2596,7 +2391,8 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     37: "module_id",
     38: "app_engine_release",
     39: "trace_id",
-  }, 39)
+    40: "span_id",
+  }, 40)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -2639,19 +2435,13 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     37: ProtocolBuffer.Encoder.STRING,
     38: ProtocolBuffer.Encoder.STRING,
     39: ProtocolBuffer.Encoder.STRING,
-  }, 39, ProtocolBuffer.Encoder.MAX_TYPE)
+    40: ProtocolBuffer.Encoder.STRING,
+  }, 40, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.RequestLog'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChVhcHBob3N0aW5nLlJlcXVlc3RMb2cTGgZhcHBfaWQgASgCMAk4AhQTGgltb2R1bGVfaWQgJSgCMAk4AUIHZGVmYXVsdKMBqgEHZGVmYXVsdLIBCSJkZWZhdWx0IqQBFBMaCnZlcnNpb25faWQgAigCMAk4AhQTGgpyZXF1ZXN0X2lkIAMoAjAJOAIUExoGb2Zmc2V0ICMoAjALOAFKFGFwcGhvc3RpbmcuTG9nT2Zmc2V0owGqAQVjdHlwZbIBBnByb3RvMqQBFBMaAmlwIAQoAjAJOAIUExoIbmlja25hbWUgBSgCMAk4ARQTGgpzdGFydF90aW1lIAYoADADOAIUExoIZW5kX3RpbWUgBygAMAM4AhQTGgdsYXRlbmN5IAgoADADOAIUExoHbWN5Y2xlcyAJKAAwAzgCFBMaBm1ldGhvZCAKKAIwCTgCFBMaCHJlc291cmNlIAsoAjAJOAIUExoMaHR0cF92ZXJzaW9uIAwoAjAJOAIUExoGc3RhdHVzIA0oADAFOAIUExoNcmVzcG9uc2Vfc2l6ZSAOKAAwAzgCFBMaCHJlZmVycmVyIA8oAjAJOAEUExoKdXNlcl9hZ2VudCAQKAIwCTgBFBMaDXVybF9tYXBfZW50cnkgESgCMAk4AhQTGghjb21iaW5lZCASKAIwCTgCFBMaC2FwaV9tY3ljbGVzIBMoADADOAEUExoEaG9zdCAUKAIwCTgBFBMaBGNvc3QgFSgBMAE4ARQTGg90YXNrX3F1ZXVlX25hbWUgFigCMAk4ARQTGgl0YXNrX25hbWUgFygCMAk4ARQTGhN3YXNfbG9hZGluZ19yZXF1ZXN0IBgoADAIOAEUExoMcGVuZGluZ190aW1lIBkoADADOAEUExoNcmVwbGljYV9pbmRleCAaKAAwBTgBQgItMaMBqgEHZGVmYXVsdLIBAi0xpAEUExoIZmluaXNoZWQgGygAMAg4AUIEdHJ1ZaMBqgEHZGVmYXVsdLIBBHRydWWkARQTGgljbG9uZV9rZXkgHCgCMAk4ARQTGgRsaW5lIB0oAjALOANKEmFwcGhvc3RpbmcuTG9nTGluZaMBqgEFY3R5cGWyAQZwcm90bzKkARQTGhBsaW5lc19pbmNvbXBsZXRlICQoADAIOAEUExoSYXBwX2VuZ2luZV9yZWxlYXNlICYoAjAJOAEUExoIdHJhY2VfaWQgJygCMAk4ARQTGgtleGl0X3JlYXNvbiAeKAAwBTgBFBMaFndhc190aHJvdHRsZWRfZm9yX3RpbWUgHygAMAg4ARQTGhp3YXNfdGhyb3R0bGVkX2Zvcl9yZXF1ZXN0cyAgKAAwCDgBFBMaDnRocm90dGxlZF90aW1lICEoADADOAEUExoLc2VydmVyX25hbWUgIigCMAk4ARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class LogModuleVersion(ProtocolBuffer.ProtocolMessage):
   has_module_id_ = 0
   module_id_ = "default"
@@ -2724,33 +2514,6 @@ class LogModuleVersion(ProtocolBuffer.ProtocolMessage):
     if (x.has_version_id()): self.set_version_id(x.version_id())
     if (x.has_deprecated_module_id_set()): self.set_deprecated_module_id_set(x.deprecated_module_id_set())
     if (x.has_deprecated_version_id_set()): self.set_deprecated_version_id_set(x.deprecated_version_id_set())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.LogModuleVersion', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.LogModuleVersion')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.LogModuleVersion')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.LogModuleVersion', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.LogModuleVersion', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.LogModuleVersion', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -2876,13 +2639,6 @@ class LogModuleVersion(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogModuleVersion'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChthcHBob3N0aW5nLkxvZ01vZHVsZVZlcnNpb24TGgltb2R1bGVfaWQgASgCMAk4AUIHZGVmYXVsdKMBqgEHZGVmYXVsdLIBCSJkZWZhdWx0IqQBFBMaCnZlcnNpb25faWQgAigCMAk4ARQTGhhkZXByZWNhdGVkX21vZHVsZV9pZF9zZXQgZSgAMAg4ARQTGhlkZXByZWNhdGVkX3ZlcnNpb25faWRfc2V0IGYoADAIOAEU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class LogReadRequest(ProtocolBuffer.ProtocolMessage):
   has_app_id_ = 0
   app_id_ = ""
@@ -3350,33 +3106,6 @@ class LogReadRequest(ProtocolBuffer.ProtocolMessage):
     if (x.has_deprecated_replica_index_set()): self.set_deprecated_replica_index_set(x.deprecated_replica_index_set())
     if (x.has_deprecated_app_logs_per_request_set()): self.set_deprecated_app_logs_per_request_set(x.deprecated_app_logs_per_request_set())
     if (x.has_deprecated_num_shards_set()): self.set_deprecated_num_shards_set(x.deprecated_num_shards_set())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.LogReadRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.LogReadRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.LogReadRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.LogReadRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.LogReadRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.LogReadRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -3981,13 +3710,6 @@ class LogReadRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogReadRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChlhcHBob3N0aW5nLkxvZ1JlYWRSZXF1ZXN0ExoGYXBwX2lkIAEoAjAJOAIUExoKdmVyc2lvbl9pZCACKAIwCTgDFBMaDm1vZHVsZV92ZXJzaW9uIBMoAjALOANKG2FwcGhvc3RpbmcuTG9nTW9kdWxlVmVyc2lvbqMBqgEFY3R5cGWyAQZwcm90bzKkARQTGgpzdGFydF90aW1lIAMoADADOAEUExoIZW5kX3RpbWUgBCgAMAM4ARQTGgZvZmZzZXQgBSgCMAs4AUoUYXBwaG9zdGluZy5Mb2dPZmZzZXSjAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoKcmVxdWVzdF9pZCAGKAIwCTgDFBMaEW1pbmltdW1fbG9nX2xldmVsIAcoADAFOAEUExoSaW5jbHVkZV9pbmNvbXBsZXRlIAgoADAIOAEUExoFY291bnQgCSgAMAM4ARQTGhJjb21iaW5lZF9sb2dfcmVnZXggDigCMAk4ARQTGgpob3N0X3JlZ2V4IA8oAjAJOAEUExoNcmVwbGljYV9pbmRleCAQKAAwBTgBFBMaEGluY2x1ZGVfYXBwX2xvZ3MgCigAMAg4ARQTGhRhcHBfbG9nc19wZXJfcmVxdWVzdCARKAAwBTgBFBMaDGluY2x1ZGVfaG9zdCALKAAwCDgBFBMaC2luY2x1ZGVfYWxsIAwoADAIOAEUExoOY2FjaGVfaXRlcmF0b3IgDSgAMAg4ARQTGgpudW1fc2hhcmRzIBIoADAFOAEUExoZZGVwcmVjYXRlZF9zdGFydF90aW1lX3NldCBnKAAwCDgBFBMaF2RlcHJlY2F0ZWRfZW5kX3RpbWVfc2V0IGgoADAIOAEUExogZGVwcmVjYXRlZF9taW5pbXVtX2xvZ19sZXZlbF9zZXQgaygAMAg4ARQTGhRkZXByZWNhdGVkX2NvdW50X3NldCBtKAAwCDgBFBMaIWRlcHJlY2F0ZWRfY29tYmluZWRfbG9nX3JlZ2V4X3NldCByKAAwCDgBFBMaGWRlcHJlY2F0ZWRfaG9zdF9yZWdleF9zZXQgcygAMAg4ARQTGhxkZXByZWNhdGVkX3JlcGxpY2FfaW5kZXhfc2V0IHQoADAIOAEUExojZGVwcmVjYXRlZF9hcHBfbG9nc19wZXJfcmVxdWVzdF9zZXQgdSgAMAg4ARQTGhlkZXByZWNhdGVkX251bV9zaGFyZHNfc2V0IHYoADAIOAEU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class LogReadResponse(ProtocolBuffer.ProtocolMessage):
   has_offset_ = 0
   offset_ = None
@@ -4053,33 +3775,6 @@ class LogReadResponse(ProtocolBuffer.ProtocolMessage):
     for i in range(x.log_size()): self.add_log().CopyFrom(x.log(i))
     if (x.has_offset()): self.mutable_offset().MergeFrom(x.offset())
     if (x.has_last_end_time()): self.set_last_end_time(x.last_end_time())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.LogReadResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.LogReadResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.LogReadResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.LogReadResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.LogReadResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.LogReadResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -4213,13 +3908,6 @@ class LogReadResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogReadResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChphcHBob3N0aW5nLkxvZ1JlYWRSZXNwb25zZRMaA2xvZyABKAIwCzgDShVhcHBob3N0aW5nLlJlcXVlc3RMb2ejAaoBBWN0eXBlsgEGcHJvdG8ypAEUExoGb2Zmc2V0IAIoAjALOAFKFGFwcGhvc3RpbmcuTG9nT2Zmc2V0owGqAQVjdHlwZbIBBnByb3RvMqQBFBMaDWxhc3RfZW5kX3RpbWUgAygAMAM4ARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class LogUsageRecord(ProtocolBuffer.ProtocolMessage):
   has_version_id_ = 0
   version_id_ = ""
@@ -4324,33 +4012,6 @@ class LogUsageRecord(ProtocolBuffer.ProtocolMessage):
     if (x.has_count()): self.set_count(x.count())
     if (x.has_total_size()): self.set_total_size(x.total_size())
     if (x.has_records()): self.set_records(x.records())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.LogUsageRecord', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.LogUsageRecord')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.LogUsageRecord')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.LogUsageRecord', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.LogUsageRecord', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.LogUsageRecord', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -4512,13 +4173,6 @@ class LogUsageRecord(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogUsageRecord'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChlhcHBob3N0aW5nLkxvZ1VzYWdlUmVjb3JkExoKdmVyc2lvbl9pZCABKAIwCTgBFBMaCnN0YXJ0X3RpbWUgAigAMAU4ARQTGghlbmRfdGltZSADKAAwBTgBFBMaBWNvdW50IAQoADADOAEUExoKdG90YWxfc2l6ZSAFKAAwAzgBFBMaB3JlY29yZHMgBigAMAU4ARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class LogUsageRequest(ProtocolBuffer.ProtocolMessage):
   has_app_id_ = 0
   app_id_ = ""
@@ -4688,33 +4342,6 @@ class LogUsageRequest(ProtocolBuffer.ProtocolMessage):
     if (x.has_versions_only()): self.set_versions_only(x.versions_only())
     if (x.has_deprecated_resolution_hours_set()): self.set_deprecated_resolution_hours_set(x.deprecated_resolution_hours_set())
     if (x.has_deprecated_usage_version_set()): self.set_deprecated_usage_version_set(x.deprecated_usage_version_set())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.LogUsageRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.LogUsageRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.LogUsageRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.LogUsageRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.LogUsageRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.LogUsageRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -4961,13 +4588,6 @@ class LogUsageRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogUsageRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChphcHBob3N0aW5nLkxvZ1VzYWdlUmVxdWVzdBMaBmFwcF9pZCABKAIwCTgCFBMaCnZlcnNpb25faWQgAigCMAk4AxQTGgpzdGFydF90aW1lIAMoADAFOAEUExoIZW5kX3RpbWUgBCgAMAU4ARQTGhByZXNvbHV0aW9uX2hvdXJzIAUoADAEOAFCATGjAaoBB2RlZmF1bHSyAQExpAEUExoQY29tYmluZV92ZXJzaW9ucyAGKAAwCDgBFBMaDXVzYWdlX3ZlcnNpb24gBygAMAU4ARQTGg12ZXJzaW9uc19vbmx5IAgoADAIOAEUExofZGVwcmVjYXRlZF9yZXNvbHV0aW9uX2hvdXJzX3NldCBpKAAwCDgBFBMaHGRlcHJlY2F0ZWRfdXNhZ2VfdmVyc2lvbl9zZXQgaygAMAg4ARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class LogUsageResponse(ProtocolBuffer.ProtocolMessage):
   has_summary_ = 0
   summary_ = None
@@ -5017,33 +4637,6 @@ class LogUsageResponse(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     for i in range(x.usage_size()): self.add_usage().CopyFrom(x.usage(i))
     if (x.has_summary()): self.mutable_summary().MergeFrom(x.summary())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.LogUsageResponse', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.LogUsageResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.LogUsageResponse')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.LogUsageResponse', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.LogUsageResponse', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.LogUsageResponse', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -5159,13 +4752,6 @@ class LogUsageResponse(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogUsageResponse'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WithcHBob3N0aW5nL2FwaS9sb2dzZXJ2aWNlL2xvZ19zZXJ2aWNlLnByb3RvChthcHBob3N0aW5nLkxvZ1VzYWdlUmVzcG9uc2UTGgV1c2FnZSABKAIwCzgDShlhcHBob3N0aW5nLkxvZ1VzYWdlUmVjb3JkowGqAQVjdHlwZbIBBnByb3RvMqQBFBMaB3N1bW1hcnkgAigCMAs4AUoZYXBwaG9zdGluZy5Mb2dVc2FnZVJlY29yZKMBqgEFY3R5cGWyAQZwcm90bzKkARQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 if _extension_runtime:
   pass
 

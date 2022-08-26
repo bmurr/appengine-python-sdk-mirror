@@ -41,3 +41,7 @@ class GrpcPortError(Error):
 
 class Python3NotFoundError(Error):
   """Raised if Python3 executable is missing."""
+
+
+class InteractiveCommandError(Error):
+  pass

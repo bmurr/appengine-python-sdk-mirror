@@ -270,7 +270,7 @@ class UploadTestBase(unittest.TestCase):
     # CGI environment that the stub relies on.
     self.original_environ = dict(os.environ)
     os.environ.update({
-        'APPLICATION_ID': 'app',
+        'GAE_APPLICATION': 'app',
         'SERVER_NAME': 'localhost',
         'SERVER_PORT': '8080',
         'AUTH_DOMAIN': 'abcxyz.com',
@@ -524,7 +524,7 @@ class UploadHandlerUnitTest(UploadTestBase):
     # Create blob-storage to be used in tests.
     self.blob_storage_path = os.path.join(self.tmpdir, 'blobstore')
     self.storage = file_blob_storage.FileBlobStorage(
-        self.blob_storage_path, os.environ['APPLICATION_ID'])
+        self.blob_storage_path, os.environ['GAE_APPLICATION'])
 
     def forward_app(unused_environ, unused_start_response):
       raise Exception('Unexpected call to forward_app')
@@ -1098,7 +1098,7 @@ class UploadHandlerWSGITest(UploadTestBase):
     # Set up environment for Blobstore.
     self.original_environ = dict(os.environ)
     os.environ.update({
-        'APPLICATION_ID': 'app',
+        'GAE_APPLICATION': 'app',
         'USER_EMAIL': 'nobody@nowhere.com',
         'SERVER_NAME': 'localhost',
         'SERVER_PORT': '8080',

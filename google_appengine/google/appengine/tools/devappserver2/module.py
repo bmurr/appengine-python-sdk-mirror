@@ -162,10 +162,6 @@ def _escape(s):
     return html.escape(s, quote=False)
 
 
-class InteractiveCommandError(errors.Error):
-  pass
-
-
 class _ScriptHandler(url_handler.UserConfiguredURLHandler):
   """A URL handler that will cause the request to be dispatched to an instance.
 
@@ -807,7 +803,7 @@ class Module(object):
     else:
       environ['SERVER_PORT'] = str(self.balanced_port)
     if 'HTTP_HOST' in environ:
-      environ['SERVER_NAME'] = environ['HTTP_HOST'].rsplit(':', 1)[0]
+      environ['SERVER_NAME'] = environ['HTTP_HOST'].rsplit(':', 1)[0]  # pytype: disable=attribute-error  # dynamic-method-lookup
     environ['DEFAULT_VERSION_HOSTNAME'] = '%s:%s' % (environ['SERVER_NAME'],
                                                      self._default_version_port)
 
@@ -866,7 +862,7 @@ class Module(object):
         if should_log_request:
           headers = wsgiref.headers.Headers(response_headers)
           status_code = int(status.split(' ', 1)[0])
-          content_length = int(headers.get('Content-Length', 0))
+          content_length = int(headers.get('Content-Length', '0'))
           # TODO: Remove after the Files API is really gone.
           if (self._filesapi_warning_message is not None and
               self._request_data.was_filesapi_used(request_id)):
@@ -920,7 +916,7 @@ class Module(object):
 
 
         if content_length <= _MAX_UPLOAD_NO_TRIGGER_BAD_CLIENT_BYTES:
-          environ['wsgi.input'].read(content_length)
+          environ['wsgi.input'].read(content_length)  # pytype: disable=attribute-error  # dynamic-method-lookup
         status = '%d %s' % (six.moves.http_client.REQUEST_ENTITY_TOO_LARGE,
                             six.moves.http_client.responses[
                                 six.moves.http_client.REQUEST_ENTITY_TOO_LARGE])
@@ -930,6 +926,7 @@ class Module(object):
       with self._handler_lock:
         handlers = self._handlers
 
+      path_info = None
       try:
         path_info = six.ensure_text(environ['PATH_INFO'])
         path_info_normal = self._normpath(path_info)
@@ -3064,7 +3061,7 @@ class InteractiveCommandModule(Module):
       A string representing the result of the command e.g. "10\n".
 
     Raises:
-      InteractiveCommandError: if the command failed for any reason.
+      errors.InteractiveCommandError: if the command failed for any reason.
     """
     start_response = start_response_utils.CapturingStartResponse()
 
@@ -3076,10 +3073,11 @@ class InteractiveCommandModule(Module):
       response = self._handle_request(
           environ, start_response, request_type=instance.INTERACTIVE_REQUEST)
     except Exception as e:
-      raise InteractiveCommandError('Unexpected command failure: ', str(e))
+      raise errors.InteractiveCommandError('Unexpected command failure: ',
+                                           str(e))
 
     if start_response.status != '200 OK':
-      raise InteractiveCommandError(
+      raise errors.InteractiveCommandError(
           six.ensure_text(start_response.merged_response(response)))
 
     return start_response.merged_response(response)

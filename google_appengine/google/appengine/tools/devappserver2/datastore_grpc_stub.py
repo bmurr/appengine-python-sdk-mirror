@@ -123,7 +123,7 @@ class DatastoreGrpcStub(apiproxy_stub.APIProxyStub):
     # reusing api_server between unittests.
     response = six.moves.urllib.request.urlopen(
         six.moves.urllib.request.Request(
-            'http://%s/reset' % self.grpc_apiserver_host, data=''))
+            'http://%s/reset' % self.grpc_apiserver_host, data=''.encode()))
     if response.code != six.moves.http_client.OK:
       raise IOError('The Cloud Datastore emulator did not reset successfully.')
 
@@ -168,7 +168,7 @@ class DatastoreGrpcStub(apiproxy_stub.APIProxyStub):
     assert service == 'datastore_v3'
     self.CheckRequest(service, call, request)
 
-    request_pb = grpc_service_pb2.Request(
+    request_pb = grpc_service_pb2.Request(  # pytype: disable=module-attr
         service_name=service, method=call, request=request.Encode())
     if call == 'Commit':
       request_pb.txn_add_task_callback_hostport = self._txn_add_task_callback_hostport  # pylint: disable=line-too-long
@@ -209,7 +209,7 @@ class DatastoreGrpcStub(apiproxy_stub.APIProxyStub):
       return self.MakeSyncCallForRemoteApiPy3(request)
 
   def MakeSyncCallForRemoteApiPy2(self, request):
-    request_pb = grpc_service_pb2.Request(
+    request_pb = grpc_service_pb2.Request(  # pytype: disable=module-attr
         service_name=request.service_name(),
         method=request.method(),
         request=request.request(),
@@ -217,7 +217,7 @@ class DatastoreGrpcStub(apiproxy_stub.APIProxyStub):
     if request.has_request_id():
       request_pb.request_id = request.request_id()
 
-    response = remote_api_pb.Response()
+    response = remote_api_pb.Response()  # pytype:disable=name-error
 
     try:
       response_pb = self.get_or_set_call_handler_stub().HandleCall(
@@ -254,7 +254,7 @@ class DatastoreGrpcStub(apiproxy_stub.APIProxyStub):
     return response
 
   def MakeSyncCallForRemoteApiPy3(self, request):
-    request_pb = grpc_service_pb2.Request(
+    request_pb = grpc_service_pb2.Request(  # pytype: disable=module-attr
         service_name=request.service_name,
         method=request.method,
         request=request.request,

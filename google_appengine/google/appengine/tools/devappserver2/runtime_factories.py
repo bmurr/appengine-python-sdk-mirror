@@ -33,9 +33,18 @@ except ImportError:
 # TODO - b/34669624, automatically get Version of python runtime in prod.
 PYTHON27_PROD_VERSION = (2, 7, 12)
 
-MODERN_RUNTIMES = set([
-    'python37', 'python38', 'python39', 'go111', 'go112', 'go113', 'go114',
-    'go115', 'php72',
+MODERN_RUNTIMES = frozenset([
+    'python37',
+    'python38',
+    'python39',
+    'python310',
+    'go111',
+    'go112',
+    'go113',
+    'go114',
+    'go115',
+    'php72',
+    'php81',
 ])
 
 FACTORIES = {
@@ -47,10 +56,12 @@ FACTORIES = {
     'go115': go_factory.GoRuntimeInstanceFactory,
     'php55': php_factory.PHPRuntimeInstanceFactory,
     'php72': php_factory.PHPRuntimeInstanceFactory,
+    'php81': php_factory.PHPRuntimeInstanceFactory,
     'python': python_factory.PythonRuntimeInstanceFactory,
     'python37': python_factory.PythonRuntimeInstanceFactory,
     'python38': python_factory.PythonRuntimeInstanceFactory,
     'python39': python_factory.PythonRuntimeInstanceFactory,
+    'python310': python_factory.PythonRuntimeInstanceFactory,
     'python27': python_factory.PythonRuntimeInstanceFactory,
     'python-compat': python_factory.PythonRuntimeInstanceFactory,
     'custom': custom_factory.CustomRuntimeInstanceFactory,

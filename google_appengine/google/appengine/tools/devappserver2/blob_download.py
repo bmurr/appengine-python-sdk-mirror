@@ -23,11 +23,10 @@ from __future__ import print_function
 
 
 import logging
-
-from google.appengine._internal import six_subset
+from google.appengine._internal import six
 
 # pylint: disable=g-import-not-at-top
-if six_subset.PY2:
+if six.PY2:
   from google.appengine.api import apiproxy_stub_map
   from google.appengine.api import datastore
   from google.appengine.api import datastore_errors
@@ -158,7 +157,7 @@ def blobstore_download_rewriter(state):
 
   blob_size, blob_content_type, blob_open_key = _get_blob_metadata(blob_key)
   if blob_content_type is not None:
-    blob_content_type = six_subset.ensure_binary(
+    blob_content_type = six.ensure_binary(
         blob_content_type, encoding='ascii')
 
   range_header = state.headers.get(blobstore.BLOB_RANGE_HEADER)
@@ -205,7 +204,7 @@ def blobstore_download_rewriter(state):
 
     content_type = state.headers.get('Content-Type')
     if not content_type or content_type == _AUTO_MIME_TYPE:
-      state.headers['Content-Type'] = six_subset.ensure_str(blob_content_type)
+      state.headers['Content-Type'] = six.ensure_str(blob_content_type)
     # Allow responses beyond the maximum dynamic response size
     state.allow_large_response = True
 

@@ -16,7 +16,6 @@
 #
 
 
-
 """An apiproxy stub that calls a remote handler via HTTP.
 
 This allows easy remote access to the App Engine datastore, and potentially any

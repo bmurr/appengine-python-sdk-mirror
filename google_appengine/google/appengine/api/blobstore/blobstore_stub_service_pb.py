@@ -17,19 +17,13 @@
 
 
 
-
 from google.net.proto import ProtocolBuffer
 import abc
 import array
-import base64
 try:
   from thread import allocate_lock as _Lock
 except ImportError:
   from threading import Lock as _Lock
-try:
-  _net_proto___parse__python = None
-except ImportError:
-  _net_proto___parse__python = None
 
 if hasattr(__builtins__, 'xrange'): range = xrange
 
@@ -83,33 +77,6 @@ class StoreBlobRequest(ProtocolBuffer.ProtocolMessage):
     assert x is not self
     if (x.has_blob_key()): self.set_blob_key(x.blob_key())
     if (x.has_content()): self.set_content(x.content())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.StoreBlobRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.StoreBlobRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.StoreBlobRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.StoreBlobRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.StoreBlobRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.StoreBlobRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -204,13 +171,6 @@ class StoreBlobRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.StoreBlobRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjVhcHBob3N0aW5nL2FwaS9ibG9ic3RvcmUvYmxvYnN0b3JlX3N0dWJfc2VydmljZS5wcm90bwobYXBwaG9zdGluZy5TdG9yZUJsb2JSZXF1ZXN0ExoIYmxvYl9rZXkgASgCMAk4AhQTGgdjb250ZW50IAIoAjAJOAEU"))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 class SetBlobStorageTypeRequest(ProtocolBuffer.ProtocolMessage):
 
 
@@ -248,33 +208,6 @@ class SetBlobStorageTypeRequest(ProtocolBuffer.ProtocolMessage):
   def MergeFrom(self, x):
     assert x is not self
     if (x.has_storage_type()): self.set_storage_type(x.storage_type())
-
-  if _net_proto___parse__python is not None:
-    def _CMergeFromString(self, s):
-      _net_proto___parse__python.MergeFromString(self, 'apphosting.SetBlobStorageTypeRequest', s)
-
-  if _net_proto___parse__python is not None:
-    def _CEncode(self):
-      return _net_proto___parse__python.Encode(self, 'apphosting.SetBlobStorageTypeRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CEncodePartial(self):
-      return _net_proto___parse__python.EncodePartial(self, 'apphosting.SetBlobStorageTypeRequest')
-
-  if _net_proto___parse__python is not None:
-    def _CToASCII(self, output_format):
-      return _net_proto___parse__python.ToASCII(self, 'apphosting.SetBlobStorageTypeRequest', output_format)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCII(self, s):
-      _net_proto___parse__python.ParseASCII(self, 'apphosting.SetBlobStorageTypeRequest', s)
-
-
-  if _net_proto___parse__python is not None:
-    def ParseASCIIIgnoreUnknown(self, s):
-      _net_proto___parse__python.ParseASCIIIgnoreUnknown(self, 'apphosting.SetBlobStorageTypeRequest', s)
-
 
   def Equals(self, x):
     if x is self: return 1
@@ -351,13 +284,6 @@ class SetBlobStorageTypeRequest(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.SetBlobStorageTypeRequest'
-  _SERIALIZED_DESCRIPTOR = array.array('B')
-  _SERIALIZED_DESCRIPTOR.fromstring(base64.decodestring("WjVhcHBob3N0aW5nL2FwaS9ibG9ic3RvcmUvYmxvYnN0b3JlX3N0dWJfc2VydmljZS5wcm90bwokYXBwaG9zdGluZy5TZXRCbG9iU3RvcmFnZVR5cGVSZXF1ZXN0ExoMc3RvcmFnZV90eXBlIAEoADAFOAJoABRzegtTdG9yYWdlVHlwZYsBkgEGTUVNT1JZmAEAjAGLAZIBBEZJTEWYAQGMAXQ="))
-  if _net_proto___parse__python is not None:
-    _net_proto___parse__python.RegisterType(
-        _SERIALIZED_DESCRIPTOR.tostring())
-
-
 
 
 

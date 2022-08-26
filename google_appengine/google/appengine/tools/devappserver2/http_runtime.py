@@ -318,13 +318,13 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
           return ''
         # On Mac, if the first read in this process occurs before the data is
         # written, no data will ever be read by this process without the seek.
-        self._process.child_out.seek(0)
-        line = self._process.child_out.read()
+        self._process.child_out.seek(0)  # pytype: disable=attribute-error  # dynamic-method-lookup
+        line = self._process.child_out.read()  # pytype: disable=attribute-error  # dynamic-method-lookup
         if '\n' in line:
           return line
         _sleep_between_retries(attempt, max_attempts, sleep_base)
     finally:
-      self._process.child_out.close()
+      self._process.child_out.close()  # pytype: disable=attribute-error  # dynamic-method-lookup
     return ''
 
   def start(self):
@@ -360,7 +360,7 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
             cwd=self._module_configuration.application_root,
             stderr=subprocess.PIPE)
       port = self._read_start_process_file()
-      _remove_retry_sharing_violation(self._process.child_out.name)
+      _remove_retry_sharing_violation(self._process.child_out.name)  # pytype: disable=attribute-error
     elif self._start_process_flavor == START_PROCESS_REVERSE:
       serialized_config = runtime_config.SerializeToString()
       with self._process_lock:

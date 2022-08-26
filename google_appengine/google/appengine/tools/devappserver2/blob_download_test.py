@@ -60,7 +60,7 @@ class DownloadTestBase(unittest.TestCase):
     # CGI environment that the stub relies on.
     self.original_environ = dict(os.environ)
     os.environ.update({
-        'APPLICATION_ID': 'app',
+        'GAE_APPLICATION': 'app',
         'SERVER_NAME': 'localhost',
         'SERVER_PORT': '8080',
         'AUTH_DOMAIN': 'abcxyz.com',

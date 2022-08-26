@@ -22,12 +22,10 @@ from __future__ import print_function
 
 import logging
 import os
-import sys
-
-PY2 = sys.version_info[0] == 2
+from google.appengine._internal import six
 
 # pylint: disable=g-import-not-at-top
-if PY2:
+if six.PY2:
   from google.appengine.api import apiproxy_stub_map
   from google.appengine.api import mail_stub
   from google.appengine.api import urlfetch_stub
@@ -62,7 +60,7 @@ else:
   from google.appengine.datastore import datastore_stub_util
   from google.appengine.datastore import datastore_v4_stub
 
-if PY2:
+if six.PY2:
   from google.appengine.datastore import datastore_v4_pb
 
   # We don't want to support datastore_v4 everywhere, because users are supposed
@@ -213,7 +211,7 @@ def setup_stubs(request_data,
         datastore_grpc_stub_class(os.environ['DATASTORE_EMULATOR_HOST']))
   else:
     if datastore_local_stub_class is None:
-      if PY2:
+      if six.PY2:
         from google.appengine.datastore import datastore_sqlite_stub
       else:
         from google.appengine.datastore import datastore_sqlite_stub
@@ -234,7 +232,7 @@ def setup_stubs(request_data,
 
   # pylint: disable=import-not-at-top
   try:
-    if PY2:
+    if six.PY2:
       from google.appengine.api.images import images_stub
     else:
       from google.appengine.api.images import images_stub
@@ -244,7 +242,7 @@ def setup_stubs(request_data,
 
 
     # We register a stub which throws a NotImplementedError for most RPCs.
-    if PY2:
+    if six.PY2:
       from google.appengine.api.images import images_not_implemented_stub
     else:
       from google.appengine.api.images import images_not_implemented_stub

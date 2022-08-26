@@ -61,7 +61,11 @@ else:
 # Check there's a working images stub.
 try:
   # pylint: disable=g-import-not-at-top, unused-import
-  from google.appengine.api.images import images_stub
+  if six.PY2:
+    from google.appengine.api.images import images_stub
+  else:
+    from google.appengine.api.images import images_stub
+
   _HAS_WORKING_IMAGES_STUB = True
 except ImportError:
   _HAS_WORKING_IMAGES_STUB = False

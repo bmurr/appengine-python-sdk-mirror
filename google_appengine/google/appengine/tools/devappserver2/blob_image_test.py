@@ -71,7 +71,7 @@ class BlobImageTest(wsgi_test_utils.WSGITestCase):
     self._mock_rewriter = self.mox.CreateMockAnything()
     self._image = MockImage()
     self.app = blob_image.Application()
-    os.environ['APPLICATION_ID'] = 'testapp'
+    os.environ['GAE_APPLICATION'] = 'testapp'
     self._get_images_stub = blob_image._get_images_stub
     blob_image._get_images_stub = lambda: self._images_stub
     self._blobstore_rewriter = blob_download.blobstore_download_rewriter

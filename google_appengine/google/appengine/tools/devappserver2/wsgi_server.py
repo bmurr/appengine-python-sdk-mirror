@@ -33,15 +33,15 @@ import time
 
 import google
 import ipaddr
+from google.appengine._internal import six
 
-from google.appengine._internal import six_subset
 from google.appengine.tools.devappserver2 import errors
 from google.appengine.tools.devappserver2 import http_runtime_constants
 from google.appengine.tools.devappserver2 import shutdown
 from google.appengine.tools.devappserver2 import thread_executor
 
 # pylint: disable=g-import-not-at-top
-if six_subset.PY2:
+if six.PY2:
   import httplib as http_client
 else:
   import http.client as http_client
@@ -200,7 +200,7 @@ _SELECT_THREAD = SelectThread()
 _SELECT_THREAD.start()
 
 
-class _SingleAddressWsgiServer(wsgiserver.CherryPyWSGIServer):
+class _SingleAddressWsgiServer(wsgiserver.CherryPyWSGIServer):  # pytype: disable=module-attr
   """A WSGI server that uses a shared SelectThread and thread pool."""
 
   def __init__(self, host, app):
@@ -312,9 +312,9 @@ class WsgiHostCheck(object):
     self.whitelisted_wildcard_hosts = set()
     self.whitelisted_deep_wildcard_hosts = set()
     for host in whitelisted_hosts:
-      if six_subset.ensure_str(host).startswith('**.'):
+      if six.ensure_str(host).startswith('**.'):
         self.whitelisted_deep_wildcard_hosts.add(self._get_base_host_name(host))
-      elif six_subset.ensure_str(host).startswith('*.'):
+      elif six.ensure_str(host).startswith('*.'):
         self.whitelisted_wildcard_hosts.add(self._get_base_host_name(host))
       else:
         self.whitelisted_hosts.add(host)
@@ -379,21 +379,20 @@ class WsgiHostCheck(object):
   def _is_whitelisted_deep_wildcard_host(self, host):
     """Checks the provided host for whitelisting through deep wildcarding."""
     return any(
-        host.endswith('.' + six_subset.ensure_str(deep_wildcard_host))
+        host.endswith('.' + six.ensure_str(deep_wildcard_host))
         for deep_wildcard_host in self.whitelisted_deep_wildcard_hosts)
 
   def _get_canonical_host_name(self, host):
     """Returns just the host name from a HTTP_HOST header value."""
-    ipv6_match = _IPV6_HOST_RE.match(six_subset.ensure_str(host))
+    ipv6_match = _IPV6_HOST_RE.match(six.ensure_str(host))
     if ipv6_match:
       return ipv6_match.group(1)
     else:
-      return six_subset.ensure_str(host).rsplit(':', 1)[0]
+      return six.ensure_str(host).rsplit(':', 1)[0]
 
   def _get_base_host_name(self, host):
     """Returns the host name without the lowest level domain part."""
-    return six_subset.ensure_str(host).split('.',
-                                             1)[-1] if '.' in host else None
+    return six.ensure_str(host).split('.', 1)[-1] if '.' in host else None
 
 
 class WsgiServer(object):
@@ -479,7 +478,7 @@ class WsgiServer(object):
     """Returns an ssl adapter for the wsgi server, or None if not using ssl."""
     # Use the 'builtin' adapter instead of 'pyopenssl' to use python's
     # standard ssl module instead of OpenSSL
-    return wsgiserver.get_ssl_adapter_class('builtin')(
+    return wsgiserver.get_ssl_adapter_class('builtin')(  # pytype: disable=module-attr
         certificate=self._ssl_certificate_paths.ssl_certificate_path,
         private_key=self._ssl_certificate_paths.ssl_certificate_key_path)
 
@@ -540,7 +539,7 @@ class WsgiServer(object):
         if port == 0:
           port = server.port
       except BindError as bind_error:
-        err = bind_error[1][0] if six_subset.PY2 else bind_error.args[1][0]
+        err = bind_error[1][0] if six.PY2 else bind_error.args[1][0]  # pytype: disable=unsupported-operands
         if err == errno.EADDRINUSE:
           # The port picked at random for first interface was not available
           # on one of the other interfaces. Forget them and try again.

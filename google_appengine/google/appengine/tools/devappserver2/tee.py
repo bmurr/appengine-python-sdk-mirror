@@ -48,4 +48,4 @@ class Tee(threading.Thread):
       self.__deque.append(line)
 
   def get_buf(self):
-    return six.b('').join(self.__deque)
+    return six.b('').join(self.__deque)  # pytype:disable=wrong-arg-types

@@ -386,7 +386,7 @@ class BuildRequestEnvironTest(stub_testing.StubTestCase):
                                                  ('Other', 'Values')], 'body',
                                                 '1.2.3.4', 8080)
     self.assertEqual('', environ.pop('wsgi.errors').getvalue())
-    self.assertEqual(six.b('body'), environ.pop('wsgi.input').getvalue())
+    self.assertEqual(b'body', environ.pop('wsgi.input').getvalue())
     self.assertEqual(expected_environ, environ)
 
   def test_build_request_environ_fake_is_logged_in(self):
@@ -417,7 +417,7 @@ class BuildRequestEnvironTest(stub_testing.StubTestCase):
         8080,
         fake_login=True)
     self.assertEqual('', environ.pop('wsgi.errors').getvalue())
-    self.assertEqual(six.b('body'), environ.pop('wsgi.input').getvalue())
+    self.assertEqual(b'body', environ.pop('wsgi.input').getvalue())
     self.assertEqual(expected_environ, environ)
 
   def test_build_request_environ_unicode_body(self):
@@ -444,7 +444,7 @@ class BuildRequestEnvironTest(stub_testing.StubTestCase):
                                                  ('Other', 'Values')], u'body',
                                                 '1.2.3.4', 80)
     self.assertEqual('', environ.pop('wsgi.errors').getvalue())
-    self.assertEqual(six.b('body'), environ.pop('wsgi.input').getvalue())
+    self.assertEqual(b'body', environ.pop('wsgi.input').getvalue())
     self.assertEqual(expected_environ, environ)
 
   def test_build_request_environ_bytes_body(self):
@@ -2726,7 +2726,7 @@ class TestInteractiveCommandModule(stub_testing.StubTestCase):
         request_type=instance.INTERACTIVE_REQUEST).AndRaise(Exception('error'))
 
     self.mox.ReplayAll()
-    self.assertRaisesRegex(module.InteractiveCommandError, 'error',
+    self.assertRaisesRegex(errors.InteractiveCommandError, 'error',
                            self.servr.send_interactive_command, 'print 5+5')
     self.mox.VerifyAll()
 
@@ -2745,7 +2745,7 @@ class TestInteractiveCommandModule(stub_testing.StubTestCase):
             good_response)
 
     self.mox.ReplayAll()
-    self.assertRaisesRegex(module.InteractiveCommandError,
+    self.assertRaisesRegex(errors.InteractiveCommandError,
                            'Instance was restarted while executing command',
                            self.servr.send_interactive_command, 'print 5+5')
     self.mox.VerifyAll()

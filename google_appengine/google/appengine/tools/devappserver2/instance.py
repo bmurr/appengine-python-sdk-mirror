@@ -548,7 +548,7 @@ class ModernInstanceFactoryMixin(object):
     Returns:
       A string representing the project id.
     """
-    app_external_name = self._module_configuration.application_external_name
+    app_external_name = self._module_configuration.application_external_name  # pytype: disable=attribute-error
     if app_external_name:
       return app_external_name
     elif 'GOOGLE_CLOUD_PROJECT' in os.environ:
@@ -568,11 +568,11 @@ class ModernInstanceFactoryMixin(object):
     runtime_environ = {
         'GAE_ENV': 'localdev',
         'GAE_INSTANCE': str(instance_id),
-        'GAE_MEMORY_MB': str(self._module_configuration.memory_limit),
-        'GAE_RUNTIME': self._module_configuration.runtime,
-        'GAE_SERVICE': self._module_configuration.module_name,
+        'GAE_MEMORY_MB': str(self._module_configuration.memory_limit),  # pytype: disable=attribute-error
+        'GAE_RUNTIME': self._module_configuration.runtime,  # pytype: disable=attribute-error
+        'GAE_SERVICE': self._module_configuration.module_name,  # pytype: disable=attribute-error
         'GAE_VERSION': (
-            self._module_configuration.major_version or instance_start_time),
+            self._module_configuration.major_version or instance_start_time),  # pytype: disable=attribute-error
         'GOOGLE_CLOUD_PROJECT': self._get_google_cloud_project(),
 
         # Python will change the LC_CTYPE env var and write the result back
@@ -588,7 +588,7 @@ class ModernInstanceFactoryMixin(object):
     }
 
     # User configured env vars.
-    for env_var in self._runtime_config_getter().environ:
+    for env_var in self._runtime_config_getter().environ:  # pytype: disable=attribute-error
       if env_var.key not in runtime_environ:
         # We don't allow users to override the standard runtime environment
         # variables.
