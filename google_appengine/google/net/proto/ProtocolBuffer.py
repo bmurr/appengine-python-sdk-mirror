@@ -42,20 +42,6 @@ import httplib
 import itertools
 import re
 import struct
-try:
-
-
-  import google.net.proto.proto1 as proto1
-except ImportError:
-
-  class ProtocolBufferDecodeError(Exception): pass
-  class ProtocolBufferEncodeError(Exception): pass
-  class ProtocolBufferReturnError(Exception): pass
-else:
-  ProtocolBufferDecodeError = proto1.ProtocolBufferDecodeError
-  ProtocolBufferEncodeError = proto1.ProtocolBufferEncodeError
-  ProtocolBufferReturnError = proto1.ProtocolBufferReturnError
-
 __all__ = ['ProtocolMessage', 'Encoder', 'Decoder',
            'ExtendableProtocolMessage',
            'ProtocolBufferDecodeError',
@@ -63,6 +49,18 @@ __all__ = ['ProtocolMessage', 'Encoder', 'Decoder',
            'ProtocolBufferReturnError']
 
 URL_RE = re.compile('^(https?)://([^/]+)(/.*)$')
+
+
+class ProtocolBufferDecodeError(Exception):
+  pass
+
+
+class ProtocolBufferEncodeError(Exception):
+  pass
+
+
+class ProtocolBufferReturnError(Exception):
+  pass
 
 
 class ProtocolMessage:

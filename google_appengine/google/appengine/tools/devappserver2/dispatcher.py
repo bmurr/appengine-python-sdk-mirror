@@ -104,7 +104,6 @@ class Dispatcher(request_info.Dispatcher):
                runtime_stderr_loglevel,
                php_config,
                python_config,
-               java_config,
                go_config,
                custom_config,
                cloud_sql_config,
@@ -138,8 +137,6 @@ class Dispatcher(request_info.Dispatcher):
         runtime-specific configuration. If None then defaults are used.
       python_config: A runtime_config_pb2.PythonConfig instance containing
         Python runtime-specific configuration. If None then defaults are used.
-      java_config: A runtime_config_pb2.JavaConfig instance containing Java
-        runtime-specific configuration. If None then defaults are used.
       go_config: A runtime_config_pb2.GoConfig instance containing Go
         runtime-specific configuration. If None then defaults are used.
       custom_config: A runtime_config_pb2.CustomConfig instance. If None, or
@@ -184,7 +181,6 @@ class Dispatcher(request_info.Dispatcher):
     self._configuration = configuration
     self._php_config = php_config
     self._python_config = python_config
-    self._java_config = java_config
     self._go_config = go_config
     self._custom_config = custom_config
     self._cloud_sql_config = cloud_sql_config
@@ -389,7 +385,6 @@ class Dispatcher(request_info.Dispatcher):
         php_config=self._php_config,
         python_config=self._python_config,
         custom_config=self._custom_config,
-        java_config=self._java_config,
         go_config=self._go_config,
         cloud_sql_config=self._cloud_sql_config,
         vm_config=self._vm_config,

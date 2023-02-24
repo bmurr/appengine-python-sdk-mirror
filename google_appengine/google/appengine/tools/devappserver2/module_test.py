@@ -23,7 +23,6 @@ import logging
 import os
 import re
 import time
-from unittest import mock
 
 # concurrent.futures must appear after import google. Somehow, the linter
 # expects it to come before the linter.
@@ -57,7 +56,6 @@ from google.appengine.tools.devappserver2 import wsgi_server
 from google.appengine.tools.devappserver2.custom import instance_factory as custom_factory
 from google.appengine.tools.devappserver2.go import gaego as gaego_application
 from google.appengine.tools.devappserver2.go import instance_factory as go_factory
-from google.appengine.tools.devappserver2.java import instance_factory as java_factory
 from google.appengine.tools.devappserver2.python import instance_factory as python_factory
 from google.testing.pybase import googletest
 from google.testing.pybase import parameterized
@@ -120,7 +118,6 @@ class ModuleFacade(module.Module):
                custom_config=None,
                php_config=None,
                python_config=None,
-               java_config=None,
                go_config=None,
                vm_config=None):
     super(ModuleFacade, self).__init__(
@@ -133,7 +130,6 @@ class ModuleFacade(module.Module):
         runtime_stderr_loglevel=1,
         php_config=None,
         python_config=None,
-        java_config=None,
         go_config=None,
         custom_config=custom_config,
         cloud_sql_config=None,
@@ -179,7 +175,6 @@ class AutoScalingModuleFacade(module.AutoScalingModule):
         runtime_stderr_loglevel=1,
         php_config=None,
         python_config=None,
-        java_config=None,
         go_config=None,
         custom_config=None,
         cloud_sql_config=None,
@@ -230,7 +225,6 @@ class ManualScalingModuleFacade(module.ManualScalingModule):
         runtime_stderr_loglevel=1,
         php_config=None,
         python_config=None,
-        java_config=None,
         go_config=None,
         custom_config=None,
         cloud_sql_config=None,
@@ -279,7 +273,6 @@ class BasicScalingModuleFacade(module.BasicScalingModule):
         runtime_stderr_loglevel=1,
         php_config=None,
         python_config=None,
-        java_config=None,
         go_config=None,
         custom_config=None,
         cloud_sql_config=None,
@@ -328,7 +321,6 @@ class ExternalModuleFacade(module.ExternalModule):
         runtime_stderr_loglevel=1,
         php_config=None,
         python_config=None,
-        java_config=None,
         go_config=None,
         custom_config=None,
         cloud_sql_config=None,
@@ -648,27 +640,21 @@ class TestModuleGetRuntimeConfig(parameterized.TestCase,
 
   @parameterized.parameters(
       ('php55', 'php_config', runtime_config_pb2.PhpConfig),
-      ('java', 'java_config', runtime_config_pb2.JavaConfig),
-      ('java7', 'java_config', runtime_config_pb2.JavaConfig),
       ('python', 'python_config', runtime_config_pb2.PythonConfig),
       ('python27', 'python_config', runtime_config_pb2.PythonConfig),
       ('python-compat', 'python_config', runtime_config_pb2.PythonConfig),
   )
-  @mock.patch('google.appengine.tools.devappserver2.java.instance_factory.'
-              'JavaRuntimeInstanceFactory._make_java_command',
-              new=mock.Mock(return_value=''))
   def test_copy_runtime_config(self, runtime, field_to_set, field_class):
     module_configuration = ModuleConfigurationStub(runtime=runtime)
     php_config = runtime_config_pb2.PhpConfig()
     python_config = runtime_config_pb2.PhpConfig()
-    java_config = runtime_config_pb2.JavaConfig()
 
     servr = ModuleFacade(
         instance_factory=self.instance_factory,
         module_configuration=module_configuration,
         php_config=php_config,
         python_config=python_config,
-        java_config=java_config)
+    )
     config = servr._get_runtime_config()
 
     self.assertTrue(hasattr(config, field_to_set))
@@ -2681,7 +2667,6 @@ class TestInteractiveCommandModule(stub_testing.StubTestCase):
         runtime_stderr_loglevel=1,
         php_config=None,
         python_config=None,
-        java_config=None,
         go_config=None,
         custom_config=None,
         cloud_sql_config=None,
@@ -2877,12 +2862,6 @@ class InstanceFactoryTest(googletest.TestCase):
     gaego_application.GaeGoApplication(mox.IgnoreArg(), mox.IgnoreArg(),
                                        mox.IgnoreArg())
     self._run_test('go111', go_factory.GoRuntimeInstanceFactory)
-
-  def test_non_vm_java(self):
-    self.mox.StubOutWithMock(java_factory.JavaRuntimeInstanceFactory,
-                             '_make_java_command')
-    java_factory.JavaRuntimeInstanceFactory._make_java_command()
-    self._run_test('java', java_factory.JavaRuntimeInstanceFactory)
 
   def test_vm_python(self):
     self._run_test(

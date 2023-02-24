@@ -408,6 +408,21 @@ class MustEnableWormholeForRuntimeTest(unittest.TestCase):
   def test_go115_returns_yes(self):
     self.assertTrue(api_server._must_enable_wormhole_for_runtime('go115'))
 
+  def test_go116_returns_yes(self):
+    self.assertTrue(api_server._must_enable_wormhole_for_runtime('go116'))
+
+  def test_go117_returns_yes(self):
+    self.assertTrue(api_server._must_enable_wormhole_for_runtime('go117'))
+
+  def test_go118_returns_yes(self):
+    self.assertTrue(api_server._must_enable_wormhole_for_runtime('go118'))
+
+  def test_go119_returns_yes(self):
+    self.assertTrue(api_server._must_enable_wormhole_for_runtime('go119'))
+
+  def test_go120_returns_yes(self):
+    self.assertTrue(api_server._must_enable_wormhole_for_runtime('go120'))
+
   def test_go111_returns_no(self):
     self.assertFalse(api_server._must_enable_wormhole_for_runtime('go111'))
 
@@ -417,11 +432,20 @@ class MustEnableWormholeForRuntimeTest(unittest.TestCase):
   def test_python310_returns_yes(self):
     self.assertTrue(api_server._must_enable_wormhole_for_runtime('python310'))
 
+  def test_python311_returns_yes(self):
+    self.assertTrue(api_server._must_enable_wormhole_for_runtime('python311'))
+
   def test_python27_returns_no(self):
     self.assertFalse(api_server._must_enable_wormhole_for_runtime('python27'))
 
   def test_php72_returns_yes(self):
     self.assertTrue(api_server._must_enable_wormhole_for_runtime('php72'))
+
+  def test_php81_returns_yes(self):
+    self.assertTrue(api_server._must_enable_wormhole_for_runtime('php81'))
+
+  def test_php82_returns_yes(self):
+    self.assertTrue(api_server._must_enable_wormhole_for_runtime('php82'))
 
   def test_php55_returns_no(self):
     self.assertFalse(api_server._must_enable_wormhole_for_runtime('php55'))

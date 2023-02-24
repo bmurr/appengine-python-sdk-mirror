@@ -66,7 +66,7 @@ class ThreadExecutor(futures.Executor):
     return f
   submit.__doc__ = futures.Executor.submit.__doc__
 
-  def shutdown(self, wait=True):
+  def shutdown(self, wait=True):  # pytype: disable=signature-mismatch  # overriding-parameter-name-checks
     with self._shutdown_lock:
       self._shutdown = True
   shutdown.__doc__ = futures.Executor.shutdown.__doc__

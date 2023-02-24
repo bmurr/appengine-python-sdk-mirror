@@ -369,7 +369,6 @@ class DevelopmentServer(object):
         constants.LOG_LEVEL_TO_RUNTIME_CONSTANT[options.log_level],
         self._create_php_config(options, php_version),
         self._create_python_config(options),
-        self._create_java_config(options),
         self._create_go_config(options),
         self._create_custom_config(options),
         self._create_cloud_sql_config(options),
@@ -515,13 +514,6 @@ class DevelopmentServer(object):
       if options.python_startup_args:
         python_config.startup_args = options.python_startup_args
     return python_config
-
-  @staticmethod
-  def _create_java_config(options):
-    java_config = runtime_config_pb2.JavaConfig()
-    if options.jvm_flag:
-      java_config.jvm_args.extend(options.jvm_flag)
-    return java_config
 
   @staticmethod
   def _create_go_config(options):

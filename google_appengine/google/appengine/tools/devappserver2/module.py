@@ -137,7 +137,7 @@ _FILESAPI_DEPRECATION_WARNING = (
     'The Files API is deprecated and will soon be removed. Further information'
     ' is available here: https://cloud.google.com/appengine/docs/deprecations'
     '/files_api')
-_ALLOWED_RUNTIMES_ENV_FLEX = ('python-compat', 'java', 'java7', 'go', 'custom')
+_ALLOWED_RUNTIMES_ENV_FLEX = ('python-compat', 'go', 'custom')
 
 
 def _static_files_regex_from_handlers(handlers):
@@ -383,11 +383,6 @@ class Module(object):
     if (self._python_config and six.ensure_str(
         self._module_configuration.runtime).startswith('python')):
       runtime_config.python_config.CopyFrom(self._python_config)
-    if (self._java_config and
-        (six.ensure_str(self._module_configuration.runtime).startswith('java')
-         or six.ensure_str(
-             self._module_configuration.effective_runtime).startswith('java'))):
-      runtime_config.java_config.CopyFrom(self._java_config)
     if (self._go_config and
         six.ensure_str(self._module_configuration.runtime).startswith('go')):
       runtime_config.go_config.CopyFrom(self._go_config)
@@ -481,7 +476,6 @@ class Module(object):
       # </scrub>
       php_config,
       python_config,
-      java_config,
       go_config,
       custom_config,
       cloud_sql_config,
@@ -520,8 +514,6 @@ class Module(object):
         runtime-specific configuration. If None then defaults are used.
       python_config: A runtime_config_pb2.PythonConfig instance containing
         Python runtime-specific configuration. If None then defaults are used.
-      java_config: A runtime_config_pb2.JavaConfig instance containing Java
-        runtime-specific configuration. If None then defaults are used.
       go_config: A runtime_config_pb2.GoConfig instances containing Go
         runtime-specific configuration. If None then defaults are used.
       custom_config: A runtime_config_pb2.CustomConfig instance. If 'runtime' is
@@ -580,7 +572,6 @@ class Module(object):
     self._balanced_port = balanced_port
     self._php_config = php_config
     self._python_config = python_config
-    self._java_config = java_config
     self._go_config = go_config
     self._custom_config = custom_config
     self._cloud_sql_config = cloud_sql_config
@@ -1208,11 +1199,11 @@ class Module(object):
           self._module_configuration, self._host, self._balanced_port,
           self._api_host, self._api_port, self._auth_domain,
           self._runtime_stderr_loglevel, self._php_config, self._python_config,
-          self._java_config, self._go_config, self._custom_config,
-          self._cloud_sql_config, self._vm_config, self._default_version_port,
-          self._port_registry, self._request_data, self._dispatcher,
-          self._use_mtime_file_watcher, self._watcher_ignore_re,
-          self._allow_skipped_files, self._threadsafe_override)
+          self._go_config, self._custom_config, self._cloud_sql_config,
+          self._vm_config, self._default_version_port, self._port_registry,
+          self._request_data, self._dispatcher, self._use_mtime_file_watcher,
+          self._watcher_ignore_re, self._allow_skipped_files,
+          self._threadsafe_override)
     else:
       raise NotImplementedError('runtime does not support interactive commands')
 
@@ -2881,10 +2872,10 @@ class InteractiveCommandModule(Module):
 
   def __init__(self, module_configuration, host, balanced_port, api_host,
                api_port, auth_domain, runtime_stderr_loglevel, php_config,
-               python_config, java_config, go_config, custom_config,
-               cloud_sql_config, vm_config, default_version_port, port_registry,
-               request_data, dispatcher, use_mtime_file_watcher,
-               watcher_ignore_re, allow_skipped_files, threadsafe_override):
+               python_config, go_config, custom_config, cloud_sql_config,
+               vm_config, default_version_port, port_registry, request_data,
+               dispatcher, use_mtime_file_watcher, watcher_ignore_re,
+               allow_skipped_files, threadsafe_override):
     """Initializer for InteractiveCommandModule.
 
     Args:
@@ -2907,8 +2898,6 @@ class InteractiveCommandModule(Module):
         runtime-specific configuration. If None then defaults are used.
       python_config: A runtime_config_pb2.PythonConfig instance containing
         Python runtime-specific configuration. If None then defaults are used.
-      java_config: A runtime_config_pb2.JavaConfig instance containing Java
-        runtime-specific configuration. If None then defaults are used.
       go_config: A runtime_config_pb2.GoConfig instances containing Go
         runtime-specific configuration. If None then defaults are used.
       custom_config: A runtime_config_pb2.CustomConfig instance. If None, or
@@ -2947,7 +2936,6 @@ class InteractiveCommandModule(Module):
         runtime_stderr_loglevel,
         php_config,
         python_config,
-        java_config,
         go_config,
         custom_config,
         cloud_sql_config,

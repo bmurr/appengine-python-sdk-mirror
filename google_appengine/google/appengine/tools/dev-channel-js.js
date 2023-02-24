@@ -23,7 +23,22 @@ $jscomp.arrayIterator = function(array) {
 };
 $jscomp.makeIterator = function(iterable) {
   var iteratorFunction = "undefined" != typeof Symbol && Symbol.iterator && iterable[Symbol.iterator];
-  return iteratorFunction ? iteratorFunction.call(iterable) : $jscomp.arrayIterator(iterable);
+  if (iteratorFunction) {
+    return iteratorFunction.call(iterable);
+  }
+  if ("number" == typeof iterable.length) {
+    return $jscomp.arrayIterator(iterable);
+  }
+  throw Error(String(iterable) + " is not an iterable or ArrayLike");
+};
+$jscomp.arrayFromIterator = function(iterator) {
+  for (var i, arr = []; !(i = iterator.next()).done;) {
+    arr.push(i.value);
+  }
+  return arr;
+};
+$jscomp.arrayFromIterable = function(iterable) {
+  return iterable instanceof Array ? iterable : $jscomp.arrayFromIterator($jscomp.makeIterator(iterable));
 };
 $jscomp.ASSUME_ES5 = !1;
 $jscomp.ASSUME_NO_NATIVE_MAP = !1;
@@ -150,6 +165,9 @@ $jscomp.generator.Context.prototype.yield = function(value, resumeAddress) {
 };
 $jscomp.generator.Context.prototype.jumpTo = function(nextAddress) {
   this.nextAddress = nextAddress;
+};
+$jscomp.generator.Context.prototype.jumpToEnd = function() {
+  this.nextAddress = 0;
 };
 $jscomp.generator.Context.prototype.setFinallyBlock = function(finallyAddress) {
   this.catchAddress_ = 0;
@@ -285,6 +303,12 @@ $jscomp.asyncExecutePromiseGeneratorFunction = function(generatorFunction) {
 };
 $jscomp.asyncExecutePromiseGeneratorProgram = function(program) {
   return $jscomp.asyncExecutePromiseGenerator(new $jscomp.generator.Generator_(new $jscomp.generator.Engine_(program)));
+};
+$jscomp.getRestArguments = function() {
+  for (var startIndex = Number(this), restArgs = [], i = startIndex; i < arguments.length; i++) {
+    restArgs[i - startIndex] = arguments[i];
+  }
+  return restArgs;
 };
 $jscomp.initSymbol = function() {
 };
@@ -977,12 +1001,15 @@ goog.define = function(name, defaultValue) {
 goog.FEATURESET_YEAR = 2012;
 goog.DEBUG = !0;
 goog.LOCALE = "en";
-goog.getLocale = function() {
-  return "en";
-};
 goog.TRUSTED_SITE = !0;
 goog.DISALLOW_TEST_ONLY_CODE = !goog.DEBUG;
 goog.ENABLE_CHROME_APP_SAFE_SCRIPT_LOADING = !1;
+goog.readFlagInternalDoNotUseOrElse = function(googFlagId, defaultValue) {
+  var obj = goog.getObjectByName(goog.FLAGS_OBJECT_), val = obj && obj[googFlagId];
+  return null != val ? val : defaultValue;
+};
+goog.FLAGS_OBJECT_ = "CLOSURE_FLAGS";
+goog.FLAGS_STAGING_DEFAULT = !0;
 goog.provide = function(name) {
   if (goog.isInModuleLoader_()) {
     throw Error("goog.provide cannot be used within a module.");
@@ -1021,6 +1048,17 @@ goog.module.get = function() {
 };
 goog.module.getInternal_ = function() {
   return null;
+};
+goog.requireDynamic = function() {
+  return null;
+};
+goog.importHandler_ = null;
+goog.uncompiledChunkIdHandler_ = null;
+goog.setImportHandlerInternalDoNotCallOrElse = function(fn) {
+  goog.importHandler_ = fn;
+};
+goog.setUncompiledChunkIdHandlerInternalDoNotCallOrElse = function(fn) {
+  goog.uncompiledChunkIdHandler_ = fn;
 };
 goog.ModuleType = {ES6:"es6", GOOG:"goog"};
 goog.moduleLoaderState_ = null;
@@ -1962,6 +2000,270 @@ function module$contents$goog$array_concatMap(arr, f, opt_obj) {
   return module$contents$goog$array_concat.apply([], module$contents$goog$array_map(arr, f, opt_obj));
 }
 goog.array.concatMap = module$contents$goog$array_concatMap;
+goog.dom.HtmlElement = function() {
+};
+goog.dom.TagName = function() {
+};
+goog.dom.TagName.cast = function(name) {
+  return name;
+};
+goog.dom.TagName.prototype.toString = function() {
+};
+goog.dom.TagName.A = "A";
+goog.dom.TagName.ABBR = "ABBR";
+goog.dom.TagName.ACRONYM = "ACRONYM";
+goog.dom.TagName.ADDRESS = "ADDRESS";
+goog.dom.TagName.APPLET = "APPLET";
+goog.dom.TagName.AREA = "AREA";
+goog.dom.TagName.ARTICLE = "ARTICLE";
+goog.dom.TagName.ASIDE = "ASIDE";
+goog.dom.TagName.AUDIO = "AUDIO";
+goog.dom.TagName.B = "B";
+goog.dom.TagName.BASE = "BASE";
+goog.dom.TagName.BASEFONT = "BASEFONT";
+goog.dom.TagName.BDI = "BDI";
+goog.dom.TagName.BDO = "BDO";
+goog.dom.TagName.BIG = "BIG";
+goog.dom.TagName.BLOCKQUOTE = "BLOCKQUOTE";
+goog.dom.TagName.BODY = "BODY";
+goog.dom.TagName.BR = "BR";
+goog.dom.TagName.BUTTON = "BUTTON";
+goog.dom.TagName.CANVAS = "CANVAS";
+goog.dom.TagName.CAPTION = "CAPTION";
+goog.dom.TagName.CENTER = "CENTER";
+goog.dom.TagName.CITE = "CITE";
+goog.dom.TagName.CODE = "CODE";
+goog.dom.TagName.COL = "COL";
+goog.dom.TagName.COLGROUP = "COLGROUP";
+goog.dom.TagName.COMMAND = "COMMAND";
+goog.dom.TagName.DATA = "DATA";
+goog.dom.TagName.DATALIST = "DATALIST";
+goog.dom.TagName.DD = "DD";
+goog.dom.TagName.DEL = "DEL";
+goog.dom.TagName.DETAILS = "DETAILS";
+goog.dom.TagName.DFN = "DFN";
+goog.dom.TagName.DIALOG = "DIALOG";
+goog.dom.TagName.DIR = "DIR";
+goog.dom.TagName.DIV = "DIV";
+goog.dom.TagName.DL = "DL";
+goog.dom.TagName.DT = "DT";
+goog.dom.TagName.EM = "EM";
+goog.dom.TagName.EMBED = "EMBED";
+goog.dom.TagName.FIELDSET = "FIELDSET";
+goog.dom.TagName.FIGCAPTION = "FIGCAPTION";
+goog.dom.TagName.FIGURE = "FIGURE";
+goog.dom.TagName.FONT = "FONT";
+goog.dom.TagName.FOOTER = "FOOTER";
+goog.dom.TagName.FORM = "FORM";
+goog.dom.TagName.FRAME = "FRAME";
+goog.dom.TagName.FRAMESET = "FRAMESET";
+goog.dom.TagName.H1 = "H1";
+goog.dom.TagName.H2 = "H2";
+goog.dom.TagName.H3 = "H3";
+goog.dom.TagName.H4 = "H4";
+goog.dom.TagName.H5 = "H5";
+goog.dom.TagName.H6 = "H6";
+goog.dom.TagName.HEAD = "HEAD";
+goog.dom.TagName.HEADER = "HEADER";
+goog.dom.TagName.HGROUP = "HGROUP";
+goog.dom.TagName.HR = "HR";
+goog.dom.TagName.HTML = "HTML";
+goog.dom.TagName.I = "I";
+goog.dom.TagName.IFRAME = "IFRAME";
+goog.dom.TagName.IMG = "IMG";
+goog.dom.TagName.INPUT = "INPUT";
+goog.dom.TagName.INS = "INS";
+goog.dom.TagName.ISINDEX = "ISINDEX";
+goog.dom.TagName.KBD = "KBD";
+goog.dom.TagName.KEYGEN = "KEYGEN";
+goog.dom.TagName.LABEL = "LABEL";
+goog.dom.TagName.LEGEND = "LEGEND";
+goog.dom.TagName.LI = "LI";
+goog.dom.TagName.LINK = "LINK";
+goog.dom.TagName.MAIN = "MAIN";
+goog.dom.TagName.MAP = "MAP";
+goog.dom.TagName.MARK = "MARK";
+goog.dom.TagName.MATH = "MATH";
+goog.dom.TagName.MENU = "MENU";
+goog.dom.TagName.MENUITEM = "MENUITEM";
+goog.dom.TagName.META = "META";
+goog.dom.TagName.METER = "METER";
+goog.dom.TagName.NAV = "NAV";
+goog.dom.TagName.NOFRAMES = "NOFRAMES";
+goog.dom.TagName.NOSCRIPT = "NOSCRIPT";
+goog.dom.TagName.OBJECT = "OBJECT";
+goog.dom.TagName.OL = "OL";
+goog.dom.TagName.OPTGROUP = "OPTGROUP";
+goog.dom.TagName.OPTION = "OPTION";
+goog.dom.TagName.OUTPUT = "OUTPUT";
+goog.dom.TagName.P = "P";
+goog.dom.TagName.PARAM = "PARAM";
+goog.dom.TagName.PICTURE = "PICTURE";
+goog.dom.TagName.PRE = "PRE";
+goog.dom.TagName.PROGRESS = "PROGRESS";
+goog.dom.TagName.Q = "Q";
+goog.dom.TagName.RP = "RP";
+goog.dom.TagName.RT = "RT";
+goog.dom.TagName.RTC = "RTC";
+goog.dom.TagName.RUBY = "RUBY";
+goog.dom.TagName.S = "S";
+goog.dom.TagName.SAMP = "SAMP";
+goog.dom.TagName.SCRIPT = "SCRIPT";
+goog.dom.TagName.SECTION = "SECTION";
+goog.dom.TagName.SELECT = "SELECT";
+goog.dom.TagName.SMALL = "SMALL";
+goog.dom.TagName.SOURCE = "SOURCE";
+goog.dom.TagName.SPAN = "SPAN";
+goog.dom.TagName.STRIKE = "STRIKE";
+goog.dom.TagName.STRONG = "STRONG";
+goog.dom.TagName.STYLE = "STYLE";
+goog.dom.TagName.SUB = "SUB";
+goog.dom.TagName.SUMMARY = "SUMMARY";
+goog.dom.TagName.SUP = "SUP";
+goog.dom.TagName.SVG = "SVG";
+goog.dom.TagName.TABLE = "TABLE";
+goog.dom.TagName.TBODY = "TBODY";
+goog.dom.TagName.TD = "TD";
+goog.dom.TagName.TEMPLATE = "TEMPLATE";
+goog.dom.TagName.TEXTAREA = "TEXTAREA";
+goog.dom.TagName.TFOOT = "TFOOT";
+goog.dom.TagName.TH = "TH";
+goog.dom.TagName.THEAD = "THEAD";
+goog.dom.TagName.TIME = "TIME";
+goog.dom.TagName.TITLE = "TITLE";
+goog.dom.TagName.TR = "TR";
+goog.dom.TagName.TRACK = "TRACK";
+goog.dom.TagName.TT = "TT";
+goog.dom.TagName.U = "U";
+goog.dom.TagName.UL = "UL";
+goog.dom.TagName.VAR = "VAR";
+goog.dom.TagName.VIDEO = "VIDEO";
+goog.dom.TagName.WBR = "WBR";
+goog.dom.element = {};
+var module$contents$goog$dom$element_isElement = function(value) {
+  return goog.isObject(value) && value.nodeType === goog.dom.NodeType.ELEMENT;
+}, module$contents$goog$dom$element_isHtmlElement = function(value) {
+  return goog.isObject(value) && module$contents$goog$dom$element_isElement(value) && (!value.namespaceURI || "http://www.w3.org/1999/xhtml" === value.namespaceURI);
+}, module$contents$goog$dom$element_isHtmlElementOfType = function(value, tagName) {
+  return goog.isObject(value) && module$contents$goog$dom$element_isHtmlElement(value) && value.tagName.toUpperCase() === tagName.toString();
+}, module$contents$goog$dom$element_isHtmlAnchorElement = function(value) {
+  return module$contents$goog$dom$element_isHtmlElementOfType(value, goog.dom.TagName.A);
+}, module$contents$goog$dom$element_isHtmlButtonElement = function(value) {
+  return module$contents$goog$dom$element_isHtmlElementOfType(value, goog.dom.TagName.BUTTON);
+}, module$contents$goog$dom$element_isHtmlLinkElement = function(value) {
+  return module$contents$goog$dom$element_isHtmlElementOfType(value, goog.dom.TagName.LINK);
+}, module$contents$goog$dom$element_isHtmlImageElement = function(value) {
+  return module$contents$goog$dom$element_isHtmlElementOfType(value, goog.dom.TagName.IMG);
+}, module$contents$goog$dom$element_isHtmlAudioElement = function(value) {
+  return module$contents$goog$dom$element_isHtmlElementOfType(value, goog.dom.TagName.AUDIO);
+}, module$contents$goog$dom$element_isHtmlVideoElement = function(value) {
+  return module$contents$goog$dom$element_isHtmlElementOfType(value, goog.dom.TagName.VIDEO);
+}, module$contents$goog$dom$element_isHtmlInputElement = function(value) {
+  return module$contents$goog$dom$element_isHtmlElementOfType(value, goog.dom.TagName.INPUT);
+}, module$contents$goog$dom$element_isHtmlTextAreaElement = function(value) {
+  return module$contents$goog$dom$element_isHtmlElementOfType(value, goog.dom.TagName.TEXTAREA);
+}, module$contents$goog$dom$element_isHtmlCanvasElement = function(value) {
+  return module$contents$goog$dom$element_isHtmlElementOfType(value, goog.dom.TagName.CANVAS);
+}, module$contents$goog$dom$element_isHtmlEmbedElement = function(value) {
+  return module$contents$goog$dom$element_isHtmlElementOfType(value, goog.dom.TagName.EMBED);
+}, module$contents$goog$dom$element_isHtmlFormElement = function(value) {
+  return module$contents$goog$dom$element_isHtmlElementOfType(value, goog.dom.TagName.FORM);
+}, module$contents$goog$dom$element_isHtmlFrameElement = function(value) {
+  return module$contents$goog$dom$element_isHtmlElementOfType(value, goog.dom.TagName.FRAME);
+}, module$contents$goog$dom$element_isHtmlIFrameElement = function(value) {
+  return module$contents$goog$dom$element_isHtmlElementOfType(value, goog.dom.TagName.IFRAME);
+}, module$contents$goog$dom$element_isHtmlObjectElement = function(value) {
+  return module$contents$goog$dom$element_isHtmlElementOfType(value, goog.dom.TagName.OBJECT);
+}, module$contents$goog$dom$element_isHtmlScriptElement = function(value) {
+  return module$contents$goog$dom$element_isHtmlElementOfType(value, goog.dom.TagName.SCRIPT);
+};
+goog.dom.element.isElement = module$contents$goog$dom$element_isElement;
+goog.dom.element.isHtmlElement = module$contents$goog$dom$element_isHtmlElement;
+goog.dom.element.isHtmlElementOfType = module$contents$goog$dom$element_isHtmlElementOfType;
+goog.dom.element.isHtmlAnchorElement = module$contents$goog$dom$element_isHtmlAnchorElement;
+goog.dom.element.isHtmlButtonElement = module$contents$goog$dom$element_isHtmlButtonElement;
+goog.dom.element.isHtmlLinkElement = module$contents$goog$dom$element_isHtmlLinkElement;
+goog.dom.element.isHtmlImageElement = module$contents$goog$dom$element_isHtmlImageElement;
+goog.dom.element.isHtmlAudioElement = module$contents$goog$dom$element_isHtmlAudioElement;
+goog.dom.element.isHtmlVideoElement = module$contents$goog$dom$element_isHtmlVideoElement;
+goog.dom.element.isHtmlInputElement = module$contents$goog$dom$element_isHtmlInputElement;
+goog.dom.element.isHtmlTextAreaElement = module$contents$goog$dom$element_isHtmlTextAreaElement;
+goog.dom.element.isHtmlCanvasElement = module$contents$goog$dom$element_isHtmlCanvasElement;
+goog.dom.element.isHtmlEmbedElement = module$contents$goog$dom$element_isHtmlEmbedElement;
+goog.dom.element.isHtmlFormElement = module$contents$goog$dom$element_isHtmlFormElement;
+goog.dom.element.isHtmlFrameElement = module$contents$goog$dom$element_isHtmlFrameElement;
+goog.dom.element.isHtmlIFrameElement = module$contents$goog$dom$element_isHtmlIFrameElement;
+goog.dom.element.isHtmlObjectElement = module$contents$goog$dom$element_isHtmlObjectElement;
+goog.dom.element.isHtmlScriptElement = module$contents$goog$dom$element_isHtmlScriptElement;
+goog.asserts.dom = {};
+var module$contents$goog$asserts$dom_assertIsElement = function(value) {
+  goog.asserts.ENABLE_ASSERTS && !module$contents$goog$dom$element_isElement(value) && goog.asserts.fail("Argument is not an Element; got: " + module$contents$goog$asserts$dom_debugStringForType(value));
+  return value;
+}, module$contents$goog$asserts$dom_assertIsHtmlElement = function(value) {
+  goog.asserts.ENABLE_ASSERTS && !module$contents$goog$dom$element_isHtmlElement(value) && goog.asserts.fail("Argument is not an HTML Element; got: " + module$contents$goog$asserts$dom_debugStringForType(value));
+  return value;
+}, module$contents$goog$asserts$dom_assertIsHtmlElementOfType = function(value, tagName) {
+  goog.asserts.ENABLE_ASSERTS && !module$contents$goog$dom$element_isHtmlElementOfType(value, tagName) && goog.asserts.fail("Argument is not an HTML Element with tag name " + (tagName.toString() + "; got: " + module$contents$goog$asserts$dom_debugStringForType(value)));
+  return value;
+}, module$contents$goog$asserts$dom_assertIsHtmlAnchorElement = function(value) {
+  return module$contents$goog$asserts$dom_assertIsHtmlElementOfType(value, goog.dom.TagName.A);
+}, module$contents$goog$asserts$dom_assertIsHtmlButtonElement = function(value) {
+  return module$contents$goog$asserts$dom_assertIsHtmlElementOfType(value, goog.dom.TagName.BUTTON);
+}, module$contents$goog$asserts$dom_assertIsHtmlLinkElement = function(value) {
+  return module$contents$goog$asserts$dom_assertIsHtmlElementOfType(value, goog.dom.TagName.LINK);
+}, module$contents$goog$asserts$dom_assertIsHtmlImageElement = function(value) {
+  return module$contents$goog$asserts$dom_assertIsHtmlElementOfType(value, goog.dom.TagName.IMG);
+}, module$contents$goog$asserts$dom_assertIsHtmlAudioElement = function(value) {
+  return module$contents$goog$asserts$dom_assertIsHtmlElementOfType(value, goog.dom.TagName.AUDIO);
+}, module$contents$goog$asserts$dom_assertIsHtmlVideoElement = function(value) {
+  return module$contents$goog$asserts$dom_assertIsHtmlElementOfType(value, goog.dom.TagName.VIDEO);
+}, module$contents$goog$asserts$dom_assertIsHtmlInputElement = function(value) {
+  return module$contents$goog$asserts$dom_assertIsHtmlElementOfType(value, goog.dom.TagName.INPUT);
+}, module$contents$goog$asserts$dom_assertIsHtmlTextAreaElement = function(value) {
+  return module$contents$goog$asserts$dom_assertIsHtmlElementOfType(value, goog.dom.TagName.TEXTAREA);
+}, module$contents$goog$asserts$dom_assertIsHtmlCanvasElement = function(value) {
+  return module$contents$goog$asserts$dom_assertIsHtmlElementOfType(value, goog.dom.TagName.CANVAS);
+}, module$contents$goog$asserts$dom_assertIsHtmlEmbedElement = function(value) {
+  return module$contents$goog$asserts$dom_assertIsHtmlElementOfType(value, goog.dom.TagName.EMBED);
+}, module$contents$goog$asserts$dom_assertIsHtmlFormElement = function(value) {
+  return module$contents$goog$asserts$dom_assertIsHtmlElementOfType(value, goog.dom.TagName.FORM);
+}, module$contents$goog$asserts$dom_assertIsHtmlFrameElement = function(value) {
+  return module$contents$goog$asserts$dom_assertIsHtmlElementOfType(value, goog.dom.TagName.FRAME);
+}, module$contents$goog$asserts$dom_assertIsHtmlIFrameElement = function(value) {
+  return module$contents$goog$asserts$dom_assertIsHtmlElementOfType(value, goog.dom.TagName.IFRAME);
+}, module$contents$goog$asserts$dom_assertIsHtmlObjectElement = function(value) {
+  return module$contents$goog$asserts$dom_assertIsHtmlElementOfType(value, goog.dom.TagName.OBJECT);
+}, module$contents$goog$asserts$dom_assertIsHtmlScriptElement = function(value) {
+  return module$contents$goog$asserts$dom_assertIsHtmlElementOfType(value, goog.dom.TagName.SCRIPT);
+}, module$contents$goog$asserts$dom_debugStringForType = function(value) {
+  if (goog.isObject(value)) {
+    try {
+      return value.constructor.displayName || value.constructor.name || Object.prototype.toString.call(value);
+    } catch (e) {
+      return "<object could not be stringified>";
+    }
+  } else {
+    return void 0 === value ? "undefined" : null === value ? "null" : typeof value;
+  }
+};
+goog.asserts.dom.assertIsElement = module$contents$goog$asserts$dom_assertIsElement;
+goog.asserts.dom.assertIsHtmlElement = module$contents$goog$asserts$dom_assertIsHtmlElement;
+goog.asserts.dom.assertIsHtmlElementOfType = module$contents$goog$asserts$dom_assertIsHtmlElementOfType;
+goog.asserts.dom.assertIsHtmlAnchorElement = module$contents$goog$asserts$dom_assertIsHtmlAnchorElement;
+goog.asserts.dom.assertIsHtmlButtonElement = module$contents$goog$asserts$dom_assertIsHtmlButtonElement;
+goog.asserts.dom.assertIsHtmlLinkElement = module$contents$goog$asserts$dom_assertIsHtmlLinkElement;
+goog.asserts.dom.assertIsHtmlImageElement = module$contents$goog$asserts$dom_assertIsHtmlImageElement;
+goog.asserts.dom.assertIsHtmlAudioElement = module$contents$goog$asserts$dom_assertIsHtmlAudioElement;
+goog.asserts.dom.assertIsHtmlVideoElement = module$contents$goog$asserts$dom_assertIsHtmlVideoElement;
+goog.asserts.dom.assertIsHtmlInputElement = module$contents$goog$asserts$dom_assertIsHtmlInputElement;
+goog.asserts.dom.assertIsHtmlTextAreaElement = module$contents$goog$asserts$dom_assertIsHtmlTextAreaElement;
+goog.asserts.dom.assertIsHtmlCanvasElement = module$contents$goog$asserts$dom_assertIsHtmlCanvasElement;
+goog.asserts.dom.assertIsHtmlEmbedElement = module$contents$goog$asserts$dom_assertIsHtmlEmbedElement;
+goog.asserts.dom.assertIsHtmlFormElement = module$contents$goog$asserts$dom_assertIsHtmlFormElement;
+goog.asserts.dom.assertIsHtmlFrameElement = module$contents$goog$asserts$dom_assertIsHtmlFrameElement;
+goog.asserts.dom.assertIsHtmlIFrameElement = module$contents$goog$asserts$dom_assertIsHtmlIFrameElement;
+goog.asserts.dom.assertIsHtmlObjectElement = module$contents$goog$asserts$dom_assertIsHtmlObjectElement;
+goog.asserts.dom.assertIsHtmlScriptElement = module$contents$goog$asserts$dom_assertIsHtmlScriptElement;
 goog.dom.asserts = {};
 goog.dom.asserts.assertIsLocation = function(o) {
   if (goog.asserts.ENABLE_ASSERTS) {
@@ -1969,58 +2271,6 @@ goog.dom.asserts.assertIsLocation = function(o) {
     win && (!o || !(o instanceof win.Location) && o instanceof win.Element) && goog.asserts.fail("Argument is not a Location (or a non-Element mock); got: %s", goog.dom.asserts.debugStringForType_(o));
   }
   return o;
-};
-goog.dom.asserts.assertIsElementType_ = function(o, typename) {
-  if (goog.asserts.ENABLE_ASSERTS) {
-    var win = goog.dom.asserts.getWindow_(o);
-    win && "undefined" != typeof win[typename] && (o && (o instanceof win[typename] || !(o instanceof win.Location || o instanceof win.Element)) || goog.asserts.fail("Argument is not a %s (or a non-Element, non-Location mock); got: %s", typename, goog.dom.asserts.debugStringForType_(o)));
-  }
-  return o;
-};
-goog.dom.asserts.assertIsHTMLAnchorElement = function(o) {
-  return goog.dom.asserts.assertIsElementType_(o, "HTMLAnchorElement");
-};
-goog.dom.asserts.assertIsHTMLButtonElement = function(o) {
-  return goog.dom.asserts.assertIsElementType_(o, "HTMLButtonElement");
-};
-goog.dom.asserts.assertIsHTMLLinkElement = function(o) {
-  return goog.dom.asserts.assertIsElementType_(o, "HTMLLinkElement");
-};
-goog.dom.asserts.assertIsHTMLImageElement = function(o) {
-  return goog.dom.asserts.assertIsElementType_(o, "HTMLImageElement");
-};
-goog.dom.asserts.assertIsHTMLAudioElement = function(o) {
-  return goog.dom.asserts.assertIsElementType_(o, "HTMLAudioElement");
-};
-goog.dom.asserts.assertIsHTMLVideoElement = function(o) {
-  return goog.dom.asserts.assertIsElementType_(o, "HTMLVideoElement");
-};
-goog.dom.asserts.assertIsHTMLInputElement = function(o) {
-  return goog.dom.asserts.assertIsElementType_(o, "HTMLInputElement");
-};
-goog.dom.asserts.assertIsHTMLTextAreaElement = function(o) {
-  return goog.dom.asserts.assertIsElementType_(o, "HTMLTextAreaElement");
-};
-goog.dom.asserts.assertIsHTMLCanvasElement = function(o) {
-  return goog.dom.asserts.assertIsElementType_(o, "HTMLCanvasElement");
-};
-goog.dom.asserts.assertIsHTMLEmbedElement = function(o) {
-  return goog.dom.asserts.assertIsElementType_(o, "HTMLEmbedElement");
-};
-goog.dom.asserts.assertIsHTMLFormElement = function(o) {
-  return goog.dom.asserts.assertIsElementType_(o, "HTMLFormElement");
-};
-goog.dom.asserts.assertIsHTMLFrameElement = function(o) {
-  return goog.dom.asserts.assertIsElementType_(o, "HTMLFrameElement");
-};
-goog.dom.asserts.assertIsHTMLIFrameElement = function(o) {
-  return goog.dom.asserts.assertIsElementType_(o, "HTMLIFrameElement");
-};
-goog.dom.asserts.assertIsHTMLObjectElement = function(o) {
-  return goog.dom.asserts.assertIsElementType_(o, "HTMLObjectElement");
-};
-goog.dom.asserts.assertIsHTMLScriptElement = function(o) {
-  return goog.dom.asserts.assertIsElementType_(o, "HTMLScriptElement");
 };
 goog.dom.asserts.debugStringForType_ = function(value) {
   if (goog.isObject(value)) {
@@ -2044,9 +2294,23 @@ goog.dom.asserts.getWindow_ = function(o) {
   }
   return null;
 };
-var module$exports$goog$labs$userAgent = {}, JSCompiler_inline_result$jscomp$36;
-JSCompiler_inline_result$jscomp$36 = !1;
-module$exports$goog$labs$userAgent.USE_CLIENT_HINTS = JSCompiler_inline_result$jscomp$36;
+goog.flags = {};
+var module$contents$goog$flags_STAGING = goog.readFlagInternalDoNotUseOrElse(1, goog.FLAGS_STAGING_DEFAULT);
+goog.flags.USE_USER_AGENT_CLIENT_HINTS = goog.readFlagInternalDoNotUseOrElse(610401301, !1);
+goog.flags.ASYNC_THROW_ON_UNICODE_TO_BYTE = goog.readFlagInternalDoNotUseOrElse(899588437, !1);
+goog.flags.TESTONLY_FALSE_FLAG = goog.readFlagInternalDoNotUseOrElse(2147483644, !1);
+goog.flags.TESTONLY_DEBUG_FLAG = goog.readFlagInternalDoNotUseOrElse(2147483645, goog.DEBUG);
+goog.flags.TESTONLY_STAGING_FLAG = goog.readFlagInternalDoNotUseOrElse(2147483646, module$contents$goog$flags_STAGING);
+goog.flags.TESTONLY_TRUE_FLAG = goog.readFlagInternalDoNotUseOrElse(2147483647, !0);
+goog.labs = {};
+goog.labs.userAgent = {};
+var module$contents$goog$labs$userAgent_forceClientHintsInTests = !1;
+goog.labs.userAgent.setUseClientHintsForTesting = function(use) {
+  module$contents$goog$labs$userAgent_forceClientHintsInTests = use;
+};
+goog.labs.userAgent.useClientHints = function() {
+  return goog.flags.USE_USER_AGENT_CLIENT_HINTS || module$contents$goog$labs$userAgent_forceClientHintsInTests;
+};
 goog.string = {};
 goog.string.internal = {};
 goog.string.internal.startsWith = function(str, prefix) {
@@ -2131,8 +2395,6 @@ goog.string.internal.compareVersions = function(version1, version2) {
 goog.string.internal.compareElements_ = function(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
 };
-goog.labs = {};
-goog.labs.userAgent = {};
 goog.labs.userAgent.util = {};
 function module$contents$goog$labs$userAgent$util_getNativeUserAgentString() {
   var navigator = goog.global.navigator;
@@ -2145,9 +2407,6 @@ function module$contents$goog$labs$userAgent$util_getNativeUserAgentString() {
   return "";
 }
 function module$contents$goog$labs$userAgent$util_getNativeUserAgentData() {
-  if (!module$exports$goog$labs$userAgent.USE_CLIENT_HINTS) {
-    return null;
-  }
   var navigator = goog.global.navigator;
   return navigator ? navigator.userAgentData || null : null;
 }
@@ -2168,6 +2427,9 @@ function module$contents$goog$labs$userAgent$util_getUserAgentData() {
   return module$contents$goog$labs$userAgent$util_userAgentDataInternal;
 }
 function module$contents$goog$labs$userAgent$util_matchUserAgentDataBrand(str) {
+  if (!(0,goog.labs.userAgent.useClientHints)()) {
+    return !1;
+  }
   var data = module$contents$goog$labs$userAgent$util_userAgentDataInternal;
   return data ? data.brands.some(function($jscomp$destructuring$var0) {
     var $jscomp$destructuring$var1 = $jscomp$destructuring$var0, brand = $jscomp$destructuring$var1.brand;
@@ -2259,15 +2521,14 @@ module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.Version.prototyp
 var module$exports$goog$labs$userAgent$highEntropy$highEntropyData = {};
 module$exports$goog$labs$userAgent$highEntropy$highEntropyData.fullVersionList = new module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.HighEntropyValue("fullVersionList");
 module$exports$goog$labs$userAgent$highEntropy$highEntropyData.platformVersion = new module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.HighEntropyValue("platformVersion");
-function module$contents$goog$labs$userAgent$highEntropy$highEntropyData_resetAllForTesting() {
-  module$exports$goog$labs$userAgent$highEntropy$highEntropyData.fullVersionList.resetForTesting();
-  module$exports$goog$labs$userAgent$highEntropy$highEntropyData.platformVersion.resetForTesting();
-}
-module$exports$goog$labs$userAgent$highEntropy$highEntropyData.resetAllForTesting = module$contents$goog$labs$userAgent$highEntropy$highEntropyData_resetAllForTesting;
 goog.labs.userAgent.browser = {};
 var module$contents$goog$labs$userAgent$browser_Brand = {ANDROID_BROWSER:"Android Browser", CHROMIUM:"Chromium", EDGE:"Microsoft Edge", FIREFOX:"Firefox", IE:"Internet Explorer", OPERA:"Opera", SAFARI:"Safari", SILK:"Silk",};
 goog.labs.userAgent.browser.Brand = module$contents$goog$labs$userAgent$browser_Brand;
-function module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand() {
+function module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand(ignoreClientHintsFlag) {
+  ignoreClientHintsFlag = void 0 === ignoreClientHintsFlag ? !1 : ignoreClientHintsFlag;
+  if (!ignoreClientHintsFlag && !(0,goog.labs.userAgent.useClientHints)()) {
+    return !1;
+  }
   var userAgentData = module$contents$goog$labs$userAgent$util_userAgentDataInternal;
   return !!userAgentData && 0 < userAgentData.brands.length;
 }
@@ -2451,76 +2712,88 @@ function module$contents$goog$labs$userAgent$browser_versionOf_(browser) {
   return Number(majorVersion);
 }
 function module$contents$goog$labs$userAgent$browser_isAtLeast(brand, majorVersion) {
-  goog.asserts.assert(Math.floor(majorVersion) === majorVersion, "Major version must be an integer");
+  (0,goog.asserts.assert)(Math.floor(majorVersion) === majorVersion, "Major version must be an integer");
   return module$contents$goog$labs$userAgent$browser_versionOf_(brand) >= majorVersion;
 }
 goog.labs.userAgent.browser.isAtLeast = module$contents$goog$labs$userAgent$browser_isAtLeast;
 function module$contents$goog$labs$userAgent$browser_isAtMost(brand, majorVersion) {
-  goog.asserts.assert(Math.floor(majorVersion) === majorVersion, "Major version must be an integer");
+  (0,goog.asserts.assert)(Math.floor(majorVersion) === majorVersion, "Major version must be an integer");
   return module$contents$goog$labs$userAgent$browser_versionOf_(brand) <= majorVersion;
 }
 goog.labs.userAgent.browser.isAtMost = module$contents$goog$labs$userAgent$browser_isAtMost;
-var module$contents$goog$labs$userAgent$browser_HighEntropyBrandVersion = function(brand) {
+var module$contents$goog$labs$userAgent$browser_HighEntropyBrandVersion = function(brand, useUach, fallbackVersion) {
   this.brand_ = brand;
+  this.version_ = new module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.Version(fallbackVersion);
+  this.useUach_ = useUach;
 };
 module$contents$goog$labs$userAgent$browser_HighEntropyBrandVersion.prototype.getIfLoaded = function() {
-  var $jscomp$this = this, loadedVersionList = module$exports$goog$labs$userAgent$highEntropy$highEntropyData.fullVersionList.getIfLoaded();
-  if (void 0 !== loadedVersionList) {
-    var matchingBrand = loadedVersionList.find(function($jscomp$destructuring$var4) {
-      var $jscomp$destructuring$var5 = $jscomp$destructuring$var4, brand = $jscomp$destructuring$var5.brand;
-      return $jscomp$this.brand_ === brand;
-    });
-    goog.asserts.assertExists(matchingBrand);
-    return new module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.Version(matchingBrand.version);
+  var $jscomp$this = this;
+  if (this.useUach_) {
+    var loadedVersionList = module$exports$goog$labs$userAgent$highEntropy$highEntropyData.fullVersionList.getIfLoaded();
+    if (void 0 !== loadedVersionList) {
+      var matchingBrand = loadedVersionList.find(function($jscomp$destructuring$var4) {
+        var $jscomp$destructuring$var5 = $jscomp$destructuring$var4, brand = $jscomp$destructuring$var5.brand;
+        return $jscomp$this.brand_ === brand;
+      });
+      (0,goog.asserts.assertExists)(matchingBrand);
+      return new module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.Version(matchingBrand.version);
+    }
+  }
+  if (module$contents$goog$labs$userAgent$browser_preUachHasLoaded) {
+    return this.version_;
   }
 };
 module$contents$goog$labs$userAgent$browser_HighEntropyBrandVersion.prototype.load = function() {
   var $jscomp$async$this = this, loadedVersionList, matchingBrand;
   return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context) {
     if (1 == $jscomp$generator$context.nextAddress) {
-      return $jscomp$generator$context.yield(module$exports$goog$labs$userAgent$highEntropy$highEntropyData.fullVersionList.load(), 2);
+      return $jscomp$async$this.useUach_ ? $jscomp$generator$context.yield(module$exports$goog$labs$userAgent$highEntropy$highEntropyData.fullVersionList.load(), 5) : $jscomp$generator$context.yield(0, 3);
     }
-    loadedVersionList = $jscomp$generator$context.yieldResult;
-    matchingBrand = loadedVersionList.find(function($jscomp$destructuring$var6) {
-      var $jscomp$destructuring$var7 = $jscomp$destructuring$var6, brand = $jscomp$destructuring$var7.brand;
-      return $jscomp$async$this.brand_ === brand;
-    });
-    goog.asserts.assertExists(matchingBrand);
-    return $jscomp$generator$context.return(new module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.Version(matchingBrand.version));
-  });
-};
-var module$contents$goog$labs$userAgent$browser_UserAgentStringFallbackBrandVersion = function(versionString) {
-  this.version_ = new module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.Version(versionString);
-};
-module$contents$goog$labs$userAgent$browser_UserAgentStringFallbackBrandVersion.prototype.getIfLoaded = function() {
-  return this.version_;
-};
-module$contents$goog$labs$userAgent$browser_UserAgentStringFallbackBrandVersion.prototype.load = function() {
-  var $jscomp$async$this = this;
-  return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context) {
+    if (3 != $jscomp$generator$context.nextAddress && (loadedVersionList = $jscomp$generator$context.yieldResult, void 0 !== loadedVersionList)) {
+      return matchingBrand = loadedVersionList.find(function($jscomp$destructuring$var6) {
+        var $jscomp$destructuring$var7 = $jscomp$destructuring$var6, brand = $jscomp$destructuring$var7.brand;
+        return $jscomp$async$this.brand_ === brand;
+      }), (0,goog.asserts.assertExists)(matchingBrand), $jscomp$generator$context.return(new module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.Version(matchingBrand.version));
+    }
+    module$contents$goog$labs$userAgent$browser_preUachHasLoaded = !0;
     return $jscomp$generator$context.return($jscomp$async$this.version_);
   });
 };
+var module$contents$goog$labs$userAgent$browser_preUachHasLoaded = !1;
 function module$contents$goog$labs$userAgent$browser_loadFullVersions() {
   return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context) {
-    return module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand() && module$contents$goog$labs$userAgent$browser_isAtLeast(module$contents$goog$labs$userAgent$browser_Brand.CHROMIUM, 98) ? $jscomp$generator$context.yield(module$exports$goog$labs$userAgent$highEntropy$highEntropyData.fullVersionList.load(), 0) : $jscomp$generator$context.jumpTo(0);
+    if (1 == $jscomp$generator$context.nextAddress) {
+      return module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand(!0) ? $jscomp$generator$context.yield(module$exports$goog$labs$userAgent$highEntropy$highEntropyData.fullVersionList.load(), 2) : $jscomp$generator$context.jumpTo(2);
+    }
+    module$contents$goog$labs$userAgent$browser_preUachHasLoaded = !0;
+    $jscomp$generator$context.jumpToEnd();
   });
 }
 goog.labs.userAgent.browser.loadFullVersions = module$contents$goog$labs$userAgent$browser_loadFullVersions;
+goog.labs.userAgent.browser.resetForTesting = function() {
+  module$contents$goog$labs$userAgent$browser_preUachHasLoaded = !1;
+  module$exports$goog$labs$userAgent$highEntropy$highEntropyData.fullVersionList.resetForTesting();
+};
 function module$contents$goog$labs$userAgent$browser_fullVersionOf(browser) {
-  if (module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand() && module$contents$goog$labs$userAgent$browser_isAtLeast(module$contents$goog$labs$userAgent$browser_Brand.CHROMIUM, 98)) {
+  var fallbackVersionString = "";
+  module$contents$goog$labs$userAgent$browser_isAtLeast(module$contents$goog$labs$userAgent$browser_Brand.CHROMIUM, 98) || (fallbackVersionString = module$contents$goog$labs$userAgent$browser_getFullVersionFromUserAgentString(browser));
+  var useUach = browser !== module$contents$goog$labs$userAgent$browser_Brand.SILK && module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand(!0);
+  if (useUach) {
     var data = module$contents$goog$labs$userAgent$util_userAgentDataInternal;
-    return data.brands.find(function($jscomp$destructuring$var8) {
+    if (!data.brands.find(function($jscomp$destructuring$var8) {
       var $jscomp$destructuring$var9 = $jscomp$destructuring$var8, brand = $jscomp$destructuring$var9.brand;
       return brand === browser;
-    }) ? new module$contents$goog$labs$userAgent$browser_HighEntropyBrandVersion(browser) : void 0;
+    })) {
+      return;
+    }
+  } else if ("" === fallbackVersionString) {
+    return;
   }
-  var fullVersionFromUserAgentString = module$contents$goog$labs$userAgent$browser_getFullVersionFromUserAgentString(browser);
-  return "" === fullVersionFromUserAgentString ? void 0 : new module$contents$goog$labs$userAgent$browser_UserAgentStringFallbackBrandVersion(fullVersionFromUserAgentString);
+  return new module$contents$goog$labs$userAgent$browser_HighEntropyBrandVersion(browser, useUach, fallbackVersionString);
 }
 goog.labs.userAgent.browser.fullVersionOf = module$contents$goog$labs$userAgent$browser_fullVersionOf;
 function module$contents$goog$labs$userAgent$browser_getVersionStringForLogging(browser) {
-  if (module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand()) {
+  if (module$contents$goog$labs$userAgent$browser_useUserAgentDataBrand(!0)) {
     var fullVersionObj = module$contents$goog$labs$userAgent$browser_fullVersionOf(browser);
     if (fullVersionObj) {
       var fullVersion = fullVersionObj.getIfLoaded();
@@ -2531,7 +2804,7 @@ function module$contents$goog$labs$userAgent$browser_getVersionStringForLogging(
         var $jscomp$destructuring$var11 = $jscomp$destructuring$var10, brand = $jscomp$destructuring$var11.brand;
         return brand === browser;
       });
-      goog.asserts.assertExists(matchingBrand);
+      (0,goog.asserts.assertExists)(matchingBrand);
       return matchingBrand.version;
     }
     return "";
@@ -2604,7 +2877,11 @@ goog.labs.userAgent.engine.isTrident = module$contents$goog$labs$userAgent$engin
 goog.labs.userAgent.engine.isVersionOrHigher = module$contents$goog$labs$userAgent$engine_isVersionOrHigher;
 goog.labs.userAgent.engine.isWebKit = module$contents$goog$labs$userAgent$engine_isWebKit;
 goog.labs.userAgent.platform = {};
-function module$contents$goog$labs$userAgent$platform_useUserAgentDataPlatform() {
+function module$contents$goog$labs$userAgent$platform_useUserAgentDataPlatform(ignoreClientHintsFlag) {
+  ignoreClientHintsFlag = void 0 === ignoreClientHintsFlag ? !1 : ignoreClientHintsFlag;
+  if (!ignoreClientHintsFlag && !(0,goog.labs.userAgent.useClientHints)()) {
+    return !1;
+  }
   var userAgentData = module$contents$goog$labs$userAgent$util_userAgentDataInternal;
   return !!userAgentData && !!userAgentData.platform;
 }
@@ -2674,29 +2951,33 @@ function module$contents$goog$labs$userAgent$platform_isVersionOrHigher(version)
   return 0 <= goog.string.internal.compareVersions(module$contents$goog$labs$userAgent$platform_getVersion(), version);
 }
 var module$contents$goog$labs$userAgent$platform_PlatformVersion = function() {
+  this.preUachHasLoaded_ = !1;
 };
 module$contents$goog$labs$userAgent$platform_PlatformVersion.prototype.getIfLoaded = function() {
-  if (module$contents$goog$labs$userAgent$util_userAgentDataInternal) {
+  if (module$contents$goog$labs$userAgent$platform_useUserAgentDataPlatform(!0)) {
     var loadedPlatformVersion = module$exports$goog$labs$userAgent$highEntropy$highEntropyData.platformVersion.getIfLoaded();
-    if (void 0 !== loadedPlatformVersion) {
-      return new module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.Version(loadedPlatformVersion);
-    }
-  } else {
+    return void 0 === loadedPlatformVersion ? void 0 : new module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.Version(loadedPlatformVersion);
+  }
+  if (this.preUachHasLoaded_) {
     return new module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.Version(module$contents$goog$labs$userAgent$platform_getVersion());
   }
 };
 module$contents$goog$labs$userAgent$platform_PlatformVersion.prototype.load = function() {
-  var JSCompiler_temp_const;
+  var $jscomp$async$this = this, JSCompiler_temp_const;
   return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context) {
     if (1 == $jscomp$generator$context.nextAddress) {
-      if (!module$contents$goog$labs$userAgent$util_userAgentDataInternal) {
-        return $jscomp$generator$context.return(new module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.Version(module$contents$goog$labs$userAgent$platform_getVersion()));
+      if (!module$contents$goog$labs$userAgent$platform_useUserAgentDataPlatform(!0)) {
+        return $jscomp$async$this.preUachHasLoaded_ = !0, $jscomp$generator$context.return(new module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.Version(module$contents$goog$labs$userAgent$platform_getVersion()));
       }
       JSCompiler_temp_const = module$exports$goog$labs$userAgent$highEntropy$highEntropyValue.Version;
       return $jscomp$generator$context.yield(module$exports$goog$labs$userAgent$highEntropy$highEntropyData.platformVersion.load(), 3);
     }
     return $jscomp$generator$context.return(new JSCompiler_temp_const($jscomp$generator$context.yieldResult));
   });
+};
+module$contents$goog$labs$userAgent$platform_PlatformVersion.prototype.resetForTesting = function() {
+  module$exports$goog$labs$userAgent$highEntropy$highEntropyData.platformVersion.resetForTesting();
+  this.preUachHasLoaded_ = !1;
 };
 var module$contents$goog$labs$userAgent$platform_version = new module$contents$goog$labs$userAgent$platform_PlatformVersion();
 goog.labs.userAgent.platform.getVersion = module$contents$goog$labs$userAgent$platform_getVersion;
@@ -2845,20 +3126,20 @@ goog.userAgent.isDocumentModeOrHigher = function(documentMode) {
   return Number(goog.userAgent.DOCUMENT_MODE) >= documentMode;
 };
 goog.userAgent.isDocumentMode = goog.userAgent.isDocumentModeOrHigher;
-var JSCompiler_inline_result$jscomp$72;
-var doc$jscomp$inline_78 = goog.global.document;
-if (doc$jscomp$inline_78 && goog.userAgent.IE) {
-  var documentMode$jscomp$inline_79 = goog.userAgent.getDocumentMode_();
-  if (documentMode$jscomp$inline_79) {
-    JSCompiler_inline_result$jscomp$72 = documentMode$jscomp$inline_79;
+var JSCompiler_inline_result$jscomp$69;
+var doc$jscomp$inline_75 = goog.global.document;
+if (doc$jscomp$inline_75 && goog.userAgent.IE) {
+  var documentMode$jscomp$inline_76 = goog.userAgent.getDocumentMode_();
+  if (documentMode$jscomp$inline_76) {
+    JSCompiler_inline_result$jscomp$69 = documentMode$jscomp$inline_76;
   } else {
-    var ieVersion$jscomp$inline_80 = parseInt(goog.userAgent.VERSION, 10);
-    JSCompiler_inline_result$jscomp$72 = ieVersion$jscomp$inline_80 || void 0;
+    var ieVersion$jscomp$inline_77 = parseInt(goog.userAgent.VERSION, 10);
+    JSCompiler_inline_result$jscomp$69 = ieVersion$jscomp$inline_77 || void 0;
   }
 } else {
-  JSCompiler_inline_result$jscomp$72 = void 0;
+  JSCompiler_inline_result$jscomp$69 = void 0;
 }
-goog.userAgent.DOCUMENT_MODE = JSCompiler_inline_result$jscomp$72;
+goog.userAgent.DOCUMENT_MODE = JSCompiler_inline_result$jscomp$69;
 goog.dom.BrowserFeature = {};
 goog.dom.BrowserFeature.ASSUME_NO_OFFSCREEN_CANVAS = !1;
 goog.dom.BrowserFeature.ASSUME_OFFSCREEN_CANVAS = !1;
@@ -3049,145 +3330,6 @@ goog.functions.rateLimit = function(f, interval, opt_scope) {
 goog.functions.isFunction = function(val) {
   return "function" === typeof val;
 };
-goog.dom.HtmlElement = function() {
-};
-goog.dom.TagName = function() {
-};
-goog.dom.TagName.cast = function(name) {
-  return name;
-};
-goog.dom.TagName.prototype.toString = function() {
-};
-goog.dom.TagName.A = "A";
-goog.dom.TagName.ABBR = "ABBR";
-goog.dom.TagName.ACRONYM = "ACRONYM";
-goog.dom.TagName.ADDRESS = "ADDRESS";
-goog.dom.TagName.APPLET = "APPLET";
-goog.dom.TagName.AREA = "AREA";
-goog.dom.TagName.ARTICLE = "ARTICLE";
-goog.dom.TagName.ASIDE = "ASIDE";
-goog.dom.TagName.AUDIO = "AUDIO";
-goog.dom.TagName.B = "B";
-goog.dom.TagName.BASE = "BASE";
-goog.dom.TagName.BASEFONT = "BASEFONT";
-goog.dom.TagName.BDI = "BDI";
-goog.dom.TagName.BDO = "BDO";
-goog.dom.TagName.BIG = "BIG";
-goog.dom.TagName.BLOCKQUOTE = "BLOCKQUOTE";
-goog.dom.TagName.BODY = "BODY";
-goog.dom.TagName.BR = "BR";
-goog.dom.TagName.BUTTON = "BUTTON";
-goog.dom.TagName.CANVAS = "CANVAS";
-goog.dom.TagName.CAPTION = "CAPTION";
-goog.dom.TagName.CENTER = "CENTER";
-goog.dom.TagName.CITE = "CITE";
-goog.dom.TagName.CODE = "CODE";
-goog.dom.TagName.COL = "COL";
-goog.dom.TagName.COLGROUP = "COLGROUP";
-goog.dom.TagName.COMMAND = "COMMAND";
-goog.dom.TagName.DATA = "DATA";
-goog.dom.TagName.DATALIST = "DATALIST";
-goog.dom.TagName.DD = "DD";
-goog.dom.TagName.DEL = "DEL";
-goog.dom.TagName.DETAILS = "DETAILS";
-goog.dom.TagName.DFN = "DFN";
-goog.dom.TagName.DIALOG = "DIALOG";
-goog.dom.TagName.DIR = "DIR";
-goog.dom.TagName.DIV = "DIV";
-goog.dom.TagName.DL = "DL";
-goog.dom.TagName.DT = "DT";
-goog.dom.TagName.EM = "EM";
-goog.dom.TagName.EMBED = "EMBED";
-goog.dom.TagName.FIELDSET = "FIELDSET";
-goog.dom.TagName.FIGCAPTION = "FIGCAPTION";
-goog.dom.TagName.FIGURE = "FIGURE";
-goog.dom.TagName.FONT = "FONT";
-goog.dom.TagName.FOOTER = "FOOTER";
-goog.dom.TagName.FORM = "FORM";
-goog.dom.TagName.FRAME = "FRAME";
-goog.dom.TagName.FRAMESET = "FRAMESET";
-goog.dom.TagName.H1 = "H1";
-goog.dom.TagName.H2 = "H2";
-goog.dom.TagName.H3 = "H3";
-goog.dom.TagName.H4 = "H4";
-goog.dom.TagName.H5 = "H5";
-goog.dom.TagName.H6 = "H6";
-goog.dom.TagName.HEAD = "HEAD";
-goog.dom.TagName.HEADER = "HEADER";
-goog.dom.TagName.HGROUP = "HGROUP";
-goog.dom.TagName.HR = "HR";
-goog.dom.TagName.HTML = "HTML";
-goog.dom.TagName.I = "I";
-goog.dom.TagName.IFRAME = "IFRAME";
-goog.dom.TagName.IMG = "IMG";
-goog.dom.TagName.INPUT = "INPUT";
-goog.dom.TagName.INS = "INS";
-goog.dom.TagName.ISINDEX = "ISINDEX";
-goog.dom.TagName.KBD = "KBD";
-goog.dom.TagName.KEYGEN = "KEYGEN";
-goog.dom.TagName.LABEL = "LABEL";
-goog.dom.TagName.LEGEND = "LEGEND";
-goog.dom.TagName.LI = "LI";
-goog.dom.TagName.LINK = "LINK";
-goog.dom.TagName.MAIN = "MAIN";
-goog.dom.TagName.MAP = "MAP";
-goog.dom.TagName.MARK = "MARK";
-goog.dom.TagName.MATH = "MATH";
-goog.dom.TagName.MENU = "MENU";
-goog.dom.TagName.MENUITEM = "MENUITEM";
-goog.dom.TagName.META = "META";
-goog.dom.TagName.METER = "METER";
-goog.dom.TagName.NAV = "NAV";
-goog.dom.TagName.NOFRAMES = "NOFRAMES";
-goog.dom.TagName.NOSCRIPT = "NOSCRIPT";
-goog.dom.TagName.OBJECT = "OBJECT";
-goog.dom.TagName.OL = "OL";
-goog.dom.TagName.OPTGROUP = "OPTGROUP";
-goog.dom.TagName.OPTION = "OPTION";
-goog.dom.TagName.OUTPUT = "OUTPUT";
-goog.dom.TagName.P = "P";
-goog.dom.TagName.PARAM = "PARAM";
-goog.dom.TagName.PICTURE = "PICTURE";
-goog.dom.TagName.PRE = "PRE";
-goog.dom.TagName.PROGRESS = "PROGRESS";
-goog.dom.TagName.Q = "Q";
-goog.dom.TagName.RP = "RP";
-goog.dom.TagName.RT = "RT";
-goog.dom.TagName.RTC = "RTC";
-goog.dom.TagName.RUBY = "RUBY";
-goog.dom.TagName.S = "S";
-goog.dom.TagName.SAMP = "SAMP";
-goog.dom.TagName.SCRIPT = "SCRIPT";
-goog.dom.TagName.SECTION = "SECTION";
-goog.dom.TagName.SELECT = "SELECT";
-goog.dom.TagName.SMALL = "SMALL";
-goog.dom.TagName.SOURCE = "SOURCE";
-goog.dom.TagName.SPAN = "SPAN";
-goog.dom.TagName.STRIKE = "STRIKE";
-goog.dom.TagName.STRONG = "STRONG";
-goog.dom.TagName.STYLE = "STYLE";
-goog.dom.TagName.SUB = "SUB";
-goog.dom.TagName.SUMMARY = "SUMMARY";
-goog.dom.TagName.SUP = "SUP";
-goog.dom.TagName.SVG = "SVG";
-goog.dom.TagName.TABLE = "TABLE";
-goog.dom.TagName.TBODY = "TBODY";
-goog.dom.TagName.TD = "TD";
-goog.dom.TagName.TEMPLATE = "TEMPLATE";
-goog.dom.TagName.TEXTAREA = "TEXTAREA";
-goog.dom.TagName.TFOOT = "TFOOT";
-goog.dom.TagName.TH = "TH";
-goog.dom.TagName.THEAD = "THEAD";
-goog.dom.TagName.TIME = "TIME";
-goog.dom.TagName.TITLE = "TITLE";
-goog.dom.TagName.TR = "TR";
-goog.dom.TagName.TRACK = "TRACK";
-goog.dom.TagName.TT = "TT";
-goog.dom.TagName.U = "U";
-goog.dom.TagName.UL = "UL";
-goog.dom.TagName.VAR = "VAR";
-goog.dom.TagName.VIDEO = "VIDEO";
-goog.dom.TagName.WBR = "WBR";
 goog.object = {};
 function module$contents$goog$object_forEach(obj, f, opt_obj) {
   for (var key in obj) {
@@ -3359,6 +3501,9 @@ function module$contents$goog$object_unsafeClone(obj) {
   }
   if ("undefined" !== typeof Set && obj instanceof Set) {
     return new Set(obj);
+  }
+  if (obj instanceof Date) {
+    return new Date(obj.getTime());
   }
   var clone = Array.isArray(obj) ? [] : "function" !== typeof ArrayBuffer || "function" !== typeof ArrayBuffer.isView || !ArrayBuffer.isView(obj) || obj instanceof DataView ? {} : new obj.constructor(obj.length), key;
   for (key in obj) {
@@ -3819,6 +3964,47 @@ goog.html.SafeUrl.sanitizeAssertUnchanged = function(url, opt_allowDataUrl) {
   goog.asserts.assert(goog.html.SAFE_URL_PATTERN_.test(url), "%s does not match the safe URL pattern", url) || (url = goog.html.SafeUrl.INNOCUOUS_STRING);
   return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(url);
 };
+goog.html.SafeUrl.ASSUME_IMPLEMENTS_URL_API_GOOG = 2020 <= goog.FEATURESET_YEAR;
+goog.html.SafeUrl.supportsURLAPI = function() {
+  if (goog.html.SafeUrl.ASSUME_IMPLEMENTS_URL_API_GOOG) {
+    return !0;
+  }
+  try {
+    return new URL("s://g"), !0;
+  } catch (e) {
+    return !1;
+  }
+}();
+goog.html.SafeUrl.legacyExtractScheme = function(url) {
+  var aTag = document.createElement("a");
+  try {
+    aTag.href = url;
+  } catch (e) {
+    return;
+  }
+  var protocol = aTag.protocol;
+  return ":" === protocol || "" === protocol ? "https:" : protocol;
+};
+goog.html.SafeUrl.extractScheme = function(url) {
+  if (!goog.html.SafeUrl.supportsURLAPI) {
+    return goog.html.SafeUrl.legacyExtractScheme(url);
+  }
+  try {
+    var parsedUrl = new URL(url);
+  } catch (e) {
+    return "https:";
+  }
+  return parsedUrl.protocol;
+};
+goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged = function(url) {
+  if (url instanceof goog.html.SafeUrl) {
+    return url;
+  }
+  url = "object" == typeof url && url.implementsGoogStringTypedString ? url.getTypedStringValue() : String(url);
+  var parsedScheme = goog.html.SafeUrl.extractScheme(url);
+  goog.asserts.assert("javascript:" !== parsedScheme, "%s is a javascript: URL", url) || (url = goog.html.SafeUrl.INNOCUOUS_STRING);
+  return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(url);
+};
 goog.html.SafeUrl.CONSTRUCTOR_TOKEN_PRIVATE_ = {};
 goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse = function(url) {
   return new goog.html.SafeUrl(url, goog.html.SafeUrl.CONSTRUCTOR_TOKEN_PRIVATE_);
@@ -3905,7 +4091,7 @@ function module$contents$goog$html$SafeStyle_sanitizePropertyValueString(value) 
       return (0,goog.asserts.fail)("String value requires balanced square brackets and one identifier per pair of brackets, got: " + value), module$contents$goog$html$SafeStyle_SafeStyle.INNOCUOUS_STRING;
     }
   } else {
-    return (0,goog.asserts.fail)("String value allows only [-,.\"'%_!#/ a-zA-Z0-9\\[\\]] and simple functions, got: " + value), module$contents$goog$html$SafeStyle_SafeStyle.INNOCUOUS_STRING;
+    return (0,goog.asserts.fail)("String value allows only [-+,.\"'%_!#/ a-zA-Z0-9\\[\\]] and simple functions, got: " + value), module$contents$goog$html$SafeStyle_SafeStyle.INNOCUOUS_STRING;
   }
   return module$contents$goog$html$SafeStyle_sanitizeUrl(value);
 }
@@ -3928,7 +4114,7 @@ function module$contents$goog$html$SafeStyle_hasBalancedSquareBrackets(value) {
   }
   return outside;
 }
-var module$contents$goog$html$SafeStyle_VALUE_RE = RegExp("^[-,.\"'%_!#/ a-zA-Z0-9\\[\\]]+$"), module$contents$goog$html$SafeStyle_URL_RE = RegExp("\\b(url\\([ \t\n]*)('[ -&(-\\[\\]-~]*'|\"[ !#-\\[\\]-~]*\"|[!#-&*-\\[\\]-~]*)([ \t\n]*\\))", "g"), module$contents$goog$html$SafeStyle_ALLOWED_FUNCTIONS = "calc cubic-bezier fit-content hsl hsla linear-gradient matrix minmax radial-gradient repeat rgb rgba (rotate|scale|translate)(X|Y|Z|3d)? var".split(" "), module$contents$goog$html$SafeStyle_FUNCTIONS_RE = 
+var module$contents$goog$html$SafeStyle_VALUE_RE = RegExp("^[-+,.\"'%_!#/ a-zA-Z0-9\\[\\]]+$"), module$contents$goog$html$SafeStyle_URL_RE = RegExp("\\b(url\\([ \t\n]*)('[ -&(-\\[\\]-~]*'|\"[ !#-\\[\\]-~]*\"|[!#-&*-\\[\\]-~]*)([ \t\n]*\\))", "g"), module$contents$goog$html$SafeStyle_ALLOWED_FUNCTIONS = "calc cubic-bezier fit-content hsl hsla linear-gradient matrix minmax radial-gradient repeat rgb rgba (rotate|scale|translate)(X|Y|Z|3d)? steps var".split(" "), module$contents$goog$html$SafeStyle_FUNCTIONS_RE = 
 new RegExp("\\b(" + module$contents$goog$html$SafeStyle_ALLOWED_FUNCTIONS.join("|") + ")\\([-+*/0-9a-zA-Z.%#\\[\\], ]+\\)", "g"), module$contents$goog$html$SafeStyle_COMMENT_RE = /\/\*/;
 function module$contents$goog$html$SafeStyle_sanitizeUrl(value) {
   return value.replace(module$contents$goog$html$SafeStyle_URL_RE, function(match$jscomp$0, before, url, after) {
@@ -4200,16 +4386,16 @@ goog.dom.safe.setOuterHtml = function(elem, html) {
   elem.outerHTML = module$contents$goog$html$SafeHtml_SafeHtml.unwrapTrustedHTML(html);
 };
 goog.dom.safe.setFormElementAction = function(form, url) {
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeAssertUnchanged(url);
-  goog.dom.asserts.assertIsHTMLFormElement(form).action = goog.html.SafeUrl.unwrap(safeUrl);
+  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
+  module$contents$goog$asserts$dom_assertIsHtmlFormElement(form).action = goog.html.SafeUrl.unwrap(safeUrl);
 };
 goog.dom.safe.setButtonFormAction = function(button, url) {
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeAssertUnchanged(url);
-  goog.dom.asserts.assertIsHTMLButtonElement(button).formAction = goog.html.SafeUrl.unwrap(safeUrl);
+  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
+  module$contents$goog$asserts$dom_assertIsHtmlButtonElement(button).formAction = goog.html.SafeUrl.unwrap(safeUrl);
 };
 goog.dom.safe.setInputFormAction = function(input, url) {
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeAssertUnchanged(url);
-  goog.dom.asserts.assertIsHTMLInputElement(input).formAction = goog.html.SafeUrl.unwrap(safeUrl);
+  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
+  module$contents$goog$asserts$dom_assertIsHtmlInputElement(input).formAction = goog.html.SafeUrl.unwrap(safeUrl);
 };
 goog.dom.safe.setStyle = function(elem, style) {
   elem.style.cssText = module$contents$goog$html$SafeStyle_SafeStyle.unwrap(style);
@@ -4218,58 +4404,38 @@ goog.dom.safe.documentWrite = function(doc, html) {
   doc.write(module$contents$goog$html$SafeHtml_SafeHtml.unwrapTrustedHTML(html));
 };
 goog.dom.safe.setAnchorHref = function(anchor, url) {
-  goog.dom.asserts.assertIsHTMLAnchorElement(anchor);
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeAssertUnchanged(url);
+  module$contents$goog$asserts$dom_assertIsHtmlAnchorElement(anchor);
+  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
   anchor.href = goog.html.SafeUrl.unwrap(safeUrl);
 };
-goog.dom.safe.setImageSrc = function(imageElement, url) {
-  goog.dom.asserts.assertIsHTMLImageElement(imageElement);
-  if (url instanceof goog.html.SafeUrl) {
-    var safeUrl = url;
-  } else {
-    var allowDataUrl = /^data:image\//i.test(url);
-    safeUrl = goog.html.SafeUrl.sanitizeAssertUnchanged(url, allowDataUrl);
-  }
-  imageElement.src = goog.html.SafeUrl.unwrap(safeUrl);
-};
 goog.dom.safe.setAudioSrc = function(audioElement, url) {
-  goog.dom.asserts.assertIsHTMLAudioElement(audioElement);
-  if (url instanceof goog.html.SafeUrl) {
-    var safeUrl = url;
-  } else {
-    var allowDataUrl = /^data:audio\//i.test(url);
-    safeUrl = goog.html.SafeUrl.sanitizeAssertUnchanged(url, allowDataUrl);
-  }
+  module$contents$goog$asserts$dom_assertIsHtmlAudioElement(audioElement);
+  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
   audioElement.src = goog.html.SafeUrl.unwrap(safeUrl);
 };
 goog.dom.safe.setVideoSrc = function(videoElement, url) {
-  goog.dom.asserts.assertIsHTMLVideoElement(videoElement);
-  if (url instanceof goog.html.SafeUrl) {
-    var safeUrl = url;
-  } else {
-    var allowDataUrl = /^data:video\//i.test(url);
-    safeUrl = goog.html.SafeUrl.sanitizeAssertUnchanged(url, allowDataUrl);
-  }
+  module$contents$goog$asserts$dom_assertIsHtmlVideoElement(videoElement);
+  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
   videoElement.src = goog.html.SafeUrl.unwrap(safeUrl);
 };
 goog.dom.safe.setEmbedSrc = function(embed, url) {
-  goog.dom.asserts.assertIsHTMLEmbedElement(embed);
+  module$contents$goog$asserts$dom_assertIsHtmlEmbedElement(embed);
   embed.src = goog.html.TrustedResourceUrl.unwrapTrustedScriptURL(url);
 };
 goog.dom.safe.setFrameSrc = function(frame, url) {
-  goog.dom.asserts.assertIsHTMLFrameElement(frame);
+  module$contents$goog$asserts$dom_assertIsHtmlFrameElement(frame);
   frame.src = goog.html.TrustedResourceUrl.unwrap(url);
 };
 goog.dom.safe.setIframeSrc = function(iframe, url) {
-  goog.dom.asserts.assertIsHTMLIFrameElement(iframe);
+  module$contents$goog$asserts$dom_assertIsHtmlIFrameElement(iframe);
   iframe.src = goog.html.TrustedResourceUrl.unwrap(url);
 };
 goog.dom.safe.setIframeSrcdoc = function(iframe, html) {
-  goog.dom.asserts.assertIsHTMLIFrameElement(iframe);
+  module$contents$goog$asserts$dom_assertIsHtmlIFrameElement(iframe);
   iframe.srcdoc = module$contents$goog$html$SafeHtml_SafeHtml.unwrapTrustedHTML(html);
 };
 goog.dom.safe.setLinkHrefAndRel = function(link, url, rel) {
-  goog.dom.asserts.assertIsHTMLLinkElement(link);
+  module$contents$goog$asserts$dom_assertIsHtmlLinkElement(link);
   link.rel = rel;
   if (goog.string.internal.caseInsensitiveContains(rel, "stylesheet")) {
     goog.asserts.assert(url instanceof goog.html.TrustedResourceUrl, 'URL must be TrustedResourceUrl because "rel" contains "stylesheet"');
@@ -4277,20 +4443,20 @@ goog.dom.safe.setLinkHrefAndRel = function(link, url, rel) {
     var win = link.ownerDocument && link.ownerDocument.defaultView, nonce = goog.dom.safe.getStyleNonce(win);
     nonce && link.setAttribute("nonce", nonce);
   } else {
-    link.href = url instanceof goog.html.TrustedResourceUrl ? goog.html.TrustedResourceUrl.unwrap(url) : url instanceof goog.html.SafeUrl ? goog.html.SafeUrl.unwrap(url) : goog.html.SafeUrl.unwrap(goog.html.SafeUrl.sanitizeAssertUnchanged(url));
+    link.href = url instanceof goog.html.TrustedResourceUrl ? goog.html.TrustedResourceUrl.unwrap(url) : url instanceof goog.html.SafeUrl ? goog.html.SafeUrl.unwrap(url) : goog.html.SafeUrl.unwrap(goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url));
   }
 };
 goog.dom.safe.setObjectData = function(object, url) {
-  goog.dom.asserts.assertIsHTMLObjectElement(object);
+  module$contents$goog$asserts$dom_assertIsHtmlObjectElement(object);
   object.data = goog.html.TrustedResourceUrl.unwrapTrustedScriptURL(url);
 };
 goog.dom.safe.setScriptSrc = function(script, url) {
-  goog.dom.asserts.assertIsHTMLScriptElement(script);
+  module$contents$goog$asserts$dom_assertIsHtmlScriptElement(script);
   goog.dom.safe.setNonceForScriptElement_(script);
   script.src = goog.html.TrustedResourceUrl.unwrapTrustedScriptURL(url);
 };
 goog.dom.safe.setScriptContent = function(script, content) {
-  goog.dom.asserts.assertIsHTMLScriptElement(script);
+  module$contents$goog$asserts$dom_assertIsHtmlScriptElement(script);
   goog.dom.safe.setNonceForScriptElement_(script);
   script.textContent = module$contents$goog$html$SafeScript_SafeScript.unwrapTrustedScript(content);
 };
@@ -4300,20 +4466,20 @@ goog.dom.safe.setNonceForScriptElement_ = function(script) {
 };
 goog.dom.safe.setLocationHref = function(loc, url) {
   goog.dom.asserts.assertIsLocation(loc);
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeAssertUnchanged(url);
+  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
   loc.href = goog.html.SafeUrl.unwrap(safeUrl);
 };
 goog.dom.safe.assignLocation = function(loc, url) {
   goog.dom.asserts.assertIsLocation(loc);
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeAssertUnchanged(url);
+  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
   loc.assign(goog.html.SafeUrl.unwrap(safeUrl));
 };
 goog.dom.safe.replaceLocation = function(loc, url) {
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeAssertUnchanged(url);
+  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
   loc.replace(goog.html.SafeUrl.unwrap(safeUrl));
 };
 goog.dom.safe.openInWindow = function(url, opt_openerWin, opt_name, opt_specs) {
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeAssertUnchanged(url);
+  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
   var win = opt_openerWin || goog.global, name = opt_name instanceof goog.string.Const ? goog.string.Const.unwrap(opt_name) : opt_name || "";
   return void 0 !== opt_specs ? win.open(goog.html.SafeUrl.unwrap(safeUrl), name, opt_specs) : win.open(goog.html.SafeUrl.unwrap(safeUrl), name);
 };
@@ -4331,7 +4497,7 @@ goog.dom.safe.createImageFromBlob = function(blob) {
   image.onload = function() {
     goog.global.URL.revokeObjectURL(objectUrl);
   };
-  goog.dom.safe.setImageSrc(image, goog.html.uncheckedconversions.safeUrlFromStringKnownToSatisfyTypeContract(goog.string.Const.from("Image blob URL."), objectUrl));
+  image.src = objectUrl;
   return image;
 };
 goog.dom.safe.createContextualFragment = function(range, html) {
@@ -4581,7 +4747,7 @@ goog.math.Size.prototype.scale = function(sx, opt_sy) {
 };
 goog.string.DETECT_DOUBLE_ESCAPING = !1;
 goog.string.FORCE_NON_DOM_HTML_UNESCAPING = !1;
-goog.string.Unicode = {NBSP:"\u00a0"};
+goog.string.Unicode = {NBSP:"\u00a0", ZERO_WIDTH_SPACE:"\u200b"};
 goog.string.startsWith = goog.string.internal.startsWith;
 goog.string.endsWith = goog.string.internal.endsWith;
 goog.string.caseInsensitiveStartsWith = goog.string.internal.caseInsensitiveStartsWith;
@@ -4958,7 +5124,7 @@ goog.dom.getElement = function(element) {
 };
 goog.dom.getHTMLElement = function(id) {
   var element = goog.dom.getElement(id);
-  return element ? goog.asserts.assertInstanceof(element, HTMLElement) : null;
+  return element ? module$contents$goog$asserts$dom_assertIsHtmlElement(element) : null;
 };
 goog.dom.getElementHelper_ = function(doc, element) {
   return "string" === typeof element ? doc.getElementById(element) : element;
@@ -4967,12 +5133,12 @@ goog.dom.getRequiredElement = function(id) {
   return goog.dom.getRequiredElementHelper_(document, id);
 };
 goog.dom.getRequiredHTMLElement = function(id) {
-  return goog.asserts.assertInstanceof(goog.dom.getRequiredElementHelper_(document, id), HTMLElement);
+  return module$contents$goog$asserts$dom_assertIsHtmlElement(goog.dom.getRequiredElementHelper_(document, id));
 };
 goog.dom.getRequiredElementHelper_ = function(doc, id) {
   goog.asserts.assertString(id);
   var element = goog.dom.getElementHelper_(doc, id);
-  return element = goog.asserts.assertElement(element, "No element found with id: " + id);
+  return goog.asserts.assert(element, "No element found with id: " + id);
 };
 goog.dom.$ = goog.dom.getElement;
 goog.dom.getElementsByTagName = function(tagName, opt_parent) {
@@ -4995,7 +5161,7 @@ goog.dom.getElementByClass = function(className, opt_el) {
 };
 goog.dom.getHTMLElementByClass = function(className, opt_parent) {
   var element = goog.dom.getElementByClass(className, opt_parent);
-  return element ? goog.asserts.assertInstanceof(element, HTMLElement) : null;
+  return element ? module$contents$goog$asserts$dom_assertIsHtmlElement(element) : null;
 };
 goog.dom.getRequiredElementByClass = function(className, opt_root) {
   var retValue = goog.dom.getElementByClass(className, opt_root);
@@ -5003,7 +5169,8 @@ goog.dom.getRequiredElementByClass = function(className, opt_root) {
 };
 goog.dom.getRequiredHTMLElementByClass = function(className, opt_parent) {
   var retValue = goog.dom.getElementByClass(className, opt_parent);
-  return goog.asserts.assertInstanceof(retValue, HTMLElement, "No HTMLElement found with className: " + className);
+  goog.asserts.assert(retValue, "No HTMLElement found with className: " + className);
+  return module$contents$goog$asserts$dom_assertIsHtmlElement(retValue);
 };
 goog.dom.canUseQuerySelector_ = function(parent) {
   return !(!parent.querySelectorAll || !parent.querySelector);
@@ -5093,7 +5260,7 @@ goog.dom.getDocumentScroll = function() {
 };
 goog.dom.getDocumentScroll_ = function(doc) {
   var el = goog.dom.getDocumentScrollElement_(doc), win = goog.dom.getWindow_(doc);
-  return goog.userAgent.IE && goog.userAgent.isVersionOrHigher("10") && win.pageYOffset != el.scrollTop ? new goog.math.Coordinate(el.scrollLeft, el.scrollTop) : new goog.math.Coordinate(win.pageXOffset || el.scrollLeft, win.pageYOffset || el.scrollTop);
+  return goog.userAgent.IE && win.pageYOffset != el.scrollTop ? new goog.math.Coordinate(el.scrollLeft, el.scrollTop) : new goog.math.Coordinate(win.pageXOffset || el.scrollLeft, win.pageYOffset || el.scrollTop);
 };
 goog.dom.getDocumentScrollElement = function() {
   return goog.dom.getDocumentScrollElement_(document);
@@ -5321,11 +5488,8 @@ goog.dom.isWindow = function(obj) {
 };
 goog.dom.getParentElement = function(element) {
   var parent;
-  if (goog.dom.BrowserFeature.CAN_USE_PARENT_ELEMENT_PROPERTY) {
-    var isIe9 = goog.userAgent.IE && goog.userAgent.isVersionOrHigher("9") && !goog.userAgent.isVersionOrHigher("10");
-    if (!(isIe9 && goog.global.SVGElement && element instanceof goog.global.SVGElement) && (parent = element.parentElement)) {
-      return parent;
-    }
+  if (goog.dom.BrowserFeature.CAN_USE_PARENT_ELEMENT_PROPERTY && (parent = element.parentElement)) {
+    return parent;
   }
   parent = element.parentNode;
   return goog.dom.isElement(parent) ? parent : null;
@@ -5924,10 +6088,29 @@ module$contents$goog$async$WorkQueue_WorkItem.prototype.reset = function() {
   this.next = this.scope = this.fn = null;
 };
 goog.async.WorkQueue = module$contents$goog$async$WorkQueue_WorkQueue;
+goog.debug.asyncStackTag = {};
+var module$contents$goog$debug$asyncStackTag_createTask = goog.DEBUG && goog.global.console && goog.global.console.createTask ? goog.global.console.createTask.bind(goog.global.console) : void 0, module$contents$goog$debug$asyncStackTag_CONSOLE_TASK_SYMBOL = module$contents$goog$debug$asyncStackTag_createTask ? Symbol("consoleTask") : void 0;
+function module$contents$goog$debug$asyncStackTag_wrap(fn, name) {
+  function wrappedFn() {
+    var args = $jscomp.getRestArguments.apply(0, arguments), $jscomp$this = this;
+    return consoleTask.run(function() {
+      return fn.call.apply(fn, [$jscomp$this].concat($jscomp.arrayFromIterable(args)));
+    });
+  }
+  name = void 0 === name ? "anonymous" : name;
+  if (!goog.DEBUG || !module$contents$goog$debug$asyncStackTag_createTask || fn[(0,goog.asserts.assertExists)(module$contents$goog$debug$asyncStackTag_CONSOLE_TASK_SYMBOL)]) {
+    return fn;
+  }
+  var consoleTask = module$contents$goog$debug$asyncStackTag_createTask(fn.name || name);
+  wrappedFn[(0,goog.asserts.assertExists)(module$contents$goog$debug$asyncStackTag_CONSOLE_TASK_SYMBOL)] = consoleTask;
+  return wrappedFn;
+}
+goog.debug.asyncStackTag.wrap = module$contents$goog$debug$asyncStackTag_wrap;
 goog.ASSUME_NATIVE_PROMISE = !1;
 var module$contents$goog$async$run_schedule, module$contents$goog$async$run_workQueueScheduled = !1, module$contents$goog$async$run_workQueue = new module$contents$goog$async$WorkQueue_WorkQueue(), module$contents$goog$async$run_run = function(callback, context) {
   module$contents$goog$async$run_schedule || module$contents$goog$async$run_initializeRunner();
   module$contents$goog$async$run_workQueueScheduled || (module$contents$goog$async$run_schedule(), module$contents$goog$async$run_workQueueScheduled = !0);
+  callback = module$contents$goog$debug$asyncStackTag_wrap(callback, "goog.async.run");
   module$contents$goog$async$run_workQueue.add(callback, context);
 }, module$contents$goog$async$run_initializeRunner = function() {
   if (goog.ASSUME_NATIVE_PROMISE || goog.global.Promise && goog.global.Promise.resolve) {
@@ -6390,7 +6573,7 @@ goog.events.Event.stopPropagation = function(e) {
 goog.events.Event.preventDefault = function(e) {
   e.preventDefault();
 };
-goog.events.BrowserFeature = {TOUCH_ENABLED:"ontouchstart" in goog.global || !!(goog.global.document && document.documentElement && "ontouchstart" in document.documentElement) || !(!goog.global.navigator || !goog.global.navigator.maxTouchPoints && !goog.global.navigator.msMaxTouchPoints), POINTER_EVENTS:"PointerEvent" in goog.global, MSPOINTER_EVENTS:"MSPointerEvent" in goog.global && !(!goog.global.navigator || !goog.global.navigator.msPointerEnabled), PASSIVE_EVENTS:function() {
+goog.events.BrowserFeature = {TOUCH_ENABLED:"ontouchstart" in goog.global || !!(goog.global.document && document.documentElement && "ontouchstart" in document.documentElement) || !(!goog.global.navigator || !goog.global.navigator.maxTouchPoints && !goog.global.navigator.msMaxTouchPoints), POINTER_EVENTS:"PointerEvent" in goog.global, MSPOINTER_EVENTS:!1, PASSIVE_EVENTS:function() {
   if (!goog.global.addEventListener || !Object.defineProperty) {
     return !1;
   }
@@ -6419,8 +6602,8 @@ SEEKED:"seeked", SEEKING:"seeking", STALLED:"stalled", SUSPEND:"suspend", TIMEUP
 ONLINE:"online", OFFLINE:"offline", MESSAGE:"message", CONNECT:"connect", INSTALL:"install", ACTIVATE:"activate", FETCH:"fetch", FOREIGNFETCH:"foreignfetch", MESSAGEERROR:"messageerror", STATECHANGE:"statechange", UPDATEFOUND:"updatefound", CONTROLLERCHANGE:"controllerchange", ANIMATIONSTART:goog.events.eventTypeHelpers.getVendorPrefixedName("AnimationStart"), ANIMATIONEND:goog.events.eventTypeHelpers.getVendorPrefixedName("AnimationEnd"), ANIMATIONITERATION:goog.events.eventTypeHelpers.getVendorPrefixedName("AnimationIteration"), 
 TRANSITIONEND:goog.events.eventTypeHelpers.getVendorPrefixedName("TransitionEnd"), POINTERDOWN:"pointerdown", POINTERUP:"pointerup", POINTERCANCEL:"pointercancel", POINTERMOVE:"pointermove", POINTEROVER:"pointerover", POINTEROUT:"pointerout", POINTERENTER:"pointerenter", POINTERLEAVE:"pointerleave", GOTPOINTERCAPTURE:"gotpointercapture", LOSTPOINTERCAPTURE:"lostpointercapture", MSGESTURECHANGE:"MSGestureChange", MSGESTUREEND:"MSGestureEnd", MSGESTUREHOLD:"MSGestureHold", MSGESTURESTART:"MSGestureStart", 
 MSGESTURETAP:"MSGestureTap", MSGOTPOINTERCAPTURE:"MSGotPointerCapture", MSINERTIASTART:"MSInertiaStart", MSLOSTPOINTERCAPTURE:"MSLostPointerCapture", MSPOINTERCANCEL:"MSPointerCancel", MSPOINTERDOWN:"MSPointerDown", MSPOINTERENTER:"MSPointerEnter", MSPOINTERHOVER:"MSPointerHover", MSPOINTERLEAVE:"MSPointerLeave", MSPOINTERMOVE:"MSPointerMove", MSPOINTEROUT:"MSPointerOut", MSPOINTEROVER:"MSPointerOver", MSPOINTERUP:"MSPointerUp", TEXT:"text", TEXTINPUT:goog.userAgent.IE ? "textinput" : "textInput", 
-COMPOSITIONSTART:"compositionstart", COMPOSITIONUPDATE:"compositionupdate", COMPOSITIONEND:"compositionend", BEFOREINPUT:"beforeinput", EXIT:"exit", LOADABORT:"loadabort", LOADCOMMIT:"loadcommit", LOADREDIRECT:"loadredirect", LOADSTART:"loadstart", LOADSTOP:"loadstop", RESPONSIVE:"responsive", SIZECHANGED:"sizechanged", UNRESPONSIVE:"unresponsive", VISIBILITYCHANGE:"visibilitychange", STORAGE:"storage", DOMSUBTREEMODIFIED:"DOMSubtreeModified", DOMNODEINSERTED:"DOMNodeInserted", DOMNODEREMOVED:"DOMNodeRemoved", 
-DOMNODEREMOVEDFROMDOCUMENT:"DOMNodeRemovedFromDocument", DOMNODEINSERTEDINTODOCUMENT:"DOMNodeInsertedIntoDocument", DOMATTRMODIFIED:"DOMAttrModified", DOMCHARACTERDATAMODIFIED:"DOMCharacterDataModified", BEFOREPRINT:"beforeprint", AFTERPRINT:"afterprint", BEFOREINSTALLPROMPT:"beforeinstallprompt", APPINSTALLED:"appinstalled", CANCEL:"cancel", FINISH:"finish", REMOVE:"remove"};
+COMPOSITIONSTART:"compositionstart", COMPOSITIONUPDATE:"compositionupdate", COMPOSITIONEND:"compositionend", BEFOREINPUT:"beforeinput", FULLSCREENCHANGE:"fullscreenchange", WEBKITBEGINFULLSCREEN:"webkitbeginfullscreen", WEBKITENDFULLSCREEN:"webkitendfullscreen", EXIT:"exit", LOADABORT:"loadabort", LOADCOMMIT:"loadcommit", LOADREDIRECT:"loadredirect", LOADSTART:"loadstart", LOADSTOP:"loadstop", RESPONSIVE:"responsive", SIZECHANGED:"sizechanged", UNRESPONSIVE:"unresponsive", VISIBILITYCHANGE:"visibilitychange", 
+STORAGE:"storage", DOMSUBTREEMODIFIED:"DOMSubtreeModified", DOMNODEINSERTED:"DOMNodeInserted", DOMNODEREMOVED:"DOMNodeRemoved", DOMNODEREMOVEDFROMDOCUMENT:"DOMNodeRemovedFromDocument", DOMNODEINSERTEDINTODOCUMENT:"DOMNodeInsertedIntoDocument", DOMATTRMODIFIED:"DOMAttrModified", DOMCHARACTERDATAMODIFIED:"DOMCharacterDataModified", BEFOREPRINT:"beforeprint", AFTERPRINT:"afterprint", BEFOREINSTALLPROMPT:"beforeinstallprompt", APPINSTALLED:"appinstalled", CANCEL:"cancel", FINISH:"finish", REMOVE:"remove"};
 goog.events.BrowserEvent = function(opt_e, opt_currentTarget) {
   goog.events.Event.call(this, opt_e ? opt_e.type : "");
   this.relatedTarget = this.currentTarget = this.target = null;
@@ -7689,6 +7872,8 @@ goog.Promise.prototype.addCallbackEntry_ = function(callbackEntry) {
   this.queueEntry_(callbackEntry);
 };
 goog.Promise.prototype.addChildPromise_ = function(onFulfilled, onRejected, opt_context) {
+  onFulfilled && (onFulfilled = module$contents$goog$debug$asyncStackTag_wrap(onFulfilled, "goog.Promise.then"));
+  onRejected && (onRejected = module$contents$goog$debug$asyncStackTag_wrap(onRejected, "goog.Promise.then"));
   var callbackEntry = goog.Promise.getCallbackEntry_(null, null, null);
   callbackEntry.child = new goog.Promise(function(resolve, reject) {
     callbackEntry.onFulfilled = onFulfilled ? function(value) {
@@ -8296,7 +8481,7 @@ goog.net.XhrIo.prototype.send = function(url, opt_method, opt_content, opt_heade
   }
 };
 goog.net.XhrIo.shouldUseXhr2Timeout_ = function(xhr) {
-  return goog.userAgent.IE && goog.userAgent.isVersionOrHigher(9) && "number" === typeof xhr[goog.net.XhrIo.XHR2_TIMEOUT_] && void 0 !== xhr[goog.net.XhrIo.XHR2_ON_TIMEOUT_];
+  return goog.userAgent.IE && "number" === typeof xhr[goog.net.XhrIo.XHR2_TIMEOUT_] && void 0 !== xhr[goog.net.XhrIo.XHR2_ON_TIMEOUT_];
 };
 goog.net.XhrIo.prototype.createXhr = function() {
   return this.xmlHttpFactory_ ? this.xmlHttpFactory_.createInstance() : goog.net.XmlHttp();

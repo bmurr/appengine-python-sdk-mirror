@@ -124,10 +124,6 @@ def MessageToString(
     indent=0,
     message_formatter=None,
     print_unknown_fields=False,
-
-
-    internal_piccolo_use_only_keep_old_float_format=False,
-
     force_colon=False):
 
   """Convert protobuf message to text format.
@@ -187,9 +183,6 @@ def MessageToString(
       descriptor_pool,
       message_formatter,
       print_unknown_fields=print_unknown_fields,
-
-      internal_piccolo_use_only_keep_old_float_format=internal_piccolo_use_only_keep_old_float_format,
-
       force_colon=force_colon)
   printer.PrintMessage(message)
   result = out.getvalue()
@@ -342,9 +335,6 @@ class _Printer(object):
       descriptor_pool=None,
       message_formatter=None,
       print_unknown_fields=False,
-
-      internal_piccolo_use_only_keep_old_float_format=False,
-
       force_colon=False):
     """Initialize the Printer.
 
@@ -398,9 +388,6 @@ class _Printer(object):
     self.descriptor_pool = descriptor_pool
     self.message_formatter = message_formatter
     self.print_unknown_fields = print_unknown_fields
-
-    self.keep_old_float_format = internal_piccolo_use_only_keep_old_float_format
-
     self.force_colon = force_colon
 
   def _TryPrintAsAnyMessage(self, message):
@@ -651,11 +638,6 @@ class _Printer(object):
       if self.float_format is not None:
         out.write('{1:{0}}'.format(self.float_format, value))
       else:
-
-        if self.keep_old_float_format:
-          out.write(str(float(format(value, '.8g'))))
-          return
-
         if math.isnan(value):
           out.write(str(value))
         else:

@@ -194,7 +194,7 @@ class DataType(object):
       return ''
 
   def format(self, value):
-    if isinstance(value, str):
+    if isinstance(value, six.string_types):
       return value
     else:
       return str(value)

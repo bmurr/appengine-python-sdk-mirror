@@ -546,7 +546,7 @@ class Application(object):
     url_match = _UPLOAD_URL_PATTERN.match(six.ensure_str(environ['PATH_INFO']))
     if not url_match:
       self.abort(404)
-    upload_key = url_match.group(1)
+    upload_key = url_match.group(1)  # pytype: disable=attribute-error  # re-none
 
     # Retrieve upload session.
     try:

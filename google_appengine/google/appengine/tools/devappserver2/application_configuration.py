@@ -47,13 +47,9 @@ else:
   from google.appengine.api import dispatchinfo
 
 
-from google.appengine.tools import app_engine_web_xml_parser
 from google.appengine.tools import queue_xml_parser
-from google.appengine.tools import web_xml_parser
-from google.appengine.tools import yaml_translator
 from google.appengine.tools.devappserver2 import constants
 from google.appengine.tools.devappserver2 import errors
-from google.appengine.tools.devappserver2.java import java_dir
 
 # Constants passed to functions registered with
 # ModuleConfiguration.add_change_callback.
@@ -91,7 +87,7 @@ _HEALTH_CHECK_DEFAULTS = {
 
 def java_supported():
   """True if this SDK supports running Java apps in the dev appserver."""
-  return os.path.isdir(java_dir.get_java_dir())
+  return False
 
 
 class ModuleConfiguration(object):
@@ -139,15 +135,7 @@ class ModuleConfiguration(object):
     self._config_path = config_path
     self._forced_app_id = app_id
     root = os.path.dirname(config_path)
-    self._is_java = os.path.normpath(config_path).endswith(os.sep + 'WEB-INF' +
-                                                           os.sep +
-                                                           'appengine-web.xml')
-    if self._is_java:
-      # We assume Java's XML-based config files only if config_path is
-      # something like /foo/bar/WEB-INF/appengine-web.xml. In this case,
-      # the application root is /foo/bar. Other apps, configured with YAML,
-      # have something like /foo/bar/app.yaml, with application root /foo/bar.
-      root = os.path.dirname(root)
+
     self._application_root = os.path.realpath(root)
     self._last_failure_message = None
 
@@ -511,11 +499,8 @@ class ModuleConfiguration(object):
       were used to produce it, namely the input configuration_path and any
       other file that was included from that one.
     """
-    if self._is_java:
-      config, files = self._parse_java_configuration(configuration_path)
-    else:
-      with open(configuration_path) as f:
-        config, files = appinfo_includes.ParseAndReturnIncludePaths(f)
+    with open(configuration_path) as f:
+      config, files = appinfo_includes.ParseAndReturnIncludePaths(f)
     if self._forced_app_id:
       config.application = self._forced_app_id
 
@@ -524,43 +509,6 @@ class ModuleConfiguration(object):
       logging.info('No version specified. Generated version id: %s',
                    config.version)
     return config, [configuration_path] + files
-
-  def _parse_java_configuration(self, app_engine_web_xml_path):
-    """Parse appengine-web.xml and web.xml.
-
-    Args:
-      app_engine_web_xml_path: A string containing the full path of the
-        .../WEB-INF/appengine-web.xml file. The corresponding
-        .../WEB-INF/web.xml file must also be present.
-
-    Returns:
-      A tuple where the first element is the parsed appinfo.AppInfoExternal
-      object and the second element is a list of the paths of the files that
-      were used to produce it, namely the input appengine-web.xml file and the
-      corresponding web.xml file.
-    """
-    with open(app_engine_web_xml_path) as f:
-      app_engine_web_xml_str = f.read()
-    app_engine_web_xml = (
-        app_engine_web_xml_parser.AppEngineWebXmlParser().ProcessXml(
-            app_engine_web_xml_str))
-
-    web_inf_dir = os.path.dirname(app_engine_web_xml_path)
-    web_xml_path = os.path.join(web_inf_dir, 'web.xml')
-    with open(web_xml_path) as f:
-      web_xml_str = f.read()
-
-    has_jsps = False
-    for _, _, filenames in os.walk(self.application_root):
-      if any(f.endswith('.jsp') for f in filenames):
-        has_jsps = True
-        break
-
-    web_xml = web_xml_parser.WebXmlParser().ProcessXml(web_xml_str, has_jsps)
-    app_yaml_str = yaml_translator.TranslateXmlToYamlForDevAppServer(
-        app_engine_web_xml, web_xml, self.application_root)
-    config = appinfo.LoadSingleAppInfo(app_yaml_str)
-    return config, [app_engine_web_xml_path, web_xml_path]
 
   def _translate_configuration_files(self):
     """Writes YAML equivalents of certain XML configuration files."""

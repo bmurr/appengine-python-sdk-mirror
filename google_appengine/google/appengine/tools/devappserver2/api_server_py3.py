@@ -94,10 +94,24 @@ DEFAULT_API_SERVER_APP_ID = 'dev~app-id'
 
 GO_WORMHOLE_RUNTIME_PATTERN = re.compile('go1([0-9]{2})')
 PYTHON_WORMHOLE_RUNTIME_PATTERN = re.compile('python3([0-9]+)')
-PHP_WORMHOLE_RUNTIME_PATTERN = re.compile('php7([0-9]+)')
+PHP_WORMHOLE_RUNTIME_PATTERN = re.compile('php[7-8]([0-9]+)')
 
 WORMHOLE_SERVICES = [
-    'datastore_v3', 'datastore_v4', 'logservice', 'memcache', 'urlfetch'
+    'datastore_v3',
+    'datastore_v4',
+    'logservice',
+    'memcache',
+    'urlfetch',
+    'user',
+    'mail',
+    'images',
+    'capability_service',
+    'blobstore',
+    'taskqueue',
+    'app_identity_service',
+    'modules',
+    'system',
+    'search',
 ]
 
 ENABLE_APP_ENGINE_APIS_MSG_TEMPLATE = (
