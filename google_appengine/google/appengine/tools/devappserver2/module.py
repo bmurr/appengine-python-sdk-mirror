@@ -57,7 +57,6 @@ from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import blob_image
 from google.appengine.tools.devappserver2 import blob_upload
 from google.appengine.tools.devappserver2 import constants
-from google.appengine.tools.devappserver2 import endpoints
 from google.appengine.tools.devappserver2 import errors
 from google.appengine.tools.devappserver2 import file_watcher
 from google.appengine.tools.devappserver2 import gcs_server
@@ -277,20 +276,6 @@ class Module(object):
     url_pattern = '/%s' % gcs_server.GCS_URL_PATTERN
     handlers.append(
         wsgi_handler.WSGIHandler(gcs_server.Application(), url_pattern))
-
-    # Add a handler for Endpoints, only if version == 1.0 and /_ah/spi handler
-    # is configured.
-    runtime_config = self._get_runtime_config()
-    for library in runtime_config.libraries:
-      if library.name == 'endpoints' and library.version == '1.0':
-        if [
-            url_map for url_map in self._module_configuration.handlers
-            if six.ensure_str(url_map.url).startswith('/_ah/spi/')
-        ]:
-          url_pattern = '/%s' % endpoints.API_SERVING_PATTERN
-          handlers.append(
-              wsgi_handler.WSGIHandler(
-                  endpoints.EndpointsDispatcher(self._dispatcher), url_pattern))
 
     found_start_handler = False
     found_warmup_handler = False

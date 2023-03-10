@@ -276,6 +276,10 @@ class DevelopmentServer(object):
     if runtime_python_path:
       instance_factory.PythonRuntimeInstanceFactory.SetRuntimePythonPath(
           runtime_python_path)
+    if options.python_virtualenv_path:
+      instance_factory.PythonRuntimeInstanceFactory.SetVirtualEnvPythonPath(
+          options.python_virtualenv_path
+      )
 
   def start(self, options):
     """Start devappserver2 servers based on the provided command line arguments.

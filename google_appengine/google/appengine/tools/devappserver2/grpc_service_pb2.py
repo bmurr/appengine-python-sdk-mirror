@@ -19,10 +19,10 @@
 # source: apphosting/tools/devappserver2/grpc_service.proto
 """Generated protocol buffer code."""
 import google
-from google.net.proto2.python.internal import builder as _builder
 from google.net.proto2.python.public import descriptor as _descriptor
 from google.net.proto2.python.public import descriptor_pool as _descriptor_pool
 from google.net.proto2.python.public import symbol_database as _symbol_database
+from google.net.proto2.python.internal import builder as _builder
 # @@protoc_insertion_point(imports)
 
 _sym_db = _symbol_database.Default()

@@ -48,9 +48,10 @@ _MODERN_DEFAULT_ENTRYPOINT = 'gunicorn -b :${PORT} main:app'
 
 _DEFAULT_REQUIREMENT_FILE_NAME = 'requirements.txt'
 
-_RECREATE_MODERN_INSTANCE_FACTORY_CONFIG_CHANGES = set([
+_RECREATE_MODERN_INSTANCE_FACTORY_CONFIG_CHANGES = frozenset([
     application_configuration.ENTRYPOINT_ADDED,
-    application_configuration.ENTRYPOINT_REMOVED])
+    application_configuration.ENTRYPOINT_REMOVED,
+])
 
 _MODERN_REQUEST_ID_HEADER_NAME = 'X-Appengine-Api-Ticket'
 
@@ -105,6 +106,16 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
     PythonRuntimeInstanceFactory._python27_runtime_is_executable = value
 
   _runtime_python_path = {}
+  _virtualenv_python_path = None
+
+  @classmethod
+  def SetVirtualEnvPythonPath(cls, virtualenv_python_path):
+    """Set the virtual env directory controlled by the user via flag."""
+    PythonRuntimeInstanceFactory._virtualenv_python_path = (
+        virtualenv_python_path
+    )
+    if not os.path.exists(virtualenv_python_path):
+      os.makedirs(virtualenv_python_path)
 
   @classmethod
   def SetRuntimePythonPath(cls, runtime_python_path):
@@ -210,8 +221,13 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
     self._CleanUpVenv(self._venv_dir)
 
   def _CleanUpVenv(self, venv_dir):
-    if os.path.exists(venv_dir):
-      shutil.rmtree(venv_dir)
+    # Delete it only if it is not user provided
+    virtualenv_python_path = (
+        PythonRuntimeInstanceFactory._virtualenv_python_path
+    )
+    if virtualenv_python_path is not None:
+      if os.path.exists(venv_dir):
+        shutil.rmtree(venv_dir)
 
   @property
   def _OrigRequirementsFile(self):
@@ -226,7 +242,18 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
 
   def _SetupVirtualenvFromConfiguration(self):
     self._CleanUpVenv(self._venv_dir)
-    self._venv_dir = tempfile.mkdtemp()
+    # Create one only if it is not user provided
+    virtualenv_python_path = (
+        PythonRuntimeInstanceFactory._virtualenv_python_path
+    )
+    if virtualenv_python_path is None:
+      self._venv_dir = tempfile.mkdtemp()
+    else:
+      self._venv_dir = os.path.join(
+          virtualenv_python_path, self._module_configuration.module_name
+      )
+      if not os.path.exists(self._venv_dir):
+        os.makedirs(self._venv_dir)
 
     if self._entrypoint:
       self.venv_env_vars = self._SetupVirtualenv(

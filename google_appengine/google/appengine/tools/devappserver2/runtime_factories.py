@@ -18,7 +18,6 @@
 
 
 
-from google.appengine.tools.devappserver2.custom import instance_factory as custom_factory
 from google.appengine.tools.devappserver2.go import instance_factory as go_factory
 from google.appengine.tools.devappserver2.php import instance_factory as php_factory
 from google.appengine.tools.devappserver2.python import instance_factory as python_factory
@@ -70,7 +69,6 @@ FACTORIES = {
     'python311': python_factory.PythonRuntimeInstanceFactory,
     'python27': python_factory.PythonRuntimeInstanceFactory,
     'python-compat': python_factory.PythonRuntimeInstanceFactory,
-    'custom': custom_factory.CustomRuntimeInstanceFactory,
 }
 
 

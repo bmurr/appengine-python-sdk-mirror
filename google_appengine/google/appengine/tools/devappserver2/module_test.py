@@ -53,7 +53,6 @@ from google.appengine.tools.devappserver2 import start_response_utils
 from google.appengine.tools.devappserver2 import stub_testing
 from google.appengine.tools.devappserver2 import util
 from google.appengine.tools.devappserver2 import wsgi_server
-from google.appengine.tools.devappserver2.custom import instance_factory as custom_factory
 from google.appengine.tools.devappserver2.go import gaego as gaego_application
 from google.appengine.tools.devappserver2.go import instance_factory as go_factory
 from google.appengine.tools.devappserver2.python import instance_factory as python_factory
@@ -2870,10 +2869,6 @@ class InstanceFactoryTest(googletest.TestCase):
   def test_vm_go(self):
     self._run_test('go', go_factory.GoRuntimeInstanceFactory, vm=True)
 
-  def test_vm_custom(self):
-    self._run_test(
-        'custom', custom_factory.CustomRuntimeInstanceFactory, vm=True)
-
   def test_env_2_python_compat(self):
     self._run_test(
         'python-compat', python_factory.PythonRuntimeInstanceFactory, env='2')
@@ -2898,43 +2893,6 @@ class InstanceFactoryTest(googletest.TestCase):
 
   def test_env_flexible_go(self):
     self._run_test('go', go_factory.GoRuntimeInstanceFactory, env='flexible')
-
-
-class TestRuntimeConfigsInModuleCreation(stub_testing.StubTestCase):
-  """Tests effects of different values in CustomConfig"""
-
-  def setUp(self):
-    super(TestRuntimeConfigsInModuleCreation, self).setUp()
-    self.custom_config = runtime_config_pb2.CustomConfig()
-    self.module_config = ModuleConfigurationStub(
-        runtime='custom', effective_runtime='custom')
-
-  def test_custom_runtime_no_configs(self):
-    """If using runtime: custom, must set --runtime or --custom_entrypoint"""
-
-    with self.assertRaises(errors.InvalidAppConfigError):
-      ModuleFacade(
-          module_configuration=self.module_config,
-          custom_config=self.custom_config)
-
-  def test_custom_runtime_with_runtime_flag(self):
-    """The runtime flag should override the the original 'custom' runtime"""
-
-    self.custom_config.runtime = 'python27'
-    module = ModuleFacade(
-        module_configuration=self.module_config,
-        custom_config=self.custom_config)
-    self.assertEquals(module.effective_runtime, self.custom_config.runtime)
-
-  def test_custom_runtime_with_too_many_flags(self):
-    """custom_entrypoint and runtime flag cannot both be set"""
-
-    self.custom_config.runtime = 'python27'
-    self.custom_config.custom_entrypoint = 'python main.py'
-    with self.assertRaises(errors.InvalidAppConfigError):
-      ModuleFacade(
-          module_configuration=self.module_config,
-          custom_config=self.custom_config)
 
 
 if __name__ == '__main__':

@@ -174,7 +174,6 @@ class Paths(object):
     self.endpointscfg_extra_paths = [
         os.path.join(dir_path, 'lib', 'cherrypy'),
         os.path.join(dir_path, 'lib', 'concurrent'),
-        os.path.join(dir_path, 'lib', 'endpoints-1.0'),
         os.path.join(dir_path, 'lib', 'portpicker'),
     ]
 

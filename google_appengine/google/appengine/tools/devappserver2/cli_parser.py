@@ -317,7 +317,7 @@ def parse_python27_executable_path(value):
     value: A str containing the path to a python27 interpreter.
 
   Returns:
-    The passed value if it is a path to a python27 intepreter.
+    The passed value if it is a path to a python27 interpreter.
 
   Raises:
     argparse.ArgumentTypeError: the value is invalid.
@@ -506,9 +506,14 @@ def create_command_line_parser(configuration=None):
   common_group.add_argument(
       '--test_ssl_port', type=PortParser(), help=argparse.SUPPRESS)
   common_group.add_argument(
-      '--specified_service_ports', type=ServicePortParser(), default=None,
-      help='A sequence of service-name:port-number to port number mapping. E.g:'
-      ' service-a:22222,service-b:33333')
+      '--specified_service_ports',
+      type=ServicePortParser(),
+      default=None,
+      help=(
+          'A sequence of service-name:port-number to port number mapping. E.g.:'
+          ' service-a:22222,service-b:33333'
+      ),
+  )
   common_group.add_argument(
       '--admin_host', default=default_server_host,
       help='host name to which the admin server should bind')
@@ -538,10 +543,14 @@ def create_command_line_parser(configuration=None):
       '--max_module_instances',
       type=parse_max_module_instances,
       restrict_configuration=[DEV_APPSERVER_CONFIGURATION],
-      help='the maximum number of runtime instances that can be started for a '
-      'particular module - the value can be an integer, in what case all '
-      'modules are limited to that number of instances or a comma-seperated '
-      'list of module:max_instances e.g. "default:5,backend:3"')
+      help=(
+          'the maximum number of runtime instances that can be started for a'
+          ' particular module - the value can be an integer, in what case all'
+          ' modules are limited to that number of instances or a'
+          ' comma-separated list of module:max_instances e.g.'
+          ' "default:5,backend:3"'
+      ),
+  )
   common_group.add_argument(
       '--use_mtime_file_watcher',
       action=boolean_action.BooleanAction,
@@ -658,7 +667,7 @@ def create_command_line_parser(configuration=None):
       '--appidentity_private_key_path',
       help='path to private key file associated with service account '
       '(.pem format). Must be set if appidentity_email_address is set.')
-  # Supressing the help text, as it is unlikely any typical user outside
+  # Suppressing the help text, as it is unlikely any typical user outside
   # of Google has an appropriately set up test oauth server that devappserver2
   # could talk to.
   # URL to the oauth server that devappserver2 should  use to authenticate the
@@ -688,6 +697,20 @@ def create_command_line_parser(configuration=None):
       'instances.')
 
   python_group.add_argument(
+      '--python_virtualenv_path',
+      type=parse_path,
+      restrict_configuration=[DEV_APPSERVER_CONFIGURATION],
+      help=(
+          'the path to a user defined directory that will be used to setup a'
+          ' virtual env. If the path does not exist it will be created and it'
+          ' will not be cleanup at the end of the devappserver execution,'
+          ' allowing for caching between invocations. If not defined, a'
+          ' temporary directory will be used and cleaned up at the end of the'
+          ' execution.'
+      ),
+  )
+
+  python_group.add_argument(
       '--runtime_python_path',
       type=parse_runtime_python_path,
       restrict_configuration=[DEV_APPSERVER_CONFIGURATION],
@@ -695,15 +718,6 @@ def create_command_line_parser(configuration=None):
       'services. Can be a single path that applies to all user python '
       'services or a comma=separated list of one or more per runtime '
       'values e.g. "python27=/user/bin/python2.7,python3=/usr/bin/python3". ')
-
-  # Java
-  java_group = parser.add_argument_group('Java')
-  java_group.add_argument(
-      '--jvm_flag', action='append',
-      restrict_configuration=[DEV_APPSERVER_CONFIGURATION],
-      help='additional arguments to pass to the java command when launching '
-      'an instance of the app. May be specified more than once. Example: '
-      '--jvm_flag=-Xmx1024m --jvm_flag=-Xms256m')
 
   # Go
   go_group = parser.add_argument_group('Go')
@@ -999,13 +1013,18 @@ def create_command_line_parser(configuration=None):
       '--default_gcs_bucket_name', default=None,
       help='default Google Cloud Storage bucket name')
   misc_group.add_argument(
-      '--env_var', action='append',
+      '--env_var',
+      action='append',
       restrict_configuration=[DEV_APPSERVER_CONFIGURATION],
-      type=lambda kv: kv.split('=', 1), dest='env_variables',
-      help='user defined environment variable for the runtime. each env_var is '
-      'in the format of key=value, and you can define multiple envrionment '
-      'variables. For example: --env_var KEY_1=val1 --env_var KEY_2=val2. '
-      'You can also define environment variables in app.yaml.')
+      type=lambda kv: kv.split('=', 1),
+      dest='env_variables',
+      help=(
+          'user defined environment variable for the runtime. each env_var is '
+          'in the format of key=value, and you can define multiple environment '
+          'variables. For example: --env_var KEY_1=val1 --env_var KEY_2=val2. '
+          'You can also define environment variables in app.yaml.'
+      ),
+  )
   misc_group.add_argument(
       '--check_java_for_cloud_datastore_emulator',
       action=boolean_action.BooleanAction,
