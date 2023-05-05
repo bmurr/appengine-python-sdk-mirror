@@ -114,7 +114,7 @@ class GoogleCloudSDKDownloader:
     @staticmethod
     def get_all_versions(*args):
         info = GoogleCloudSDKDownloader.get_version_json()
-        versions = {}
+        versions = []
         for cloud_sdk, version_components in info.items():
             component = version_components.get("app-engine-python-sdk")
 
@@ -132,9 +132,10 @@ class GoogleCloudSDKDownloader:
                 build_number,
                 f"app-engine-python-sdk_{version_string}.tar.gz",
             )
-            versions[version_string] = component_info
-
-        return versions
+            versions.append((version_string, component_info))
+            
+        versions = sorted(versions, key=lambda p: p[1].build_number)
+        return dict(versions)
 
     @staticmethod
     def list_versions(versions, args):
