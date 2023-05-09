@@ -2061,7 +2061,6 @@ namespace google\appengine {
       if (!isset($this->start_time)) return 'start_time';
       if (!isset($this->end_time)) return 'end_time';
       if (!isset($this->latency)) return 'latency';
-      if (!isset($this->mcycles)) return 'mcycles';
       if (!isset($this->method)) return 'method';
       if (!isset($this->resource)) return 'resource';
       if (!isset($this->http_version)) return 'http_version';

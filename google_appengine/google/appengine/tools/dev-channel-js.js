@@ -2298,6 +2298,8 @@ goog.flags = {};
 var module$contents$goog$flags_STAGING = goog.readFlagInternalDoNotUseOrElse(1, goog.FLAGS_STAGING_DEFAULT);
 goog.flags.USE_USER_AGENT_CLIENT_HINTS = goog.readFlagInternalDoNotUseOrElse(610401301, !1);
 goog.flags.ASYNC_THROW_ON_UNICODE_TO_BYTE = goog.readFlagInternalDoNotUseOrElse(899588437, !1);
+goog.flags.APPS_JSPB_UNSORTED_MAPS_FLAG = goog.readFlagInternalDoNotUseOrElse(513561853, module$contents$goog$flags_STAGING);
+goog.flags.APPS_JSPB_REMOVE_INTERNAL_WRAPPERS = goog.readFlagInternalDoNotUseOrElse(516931134, module$contents$goog$flags_STAGING);
 goog.flags.TESTONLY_FALSE_FLAG = goog.readFlagInternalDoNotUseOrElse(2147483644, !1);
 goog.flags.TESTONLY_DEBUG_FLAG = goog.readFlagInternalDoNotUseOrElse(2147483645, goog.DEBUG);
 goog.flags.TESTONLY_STAGING_FLAG = goog.readFlagInternalDoNotUseOrElse(2147483646, module$contents$goog$flags_STAGING);
@@ -3657,7 +3659,10 @@ goog.string.Const.TYPE_MARKER_ = {};
 goog.string.Const.GOOG_STRING_CONSTRUCTOR_TOKEN_PRIVATE_ = {};
 goog.string.Const.EMPTY = goog.string.Const.from("");
 var module$contents$goog$html$SafeScript_CONSTRUCTOR_TOKEN_PRIVATE = {}, module$contents$goog$html$SafeScript_SafeScript = function(value, token) {
-  this.privateDoNotAccessOrElseSafeScriptWrappedValue_ = token === module$contents$goog$html$SafeScript_CONSTRUCTOR_TOKEN_PRIVATE ? value : "";
+  if (goog.DEBUG && token !== module$contents$goog$html$SafeScript_CONSTRUCTOR_TOKEN_PRIVATE) {
+    throw Error("SafeScript is not meant to be built directly");
+  }
+  this.privateDoNotAccessOrElseSafeScriptWrappedValue_ = value;
   this.implementsGoogStringTypedString = !0;
 };
 module$contents$goog$html$SafeScript_SafeScript.prototype.toString = function() {
@@ -3741,7 +3746,10 @@ goog.fs.blob.getBlobWithProperties = function(parts, opt_type, opt_endings) {
   throw Error("This browser doesn't seem to support creating Blobs");
 };
 goog.html.TrustedResourceUrl = function(value, token) {
-  this.privateDoNotAccessOrElseTrustedResourceUrlWrappedValue_ = token === goog.html.TrustedResourceUrl.CONSTRUCTOR_TOKEN_PRIVATE_ ? value : "";
+  if (goog.DEBUG && token !== goog.html.TrustedResourceUrl.CONSTRUCTOR_TOKEN_PRIVATE_) {
+    throw Error("TrustedResourceUrl is not meant to be built directly");
+  }
+  this.privateDoNotAccessOrElseTrustedResourceUrlWrappedValue_ = value;
 };
 goog.html.TrustedResourceUrl.prototype.toString = function() {
   return this.privateDoNotAccessOrElseTrustedResourceUrlWrappedValue_ + "";
@@ -3821,7 +3829,10 @@ goog.html.TrustedResourceUrl.stringifyParams_ = function(prefix, currentString, 
   return currentString;
 };
 goog.html.SafeUrl = function(value, token) {
-  this.privateDoNotAccessOrElseSafeUrlWrappedValue_ = token === goog.html.SafeUrl.CONSTRUCTOR_TOKEN_PRIVATE_ ? value : "";
+  if (goog.DEBUG && token !== goog.html.SafeUrl.CONSTRUCTOR_TOKEN_PRIVATE_) {
+    throw Error("SafeUrl is not meant to be built directly");
+  }
+  this.privateDoNotAccessOrElseSafeUrlWrappedValue_ = value;
 };
 goog.html.SafeUrl.prototype.toString = function() {
   return this.privateDoNotAccessOrElseSafeUrlWrappedValue_.toString();
@@ -4012,7 +4023,10 @@ goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse = function(url) 
 goog.html.SafeUrl.INNOCUOUS_URL = goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(goog.html.SafeUrl.INNOCUOUS_STRING);
 goog.html.SafeUrl.ABOUT_BLANK = goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse("about:blank");
 var module$contents$goog$html$SafeStyle_CONSTRUCTOR_TOKEN_PRIVATE = {}, module$contents$goog$html$SafeStyle_SafeStyle = function(value, token) {
-  this.privateDoNotAccessOrElseSafeStyleWrappedValue_ = token === module$contents$goog$html$SafeStyle_CONSTRUCTOR_TOKEN_PRIVATE ? value : "";
+  if (goog.DEBUG && token !== module$contents$goog$html$SafeStyle_CONSTRUCTOR_TOKEN_PRIVATE) {
+    throw Error("SafeStyle is not meant to be built directly");
+  }
+  this.privateDoNotAccessOrElseSafeStyleWrappedValue_ = value;
   this.implementsGoogStringTypedString = !0;
 };
 module$contents$goog$html$SafeStyle_SafeStyle.fromConstant = function(style) {
@@ -4129,7 +4143,10 @@ function module$contents$goog$html$SafeStyle_sanitizeUrl(value) {
 }
 goog.html.SafeStyle = module$contents$goog$html$SafeStyle_SafeStyle;
 var module$contents$goog$html$SafeStyleSheet_CONSTRUCTOR_TOKEN_PRIVATE = {}, module$contents$goog$html$SafeStyleSheet_SafeStyleSheet = function(value, token) {
-  this.privateDoNotAccessOrElseSafeStyleSheetWrappedValue_ = token === module$contents$goog$html$SafeStyleSheet_CONSTRUCTOR_TOKEN_PRIVATE ? value : "";
+  if (goog.DEBUG && token !== module$contents$goog$html$SafeStyleSheet_CONSTRUCTOR_TOKEN_PRIVATE) {
+    throw Error("SafeStyleSheet is not meant to be built directly");
+  }
+  this.privateDoNotAccessOrElseSafeStyleSheetWrappedValue_ = value;
   this.implementsGoogStringTypedString = !0;
 };
 module$contents$goog$html$SafeStyleSheet_SafeStyleSheet.prototype.toString = function() {
@@ -4166,7 +4183,10 @@ module$contents$goog$html$SafeStyleSheet_SafeStyleSheet.createSafeStyleSheetSecu
 module$contents$goog$html$SafeStyleSheet_SafeStyleSheet.EMPTY = module$contents$goog$html$SafeStyleSheet_SafeStyleSheet.createSafeStyleSheetSecurityPrivateDoNotAccessOrElse("");
 goog.html.SafeStyleSheet = module$contents$goog$html$SafeStyleSheet_SafeStyleSheet;
 var module$contents$goog$html$SafeHtml_CONSTRUCTOR_TOKEN_PRIVATE = {}, module$contents$goog$html$SafeHtml_SafeHtml = function(value, token) {
-  this.privateDoNotAccessOrElseSafeHtmlWrappedValue_ = token === module$contents$goog$html$SafeHtml_CONSTRUCTOR_TOKEN_PRIVATE ? value : "";
+  if (goog.DEBUG && token !== module$contents$goog$html$SafeHtml_CONSTRUCTOR_TOKEN_PRIVATE) {
+    throw Error("SafeHtml is not meant to be built directly");
+  }
+  this.privateDoNotAccessOrElseSafeHtmlWrappedValue_ = value;
   this.implementsGoogStringTypedString = !0;
 };
 module$contents$goog$html$SafeHtml_SafeHtml.prototype.getTypedStringValue = function() {
@@ -6581,9 +6601,10 @@ goog.events.BrowserFeature = {TOUCH_ENABLED:"ontouchstart" in goog.global || !!(
     passive = !0;
   }});
   try {
-    goog.global.addEventListener("test", function() {
-    }, options), goog.global.removeEventListener("test", function() {
-    }, options);
+    var nullFunction = function() {
+    };
+    goog.global.addEventListener("test", nullFunction, options);
+    goog.global.removeEventListener("test", nullFunction, options);
   } catch (e) {
   }
   return passive;

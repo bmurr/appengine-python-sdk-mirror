@@ -349,6 +349,9 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
           }
       )
 
+      if self._module_configuration.build_env_variables:
+        pip_env.update(self._module_configuration.build_env_variables)
+
       pip_requirement = 'pip'
       if self._IsPythonExecutableBefore36():
         # Because pip 21.0.0 drops support for python 3.5

@@ -98,6 +98,7 @@ class TestModuleConfiguration(unittest.TestCase):
     error_handlers = [appinfo.ErrorHandlers(file='error.html')]
     handlers = [appinfo.URLMap()]
     env_variables = appinfo.EnvironmentVariables()
+    build_env_variables = appinfo.EnvironmentVariables(a='a_val', b='b_val')
     info = appinfo.AppInfoExternal(
         application='app',
         entrypoint='gunicorn main:app',
@@ -111,6 +112,7 @@ class TestModuleConfiguration(unittest.TestCase):
         handlers=handlers,
         inbound_services=['warmup'],
         env_variables=env_variables,
+        build_env_variables=build_env_variables,
     )
     with mock.patch.object(
         appinfo_includes, 'ParseAndReturnIncludePaths',
@@ -150,12 +152,14 @@ class TestModuleConfiguration(unittest.TestCase):
     self.assertEqual(env_variables, config.env_variables)
     self.assertEqual({'/appdir/app.yaml': 10}, config._mtimes)
     self.assertEqual(_DEFAULT_HEALTH_CHECK, config.health_check)
+    self.assertEqual(build_env_variables, config.build_env_variables)
 
   def test_good_app_yaml_configuration_basic_scaling(self):
     basic_scaling = appinfo.BasicScaling()
     error_handlers = [appinfo.ErrorHandlers(file='error.html')]
     handlers = [appinfo.URLMap()]
     env_variables = appinfo.EnvironmentVariables()
+    build_env_variables = appinfo.EnvironmentVariables(a='a_val', b='b_val')
     info = appinfo.AppInfoExternal(
         application='app',
         module='module1',
@@ -168,6 +172,7 @@ class TestModuleConfiguration(unittest.TestCase):
         handlers=handlers,
         inbound_services=['warmup'],
         env_variables=env_variables,
+        build_env_variables=build_env_variables,
     )
     with mock.patch.object(
         appinfo_includes, 'ParseAndReturnIncludePaths',
@@ -206,12 +211,14 @@ class TestModuleConfiguration(unittest.TestCase):
     self.assertEqual(env_variables, config.env_variables)
     self.assertEqual({'/appdir/app.yaml': 10}, config._mtimes)
     self.assertEqual(_DEFAULT_HEALTH_CHECK, config.health_check)
+    self.assertEqual(build_env_variables, config.build_env_variables)
 
   def test_memory_limit_configuration_auto_scaling_nondefault(self):
     automatic_scaling = appinfo.AutomaticScaling()
     error_handlers = [appinfo.ErrorHandlers(file='error.html')]
     handlers = [appinfo.URLMap()]
     env_variables = appinfo.EnvironmentVariables()
+    build_env_variables = appinfo.EnvironmentVariables()
     info = appinfo.AppInfoExternal(
         application='app',
         module='module1',
@@ -225,6 +232,7 @@ class TestModuleConfiguration(unittest.TestCase):
         inbound_services=['warmup'],
         env_variables=env_variables,
         instance_class='F4_1G',
+        build_env_variables=build_env_variables,
     )
     with mock.patch.object(
         appinfo_includes, 'ParseAndReturnIncludePaths',
@@ -245,6 +253,7 @@ class TestModuleConfiguration(unittest.TestCase):
     error_handlers = [appinfo.ErrorHandlers(file='error.html')]
     handlers = [appinfo.URLMap()]
     env_variables = appinfo.EnvironmentVariables()
+    build_env_variables = appinfo.EnvironmentVariables()
     info = appinfo.AppInfoExternal(
         application='app',
         module='module1',
@@ -258,6 +267,7 @@ class TestModuleConfiguration(unittest.TestCase):
         inbound_services=['warmup'],
         env_variables=env_variables,
         instance_class='B4_1G',
+        build_env_variables=build_env_variables,
     )
     with mock.patch.object(
         appinfo_includes, 'ParseAndReturnIncludePaths',

@@ -96,19 +96,19 @@ class PHPRuntime(object):
       module_id, version_id = config.version_id.split(
           six.ensure_binary(appinfo.MODULE_SEPARATOR))
     self.environ_template = {
-        'APPLICATION_ID': six.ensure_text(config.app_id),
-        'CURRENT_MODULE_ID': module_id,
-        'CURRENT_VERSION_ID': version_id,
-        'DATACENTER': six.ensure_text(config.datacenter),
-        'INSTANCE_ID': six.ensure_text(config.instance_id),
+        'APPLICATION_ID': six.ensure_str(config.app_id),
+        'CURRENT_MODULE_ID': six.ensure_str(module_id),
+        'CURRENT_VERSION_ID': six.ensure_str(version_id),
+        'DATACENTER': six.ensure_str(config.datacenter),
+        'INSTANCE_ID': six.ensure_str(config.instance_id),
         'APPENGINE_RUNTIME': 'php',
-        'AUTH_DOMAIN': six.ensure_text(config.auth_domain),
+        'AUTH_DOMAIN': six.ensure_str(config.auth_domain),
         'HTTPS': 'off',
         # By default php-cgi does not allow .php files to be run directly so
         # REDIRECT_STATUS must be set. See:
         # http://php.net/manual/en/security.cgi-bin.force-redirect.php
         'REDIRECT_STATUS': '1',
-        'REMOTE_API_HOST': six.ensure_text(config.api_host),
+        'REMOTE_API_HOST': str(config.api_host),
         'REMOTE_API_PORT': str(config.api_port),
         'SERVER_SOFTWARE': http_runtime_constants.SERVER_SOFTWARE,
         'STDERR_LOG_LEVEL': str(config.stderr_log_level),
@@ -141,7 +141,7 @@ class PHPRuntime(object):
     # PHP environment. Put the user script in REAL_SCRIPT_FILENAME.
     user_environ['REAL_SCRIPT_FILENAME'] = os.path.normpath(
         os.path.join(
-            six.ensure_text(self.config.application_root),
+            six.ensure_str(self.config.application_root),
             environ[http_runtime_constants.SCRIPT_HEADER].lstrip('/')))
     user_environ['SCRIPT_FILENAME'] = SETUP_PHP_PATH
     user_environ['REMOTE_REQUEST_ID'] = environ[
@@ -171,7 +171,7 @@ class PHPRuntime(object):
       ld_library_path.append(os.environ['LD_LIBRARY_PATH'])
     if ld_library_path:
       user_environ['LD_LIBRARY_PATH'] = ':'.join(
-          six.ensure_text(path) for path in ld_library_path)
+          six.ensure_str(path) for path in ld_library_path)
 
     # On Windows, TMP & TEMP environmental variables are used by GetTempPath
     # http://msdn.microsoft.com/library/windows/desktop/aa364992(v=vs.85).aspx
@@ -183,7 +183,7 @@ class PHPRuntime(object):
     if self.config.php_config.enable_debugger:
       user_environ['XDEBUG_CONFIG'] = environ.get('XDEBUG_CONFIG', '')
 
-    return dict((six.ensure_text(key), six.ensure_text(value))
+    return dict((six.ensure_str(key), six.ensure_str(value))
                 for key, value in user_environ.items())
 
   def make_php_cgi_args(self):
@@ -194,18 +194,18 @@ class PHPRuntime(object):
     if sys.platform == 'win32':
       # See https://bugs.php.net/bug.php?id=46034 for quoting requirements.
       include_path = 'include_path="%s"' % ';'.join(
-          six.ensure_text(path) for path in include_paths)
+          six.ensure_str(path) for path in include_paths)
     else:
       include_path = 'include_path=%s' % ':'.join(
-          six.ensure_text(path) for path in include_paths)
+          six.ensure_str(path) for path in include_paths)
 
     args = [
-        six.ensure_text(self.config.php_config.php_executable_path), '-d',
+        six.ensure_str(self.config.php_config.php_executable_path), '-d',
         include_path
     ]
 
     # Load php.ini from application's root.
-    args.extend(['-c', six.ensure_text(self.config.application_root)])
+    args.extend(['-c', six.ensure_str(self.config.application_root)])
 
     if self.config.php_config.enable_debugger:
       args.extend(['-d', 'xdebug.default_enable="1"'])
@@ -216,19 +216,19 @@ class PHPRuntime(object):
       args.extend([
           '-d',
           'zend_extension="%s"' %
-          six.ensure_text(self.config.php_config.xdebug_extension_path)
+          six.ensure_str(self.config.php_config.xdebug_extension_path)
       ])
 
     if self.config.php_config.gae_extension_path:
       args.extend([
           '-d',
           'extension="%s"' % os.path.basename(
-              six.ensure_text(self.config.php_config.gae_extension_path))
+              six.ensure_str(self.config.php_config.gae_extension_path))
       ])
       args.extend([
           '-d',
           'extension_dir="%s"' % os.path.dirname(
-              six.ensure_text(self.config.php_config.gae_extension_path))
+              six.ensure_str(self.config.php_config.gae_extension_path))
       ])
 
     return args

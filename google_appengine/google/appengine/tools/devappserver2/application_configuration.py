@@ -385,6 +385,10 @@ class ModuleConfiguration(object):
   def default_expiration(self):
     return self._app_info_external.default_expiration
 
+  @property
+  def build_env_variables(self):
+    return self._app_info_external.build_env_variables
+
   def check_for_updates(self):
     """Return any configuration changes since the last check_for_updates call.
 
@@ -786,6 +790,10 @@ class BackendConfiguration(object):
   @property
   def default_expiration(self):
     return self._module_configuration.default_expiration
+
+  @property
+  def build_env_variables(self):
+    return self._module_configuration.build_env_variables
 
   def check_for_updates(self):
     """Return any configuration changes since the last check_for_updates call.

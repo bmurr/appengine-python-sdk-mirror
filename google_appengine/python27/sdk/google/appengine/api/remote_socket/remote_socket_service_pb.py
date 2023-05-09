@@ -672,6 +672,8 @@ class CreateSocketRequest(ProtocolBuffer.ProtocolMessage):
   project_id_ = 0
   has_pool_ = 0
   pool_ = ""
+  has_unified_rsg_socket_log_ = 0
+  unified_rsg_socket_log_ = 0
 
   def __init__(self, contents=None):
     self.socket_options_ = []
@@ -810,6 +812,19 @@ class CreateSocketRequest(ProtocolBuffer.ProtocolMessage):
 
   def has_pool(self): return self.has_pool_
 
+  def unified_rsg_socket_log(self): return self.unified_rsg_socket_log_
+
+  def set_unified_rsg_socket_log(self, x):
+    self.has_unified_rsg_socket_log_ = 1
+    self.unified_rsg_socket_log_ = x
+
+  def clear_unified_rsg_socket_log(self):
+    if self.has_unified_rsg_socket_log_:
+      self.has_unified_rsg_socket_log_ = 0
+      self.unified_rsg_socket_log_ = 0
+
+  def has_unified_rsg_socket_log(self): return self.has_unified_rsg_socket_log_
+
 
   def MergeFrom(self, x):
     assert x is not self
@@ -822,6 +837,7 @@ class CreateSocketRequest(ProtocolBuffer.ProtocolMessage):
     if (x.has_app_id()): self.set_app_id(x.app_id())
     if (x.has_project_id()): self.set_project_id(x.project_id())
     if (x.has_pool()): self.set_pool(x.pool())
+    if (x.has_unified_rsg_socket_log()): self.set_unified_rsg_socket_log(x.unified_rsg_socket_log())
 
   def Equals(self, x):
     if x is self: return 1
@@ -844,6 +860,8 @@ class CreateSocketRequest(ProtocolBuffer.ProtocolMessage):
     if self.has_project_id_ and self.project_id_ != x.project_id_: return 0
     if self.has_pool_ != x.has_pool_: return 0
     if self.has_pool_ and self.pool_ != x.pool_: return 0
+    if self.has_unified_rsg_socket_log_ != x.has_unified_rsg_socket_log_: return 0
+    if self.has_unified_rsg_socket_log_ and self.unified_rsg_socket_log_ != x.unified_rsg_socket_log_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -874,6 +892,7 @@ class CreateSocketRequest(ProtocolBuffer.ProtocolMessage):
     if (self.has_app_id_): n += 1 + self.lengthString(len(self.app_id_))
     if (self.has_project_id_): n += 1 + self.lengthVarInt64(self.project_id_)
     if (self.has_pool_): n += 1 + self.lengthString(len(self.pool_))
+    if (self.has_unified_rsg_socket_log_): n += 2
     return n + 2
 
   def ByteSizePartial(self):
@@ -892,6 +911,7 @@ class CreateSocketRequest(ProtocolBuffer.ProtocolMessage):
     if (self.has_app_id_): n += 1 + self.lengthString(len(self.app_id_))
     if (self.has_project_id_): n += 1 + self.lengthVarInt64(self.project_id_)
     if (self.has_pool_): n += 1 + self.lengthString(len(self.pool_))
+    if (self.has_unified_rsg_socket_log_): n += 2
     return n
 
   def Clear(self):
@@ -904,6 +924,7 @@ class CreateSocketRequest(ProtocolBuffer.ProtocolMessage):
     self.clear_app_id()
     self.clear_project_id()
     self.clear_pool()
+    self.clear_unified_rsg_socket_log()
 
   def OutputUnchecked(self, out):
     out.putVarInt32(8)
@@ -934,6 +955,9 @@ class CreateSocketRequest(ProtocolBuffer.ProtocolMessage):
     if (self.has_pool_):
       out.putVarInt32(90)
       out.putPrefixedString(self.pool_)
+    if (self.has_unified_rsg_socket_log_):
+      out.putVarInt32(96)
+      out.putBoolean(self.unified_rsg_socket_log_)
 
   def OutputPartial(self, out):
     if (self.has_family_):
@@ -966,6 +990,9 @@ class CreateSocketRequest(ProtocolBuffer.ProtocolMessage):
     if (self.has_pool_):
       out.putVarInt32(90)
       out.putPrefixedString(self.pool_)
+    if (self.has_unified_rsg_socket_log_):
+      out.putVarInt32(96)
+      out.putBoolean(self.unified_rsg_socket_log_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -1006,6 +1033,9 @@ class CreateSocketRequest(ProtocolBuffer.ProtocolMessage):
       if tt == 90:
         self.set_pool(d.getPrefixedString())
         continue
+      if tt == 96:
+        self.set_unified_rsg_socket_log(d.getBoolean())
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
@@ -1036,6 +1066,7 @@ class CreateSocketRequest(ProtocolBuffer.ProtocolMessage):
     if self.has_app_id_: res+=prefix+("app_id: %s\n" % self.DebugFormatString(self.app_id_))
     if self.has_project_id_: res+=prefix+("project_id: %s\n" % self.DebugFormatInt64(self.project_id_))
     if self.has_pool_: res+=prefix+("pool: %s\n" % self.DebugFormatString(self.pool_))
+    if self.has_unified_rsg_socket_log_: res+=prefix+("unified_rsg_socket_log: %s\n" % self.DebugFormatBool(self.unified_rsg_socket_log_))
     return res
 
 
@@ -1051,6 +1082,7 @@ class CreateSocketRequest(ProtocolBuffer.ProtocolMessage):
   kapp_id = 9
   kproject_id = 10
   kpool = 11
+  kunified_rsg_socket_log = 12
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",
@@ -1063,7 +1095,8 @@ class CreateSocketRequest(ProtocolBuffer.ProtocolMessage):
     9: "app_id",
     10: "project_id",
     11: "pool",
-  }, 11)
+    12: "unified_rsg_socket_log",
+  }, 12)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -1076,7 +1109,8 @@ class CreateSocketRequest(ProtocolBuffer.ProtocolMessage):
     9: ProtocolBuffer.Encoder.STRING,
     10: ProtocolBuffer.Encoder.NUMERIC,
     11: ProtocolBuffer.Encoder.STRING,
-  }, 11, ProtocolBuffer.Encoder.MAX_TYPE)
+    12: ProtocolBuffer.Encoder.NUMERIC,
+  }, 12, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""

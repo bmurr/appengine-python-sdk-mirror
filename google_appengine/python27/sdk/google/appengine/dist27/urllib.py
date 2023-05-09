@@ -106,7 +106,7 @@ def urlcleanup():
     ftpcache.clear()
 
 # check for SSL
-# NOTE(user): HTTPS is available under App Engine, but the ssl module isn't.
+# NOTE(amistry): HTTPS is available under App Engine, but the ssl module isn't.
 _have_ssl = True
 
 # exception raised when downloaded size does not match content-length

@@ -1685,10 +1685,6 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
       initialized = 0
       if debug_strs is not None:
         debug_strs.append('Required field: latency not set.')
-    if (not self.has_mcycles_):
-      initialized = 0
-      if debug_strs is not None:
-        debug_strs.append('Required field: mcycles not set.')
     if (not self.has_method_):
       initialized = 0
       if debug_strs is not None:
@@ -1733,7 +1729,7 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     n += self.lengthVarInt64(self.start_time_)
     n += self.lengthVarInt64(self.end_time_)
     n += self.lengthVarInt64(self.latency_)
-    n += self.lengthVarInt64(self.mcycles_)
+    if (self.has_mcycles_): n += 1 + self.lengthVarInt64(self.mcycles_)
     n += self.lengthString(len(self.method_))
     n += self.lengthString(len(self.resource_))
     n += self.lengthString(len(self.http_version_))
@@ -1764,7 +1760,7 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if (self.has_was_throttled_for_requests_): n += 3
     if (self.has_throttled_time_): n += 2 + self.lengthVarInt64(self.throttled_time_)
     if (self.has_server_name_): n += 2 + self.lengthString(len(self.server_name_))
-    return n + 17
+    return n + 16
 
   def ByteSizePartial(self):
     n = 0
@@ -1792,9 +1788,7 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if (self.has_latency_):
       n += 1
       n += self.lengthVarInt64(self.latency_)
-    if (self.has_mcycles_):
-      n += 1
-      n += self.lengthVarInt64(self.mcycles_)
+    if (self.has_mcycles_): n += 1 + self.lengthVarInt64(self.mcycles_)
     if (self.has_method_):
       n += 1
       n += self.lengthString(len(self.method_))
@@ -1901,8 +1895,9 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     out.putVarInt64(self.end_time_)
     out.putVarInt32(64)
     out.putVarInt64(self.latency_)
-    out.putVarInt32(72)
-    out.putVarInt64(self.mcycles_)
+    if (self.has_mcycles_):
+      out.putVarInt32(72)
+      out.putVarInt64(self.mcycles_)
     out.putVarInt32(82)
     out.putPrefixedString(self.method_)
     out.putVarInt32(90)
