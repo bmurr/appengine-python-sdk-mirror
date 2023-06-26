@@ -2996,6 +2996,23 @@ namespace google\appengine {
     public function hasSource() {
       return isset($this->source);
     }
+    public function getAllNamespaces() {
+      if (!isset($this->all_namespaces)) {
+        return false;
+      }
+      return $this->all_namespaces;
+    }
+    public function setAllNamespaces($val) {
+      $this->all_namespaces = $val;
+      return $this;
+    }
+    public function clearAllNamespaces() {
+      unset($this->all_namespaces);
+      return $this;
+    }
+    public function hasAllNamespaces() {
+      return isset($this->all_namespaces);
+    }
     public function clear() {
       $this->clearFetchSchema();
       $this->clearLimit();
@@ -3005,6 +3022,7 @@ namespace google\appengine {
       $this->clearIndexNamePrefix();
       $this->clearOffset();
       $this->clearSource();
+      $this->clearAllNamespaces();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -3037,6 +3055,9 @@ namespace google\appengine {
       if (isset($this->source)) {
         $res += 1;
         $res += $this->lengthVarInt64($this->source);
+      }
+      if (isset($this->all_namespaces)) {
+        $res += 2;
       }
       return $res;
     }
@@ -3073,6 +3094,10 @@ namespace google\appengine {
         $out->putVarInt32(64);
         $out->putVarInt32($this->source);
       }
+      if (isset($this->all_namespaces)) {
+        $out->putVarInt32(72);
+        $out->putBoolean($this->all_namespaces);
+      }
     }
     public function tryMerge($d) {
       while($d->avail() > 0) {
@@ -3107,6 +3132,9 @@ namespace google\appengine {
             break;
           case 64:
             $this->setSource($d->getVarInt32());
+            break;
+          case 72:
+            $this->setAllNamespaces($d->getBoolean());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -3145,6 +3173,9 @@ namespace google\appengine {
       if ($x->hasSource()) {
         $this->setSource($x->getSource());
       }
+      if ($x->hasAllNamespaces()) {
+        $this->setAllNamespaces($x->getAllNamespaces());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -3164,6 +3195,8 @@ namespace google\appengine {
       if (isset($this->offset) && !$this->integerEquals($this->offset, $x->offset)) return false;
       if (isset($this->source) !== isset($x->source)) return false;
       if (isset($this->source) && $this->source !== $x->source) return false;
+      if (isset($this->all_namespaces) !== isset($x->all_namespaces)) return false;
+      if (isset($this->all_namespaces) && $this->all_namespaces !== $x->all_namespaces) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -3191,6 +3224,9 @@ namespace google\appengine {
       }
       if (isset($this->source)) {
         $res .= $prefix . "source: " . ($this->source) . "\n";
+      }
+      if (isset($this->all_namespaces)) {
+        $res .= $prefix . "all_namespaces: " . $this->debugFormatBool($this->all_namespaces) . "\n";
       }
       return $res;
     }

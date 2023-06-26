@@ -1423,7 +1423,7 @@ class AutoScalingModule(Module):
           self._num_outstanding_instance_requests -= 1
         self._condition.notify()
 
-  def _handle_script_request(self,
+  def _handle_script_request(self,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
                              environ,
                              start_response,
                              url_map,
@@ -1816,7 +1816,7 @@ class ManualScalingModule(Module):
       with self._condition:
         self._condition.notify()
 
-  def _handle_script_request(self,
+  def _handle_script_request(self,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
                              environ,
                              start_response,
                              url_map,
@@ -2231,7 +2231,7 @@ class ExternalModule(Module):
       with self._condition:
         self._condition.notify()
 
-  def _handle_script_request(self,
+  def _handle_script_request(self,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
                              environ,
                              start_response,
                              url_map,
@@ -2626,7 +2626,7 @@ class BasicScalingModule(Module):
       with self._condition:
         self._condition.notify()
 
-  def _handle_script_request(self,
+  def _handle_script_request(self,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
                              environ,
                              start_response,
                              url_map,
@@ -2957,7 +2957,7 @@ class InteractiveCommandModule(Module):
       self._inst = None
     self.report_quit_metrics(instances)
 
-  def _handle_script_request(self,
+  def _handle_script_request(self,  # pytype: disable=signature-mismatch  # overriding-parameter-count-checks
                              environ,
                              start_response,
                              url_map,

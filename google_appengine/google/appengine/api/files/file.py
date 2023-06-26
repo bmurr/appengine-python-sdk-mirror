@@ -699,7 +699,6 @@ def delete(*filenames):
       if blobkey:
         blobkeys.append(blobkey)
     elif filename.startswith(gs._GS_PREFIX):
-
       __checkIsFinalizedName(filename)
       blobkeys.append(blobstore.create_gs_key(filename))
     else:

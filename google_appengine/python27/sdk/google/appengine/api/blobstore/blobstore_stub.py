@@ -280,7 +280,6 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
       storage: blobstore storage stub.
     """
     datastore.Delete(cls.ToDatastoreBlobKey(blobkey))
-
     blobinfo = datastore_types.Key.from_path(blobstore.BLOB_INFO_KIND,
                                              blobkey,
                                              namespace='')

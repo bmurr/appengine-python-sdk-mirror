@@ -7,9 +7,15 @@ supported_api_versions:
   python27:
     api_versions: ['1']
   python37:
-    api_versions: [null, '1']
+    api_versions: [null]
   python38:
-    api_versions: [null, '1']
+    api_versions: [null]
+  python39:
+    api_versions: [null]
+  python310:
+    api_versions: [null]
+  python311:
+    api_versions: [null]
   java7:
     api_versions: ['1.0']
   go111:

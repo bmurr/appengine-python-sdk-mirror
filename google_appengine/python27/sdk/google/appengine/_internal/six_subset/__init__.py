@@ -32,6 +32,7 @@ if PY3:
   string_types = str,
   integer_types = int,
   text_type = str
+  unichr = chr
   binary_type = bytes
   class_types = type,
   iterbytes = iter
@@ -63,6 +64,7 @@ else:
   string_types = basestring,
   integer_types = (int, long)
   text_type = unicode
+  unichr = unichr
   binary_type = str
   class_types = (type, types.ClassType)
 

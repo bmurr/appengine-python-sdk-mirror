@@ -3226,6 +3226,8 @@ class ListIndexesParams(ProtocolBuffer.ProtocolMessage):
   offset_ = 0
   has_source_ = 0
   source_ = 0
+  has_all_namespaces_ = 0
+  all_namespaces_ = 0
 
   def __init__(self, contents=None):
     if contents is not None: self.MergeFromString(contents)
@@ -3334,6 +3336,19 @@ class ListIndexesParams(ProtocolBuffer.ProtocolMessage):
 
   def has_source(self): return self.has_source_
 
+  def all_namespaces(self): return self.all_namespaces_
+
+  def set_all_namespaces(self, x):
+    self.has_all_namespaces_ = 1
+    self.all_namespaces_ = x
+
+  def clear_all_namespaces(self):
+    if self.has_all_namespaces_:
+      self.has_all_namespaces_ = 0
+      self.all_namespaces_ = 0
+
+  def has_all_namespaces(self): return self.has_all_namespaces_
+
 
   def MergeFrom(self, x):
     assert x is not self
@@ -3345,6 +3360,7 @@ class ListIndexesParams(ProtocolBuffer.ProtocolMessage):
     if (x.has_index_name_prefix()): self.set_index_name_prefix(x.index_name_prefix())
     if (x.has_offset()): self.set_offset(x.offset())
     if (x.has_source()): self.set_source(x.source())
+    if (x.has_all_namespaces()): self.set_all_namespaces(x.all_namespaces())
 
   def Equals(self, x):
     if x is self: return 1
@@ -3364,6 +3380,8 @@ class ListIndexesParams(ProtocolBuffer.ProtocolMessage):
     if self.has_offset_ and self.offset_ != x.offset_: return 0
     if self.has_source_ != x.has_source_: return 0
     if self.has_source_ and self.source_ != x.source_: return 0
+    if self.has_all_namespaces_ != x.has_all_namespaces_: return 0
+    if self.has_all_namespaces_ and self.all_namespaces_ != x.all_namespaces_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -3380,6 +3398,7 @@ class ListIndexesParams(ProtocolBuffer.ProtocolMessage):
     if (self.has_index_name_prefix_): n += 1 + self.lengthString(len(self.index_name_prefix_))
     if (self.has_offset_): n += 1 + self.lengthVarInt64(self.offset_)
     if (self.has_source_): n += 1 + self.lengthVarInt64(self.source_)
+    if (self.has_all_namespaces_): n += 2
     return n
 
   def ByteSizePartial(self):
@@ -3392,6 +3411,7 @@ class ListIndexesParams(ProtocolBuffer.ProtocolMessage):
     if (self.has_index_name_prefix_): n += 1 + self.lengthString(len(self.index_name_prefix_))
     if (self.has_offset_): n += 1 + self.lengthVarInt64(self.offset_)
     if (self.has_source_): n += 1 + self.lengthVarInt64(self.source_)
+    if (self.has_all_namespaces_): n += 2
     return n
 
   def Clear(self):
@@ -3403,6 +3423,7 @@ class ListIndexesParams(ProtocolBuffer.ProtocolMessage):
     self.clear_index_name_prefix()
     self.clear_offset()
     self.clear_source()
+    self.clear_all_namespaces()
 
   def OutputUnchecked(self, out):
     if (self.has_fetch_schema_):
@@ -3429,6 +3450,9 @@ class ListIndexesParams(ProtocolBuffer.ProtocolMessage):
     if (self.has_source_):
       out.putVarInt32(64)
       out.putVarInt32(self.source_)
+    if (self.has_all_namespaces_):
+      out.putVarInt32(72)
+      out.putBoolean(self.all_namespaces_)
 
   def OutputPartial(self, out):
     if (self.has_fetch_schema_):
@@ -3455,6 +3479,9 @@ class ListIndexesParams(ProtocolBuffer.ProtocolMessage):
     if (self.has_source_):
       out.putVarInt32(64)
       out.putVarInt32(self.source_)
+    if (self.has_all_namespaces_):
+      out.putVarInt32(72)
+      out.putBoolean(self.all_namespaces_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -3483,6 +3510,9 @@ class ListIndexesParams(ProtocolBuffer.ProtocolMessage):
       if tt == 64:
         self.set_source(d.getVarInt32())
         continue
+      if tt == 72:
+        self.set_all_namespaces(d.getBoolean())
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
@@ -3499,6 +3529,7 @@ class ListIndexesParams(ProtocolBuffer.ProtocolMessage):
     if self.has_index_name_prefix_: res+=prefix+("index_name_prefix: %s\n" % self.DebugFormatString(self.index_name_prefix_))
     if self.has_offset_: res+=prefix+("offset: %s\n" % self.DebugFormatInt32(self.offset_))
     if self.has_source_: res+=prefix+("source: %s\n" % self.DebugFormatInt32(self.source_))
+    if self.has_all_namespaces_: res+=prefix+("all_namespaces: %s\n" % self.DebugFormatBool(self.all_namespaces_))
     return res
 
 
@@ -3513,6 +3544,7 @@ class ListIndexesParams(ProtocolBuffer.ProtocolMessage):
   kindex_name_prefix = 6
   koffset = 7
   ksource = 8
+  kall_namespaces = 9
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",
@@ -3524,7 +3556,8 @@ class ListIndexesParams(ProtocolBuffer.ProtocolMessage):
     6: "index_name_prefix",
     7: "offset",
     8: "source",
-  }, 8)
+    9: "all_namespaces",
+  }, 9)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -3536,7 +3569,8 @@ class ListIndexesParams(ProtocolBuffer.ProtocolMessage):
     6: ProtocolBuffer.Encoder.STRING,
     7: ProtocolBuffer.Encoder.NUMERIC,
     8: ProtocolBuffer.Encoder.NUMERIC,
-  }, 8, ProtocolBuffer.Encoder.MAX_TYPE)
+    9: ProtocolBuffer.Encoder.NUMERIC,
+  }, 9, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
