@@ -227,6 +227,8 @@ class MemcacheGetRequest(ProtocolBuffer.ProtocolMessage):
   for_cas_ = 0
   has_override_ = 0
   override_ = None
+  has_for_peek_ = 0
+  for_peek_ = 0
 
   def __init__(self, contents=None):
     self.key_ = []
@@ -293,6 +295,19 @@ class MemcacheGetRequest(ProtocolBuffer.ProtocolMessage):
 
   def has_override(self): return self.has_override_
 
+  def for_peek(self): return self.for_peek_
+
+  def set_for_peek(self, x):
+    self.has_for_peek_ = 1
+    self.for_peek_ = x
+
+  def clear_for_peek(self):
+    if self.has_for_peek_:
+      self.has_for_peek_ = 0
+      self.for_peek_ = 0
+
+  def has_for_peek(self): return self.has_for_peek_
+
 
   def MergeFrom(self, x):
     assert x is not self
@@ -300,6 +315,7 @@ class MemcacheGetRequest(ProtocolBuffer.ProtocolMessage):
     if (x.has_name_space()): self.set_name_space(x.name_space())
     if (x.has_for_cas()): self.set_for_cas(x.for_cas())
     if (x.has_override()): self.mutable_override().MergeFrom(x.override())
+    if (x.has_for_peek()): self.set_for_peek(x.for_peek())
 
   def Equals(self, x):
     if x is self: return 1
@@ -312,6 +328,8 @@ class MemcacheGetRequest(ProtocolBuffer.ProtocolMessage):
     if self.has_for_cas_ and self.for_cas_ != x.for_cas_: return 0
     if self.has_override_ != x.has_override_: return 0
     if self.has_override_ and self.override_ != x.override_: return 0
+    if self.has_for_peek_ != x.has_for_peek_: return 0
+    if self.has_for_peek_ and self.for_peek_ != x.for_peek_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -326,6 +344,7 @@ class MemcacheGetRequest(ProtocolBuffer.ProtocolMessage):
     if (self.has_name_space_): n += 1 + self.lengthString(len(self.name_space_))
     if (self.has_for_cas_): n += 2
     if (self.has_override_): n += 1 + self.lengthString(self.override_.ByteSize())
+    if (self.has_for_peek_): n += 2
     return n
 
   def ByteSizePartial(self):
@@ -335,6 +354,7 @@ class MemcacheGetRequest(ProtocolBuffer.ProtocolMessage):
     if (self.has_name_space_): n += 1 + self.lengthString(len(self.name_space_))
     if (self.has_for_cas_): n += 2
     if (self.has_override_): n += 1 + self.lengthString(self.override_.ByteSizePartial())
+    if (self.has_for_peek_): n += 2
     return n
 
   def Clear(self):
@@ -342,6 +362,7 @@ class MemcacheGetRequest(ProtocolBuffer.ProtocolMessage):
     self.clear_name_space()
     self.clear_for_cas()
     self.clear_override()
+    self.clear_for_peek()
 
   def OutputUnchecked(self, out):
     for i in range(len(self.key_)):
@@ -357,6 +378,9 @@ class MemcacheGetRequest(ProtocolBuffer.ProtocolMessage):
       out.putVarInt32(42)
       out.putVarInt32(self.override_.ByteSize())
       self.override_.OutputUnchecked(out)
+    if (self.has_for_peek_):
+      out.putVarInt32(48)
+      out.putBoolean(self.for_peek_)
 
   def OutputPartial(self, out):
     for i in range(len(self.key_)):
@@ -372,6 +396,9 @@ class MemcacheGetRequest(ProtocolBuffer.ProtocolMessage):
       out.putVarInt32(42)
       out.putVarInt32(self.override_.ByteSizePartial())
       self.override_.OutputPartial(out)
+    if (self.has_for_peek_):
+      out.putVarInt32(48)
+      out.putBoolean(self.for_peek_)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -390,6 +417,9 @@ class MemcacheGetRequest(ProtocolBuffer.ProtocolMessage):
         tmp = ProtocolBuffer.Decoder(d.buffer(), d.pos(), d.pos() + length)
         d.skip(length)
         self.mutable_override().TryMerge(tmp)
+        continue
+      if tt == 48:
+        self.set_for_peek(d.getBoolean())
         continue
 
 
@@ -411,6 +441,7 @@ class MemcacheGetRequest(ProtocolBuffer.ProtocolMessage):
       res+=prefix+"override <\n"
       res+=self.override_.__str__(prefix + "  ", printElemNumber)
       res+=prefix+">\n"
+    if self.has_for_peek_: res+=prefix+("for_peek: %s\n" % self.DebugFormatBool(self.for_peek_))
     return res
 
 
@@ -421,6 +452,7 @@ class MemcacheGetRequest(ProtocolBuffer.ProtocolMessage):
   kname_space = 2
   kfor_cas = 4
   koverride = 5
+  kfor_peek = 6
 
   _TEXT = _BuildTagLookupTable({
     0: "ErrorCode",
@@ -428,7 +460,8 @@ class MemcacheGetRequest(ProtocolBuffer.ProtocolMessage):
     2: "name_space",
     4: "for_cas",
     5: "override",
-  }, 5)
+    6: "for_peek",
+  }, 6)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -436,12 +469,176 @@ class MemcacheGetRequest(ProtocolBuffer.ProtocolMessage):
     2: ProtocolBuffer.Encoder.STRING,
     4: ProtocolBuffer.Encoder.NUMERIC,
     5: ProtocolBuffer.Encoder.STRING,
-  }, 5, ProtocolBuffer.Encoder.MAX_TYPE)
+    6: ProtocolBuffer.Encoder.NUMERIC,
+  }, 6, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.MemcacheGetRequest'
+class ItemTimestamps(ProtocolBuffer.ProtocolMessage):
+  has_expiration_time_sec_ = 0
+  expiration_time_sec_ = 0
+  has_last_access_time_sec_ = 0
+  last_access_time_sec_ = 0
+  has_delete_lock_time_sec_ = 0
+  delete_lock_time_sec_ = 0
+
+  def __init__(self, contents=None):
+    if contents is not None: self.MergeFromString(contents)
+
+  def expiration_time_sec(self): return self.expiration_time_sec_
+
+  def set_expiration_time_sec(self, x):
+    self.has_expiration_time_sec_ = 1
+    self.expiration_time_sec_ = x
+
+  def clear_expiration_time_sec(self):
+    if self.has_expiration_time_sec_:
+      self.has_expiration_time_sec_ = 0
+      self.expiration_time_sec_ = 0
+
+  def has_expiration_time_sec(self): return self.has_expiration_time_sec_
+
+  def last_access_time_sec(self): return self.last_access_time_sec_
+
+  def set_last_access_time_sec(self, x):
+    self.has_last_access_time_sec_ = 1
+    self.last_access_time_sec_ = x
+
+  def clear_last_access_time_sec(self):
+    if self.has_last_access_time_sec_:
+      self.has_last_access_time_sec_ = 0
+      self.last_access_time_sec_ = 0
+
+  def has_last_access_time_sec(self): return self.has_last_access_time_sec_
+
+  def delete_lock_time_sec(self): return self.delete_lock_time_sec_
+
+  def set_delete_lock_time_sec(self, x):
+    self.has_delete_lock_time_sec_ = 1
+    self.delete_lock_time_sec_ = x
+
+  def clear_delete_lock_time_sec(self):
+    if self.has_delete_lock_time_sec_:
+      self.has_delete_lock_time_sec_ = 0
+      self.delete_lock_time_sec_ = 0
+
+  def has_delete_lock_time_sec(self): return self.has_delete_lock_time_sec_
+
+
+  def MergeFrom(self, x):
+    assert x is not self
+    if (x.has_expiration_time_sec()): self.set_expiration_time_sec(x.expiration_time_sec())
+    if (x.has_last_access_time_sec()): self.set_last_access_time_sec(x.last_access_time_sec())
+    if (x.has_delete_lock_time_sec()): self.set_delete_lock_time_sec(x.delete_lock_time_sec())
+
+  def Equals(self, x):
+    if x is self: return 1
+    if self.has_expiration_time_sec_ != x.has_expiration_time_sec_: return 0
+    if self.has_expiration_time_sec_ and self.expiration_time_sec_ != x.expiration_time_sec_: return 0
+    if self.has_last_access_time_sec_ != x.has_last_access_time_sec_: return 0
+    if self.has_last_access_time_sec_ and self.last_access_time_sec_ != x.last_access_time_sec_: return 0
+    if self.has_delete_lock_time_sec_ != x.has_delete_lock_time_sec_: return 0
+    if self.has_delete_lock_time_sec_ and self.delete_lock_time_sec_ != x.delete_lock_time_sec_: return 0
+    return 1
+
+  def IsInitialized(self, debug_strs=None):
+    initialized = 1
+    return initialized
+
+  def ByteSize(self):
+    n = 0
+    if (self.has_expiration_time_sec_): n += 1 + self.lengthVarInt64(self.expiration_time_sec_)
+    if (self.has_last_access_time_sec_): n += 1 + self.lengthVarInt64(self.last_access_time_sec_)
+    if (self.has_delete_lock_time_sec_): n += 1 + self.lengthVarInt64(self.delete_lock_time_sec_)
+    return n
+
+  def ByteSizePartial(self):
+    n = 0
+    if (self.has_expiration_time_sec_): n += 1 + self.lengthVarInt64(self.expiration_time_sec_)
+    if (self.has_last_access_time_sec_): n += 1 + self.lengthVarInt64(self.last_access_time_sec_)
+    if (self.has_delete_lock_time_sec_): n += 1 + self.lengthVarInt64(self.delete_lock_time_sec_)
+    return n
+
+  def Clear(self):
+    self.clear_expiration_time_sec()
+    self.clear_last_access_time_sec()
+    self.clear_delete_lock_time_sec()
+
+  def OutputUnchecked(self, out):
+    if (self.has_expiration_time_sec_):
+      out.putVarInt32(8)
+      out.putVarInt64(self.expiration_time_sec_)
+    if (self.has_last_access_time_sec_):
+      out.putVarInt32(16)
+      out.putVarInt64(self.last_access_time_sec_)
+    if (self.has_delete_lock_time_sec_):
+      out.putVarInt32(24)
+      out.putVarInt64(self.delete_lock_time_sec_)
+
+  def OutputPartial(self, out):
+    if (self.has_expiration_time_sec_):
+      out.putVarInt32(8)
+      out.putVarInt64(self.expiration_time_sec_)
+    if (self.has_last_access_time_sec_):
+      out.putVarInt32(16)
+      out.putVarInt64(self.last_access_time_sec_)
+    if (self.has_delete_lock_time_sec_):
+      out.putVarInt32(24)
+      out.putVarInt64(self.delete_lock_time_sec_)
+
+  def TryMerge(self, d):
+    while d.avail() > 0:
+      tt = d.getVarInt32()
+      if tt == 8:
+        self.set_expiration_time_sec(d.getVarInt64())
+        continue
+      if tt == 16:
+        self.set_last_access_time_sec(d.getVarInt64())
+        continue
+      if tt == 24:
+        self.set_delete_lock_time_sec(d.getVarInt64())
+        continue
+
+
+      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
+      d.skipData(tt)
+
+
+  def __str__(self, prefix="", printElemNumber=0):
+    res=""
+    if self.has_expiration_time_sec_: res+=prefix+("expiration_time_sec: %s\n" % self.DebugFormatInt64(self.expiration_time_sec_))
+    if self.has_last_access_time_sec_: res+=prefix+("last_access_time_sec: %s\n" % self.DebugFormatInt64(self.last_access_time_sec_))
+    if self.has_delete_lock_time_sec_: res+=prefix+("delete_lock_time_sec: %s\n" % self.DebugFormatInt64(self.delete_lock_time_sec_))
+    return res
+
+
+  def _BuildTagLookupTable(sparse, maxtag, default=None):
+    return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
+
+  kexpiration_time_sec = 1
+  klast_access_time_sec = 2
+  kdelete_lock_time_sec = 3
+
+  _TEXT = _BuildTagLookupTable({
+    0: "ErrorCode",
+    1: "expiration_time_sec",
+    2: "last_access_time_sec",
+    3: "delete_lock_time_sec",
+  }, 3)
+
+  _TYPES = _BuildTagLookupTable({
+    0: ProtocolBuffer.Encoder.NUMERIC,
+    1: ProtocolBuffer.Encoder.NUMERIC,
+    2: ProtocolBuffer.Encoder.NUMERIC,
+    3: ProtocolBuffer.Encoder.NUMERIC,
+  }, 3, ProtocolBuffer.Encoder.MAX_TYPE)
+
+
+  _STYLE = """"""
+  _STYLE_CONTENT_TYPE = """"""
+  _PROTO_DESCRIPTOR_NAME = 'apphosting.ItemTimestamps'
 class MemcacheGetResponse_Item(ProtocolBuffer.ProtocolMessage):
   has_key_ = 0
   key_ = ""
@@ -453,8 +650,13 @@ class MemcacheGetResponse_Item(ProtocolBuffer.ProtocolMessage):
   cas_id_ = 0
   has_expires_in_seconds_ = 0
   expires_in_seconds_ = 0
+  has_timestamps_ = 0
+  timestamps_ = None
+  has_is_delete_locked_ = 0
+  is_delete_locked_ = 0
 
   def __init__(self, contents=None):
+    self.lazy_init_lock_ = _Lock()
     if contents is not None: self.MergeFromString(contents)
 
   def key(self): return self.key_
@@ -522,6 +724,38 @@ class MemcacheGetResponse_Item(ProtocolBuffer.ProtocolMessage):
 
   def has_expires_in_seconds(self): return self.has_expires_in_seconds_
 
+  def timestamps(self):
+    if self.timestamps_ is None:
+      self.lazy_init_lock_.acquire()
+      try:
+        if self.timestamps_ is None: self.timestamps_ = ItemTimestamps()
+      finally:
+        self.lazy_init_lock_.release()
+    return self.timestamps_
+
+  def mutable_timestamps(self): self.has_timestamps_ = 1; return self.timestamps()
+
+  def clear_timestamps(self):
+
+    if self.has_timestamps_:
+      self.has_timestamps_ = 0;
+      if self.timestamps_ is not None: self.timestamps_.Clear()
+
+  def has_timestamps(self): return self.has_timestamps_
+
+  def is_delete_locked(self): return self.is_delete_locked_
+
+  def set_is_delete_locked(self, x):
+    self.has_is_delete_locked_ = 1
+    self.is_delete_locked_ = x
+
+  def clear_is_delete_locked(self):
+    if self.has_is_delete_locked_:
+      self.has_is_delete_locked_ = 0
+      self.is_delete_locked_ = 0
+
+  def has_is_delete_locked(self): return self.has_is_delete_locked_
+
 
   def MergeFrom(self, x):
     assert x is not self
@@ -530,6 +764,8 @@ class MemcacheGetResponse_Item(ProtocolBuffer.ProtocolMessage):
     if (x.has_flags()): self.set_flags(x.flags())
     if (x.has_cas_id()): self.set_cas_id(x.cas_id())
     if (x.has_expires_in_seconds()): self.set_expires_in_seconds(x.expires_in_seconds())
+    if (x.has_timestamps()): self.mutable_timestamps().MergeFrom(x.timestamps())
+    if (x.has_is_delete_locked()): self.set_is_delete_locked(x.is_delete_locked())
 
   def Equals(self, x):
     if x is self: return 1
@@ -543,6 +779,10 @@ class MemcacheGetResponse_Item(ProtocolBuffer.ProtocolMessage):
     if self.has_cas_id_ and self.cas_id_ != x.cas_id_: return 0
     if self.has_expires_in_seconds_ != x.has_expires_in_seconds_: return 0
     if self.has_expires_in_seconds_ and self.expires_in_seconds_ != x.expires_in_seconds_: return 0
+    if self.has_timestamps_ != x.has_timestamps_: return 0
+    if self.has_timestamps_ and self.timestamps_ != x.timestamps_: return 0
+    if self.has_is_delete_locked_ != x.has_is_delete_locked_: return 0
+    if self.has_is_delete_locked_ and self.is_delete_locked_ != x.is_delete_locked_: return 0
     return 1
 
   def IsInitialized(self, debug_strs=None):
@@ -555,6 +795,7 @@ class MemcacheGetResponse_Item(ProtocolBuffer.ProtocolMessage):
       initialized = 0
       if debug_strs is not None:
         debug_strs.append('Required field: value not set.')
+    if (self.has_timestamps_ and not self.timestamps_.IsInitialized(debug_strs)): initialized = 0
     return initialized
 
   def ByteSize(self):
@@ -564,6 +805,8 @@ class MemcacheGetResponse_Item(ProtocolBuffer.ProtocolMessage):
     if (self.has_flags_): n += 5
     if (self.has_cas_id_): n += 9
     if (self.has_expires_in_seconds_): n += 1 + self.lengthVarInt64(self.expires_in_seconds_)
+    if (self.has_timestamps_): n += 1 + self.lengthString(self.timestamps_.ByteSize())
+    if (self.has_is_delete_locked_): n += 2
     return n + 2
 
   def ByteSizePartial(self):
@@ -577,6 +820,8 @@ class MemcacheGetResponse_Item(ProtocolBuffer.ProtocolMessage):
     if (self.has_flags_): n += 5
     if (self.has_cas_id_): n += 9
     if (self.has_expires_in_seconds_): n += 1 + self.lengthVarInt64(self.expires_in_seconds_)
+    if (self.has_timestamps_): n += 1 + self.lengthString(self.timestamps_.ByteSizePartial())
+    if (self.has_is_delete_locked_): n += 2
     return n
 
   def Clear(self):
@@ -585,6 +830,8 @@ class MemcacheGetResponse_Item(ProtocolBuffer.ProtocolMessage):
     self.clear_flags()
     self.clear_cas_id()
     self.clear_expires_in_seconds()
+    self.clear_timestamps()
+    self.clear_is_delete_locked()
 
   def OutputUnchecked(self, out):
     out.putVarInt32(18)
@@ -600,6 +847,13 @@ class MemcacheGetResponse_Item(ProtocolBuffer.ProtocolMessage):
     if (self.has_expires_in_seconds_):
       out.putVarInt32(48)
       out.putVarInt32(self.expires_in_seconds_)
+    if (self.has_timestamps_):
+      out.putVarInt32(66)
+      out.putVarInt32(self.timestamps_.ByteSize())
+      self.timestamps_.OutputUnchecked(out)
+    if (self.has_is_delete_locked_):
+      out.putVarInt32(72)
+      out.putBoolean(self.is_delete_locked_)
 
   def OutputPartial(self, out):
     if (self.has_key_):
@@ -617,6 +871,13 @@ class MemcacheGetResponse_Item(ProtocolBuffer.ProtocolMessage):
     if (self.has_expires_in_seconds_):
       out.putVarInt32(48)
       out.putVarInt32(self.expires_in_seconds_)
+    if (self.has_timestamps_):
+      out.putVarInt32(66)
+      out.putVarInt32(self.timestamps_.ByteSizePartial())
+      self.timestamps_.OutputPartial(out)
+    if (self.has_is_delete_locked_):
+      out.putVarInt32(72)
+      out.putBoolean(self.is_delete_locked_)
 
   def TryMerge(self, d):
     while 1:
@@ -637,6 +898,15 @@ class MemcacheGetResponse_Item(ProtocolBuffer.ProtocolMessage):
       if tt == 48:
         self.set_expires_in_seconds(d.getVarInt32())
         continue
+      if tt == 66:
+        length = d.getVarInt32()
+        tmp = ProtocolBuffer.Decoder(d.buffer(), d.pos(), d.pos() + length)
+        d.skip(length)
+        self.mutable_timestamps().TryMerge(tmp)
+        continue
+      if tt == 72:
+        self.set_is_delete_locked(d.getBoolean())
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
@@ -650,6 +920,11 @@ class MemcacheGetResponse_Item(ProtocolBuffer.ProtocolMessage):
     if self.has_flags_: res+=prefix+("flags: %s\n" % self.DebugFormatFixed32(self.flags_))
     if self.has_cas_id_: res+=prefix+("cas_id: %s\n" % self.DebugFormatFixed64(self.cas_id_))
     if self.has_expires_in_seconds_: res+=prefix+("expires_in_seconds: %s\n" % self.DebugFormatInt32(self.expires_in_seconds_))
+    if self.has_timestamps_:
+      res+=prefix+"timestamps <\n"
+      res+=self.timestamps_.__str__(prefix + "  ", printElemNumber)
+      res+=prefix+">\n"
+    if self.has_is_delete_locked_: res+=prefix+("is_delete_locked: %s\n" % self.DebugFormatBool(self.is_delete_locked_))
     return res
 
 class MemcacheGetResponse(ProtocolBuffer.ProtocolMessage):
@@ -814,6 +1089,8 @@ class MemcacheGetResponse(ProtocolBuffer.ProtocolMessage):
   kItemflags = 4
   kItemcas_id = 5
   kItemexpires_in_seconds = 6
+  kItemtimestamps = 8
+  kItemis_delete_locked = 9
   kget_status = 7
 
   _TEXT = _BuildTagLookupTable({
@@ -825,7 +1102,9 @@ class MemcacheGetResponse(ProtocolBuffer.ProtocolMessage):
     5: "cas_id",
     6: "expires_in_seconds",
     7: "get_status",
-  }, 7)
+    8: "timestamps",
+    9: "is_delete_locked",
+  }, 9)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -836,7 +1115,9 @@ class MemcacheGetResponse(ProtocolBuffer.ProtocolMessage):
     5: ProtocolBuffer.Encoder.DOUBLE,
     6: ProtocolBuffer.Encoder.NUMERIC,
     7: ProtocolBuffer.Encoder.NUMERIC,
-  }, 7, ProtocolBuffer.Encoder.MAX_TYPE)
+    8: ProtocolBuffer.Encoder.STRING,
+    9: ProtocolBuffer.Encoder.NUMERIC,
+  }, 9, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
@@ -3657,4 +3938,4 @@ class MemcacheStatsResponse(ProtocolBuffer.ProtocolMessage):
 if _extension_runtime:
   pass
 
-__all__ = ['MemcacheServiceError','AppOverride','MemcacheGetRequest','MemcacheGetResponse','MemcacheGetResponse_Item','MemcacheSetRequest','MemcacheSetRequest_Item','MemcacheSetResponse','MemcacheDeleteRequest','MemcacheDeleteRequest_Item','MemcacheDeleteResponse','MemcacheIncrementRequest','MemcacheIncrementResponse','MemcacheBatchIncrementRequest','MemcacheBatchIncrementResponse','MemcacheFlushRequest','MemcacheFlushResponse','MemcacheStatsRequest','MergedNamespaceStats','MemcacheHotKey','MemcacheStatsResponse']
+__all__ = ['MemcacheServiceError','AppOverride','MemcacheGetRequest','ItemTimestamps','MemcacheGetResponse','MemcacheGetResponse_Item','MemcacheSetRequest','MemcacheSetRequest_Item','MemcacheSetResponse','MemcacheDeleteRequest','MemcacheDeleteRequest_Item','MemcacheDeleteResponse','MemcacheIncrementRequest','MemcacheIncrementResponse','MemcacheBatchIncrementRequest','MemcacheBatchIncrementResponse','MemcacheFlushRequest','MemcacheFlushResponse','MemcacheStatsRequest','MergedNamespaceStats','MemcacheHotKey','MemcacheStatsResponse']

@@ -30,7 +30,7 @@ import unittest
 import google
 
 import mox
-import portpicker
+from portpicker import portpicker_py2 as portpicker
 from google.appengine._internal import six
 
 # pylint: disable=g-import-not-at-top

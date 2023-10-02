@@ -51,11 +51,9 @@ import tempfile
 import threading
 import time
 import traceback
-import six.moves.urllib
 
 import google
-import portpicker
-from google.appengine._internal.ruamel import yaml
+
 
 if 'APISERVER_EXTRA_IMPORTS' in os.environ:
   extras = os.environ['APISERVER_EXTRA_IMPORTS'].split(':')
@@ -70,6 +68,10 @@ from google.appengine.datastore import datastore_stub_util
 from google.appengine.ext.remote_api import remote_api_bytes_pb2
 from google.appengine.ext.remote_api import remote_api_services
 from google.appengine.runtime import apiproxy_errors
+from portpicker import portpicker_py2 as portpicker
+from google.appengine._internal.ruamel import yaml
+import six.moves.urllib
+
 from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import cli_parser
 from google.appengine.tools.devappserver2 import constants

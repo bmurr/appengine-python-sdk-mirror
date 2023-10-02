@@ -227,11 +227,29 @@ namespace google\appengine {
     public function hasOverride() {
       return isset($this->override);
     }
+    public function getForPeek() {
+      if (!isset($this->for_peek)) {
+        return false;
+      }
+      return $this->for_peek;
+    }
+    public function setForPeek($val) {
+      $this->for_peek = $val;
+      return $this;
+    }
+    public function clearForPeek() {
+      unset($this->for_peek);
+      return $this;
+    }
+    public function hasForPeek() {
+      return isset($this->for_peek);
+    }
     public function clear() {
       $this->clearKey();
       $this->clearNameSpace();
       $this->clearForCas();
       $this->clearOverride();
+      $this->clearForPeek();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -250,6 +268,9 @@ namespace google\appengine {
       if (isset($this->override)) {
         $res += 1;
         $res += $this->lengthString($this->override->byteSizePartial());
+      }
+      if (isset($this->for_peek)) {
+        $res += 2;
       }
       return $res;
     }
@@ -271,6 +292,10 @@ namespace google\appengine {
         $out->putVarInt32(42);
         $out->putVarInt32($this->override->byteSizePartial());
         $this->override->outputPartial($out);
+      }
+      if (isset($this->for_peek)) {
+        $out->putVarInt32(48);
+        $out->putBoolean($this->for_peek);
       }
     }
     public function tryMerge($d) {
@@ -295,6 +320,9 @@ namespace google\appengine {
             $tmp = new \google\net\Decoder($d->buffer(), $d->pos(), $d->pos() + $length);
             $d->skip($length);
             $this->mutableOverride()->tryMerge($tmp);
+            break;
+          case 48:
+            $this->setForPeek($d->getBoolean());
             break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
@@ -322,6 +350,9 @@ namespace google\appengine {
       if ($x->hasOverride()) {
         $this->mutableOverride()->mergeFrom($x->getOverride());
       }
+      if ($x->hasForPeek()) {
+        $this->setForPeek($x->getForPeek());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -335,6 +366,8 @@ namespace google\appengine {
       if (isset($this->for_cas) && $this->for_cas !== $x->for_cas) return false;
       if (isset($this->override) !== isset($x->override)) return false;
       if (isset($this->override) && !$this->override->equals($x->override)) return false;
+      if (isset($this->for_peek) !== isset($x->for_peek)) return false;
+      if (isset($this->for_peek) && $this->for_peek !== $x->for_peek) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -350,6 +383,170 @@ namespace google\appengine {
       }
       if (isset($this->override)) {
         $res .= $prefix . "override <\n" . $this->override->shortDebugString($prefix . "  ") . $prefix . ">\n";
+      }
+      if (isset($this->for_peek)) {
+        $res .= $prefix . "for_peek: " . $this->debugFormatBool($this->for_peek) . "\n";
+      }
+      return $res;
+    }
+  }
+}
+namespace google\appengine {
+  class ItemTimestamps extends \google\net\ProtocolMessage {
+    public function getExpirationTimeSec() {
+      if (!isset($this->expiration_time_sec)) {
+        return "0";
+      }
+      return $this->expiration_time_sec;
+    }
+    public function setExpirationTimeSec($val) {
+      if (is_double($val)) {
+        $this->expiration_time_sec = sprintf('%0.0F', $val);
+      } else {
+        $this->expiration_time_sec = $val;
+      }
+      return $this;
+    }
+    public function clearExpirationTimeSec() {
+      unset($this->expiration_time_sec);
+      return $this;
+    }
+    public function hasExpirationTimeSec() {
+      return isset($this->expiration_time_sec);
+    }
+    public function getLastAccessTimeSec() {
+      if (!isset($this->last_access_time_sec)) {
+        return "0";
+      }
+      return $this->last_access_time_sec;
+    }
+    public function setLastAccessTimeSec($val) {
+      if (is_double($val)) {
+        $this->last_access_time_sec = sprintf('%0.0F', $val);
+      } else {
+        $this->last_access_time_sec = $val;
+      }
+      return $this;
+    }
+    public function clearLastAccessTimeSec() {
+      unset($this->last_access_time_sec);
+      return $this;
+    }
+    public function hasLastAccessTimeSec() {
+      return isset($this->last_access_time_sec);
+    }
+    public function getDeleteLockTimeSec() {
+      if (!isset($this->delete_lock_time_sec)) {
+        return "0";
+      }
+      return $this->delete_lock_time_sec;
+    }
+    public function setDeleteLockTimeSec($val) {
+      if (is_double($val)) {
+        $this->delete_lock_time_sec = sprintf('%0.0F', $val);
+      } else {
+        $this->delete_lock_time_sec = $val;
+      }
+      return $this;
+    }
+    public function clearDeleteLockTimeSec() {
+      unset($this->delete_lock_time_sec);
+      return $this;
+    }
+    public function hasDeleteLockTimeSec() {
+      return isset($this->delete_lock_time_sec);
+    }
+    public function clear() {
+      $this->clearExpirationTimeSec();
+      $this->clearLastAccessTimeSec();
+      $this->clearDeleteLockTimeSec();
+    }
+    public function byteSizePartial() {
+      $res = 0;
+      if (isset($this->expiration_time_sec)) {
+        $res += 1;
+        $res += $this->lengthVarInt64($this->expiration_time_sec);
+      }
+      if (isset($this->last_access_time_sec)) {
+        $res += 1;
+        $res += $this->lengthVarInt64($this->last_access_time_sec);
+      }
+      if (isset($this->delete_lock_time_sec)) {
+        $res += 1;
+        $res += $this->lengthVarInt64($this->delete_lock_time_sec);
+      }
+      return $res;
+    }
+    public function outputPartial($out) {
+      if (isset($this->expiration_time_sec)) {
+        $out->putVarInt32(8);
+        $out->putVarInt64($this->expiration_time_sec);
+      }
+      if (isset($this->last_access_time_sec)) {
+        $out->putVarInt32(16);
+        $out->putVarInt64($this->last_access_time_sec);
+      }
+      if (isset($this->delete_lock_time_sec)) {
+        $out->putVarInt32(24);
+        $out->putVarInt64($this->delete_lock_time_sec);
+      }
+    }
+    public function tryMerge($d) {
+      while($d->avail() > 0) {
+        $tt = $d->getVarInt32();
+        switch ($tt) {
+          case 8:
+            $this->setExpirationTimeSec($d->getVarInt64());
+            break;
+          case 16:
+            $this->setLastAccessTimeSec($d->getVarInt64());
+            break;
+          case 24:
+            $this->setDeleteLockTimeSec($d->getVarInt64());
+            break;
+          case 0:
+            throw new \google\net\ProtocolBufferDecodeError();
+            break;
+          default:
+            $d->skipData($tt);
+        }
+      };
+    }
+    public function checkInitialized() {
+      return null;
+    }
+    public function mergeFrom($x) {
+      if ($x === $this) { throw new \IllegalArgumentException('Cannot copy message to itself'); }
+      if ($x->hasExpirationTimeSec()) {
+        $this->setExpirationTimeSec($x->getExpirationTimeSec());
+      }
+      if ($x->hasLastAccessTimeSec()) {
+        $this->setLastAccessTimeSec($x->getLastAccessTimeSec());
+      }
+      if ($x->hasDeleteLockTimeSec()) {
+        $this->setDeleteLockTimeSec($x->getDeleteLockTimeSec());
+      }
+    }
+    public function equals($x) {
+      if ($x === $this) { return true; }
+      if (isset($this->expiration_time_sec) !== isset($x->expiration_time_sec)) return false;
+      if (isset($this->expiration_time_sec) && !$this->integerEquals($this->expiration_time_sec, $x->expiration_time_sec)) return false;
+      if (isset($this->last_access_time_sec) !== isset($x->last_access_time_sec)) return false;
+      if (isset($this->last_access_time_sec) && !$this->integerEquals($this->last_access_time_sec, $x->last_access_time_sec)) return false;
+      if (isset($this->delete_lock_time_sec) !== isset($x->delete_lock_time_sec)) return false;
+      if (isset($this->delete_lock_time_sec) && !$this->integerEquals($this->delete_lock_time_sec, $x->delete_lock_time_sec)) return false;
+      return true;
+    }
+    public function shortDebugString($prefix = "") {
+      $res = '';
+      if (isset($this->expiration_time_sec)) {
+        $res .= $prefix . "expiration_time_sec: " . $this->debugFormatInt64($this->expiration_time_sec) . "\n";
+      }
+      if (isset($this->last_access_time_sec)) {
+        $res .= $prefix . "last_access_time_sec: " . $this->debugFormatInt64($this->last_access_time_sec) . "\n";
+      }
+      if (isset($this->delete_lock_time_sec)) {
+        $res .= $prefix . "delete_lock_time_sec: " . $this->debugFormatInt64($this->delete_lock_time_sec) . "\n";
       }
       return $res;
     }
@@ -456,12 +653,53 @@ namespace google\appengine\MemcacheGetResponse {
     public function hasExpiresInSeconds() {
       return isset($this->expires_in_seconds);
     }
+    public function getTimestamps() {
+      if (!isset($this->timestamps)) {
+        return new \google\appengine\ItemTimestamps();
+      }
+      return $this->timestamps;
+    }
+    public function mutableTimestamps() {
+      if (!isset($this->timestamps)) {
+        $res = new \google\appengine\ItemTimestamps();
+        $this->timestamps = $res;
+        return $res;
+      }
+      return $this->timestamps;
+    }
+    public function clearTimestamps() {
+      if (isset($this->timestamps)) {
+        unset($this->timestamps);
+      }
+    }
+    public function hasTimestamps() {
+      return isset($this->timestamps);
+    }
+    public function getIsDeleteLocked() {
+      if (!isset($this->is_delete_locked)) {
+        return false;
+      }
+      return $this->is_delete_locked;
+    }
+    public function setIsDeleteLocked($val) {
+      $this->is_delete_locked = $val;
+      return $this;
+    }
+    public function clearIsDeleteLocked() {
+      unset($this->is_delete_locked);
+      return $this;
+    }
+    public function hasIsDeleteLocked() {
+      return isset($this->is_delete_locked);
+    }
     public function clear() {
       $this->clearKey();
       $this->clearValue();
       $this->clearFlags();
       $this->clearCasId();
       $this->clearExpiresInSeconds();
+      $this->clearTimestamps();
+      $this->clearIsDeleteLocked();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -482,6 +720,13 @@ namespace google\appengine\MemcacheGetResponse {
       if (isset($this->expires_in_seconds)) {
         $res += 1;
         $res += $this->lengthVarInt64($this->expires_in_seconds);
+      }
+      if (isset($this->timestamps)) {
+        $res += 1;
+        $res += $this->lengthString($this->timestamps->byteSizePartial());
+      }
+      if (isset($this->is_delete_locked)) {
+        $res += 2;
       }
       return $res;
     }
@@ -505,6 +750,15 @@ namespace google\appengine\MemcacheGetResponse {
       if (isset($this->expires_in_seconds)) {
         $out->putVarInt32(48);
         $out->putVarInt32($this->expires_in_seconds);
+      }
+      if (isset($this->timestamps)) {
+        $out->putVarInt32(66);
+        $out->putVarInt32($this->timestamps->byteSizePartial());
+        $this->timestamps->outputPartial($out);
+      }
+      if (isset($this->is_delete_locked)) {
+        $out->putVarInt32(72);
+        $out->putBoolean($this->is_delete_locked);
       }
     }
     public function tryMerge($d) {
@@ -531,6 +785,15 @@ namespace google\appengine\MemcacheGetResponse {
           case 48:
             $this->setExpiresInSeconds($d->getVarInt32());
             break;
+          case 66:
+            $length = $d->getVarInt32();
+            $tmp = new \google\net\Decoder($d->buffer(), $d->pos(), $d->pos() + $length);
+            $d->skip($length);
+            $this->mutableTimestamps()->tryMerge($tmp);
+            break;
+          case 72:
+            $this->setIsDeleteLocked($d->getBoolean());
+            break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
             break;
@@ -542,6 +805,7 @@ namespace google\appengine\MemcacheGetResponse {
     public function checkInitialized() {
       if (!isset($this->key)) return 'key';
       if (!isset($this->value)) return 'value';
+      if (isset($this->timestamps) && (!$this->timestamps->isInitialized())) return 'timestamps';
       return null;
     }
     public function mergeFrom($x) {
@@ -561,6 +825,12 @@ namespace google\appengine\MemcacheGetResponse {
       if ($x->hasExpiresInSeconds()) {
         $this->setExpiresInSeconds($x->getExpiresInSeconds());
       }
+      if ($x->hasTimestamps()) {
+        $this->mutableTimestamps()->mergeFrom($x->getTimestamps());
+      }
+      if ($x->hasIsDeleteLocked()) {
+        $this->setIsDeleteLocked($x->getIsDeleteLocked());
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -574,6 +844,10 @@ namespace google\appengine\MemcacheGetResponse {
       if (isset($this->cas_id) && !$this->integerEquals($this->cas_id, $x->cas_id)) return false;
       if (isset($this->expires_in_seconds) !== isset($x->expires_in_seconds)) return false;
       if (isset($this->expires_in_seconds) && !$this->integerEquals($this->expires_in_seconds, $x->expires_in_seconds)) return false;
+      if (isset($this->timestamps) !== isset($x->timestamps)) return false;
+      if (isset($this->timestamps) && !$this->timestamps->equals($x->timestamps)) return false;
+      if (isset($this->is_delete_locked) !== isset($x->is_delete_locked)) return false;
+      if (isset($this->is_delete_locked) && $this->is_delete_locked !== $x->is_delete_locked) return false;
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -592,6 +866,12 @@ namespace google\appengine\MemcacheGetResponse {
       }
       if (isset($this->expires_in_seconds)) {
         $res .= $prefix . "expires_in_seconds: " . $this->debugFormatInt32($this->expires_in_seconds) . "\n";
+      }
+      if (isset($this->timestamps)) {
+        $res .= $prefix . "timestamps <\n" . $this->timestamps->shortDebugString($prefix . "  ") . $prefix . ">\n";
+      }
+      if (isset($this->is_delete_locked)) {
+        $res .= $prefix . "is_delete_locked: " . $this->debugFormatBool($this->is_delete_locked) . "\n";
       }
       return $res;
     }

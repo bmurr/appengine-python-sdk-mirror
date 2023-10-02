@@ -28,7 +28,7 @@ import tempfile
 import time
 
 import httplib2
-import portpicker
+from portpicker import portpicker_py2 as portpicker
 import six.moves.http_client
 
 from google.appengine.tools.devappserver2 import constants

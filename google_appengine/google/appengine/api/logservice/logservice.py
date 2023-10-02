@@ -791,18 +791,6 @@ class RequestLog(object):
     return None
 
   @property
-  def cost(self):
-    """The estimated cost of this request, in fractional dollars.
-
-    Returns:
-        A float representing an estimated fractional dollar cost of this
-        request, or None if not available.
-    """
-    if self.__pb.has_cost():
-      return self.__pb.cost()
-    return None
-
-  @property
   def task_queue_name(self):
     """The request's queue name, if generated via the Task Queue API.
 

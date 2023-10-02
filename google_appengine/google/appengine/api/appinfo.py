@@ -517,7 +517,7 @@ _SUPPORTED_LIBRARIES = [
         'django',
         'http://www.djangoproject.com/',
         'A full-featured web application framework for Python.',
-        ['1.2', '1.3', '1.4', '1.5', '1.9', '1.11'],
+        ['1.2', '1.3', '1.4', '1.5', '1.9', '1.11', '1.11.29'],
         latest_version='1.4',
         deprecated_versions=['1.2', '1.3', '1.5', '1.9'],
 
@@ -764,6 +764,7 @@ _NAME_TO_SUPPORTED_LIBRARY = dict((library.name, library)
 
 REQUIRED_LIBRARIES = {
     ('django', '1.11'): [('pytz', '2017.2')],
+    ('django', '1.11.29'): [('pytz', '2017.2')],
     ('flask', '0.12'): [('click', '6.6'), ('itsdangerous', '0.24'),
                         ('jinja2', '2.6'), ('werkzeug', '0.11.10')],
     ('jinja2', '2.6'): [('markupsafe', '0.15'), ('setuptools', '0.6c11')],

@@ -911,6 +911,135 @@ class LogLine(ProtocolBuffer.ProtocolMessage):
   _STYLE = """"""
   _STYLE_CONTENT_TYPE = """"""
   _PROTO_DESCRIPTOR_NAME = 'apphosting.LogLine'
+class RequestLog_MapFieldEntry(ProtocolBuffer.ProtocolMessage):
+  has_key_ = 0
+  key_ = ""
+  has_value_ = 0
+  value_ = ""
+
+  def __init__(self, contents=None):
+    if contents is not None: self.MergeFromString(contents)
+
+  def key(self): return self.key_
+
+  def set_key(self, x):
+    self.has_key_ = 1
+    self.key_ = x
+
+  def clear_key(self):
+    if self.has_key_:
+      self.has_key_ = 0
+      self.key_ = ""
+
+  def has_key(self): return self.has_key_
+
+  def value(self): return self.value_
+
+  def set_value(self, x):
+    self.has_value_ = 1
+    self.value_ = x
+
+  def clear_value(self):
+    if self.has_value_:
+      self.has_value_ = 0
+      self.value_ = ""
+
+  def has_value(self): return self.has_value_
+
+
+  def MergeFrom(self, x):
+    assert x is not self
+    if (x.has_key()): self.set_key(x.key())
+    if (x.has_value()): self.set_value(x.value())
+
+  def Equals(self, x):
+    if x is self: return 1
+    if self.has_key_ != x.has_key_: return 0
+    if self.has_key_ and self.key_ != x.key_: return 0
+    if self.has_value_ != x.has_value_: return 0
+    if self.has_value_ and self.value_ != x.value_: return 0
+    return 1
+
+  def IsInitialized(self, debug_strs=None):
+    initialized = 1
+    return initialized
+
+  def ByteSize(self):
+    n = 0
+    if (self.has_key_): n += 1 + self.lengthString(len(self.key_))
+    if (self.has_value_): n += 1 + self.lengthString(len(self.value_))
+    return n
+
+  def ByteSizePartial(self):
+    n = 0
+    if (self.has_key_): n += 1 + self.lengthString(len(self.key_))
+    if (self.has_value_): n += 1 + self.lengthString(len(self.value_))
+    return n
+
+  def Clear(self):
+    self.clear_key()
+    self.clear_value()
+
+  def OutputUnchecked(self, out):
+    if (self.has_key_):
+      out.putVarInt32(10)
+      out.putPrefixedString(self.key_)
+    if (self.has_value_):
+      out.putVarInt32(18)
+      out.putPrefixedString(self.value_)
+
+  def OutputPartial(self, out):
+    if (self.has_key_):
+      out.putVarInt32(10)
+      out.putPrefixedString(self.key_)
+    if (self.has_value_):
+      out.putVarInt32(18)
+      out.putPrefixedString(self.value_)
+
+  def TryMerge(self, d):
+    while d.avail() > 0:
+      tt = d.getVarInt32()
+      if tt == 10:
+        self.set_key(d.getPrefixedString())
+        continue
+      if tt == 18:
+        self.set_value(d.getPrefixedString())
+        continue
+
+
+      if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
+      d.skipData(tt)
+
+
+  def __str__(self, prefix="", printElemNumber=0):
+    res=""
+    if self.has_key_: res+=prefix+("key: %s\n" % self.DebugFormatString(self.key_))
+    if self.has_value_: res+=prefix+("value: %s\n" % self.DebugFormatString(self.value_))
+    return res
+
+
+  def _BuildTagLookupTable(sparse, maxtag, default=None):
+    return tuple([sparse.get(i, default) for i in range(0, 1+maxtag)])
+
+  kkey = 1
+  kvalue = 2
+
+  _TEXT = _BuildTagLookupTable({
+    0: "ErrorCode",
+    1: "key",
+    2: "value",
+  }, 2)
+
+  _TYPES = _BuildTagLookupTable({
+    0: ProtocolBuffer.Encoder.NUMERIC,
+    1: ProtocolBuffer.Encoder.STRING,
+    2: ProtocolBuffer.Encoder.STRING,
+  }, 2, ProtocolBuffer.Encoder.MAX_TYPE)
+
+
+  _STYLE = """"""
+  _STYLE_CONTENT_TYPE = """"""
+  _PROTO_DESCRIPTOR_NAME = 'apphosting.RequestLog_MapFieldEntry'
 class RequestLog(ProtocolBuffer.ProtocolMessage):
   has_app_id_ = 0
   app_id_ = ""
@@ -956,8 +1085,6 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
   api_mcycles_ = 0
   has_host_ = 0
   host_ = ""
-  has_cost_ = 0
-  cost_ = 0.0
   has_task_queue_name_ = 0
   task_queue_name_ = ""
   has_task_name_ = 0
@@ -993,6 +1120,7 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
 
   def __init__(self, contents=None):
     self.line_ = []
+    self.labels_ = []
     self.lazy_init_lock_ = _Lock()
     if contents is not None: self.MergeFromString(contents)
 
@@ -1288,19 +1416,6 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
 
   def has_host(self): return self.has_host_
 
-  def cost(self): return self.cost_
-
-  def set_cost(self, x):
-    self.has_cost_ = 1
-    self.cost_ = x
-
-  def clear_cost(self):
-    if self.has_cost_:
-      self.has_cost_ = 0
-      self.cost_ = 0.0
-
-  def has_cost(self): return self.has_cost_
-
   def task_queue_name(self): return self.task_queue_name_
 
   def set_task_queue_name(self, x):
@@ -1460,6 +1575,22 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
 
   def has_span_id(self): return self.has_span_id_
 
+  def labels_size(self): return len(self.labels_)
+  def labels_list(self): return self.labels_
+
+  def labels(self, i):
+    return self.labels_[i]
+
+  def mutable_labels(self, i):
+    return self.labels_[i]
+
+  def add_labels(self):
+    x = RequestLog_MapFieldEntry()
+    self.labels_.append(x)
+    return x
+
+  def clear_labels(self):
+    self.labels_ = []
   def exit_reason(self): return self.exit_reason_
 
   def set_exit_reason(self, x):
@@ -1550,7 +1681,6 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if (x.has_combined()): self.set_combined(x.combined())
     if (x.has_api_mcycles()): self.set_api_mcycles(x.api_mcycles())
     if (x.has_host()): self.set_host(x.host())
-    if (x.has_cost()): self.set_cost(x.cost())
     if (x.has_task_queue_name()): self.set_task_queue_name(x.task_queue_name())
     if (x.has_task_name()): self.set_task_name(x.task_name())
     if (x.has_was_loading_request()): self.set_was_loading_request(x.was_loading_request())
@@ -1563,6 +1693,7 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if (x.has_app_engine_release()): self.set_app_engine_release(x.app_engine_release())
     if (x.has_trace_id()): self.set_trace_id(x.trace_id())
     if (x.has_span_id()): self.set_span_id(x.span_id())
+    for i in range(x.labels_size()): self.add_labels().CopyFrom(x.labels(i))
     if (x.has_exit_reason()): self.set_exit_reason(x.exit_reason())
     if (x.has_was_throttled_for_time()): self.set_was_throttled_for_time(x.was_throttled_for_time())
     if (x.has_was_throttled_for_requests()): self.set_was_throttled_for_requests(x.was_throttled_for_requests())
@@ -1615,8 +1746,6 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if self.has_api_mcycles_ and self.api_mcycles_ != x.api_mcycles_: return 0
     if self.has_host_ != x.has_host_: return 0
     if self.has_host_ and self.host_ != x.host_: return 0
-    if self.has_cost_ != x.has_cost_: return 0
-    if self.has_cost_ and self.cost_ != x.cost_: return 0
     if self.has_task_queue_name_ != x.has_task_queue_name_: return 0
     if self.has_task_queue_name_ and self.task_queue_name_ != x.task_queue_name_: return 0
     if self.has_task_name_ != x.has_task_name_: return 0
@@ -1642,6 +1771,9 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if self.has_trace_id_ and self.trace_id_ != x.trace_id_: return 0
     if self.has_span_id_ != x.has_span_id_: return 0
     if self.has_span_id_ and self.span_id_ != x.span_id_: return 0
+    if len(self.labels_) != len(x.labels_): return 0
+    for e1, e2 in zip(self.labels_, x.labels_):
+      if e1 != e2: return 0
     if self.has_exit_reason_ != x.has_exit_reason_: return 0
     if self.has_exit_reason_ and self.exit_reason_ != x.exit_reason_: return 0
     if self.has_was_throttled_for_time_ != x.has_was_throttled_for_time_: return 0
@@ -1715,6 +1847,8 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
         debug_strs.append('Required field: combined not set.')
     for p in self.line_:
       if not p.IsInitialized(debug_strs): initialized=0
+    for p in self.labels_:
+      if not p.IsInitialized(debug_strs): initialized=0
     return initialized
 
   def ByteSize(self):
@@ -1741,7 +1875,6 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     n += self.lengthString(len(self.combined_))
     if (self.has_api_mcycles_): n += 2 + self.lengthVarInt64(self.api_mcycles_)
     if (self.has_host_): n += 2 + self.lengthString(len(self.host_))
-    if (self.has_cost_): n += 10
     if (self.has_task_queue_name_): n += 2 + self.lengthString(len(self.task_queue_name_))
     if (self.has_task_name_): n += 2 + self.lengthString(len(self.task_name_))
     if (self.has_was_loading_request_): n += 3
@@ -1755,6 +1888,8 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if (self.has_app_engine_release_): n += 2 + self.lengthString(len(self.app_engine_release_))
     if (self.has_trace_id_): n += 2 + self.lengthString(len(self.trace_id_))
     if (self.has_span_id_): n += 2 + self.lengthString(len(self.span_id_))
+    n += 2 * len(self.labels_)
+    for i in range(len(self.labels_)): n += self.lengthString(self.labels_[i].ByteSize())
     if (self.has_exit_reason_): n += 2 + self.lengthVarInt64(self.exit_reason_)
     if (self.has_was_throttled_for_time_): n += 3
     if (self.has_was_throttled_for_requests_): n += 3
@@ -1814,7 +1949,6 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
       n += self.lengthString(len(self.combined_))
     if (self.has_api_mcycles_): n += 2 + self.lengthVarInt64(self.api_mcycles_)
     if (self.has_host_): n += 2 + self.lengthString(len(self.host_))
-    if (self.has_cost_): n += 10
     if (self.has_task_queue_name_): n += 2 + self.lengthString(len(self.task_queue_name_))
     if (self.has_task_name_): n += 2 + self.lengthString(len(self.task_name_))
     if (self.has_was_loading_request_): n += 3
@@ -1828,6 +1962,8 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if (self.has_app_engine_release_): n += 2 + self.lengthString(len(self.app_engine_release_))
     if (self.has_trace_id_): n += 2 + self.lengthString(len(self.trace_id_))
     if (self.has_span_id_): n += 2 + self.lengthString(len(self.span_id_))
+    n += 2 * len(self.labels_)
+    for i in range(len(self.labels_)): n += self.lengthString(self.labels_[i].ByteSizePartial())
     if (self.has_exit_reason_): n += 2 + self.lengthVarInt64(self.exit_reason_)
     if (self.has_was_throttled_for_time_): n += 3
     if (self.has_was_throttled_for_requests_): n += 3
@@ -1858,7 +1994,6 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     self.clear_combined()
     self.clear_api_mcycles()
     self.clear_host()
-    self.clear_cost()
     self.clear_task_queue_name()
     self.clear_task_name()
     self.clear_was_loading_request()
@@ -1871,6 +2006,7 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     self.clear_app_engine_release()
     self.clear_trace_id()
     self.clear_span_id()
+    self.clear_labels()
     self.clear_exit_reason()
     self.clear_was_throttled_for_time()
     self.clear_was_throttled_for_requests()
@@ -1924,9 +2060,6 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if (self.has_host_):
       out.putVarInt32(162)
       out.putPrefixedString(self.host_)
-    if (self.has_cost_):
-      out.putVarInt32(169)
-      out.putDouble(self.cost_)
     if (self.has_task_queue_name_):
       out.putVarInt32(178)
       out.putPrefixedString(self.task_queue_name_)
@@ -1986,6 +2119,10 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if (self.has_span_id_):
       out.putVarInt32(322)
       out.putPrefixedString(self.span_id_)
+    for i in range(len(self.labels_)):
+      out.putVarInt32(330)
+      out.putVarInt32(self.labels_[i].ByteSize())
+      self.labels_[i].OutputUnchecked(out)
 
   def OutputPartial(self, out):
     if (self.has_app_id_):
@@ -2048,9 +2185,6 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if (self.has_host_):
       out.putVarInt32(162)
       out.putPrefixedString(self.host_)
-    if (self.has_cost_):
-      out.putVarInt32(169)
-      out.putDouble(self.cost_)
     if (self.has_task_queue_name_):
       out.putVarInt32(178)
       out.putPrefixedString(self.task_queue_name_)
@@ -2110,6 +2244,10 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if (self.has_span_id_):
       out.putVarInt32(322)
       out.putPrefixedString(self.span_id_)
+    for i in range(len(self.labels_)):
+      out.putVarInt32(330)
+      out.putVarInt32(self.labels_[i].ByteSizePartial())
+      self.labels_[i].OutputPartial(out)
 
   def TryMerge(self, d):
     while d.avail() > 0:
@@ -2174,9 +2312,6 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
       if tt == 162:
         self.set_host(d.getPrefixedString())
         continue
-      if tt == 169:
-        self.set_cost(d.getDouble())
-        continue
       if tt == 178:
         self.set_task_queue_name(d.getPrefixedString())
         continue
@@ -2240,6 +2375,12 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
       if tt == 322:
         self.set_span_id(d.getPrefixedString())
         continue
+      if tt == 330:
+        length = d.getVarInt32()
+        tmp = ProtocolBuffer.Decoder(d.buffer(), d.pos(), d.pos() + length)
+        d.skip(length)
+        self.add_labels().TryMerge(tmp)
+        continue
 
 
       if (tt == 0): raise ProtocolBuffer.ProtocolBufferDecodeError()
@@ -2273,7 +2414,6 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if self.has_combined_: res+=prefix+("combined: %s\n" % self.DebugFormatString(self.combined_))
     if self.has_api_mcycles_: res+=prefix+("api_mcycles: %s\n" % self.DebugFormatInt64(self.api_mcycles_))
     if self.has_host_: res+=prefix+("host: %s\n" % self.DebugFormatString(self.host_))
-    if self.has_cost_: res+=prefix+("cost: %s\n" % self.DebugFormat(self.cost_))
     if self.has_task_queue_name_: res+=prefix+("task_queue_name: %s\n" % self.DebugFormatString(self.task_queue_name_))
     if self.has_task_name_: res+=prefix+("task_name: %s\n" % self.DebugFormatString(self.task_name_))
     if self.has_was_loading_request_: res+=prefix+("was_loading_request: %s\n" % self.DebugFormatBool(self.was_loading_request_))
@@ -2293,6 +2433,14 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     if self.has_app_engine_release_: res+=prefix+("app_engine_release: %s\n" % self.DebugFormatString(self.app_engine_release_))
     if self.has_trace_id_: res+=prefix+("trace_id: %s\n" % self.DebugFormatString(self.trace_id_))
     if self.has_span_id_: res+=prefix+("span_id: %s\n" % self.DebugFormatString(self.span_id_))
+    cnt=0
+    for e in self.labels_:
+      elm=""
+      if printElemNumber: elm="(%d)" % cnt
+      res+=prefix+("labels%s <\n" % elm)
+      res+=e.__str__(prefix + "  ", printElemNumber)
+      res+=prefix+">\n"
+      cnt+=1
     if self.has_exit_reason_: res+=prefix+("exit_reason: %s\n" % self.DebugFormatInt32(self.exit_reason_))
     if self.has_was_throttled_for_time_: res+=prefix+("was_throttled_for_time: %s\n" % self.DebugFormatBool(self.was_throttled_for_time_))
     if self.has_was_throttled_for_requests_: res+=prefix+("was_throttled_for_requests: %s\n" % self.DebugFormatBool(self.was_throttled_for_requests_))
@@ -2326,7 +2474,6 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
   kcombined = 18
   kapi_mcycles = 19
   khost = 20
-  kcost = 21
   ktask_queue_name = 22
   ktask_name = 23
   kwas_loading_request = 24
@@ -2339,6 +2486,7 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
   kapp_engine_release = 38
   ktrace_id = 39
   kspan_id = 40
+  klabels = 41
   kexit_reason = 30
   kwas_throttled_for_time = 31
   kwas_throttled_for_requests = 32
@@ -2367,7 +2515,6 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     18: "combined",
     19: "api_mcycles",
     20: "host",
-    21: "cost",
     22: "task_queue_name",
     23: "task_name",
     24: "was_loading_request",
@@ -2387,7 +2534,8 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     38: "app_engine_release",
     39: "trace_id",
     40: "span_id",
-  }, 40)
+    41: "labels",
+  }, 41)
 
   _TYPES = _BuildTagLookupTable({
     0: ProtocolBuffer.Encoder.NUMERIC,
@@ -2411,7 +2559,6 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     18: ProtocolBuffer.Encoder.STRING,
     19: ProtocolBuffer.Encoder.NUMERIC,
     20: ProtocolBuffer.Encoder.STRING,
-    21: ProtocolBuffer.Encoder.DOUBLE,
     22: ProtocolBuffer.Encoder.STRING,
     23: ProtocolBuffer.Encoder.STRING,
     24: ProtocolBuffer.Encoder.NUMERIC,
@@ -2431,7 +2578,8 @@ class RequestLog(ProtocolBuffer.ProtocolMessage):
     38: ProtocolBuffer.Encoder.STRING,
     39: ProtocolBuffer.Encoder.STRING,
     40: ProtocolBuffer.Encoder.STRING,
-  }, 40, ProtocolBuffer.Encoder.MAX_TYPE)
+    41: ProtocolBuffer.Encoder.STRING,
+  }, 41, ProtocolBuffer.Encoder.MAX_TYPE)
 
 
   _STYLE = """"""
@@ -4750,4 +4898,4 @@ class LogUsageResponse(ProtocolBuffer.ProtocolMessage):
 if _extension_runtime:
   pass
 
-__all__ = ['LogServiceError','UserAppLogLine','UserAppLogGroup','FlushRequest','LogOffset','LogLine','RequestLog','LogModuleVersion','LogReadRequest','LogReadResponse','LogUsageRecord','LogUsageRequest','LogUsageResponse']
+__all__ = ['LogServiceError','UserAppLogLine','UserAppLogGroup','FlushRequest','LogOffset','LogLine','RequestLog_MapFieldEntry','RequestLog','LogModuleVersion','LogReadRequest','LogReadResponse','LogUsageRecord','LogUsageRequest','LogUsageResponse']

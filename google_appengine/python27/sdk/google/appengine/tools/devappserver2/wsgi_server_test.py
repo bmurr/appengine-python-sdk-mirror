@@ -638,7 +638,7 @@ class WsgiHostCheckTest(unittest.TestCase):
 
   def test_whitelisted_host_passes_host_check(self):
     self.add_host_check_with_whitelisted_hosts(
-        ['local.dev', '2001:db8::1:0:0:1'])
+        ['local.dev', '[2001:db8::1:0:0:1]'])
 
     # with port
     self.assert_host_check_passes_with_request_host('local.dev:8080')

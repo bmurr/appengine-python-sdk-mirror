@@ -81,7 +81,7 @@ def start_process(args, input_string='', env=None, cwd=None, stdout=None,
     p = subprocess.Popen(args, env=env, cwd=cwd, stdout=stdout, stderr=stderr,
                          stdin=subprocess.PIPE, startupinfo=startupinfo,
                          shell=shell)
-    if _SUBPROCESS_STDIN_IS_THREAD_HOSTILE:
+    if _SUBPROCESS_STDIN_IS_THREAD_HOSTILE and p.stdin is not None:
       p.stdin.write(input_string)
       p.stdin.close()
       p.stdin = None

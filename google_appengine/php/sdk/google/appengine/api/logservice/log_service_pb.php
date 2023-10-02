@@ -773,9 +773,126 @@ namespace google\appengine {
     }
   }
 }
+namespace google\appengine\RequestLog {
+  class MapFieldEntry extends \google\net\ProtocolMessage {
+    public function getKey() {
+      if (!isset($this->key)) {
+        return '';
+      }
+      return $this->key;
+    }
+    public function setKey($val) {
+      $this->key = $val;
+      return $this;
+    }
+    public function clearKey() {
+      unset($this->key);
+      return $this;
+    }
+    public function hasKey() {
+      return isset($this->key);
+    }
+    public function getValue() {
+      if (!isset($this->value)) {
+        return '';
+      }
+      return $this->value;
+    }
+    public function setValue($val) {
+      $this->value = $val;
+      return $this;
+    }
+    public function clearValue() {
+      unset($this->value);
+      return $this;
+    }
+    public function hasValue() {
+      return isset($this->value);
+    }
+    public function clear() {
+      $this->clearKey();
+      $this->clearValue();
+    }
+    public function byteSizePartial() {
+      $res = 0;
+      if (isset($this->key)) {
+        $res += 1;
+        $res += $this->lengthString(strlen($this->key));
+      }
+      if (isset($this->value)) {
+        $res += 1;
+        $res += $this->lengthString(strlen($this->value));
+      }
+      return $res;
+    }
+    public function outputPartial($out) {
+      if (isset($this->key)) {
+        $out->putVarInt32(10);
+        $out->putPrefixedString($this->key);
+      }
+      if (isset($this->value)) {
+        $out->putVarInt32(18);
+        $out->putPrefixedString($this->value);
+      }
+    }
+    public function tryMerge($d) {
+      while($d->avail() > 0) {
+        $tt = $d->getVarInt32();
+        switch ($tt) {
+          case 10:
+            $length = $d->getVarInt32();
+            $this->setKey(substr($d->buffer(), $d->pos(), $length));
+            $d->skip($length);
+            break;
+          case 18:
+            $length = $d->getVarInt32();
+            $this->setValue(substr($d->buffer(), $d->pos(), $length));
+            $d->skip($length);
+            break;
+          case 0:
+            throw new \google\net\ProtocolBufferDecodeError();
+            break;
+          default:
+            $d->skipData($tt);
+        }
+      };
+    }
+    public function checkInitialized() {
+      return null;
+    }
+    public function mergeFrom($x) {
+      if ($x === $this) { throw new \IllegalArgumentException('Cannot copy message to itself'); }
+      if ($x->hasKey()) {
+        $this->setKey($x->getKey());
+      }
+      if ($x->hasValue()) {
+        $this->setValue($x->getValue());
+      }
+    }
+    public function equals($x) {
+      if ($x === $this) { return true; }
+      if (isset($this->key) !== isset($x->key)) return false;
+      if (isset($this->key) && $this->key !== $x->key) return false;
+      if (isset($this->value) !== isset($x->value)) return false;
+      if (isset($this->value) && $this->value !== $x->value) return false;
+      return true;
+    }
+    public function shortDebugString($prefix = "") {
+      $res = '';
+      if (isset($this->key)) {
+        $res .= $prefix . "key: " . $this->debugFormatString($this->key) . "\n";
+      }
+      if (isset($this->value)) {
+        $res .= $prefix . "value: " . $this->debugFormatString($this->value) . "\n";
+      }
+      return $res;
+    }
+  }
+}
 namespace google\appengine {
   class RequestLog extends \google\net\ProtocolMessage {
     private $line = array();
+    private $labels = array();
     public function getAppId() {
       if (!isset($this->app_id)) {
         return '';
@@ -1140,23 +1257,6 @@ namespace google\appengine {
     public function hasHost() {
       return isset($this->host);
     }
-    public function getCost() {
-      if (!isset($this->cost)) {
-        return 0.0;
-      }
-      return $this->cost;
-    }
-    public function setCost($val) {
-      $this->cost = $val;
-      return $this;
-    }
-    public function clearCost() {
-      unset($this->cost);
-      return $this;
-    }
-    public function hasCost() {
-      return isset($this->cost);
-    }
     public function getTaskQueueName() {
       if (!isset($this->task_queue_name)) {
         return '';
@@ -1507,6 +1607,37 @@ namespace google\appengine {
     public function hasSpanId() {
       return isset($this->span_id);
     }
+    public function getLabelsSize() {
+      return sizeof($this->labels);
+    }
+    public function getLabelsList() {
+      return $this->labels;
+    }
+    public function mutableLabels($idx) {
+      if (!isset($this->labels[$idx])) {
+        $val = new \google\appengine\RequestLog\MapFieldEntry();
+        $this->labels[$idx] = $val;
+        return $val;
+      }
+      return $this->labels[$idx];
+    }
+    public function getLabels($idx) {
+      if (isset($this->labels[$idx])) {
+        return $this->labels[$idx];
+      }
+      if ($idx >= end(array_keys($this->labels))) {
+        throw new \OutOfRangeException('index out of range: ' + $idx);
+      }
+      return new \google\appengine\RequestLog\MapFieldEntry();
+    }
+    public function addLabels() {
+      $val = new \google\appengine\RequestLog\MapFieldEntry();
+      $this->labels[] = $val;
+      return $val;
+    }
+    public function clearLabels() {
+      $this->labels = array();
+    }
     public function clear() {
       $this->clearAppId();
       $this->clearVersionId();
@@ -1528,7 +1659,6 @@ namespace google\appengine {
       $this->clearCombined();
       $this->clearApiMcycles();
       $this->clearHost();
-      $this->clearCost();
       $this->clearTaskQueueName();
       $this->clearTaskName();
       $this->clearWasLoadingRequest();
@@ -1548,6 +1678,7 @@ namespace google\appengine {
       $this->clearAppEngineRelease();
       $this->clearTraceId();
       $this->clearSpanId();
+      $this->clearLabels();
     }
     public function byteSizePartial() {
       $res = 0;
@@ -1631,9 +1762,6 @@ namespace google\appengine {
         $res += 2;
         $res += $this->lengthString(strlen($this->host));
       }
-      if (isset($this->cost)) {
-        $res += 10;
-      }
       if (isset($this->task_queue_name)) {
         $res += 2;
         $res += $this->lengthString(strlen($this->task_queue_name));
@@ -1705,6 +1833,11 @@ namespace google\appengine {
       if (isset($this->span_id)) {
         $res += 2;
         $res += $this->lengthString(strlen($this->span_id));
+      }
+      $this->checkProtoArray($this->labels);
+      $res += 2 * sizeof($this->labels);
+      foreach ($this->labels as $value) {
+        $res += $this->lengthString($value->byteSizePartial());
       }
       return $res;
     }
@@ -1789,10 +1922,6 @@ namespace google\appengine {
         $out->putVarInt32(162);
         $out->putPrefixedString($this->host);
       }
-      if (isset($this->cost)) {
-        $out->putVarInt32(169);
-        $out->putDouble($this->cost);
-      }
       if (isset($this->task_queue_name)) {
         $out->putVarInt32(178);
         $out->putPrefixedString($this->task_queue_name);
@@ -1871,6 +2000,12 @@ namespace google\appengine {
       if (isset($this->span_id)) {
         $out->putVarInt32(322);
         $out->putPrefixedString($this->span_id);
+      }
+      $this->checkProtoArray($this->labels);
+      foreach ($this->labels as $value) {
+        $out->putVarInt32(330);
+        $out->putVarInt32($value->byteSizePartial());
+        $value->outputPartial($out);
       }
     }
     public function tryMerge($d) {
@@ -1963,9 +2098,6 @@ namespace google\appengine {
             $this->setHost(substr($d->buffer(), $d->pos(), $length));
             $d->skip($length);
             break;
-          case 169:
-            $this->setCost($d->getDouble());
-            break;
           case 178:
             $length = $d->getVarInt32();
             $this->setTaskQueueName(substr($d->buffer(), $d->pos(), $length));
@@ -2045,6 +2177,12 @@ namespace google\appengine {
             $this->setSpanId(substr($d->buffer(), $d->pos(), $length));
             $d->skip($length);
             break;
+          case 330:
+            $length = $d->getVarInt32();
+            $tmp = new \google\net\Decoder($d->buffer(), $d->pos(), $d->pos() + $length);
+            $d->skip($length);
+            $this->addLabels()->tryMerge($tmp);
+            break;
           case 0:
             throw new \google\net\ProtocolBufferDecodeError();
             break;
@@ -2072,6 +2210,9 @@ namespace google\appengine {
         if (!$value->isInitialized()) return 'line';
       }
       if (isset($this->offset) && (!$this->offset->isInitialized())) return 'offset';
+      foreach ($this->labels as $value) {
+        if (!$value->isInitialized()) return 'labels';
+      }
       return null;
     }
     public function mergeFrom($x) {
@@ -2136,9 +2277,6 @@ namespace google\appengine {
       if ($x->hasHost()) {
         $this->setHost($x->getHost());
       }
-      if ($x->hasCost()) {
-        $this->setCost($x->getCost());
-      }
       if ($x->hasTaskQueueName()) {
         $this->setTaskQueueName($x->getTaskQueueName());
       }
@@ -2196,6 +2334,9 @@ namespace google\appengine {
       if ($x->hasSpanId()) {
         $this->setSpanId($x->getSpanId());
       }
+      foreach ($x->getLabelsList() as $v) {
+        $this->addLabels()->copyFrom($v);
+      }
     }
     public function equals($x) {
       if ($x === $this) { return true; }
@@ -2239,8 +2380,6 @@ namespace google\appengine {
       if (isset($this->api_mcycles) && !$this->integerEquals($this->api_mcycles, $x->api_mcycles)) return false;
       if (isset($this->host) !== isset($x->host)) return false;
       if (isset($this->host) && $this->host !== $x->host) return false;
-      if (isset($this->cost) !== isset($x->cost)) return false;
-      if (isset($this->cost) && $this->cost !== $x->cost) return false;
       if (isset($this->task_queue_name) !== isset($x->task_queue_name)) return false;
       if (isset($this->task_queue_name) && $this->task_queue_name !== $x->task_queue_name) return false;
       if (isset($this->task_name) !== isset($x->task_name)) return false;
@@ -2281,6 +2420,10 @@ namespace google\appengine {
       if (isset($this->trace_id) && $this->trace_id !== $x->trace_id) return false;
       if (isset($this->span_id) !== isset($x->span_id)) return false;
       if (isset($this->span_id) && $this->span_id !== $x->span_id) return false;
+      if (sizeof($this->labels) !== sizeof($x->labels)) return false;
+      foreach (array_map(null, $this->labels, $x->labels) as $v) {
+        if (!$v[0]->equals($v[1])) return false;
+      }
       return true;
     }
     public function shortDebugString($prefix = "") {
@@ -2345,9 +2488,6 @@ namespace google\appengine {
       if (isset($this->host)) {
         $res .= $prefix . "host: " . $this->debugFormatString($this->host) . "\n";
       }
-      if (isset($this->cost)) {
-        $res .= $prefix . "cost: " . $this->debugFormatDouble($this->cost) . "\n";
-      }
       if (isset($this->task_queue_name)) {
         $res .= $prefix . "task_queue_name: " . $this->debugFormatString($this->task_queue_name) . "\n";
       }
@@ -2404,6 +2544,9 @@ namespace google\appengine {
       }
       if (isset($this->span_id)) {
         $res .= $prefix . "span_id: " . $this->debugFormatString($this->span_id) . "\n";
+      }
+      foreach ($this->labels as $value) {
+        $res .= $prefix . "labels <\n" . $value->shortDebugString($prefix . "  ") . $prefix . ">\n";
       }
       return $res;
     }

@@ -52,12 +52,14 @@ import tempfile
 import threading
 import time
 import traceback
+
+import google
+
+from portpicker import portpicker_py2 as portpicker
+from google.appengine._internal.ruamel import yaml
 import urllib2
 import urlparse
 
-import google
-import portpicker
-from google.appengine._internal.ruamel import yaml
 
 if 'APISERVER_EXTRA_IMPORTS' in os.environ:
   extras = os.environ['APISERVER_EXTRA_IMPORTS'].split(':')

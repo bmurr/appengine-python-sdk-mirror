@@ -83,7 +83,7 @@ _SECONDS_TO_MILLISECONDS = 1000
 _PORT_0_RETRIES = 2048
 
 # Per RFC2732, IPv6 addresses in URLs are enclosed in []
-_IPV6_HOST_RE = re.compile(r'^\[(.*)\]')
+_IPV6_HOST_RE = re.compile(r'^\[.*\]')
 
 
 class BindError(errors.Error):
@@ -363,6 +363,10 @@ class WsgiHostCheck(object):
       return True
 
     try:
+      # The ipaddr library works with ipv6 addresses but not when they are
+      # wrapped in square brackets.
+      if host.startswith('[') and host.endswith(']'):
+        return ipaddr.IPAddress(host[1:-1]).is_loopback
       return ipaddr.IPAddress(host).is_loopback
     except ValueError:
       return False
@@ -386,7 +390,7 @@ class WsgiHostCheck(object):
     """Returns just the host name from a HTTP_HOST header value."""
     ipv6_match = _IPV6_HOST_RE.match(six.ensure_str(host))
     if ipv6_match:
-      return ipv6_match.group(1)
+      return ipv6_match.group()
     else:
       return six.ensure_str(host).rsplit(':', 1)[0]
 

@@ -68,7 +68,7 @@ class Manifest(object):
 
 
 def ReadManifest(jar_file_name):
-  """Read and parse the manifest out of the given jar.
+  """Read and parse the manifest out of the given jar file name.
 
   Args:
     jar_file_name: the name of the jar from which the manifest is to be read.
@@ -80,11 +80,26 @@ def ReadManifest(jar_file_name):
     IOError: if the jar does not exist or cannot be read.
   """
   with zipfile.ZipFile(jar_file_name) as jar:
-    try:
-      manifest_string = jar.read(_MANIFEST_NAME).decode('ascii')
-    except KeyError:
-      return None
-    return _ParseManifest(manifest_string, jar_file_name)
+    return ReadManifestFromZipFile(jar)
+
+
+def ReadManifestFromZipFile(zip_file):
+  """Read and parse the manifest out of the given zip file object.
+
+  Args:
+    zip_file: the zipfile.Zipfile object from which the manifest is to be read.
+
+  Returns:
+    A parsed Manifest object, or None if the jar has no manifest.
+
+  Raises:
+    IOError: if the jar does not exist or cannot be read.
+  """
+  try:
+    manifest_string = zip_file.read(_MANIFEST_NAME).decode('utf-8')
+  except KeyError:
+    return None
+  return _ParseManifest(manifest_string, zip_file.filename)
 
 
 def _ParseManifest(manifest_string, jar_file_name):
@@ -144,6 +159,8 @@ def _ParseManifestSection(section, jar_file_name):
   try:
     return dict(line.split(': ', 1) for line in section.split('\n'))
   except ValueError:
+    if jar_file_name is None:
+      jar_file_name = '(unknown)'
     raise InvalidJarError('%s: Invalid manifest %r' % (jar_file_name, section))
 
 

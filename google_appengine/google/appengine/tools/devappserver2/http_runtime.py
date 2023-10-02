@@ -37,7 +37,6 @@ process.
 START_PROCESS_REVERSE_NO_FILE equivalent to START_PROCESS, but passes the HTTP
 port number created in http_runtime.py as an environment variable to the runtime
 process.
-
 """
 
 
@@ -50,7 +49,7 @@ import sys
 import threading
 import time
 
-import portpicker
+from portpicker import portpicker_py2 as portpicker
 from google.appengine._internal import six
 
 from google.appengine.tools.devappserver2 import application_configuration
@@ -112,7 +111,7 @@ def _sleep_between_retries(attempt, max_attempts, sleep_base):
     time.sleep((2**attempt) * sleep_base)
 
 
-def _remove_retry_sharing_violation(path, max_attempts=10, sleep_base=.125):
+def _remove_retry_sharing_violation(path, max_attempts=10, sleep_base=0.125):
   """Removes a file (with retries on Windows for sharing violations).
 
   Args:
@@ -171,8 +170,11 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
   """Manages a runtime subprocess used to handle dynamic content."""
 
   _VALID_START_PROCESS_FLAVORS = [
-      START_PROCESS, START_PROCESS_FILE, START_PROCESS_REVERSE,
-      START_PROCESS_REVERSE_NO_FILE, START_PROCESS_WITH_ENTRYPOINT
+      START_PROCESS,
+      START_PROCESS_FILE,
+      START_PROCESS_REVERSE,
+      START_PROCESS_REVERSE_NO_FILE,
+      START_PROCESS_WITH_ENTRYPOINT,
   ]
 
   # TODO: Determine if we can always use SIGTERM.
@@ -197,14 +199,16 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
     cls._quit_with_sigterm = quit_with_sigterm
     return previous_quit_with_sigterm
 
-  def __init__(self,
-               args,
-               runtime_config_getter,
-               module_configuration,
-               env=None,
-               start_process_flavor=START_PROCESS,
-               extra_args_getter=None,
-               request_id_header_name=None):
+  def __init__(
+      self,
+      args,
+      runtime_config_getter,
+      module_configuration,
+      env=None,
+      start_process_flavor=START_PROCESS,
+      extra_args_getter=None,
+      request_id_header_name=None,
+  ):
     """Initializer for HttpRuntimeProxy.
 
     Args:
@@ -241,11 +245,15 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
     # Java and Go. Python hacks os.environ to not really return the environment
     # variables, so Python needs to set these elsewhere.
     runtime_config = self._runtime_config_getter()
-    if (runtime_config.vm or
-        self._module_configuration.runtime in _RUNTIMES_NEED_VM_ENV_VARS):
+    if (
+        runtime_config.vm
+        or self._module_configuration.runtime in _RUNTIMES_NEED_VM_ENV_VARS
+    ):
       self._env.update(
-          get_vm_environment_variables(self._module_configuration,
-                                       runtime_config))
+          get_vm_environment_variables(
+              self._module_configuration, runtime_config
+          )
+      )
 
     if start_process_flavor not in self._VALID_START_PROCESS_FLAVORS:
       raise ValueError('Invalid start_process_flavor.')
@@ -256,6 +264,7 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
   def _get_instance_logs(self):
     # Give the runtime process a bit of time to write to stderr.
     time.sleep(0.1)
+    assert self._stderr_tee is not None
     return self._stderr_tee.get_buf()
 
   def _instance_died_unexpectedly(self):
@@ -266,8 +275,9 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
       # its return code.
       return self._process and self._process.poll() is not None
 
-  def handle(self, environ, start_response, url_map, match, request_id,
-             request_type):
+  def handle(
+      self, environ, start_response, url_map, match, request_id, request_type
+  ):
     """Serves this request by forwarding it to the runtime process.
 
     Args:
@@ -284,10 +294,12 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
       A sequence of strings containing the body of the HTTP response.
     """
 
-    return self._proxy.handle(environ, start_response, url_map, match,
-                              request_id, request_type)
+    assert self._proxy is not None
+    return self._proxy.handle(
+        environ, start_response, url_map, match, request_id, request_type
+    )
 
-  def _read_start_process_file(self, max_attempts=10, sleep_base=.125):
+  def _read_start_process_file(self, max_attempts=10, sleep_base=0.125):
     """Read the single line response expected in the start process file.
 
     The START_PROCESS_FILE flavor uses a file for the runtime instance to
@@ -309,6 +321,7 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
       newline is read before the process exits or the max number of attempts are
       made.
     """
+    assert self._process is not None
     try:
       for attempt in range(max_attempts):
         # Yes, the final data may already be in the file even though the
@@ -345,7 +358,9 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=self._env,
-            cwd=self._module_configuration.application_root)
+            cwd=self._module_configuration.application_root,
+        )
+      assert self._process.stdout is not None
       port = six.ensure_text(self._process.stdout.readline())
       if '\t' in port:  # Split out the host if present.
         host, port = port.split('\t', 1)
@@ -358,7 +373,8 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
             input_string=serialized_config,
             env=self._env,
             cwd=self._module_configuration.application_root,
-            stderr=subprocess.PIPE)
+            stderr=subprocess.PIPE,
+        )
       port = self._read_start_process_file()
       _remove_retry_sharing_violation(self._process.child_out.name)  # pytype: disable=attribute-error
     elif self._start_process_flavor == START_PROCESS_REVERSE:
@@ -378,7 +394,8 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
             input_string=serialized_config,
             env=self._env,
             cwd=self._module_configuration.application_root,
-            stderr=subprocess.PIPE)
+            stderr=subprocess.PIPE,
+        )
     elif self._start_process_flavor == START_PROCESS_WITH_ENTRYPOINT:
       serialized_config = runtime_config.SerializeToString()
       with self._process_lock:
@@ -392,7 +409,8 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
             env=self._env,
             cwd=self._module_configuration.application_root,
             stderr=subprocess.PIPE,
-            shell=True)
+            shell=True,
+        )
     elif self._start_process_flavor == START_PROCESS_REVERSE_NO_FILE:
       serialized_config = runtime_config.SerializeToString()
       with self._process_lock:
@@ -408,9 +426,10 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
         args = []
         for arg in self._args:
           args.append(
-              arg.replace('{port}', str(port)).replace(
-                  '{api_port}', str(runtime_config.api_port)).replace(
-                      '{api_host}', runtime_config.api_host))
+              arg.replace('{port}', str(port))
+              .replace('{api_port}', str(runtime_config.api_port))
+              .replace('{api_host}', runtime_config.api_host)
+          )
 
         self._process = safe_subprocess.start_process(
             args=args,
@@ -418,12 +437,15 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=self._env,
-            cwd=self._module_configuration.application_root)
+            cwd=self._module_configuration.application_root,
+        )
 
     # _stderr_tee may be pre-set by unit tests.
     if self._stderr_tee is None:
-      self._stderr_tee = tee.Tee(self._process.stderr,
-                                 sys.stderr if six.PY2 else sys.stderr.buffer)
+      assert self._process is not None
+      self._stderr_tee = tee.Tee(
+          self._process.stderr, sys.stderr if six.PY2 else sys.stderr.buffer
+      )
       self._stderr_tee.start()
 
     error = None
@@ -439,9 +461,11 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
           instance_died_unexpectedly=self._instance_died_unexpectedly,
           instance_logs_getter=self._get_instance_logs,
           error_handler_file=application_configuration.get_app_error_file(
-              self._module_configuration),
+              self._module_configuration
+          ),
           prior_error=error,
-          request_id_header_name=self._request_id_header_name)
+          request_id_header_name=self._request_id_header_name,
+      )
       self._proxy.wait_for_connection(self._process)
 
   def quit(self):
