@@ -1165,6 +1165,7 @@ class Property(ProtocolBuffer.ProtocolMessage):
   ENTITY_PROTO =   19
   EMPTY_LIST   =   24
   INDEX_VALUE  =   18
+  VECTOR       =   31
 
   _Meaning_NAMES = {
     0: "NO_MEANING",
@@ -1188,6 +1189,7 @@ class Property(ProtocolBuffer.ProtocolMessage):
     19: "ENTITY_PROTO",
     24: "EMPTY_LIST",
     18: "INDEX_VALUE",
+    31: "VECTOR",
   }
 
   def Meaning_Name(cls, x): return cls._Meaning_NAMES.get(x, "")

@@ -32,6 +32,7 @@ MODERN_RUNTIMES = frozenset([
     'python39',
     'python310',
     'python311',
+    'python312',
     'go111',
     'go112',
     'go113',
@@ -69,6 +70,7 @@ FACTORIES = {
     'python39': python_factory.PythonRuntimeInstanceFactory,
     'python310': python_factory.PythonRuntimeInstanceFactory,
     'python311': python_factory.PythonRuntimeInstanceFactory,
+    'python312': python_factory.PythonRuntimeInstanceFactory,
     'python27': python_factory.PythonRuntimeInstanceFactory,
     'python-compat': python_factory.PythonRuntimeInstanceFactory,
 }

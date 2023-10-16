@@ -1081,6 +1081,8 @@ goog.setImportHandlerInternalDoNotCallOrElse = function(fn) {
 goog.setUncompiledChunkIdHandlerInternalDoNotCallOrElse = function(fn) {
   goog.uncompiledChunkIdHandler_ = fn;
 };
+goog.maybeRequireFrameworkInternalOnlyDoNotCallOrElse = function() {
+};
 goog.ModuleType = {ES6:"es6", GOOG:"goog"};
 goog.moduleLoaderState_ = null;
 goog.isInModuleLoader_ = function() {
@@ -3981,7 +3983,6 @@ goog.html.SafeUrl.fromTrustedResourceUrl = function(trustedResourceUrl) {
   return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(goog.html.TrustedResourceUrl.unwrap(trustedResourceUrl));
 };
 goog.html.SAFE_URL_PATTERN_ = /^(?:(?:https?|mailto|ftp):|[^:/?#]*(?:[/?#]|$))/i;
-goog.html.SafeUrl.SAFE_URL_PATTERN = goog.html.SAFE_URL_PATTERN_;
 goog.html.SafeUrl.trySanitize = function(url) {
   if (url instanceof goog.html.SafeUrl) {
     return url;

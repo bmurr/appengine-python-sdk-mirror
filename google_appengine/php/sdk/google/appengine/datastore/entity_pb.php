@@ -1173,6 +1173,7 @@ namespace storage_onestore_v3\Property {
     const ENTITY_PROTO = 19;
     const EMPTY_LIST = 24;
     const INDEX_VALUE = 18;
+    const VECTOR = 31;
   }
 }
 namespace storage_onestore_v3 {

@@ -309,7 +309,7 @@ class IndexYamlUpdater(object):
 
 
 
-        fh = openfile(index_yaml_file, 'rU')
+        fh = openfile(index_yaml_file, 'r')
       except IOError:
         index_yaml_data = None
       else:
