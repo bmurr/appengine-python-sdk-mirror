@@ -3259,11 +3259,13 @@ class Index_Property(ProtocolBuffer.ProtocolMessage):
   MODE_UNSPECIFIED =    0
   GEOSPATIAL   =    3
   ARRAY_CONTAINS =    4
+  VECTOR       =    5
 
   _Mode_NAMES = {
     0: "MODE_UNSPECIFIED",
     3: "GEOSPATIAL",
     4: "ARRAY_CONTAINS",
+    5: "VECTOR",
   }
 
   def Mode_Name(cls, x): return cls._Mode_NAMES.get(x, "")

@@ -3173,6 +3173,7 @@ namespace storage_onestore_v3\Index\Property {
     const MODE_UNSPECIFIED = 0;
     const GEOSPATIAL = 3;
     const ARRAY_CONTAINS = 4;
+    const VECTOR = 5;
   }
 }
 namespace storage_onestore_v3\Index {
