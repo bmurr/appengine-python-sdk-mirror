@@ -172,8 +172,11 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
 
   def _IsPythonExecutableBefore36(self):
     try:
-      python_version_str = subprocess.check_output(
-          [self._GetPythonInterpreterPath(), '--version'])
+      python_version_str = str(
+          subprocess.check_output(
+              [self._GetPythonInterpreterPath(), '--version']
+          )
+      )
     except OSError:  # If python3 is not found, an OSError would be raised.
       logging.warning(
           'Failed getting python3 version assuming pre 3.6 version.')

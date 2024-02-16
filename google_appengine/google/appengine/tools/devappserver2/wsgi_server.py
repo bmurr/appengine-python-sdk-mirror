@@ -179,7 +179,7 @@ class SelectThread(object):
       if _HAS_POLL:
         # With 100 file descriptors, it is approximately 5x slower to
         # recreate and reinitialize the Poll object on every call to _select
-        # rather reuse one. But the absolute cost of contruction,
+        # rather reuse one. But the absolute cost of construction,
         # initialization and calling poll(0) is ~25us so code simplicity
         # wins.
         poll = select.poll()
@@ -543,7 +543,16 @@ class WsgiServer(object):
         if port == 0:
           port = server.port
       except BindError as bind_error:
-        err = bind_error[1][0] if six.PY2 else bind_error.args[1][0]  # pytype: disable=unsupported-operands
+        err = None
+        if six.PY2:
+          err = bind_error[1][0]
+        elif (
+            bind_error.args
+            and len(bind_error.args) > 1
+            and isinstance(bind_error.args[1], OSError)
+        ):
+          err = bind_error.args[1].errno  # pytype: disable=unsupported-operands
+
         if err == errno.EADDRINUSE:
           # The port picked at random for first interface was not available
           # on one of the other interfaces. Forget them and try again.

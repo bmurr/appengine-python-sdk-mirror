@@ -16,7 +16,6 @@
 #
 """Tests for google.appengine.tools.devappserver2.wsgi_server."""
 
-
 import errno
 import json
 import os
@@ -170,11 +169,11 @@ class SharedCherryPyThreadPoolTest(unittest.TestCase):
 
   def test_shutdown_connection(self):
 
-    class DummyObect(object):
+    class DummyObject(object):
       pass
 
-    connection = DummyObect()
-    connection.rfile = DummyObect()
+    connection = DummyObject()
+    connection.rfile = DummyObject()
     connection.rfile.closed = False
     connection.socket = self.mox.CreateMockAnything()
     connection.socket.shutdown(socket.SHUT_RD)
@@ -185,11 +184,11 @@ class SharedCherryPyThreadPoolTest(unittest.TestCase):
 
   def test_shutdown_connection_rfile_already_close(self):
 
-    class DummyObect(object):
+    class DummyObject(object):
       pass
 
-    connection = DummyObect()
-    connection.rfile = DummyObect()
+    connection = DummyObject()
+    connection.rfile = DummyObject()
     connection.rfile.closed = True
     connection.socket = self.mox.CreateMockAnything()
 
@@ -459,7 +458,7 @@ class WsgiServerPort0StartupTest(unittest.TestCase):
     wsgi_server._SingleAddressWsgiServer(('::1', 123),
                                          None).AndReturn(inet6_server)
     inet6_server.start().AndRaise(
-        wsgi_server.BindError('message', (errno.EADDRINUSE, 'in use')))
+        wsgi_server.BindError('message', OSError(errno.EADDRINUSE, 'in use')))
     inet4_server.quit()
     # Retry
     wsgi_server._SingleAddressWsgiServer(('127.0.0.1', 0),
@@ -500,7 +499,7 @@ class WsgiServerPort0StartupTest(unittest.TestCase):
       wsgi_server._SingleAddressWsgiServer(('::1', offset + 1),
                                            None).AndReturn(inet6_server)
       inet6_server.start().AndRaise(
-          wsgi_server.BindError('message', (errno.EADDRINUSE, 'in use')))
+          wsgi_server.BindError('message', OSError(errno.EADDRINUSE, 'in use')))
       inet4_server.quit()
     self.mox.ReplayAll()
     self.assertRaises(wsgi_server.BindError, self.server.start)

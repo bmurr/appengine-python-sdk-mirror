@@ -38,16 +38,19 @@ from google.appengine.tools.devappserver2 import instance
 
 from google.appengine.tools.devappserver2 import safe_subprocess
 
-_RUNTIME_PATH = os.path.abspath(
+_RUNTIME_PATH = six.ensure_str(os.path.abspath(
 
 
 
 
 os.path.join(os.path.dirname(sys.argv[0]), '_php_runtime.py')
-)
-_CHECK_ENVIRONMENT_SCRIPT_PATH = os.path.join(
-    os.path.dirname(__file__), 'check_environment.php')
-_RUNTIME_ARGS = [sys.executable, _RUNTIME_PATH]
+))
+_CHECK_ENVIRONMENT_SCRIPT_PATH = six.ensure_str(os.path.join(
+    os.path.dirname(__file__), 'check_environment.php'))
+_RUNTIME_ARGS = [
+    # sys.executable is None in tests
+    None if sys.executable is  None else six.ensure_str(sys.executable),
+    _RUNTIME_PATH]
 
 GAE_EXTENSION_NAME = 'GAE Runtime Module'
 
@@ -302,10 +305,12 @@ class PHPRuntimeInstanceFactory(instance.InstanceFactory,
     php_executable_path = php_config.php_executable_path
     if self._is_modern():
       if self._module_configuration.entrypoint:
-        runtime_args = self._module_configuration.entrypoint.split()
+        runtime_args = six.ensure_str(
+            self._module_configuration.entrypoint.split())
       else:
-        runtime_args = (php_executable_path, '-S', 'localhost:${PORT}',
-                        'index.php')
+        runtime_args = (
+            six.ensure_str(php_executable_path), '-S', 'localhost:${PORT}',
+            'index.php')
 
       start_process_flavor = http_runtime.START_PROCESS_WITH_ENTRYPOINT
 

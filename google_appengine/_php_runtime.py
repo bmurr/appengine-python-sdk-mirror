@@ -105,5 +105,9 @@ def _run_file(file_path, globals_):
 
 if __name__ == '__main__':
 
-  assert sys.version_info[0] == 2
+  if wrapper_util.enable_python3():
+    assert sys.version_info[0] == 3
+  else:
+    assert sys.version_info[0] == 2
+
   _run_file(__file__, globals())

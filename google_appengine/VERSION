@@ -28,3 +28,13 @@ supported_api_versions:
     api_versions: [null, '1']
   go115:
     api_versions: [null, '1']
+  go116:
+    api_versions: [null, '1']
+  go118:
+    api_versions: [null, '1']
+  go119:
+    api_versions: [null, '1']
+  go120:
+    api_versions: [null, '1']
+  go121:
+    api_versions: [null, '1']

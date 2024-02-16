@@ -21,6 +21,25 @@ import subprocess
 import sys
 
 
+def enable_python3():
+  """Enable Python3.
+
+  Needed during our upgrade to python3 rather than depending on
+  sys.version_info[0] for a couple of reasons.
+  o Requires users to explicitly opt into python3 until it is
+    working.
+  o Allows for our unit tests which run under python3 to validate python2
+    codepaths while depending on sys.version_info[0] does not. Note that
+    patching sys.version_info[0] for tests ends up causing test breakages
+    such as importing incompatible classes.
+
+  Returns:
+    True if python3 was enabled by setting the XX_GOOGLE_ENABLE_PY3
+    environment variale.
+  """
+  return bool(os.getenv('XX_GOOGLE_ENABLE_PY3'))
+
+
 def reject_old_python_versions(minimum_version):
   """Guard against old python versions.
 
@@ -138,8 +157,6 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'ipaddr'),
         os.path.join(dir_path, 'lib', 'jinja2-2.6'),
         os.path.join(dir_path, 'lib', 'protorpc-1.0'),
-        os.path.join(dir_path, 'lib', 'webob_0_9'),
-        os.path.join(dir_path, 'lib', 'webapp2-2.5.2'),
         os.path.join(dir_path, 'lib', 'yaml-3.10'),
         os.path.join(dir_path, 'lib', 'simplejson'),
         os.path.join(dir_path, 'lib', 'six_subset'),
@@ -149,6 +166,17 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'pyasn1_modules'),
         os.path.join(dir_path, 'lib', 'py27_urlquote'),
     ]
+
+    if enable_python3():
+      self.v1_extra_paths.extend([
+          os.path.join(dir_path, 'lib', 'webob'),
+          os.path.join(dir_path, 'lib', 'webapp2'),
+      ])
+    else:
+      self.v1_extra_paths.extend([
+          os.path.join(dir_path, 'lib', 'webob_0_9'),
+          os.path.join(dir_path, 'lib', 'webapp2-2.5.2'),
+      ])
 
     if sys.version_info >= (2, 6):
       self.v1_extra_paths.extend([
@@ -167,6 +195,20 @@ class Paths(object):
     ]
     if grpc_importable:
       self.api_server_extra_paths.append(grpc_path)
+
+    if enable_python3():
+      self.api_server_extra_paths.extend([
+          os.path.join(dir_path, 'lib', 'cachetools'),
+          os.path.join(dir_path, 'lib', 'frozendict'),
+          os.path.join(dir_path, 'lib', 'google_auth_oauthlib'),
+          os.path.join(dir_path, 'lib', 'httplib2'),
+          os.path.join(dir_path, 'lib', 'mock'),
+          os.path.join(dir_path, 'lib', 'requests_oauthlib'),
+          os.path.join(dir_path, 'lib', 'ruamel'),
+      ])
+    else:
+      self.v1_extra_paths.extend([
+      ])
 
 
 
@@ -214,7 +256,6 @@ class Paths(object):
     python_runtime_dir = os.path.join(python27_sdk_dir, 'python', 'runtime')
 
     stub_paths = [
-        os.path.join(dir_path, 'lib', 'antlr3'),
         os.path.join(dir_path, 'lib', 'fancy_urllib'),
         os.path.join(dir_path, 'lib', 'ipaddr'),
         os.path.join(dir_path, 'lib', 'six_subset'),
@@ -227,6 +268,15 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'oauth2client_devserver'),
         os.path.join(dir_path, 'lib', 'six-1.12.0'),
     ]
+    if enable_python3():
+      stub_paths.extend([
+
+          os.path.join(dir_path, 'lib', 'py3_antlr3'),
+      ])
+    else:
+      stub_paths.extend([
+          os.path.join(dir_path, 'lib', 'antlr3'),
+      ])
 
 
 
@@ -263,7 +313,6 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'google_auth_oauthlib'),
         os.path.join(dir_path, 'lib', 'idna'),
         os.path.join(dir_path, 'lib', 'ipaddr'),
-        os.path.join(dir_path, 'lib', 'jinja2-2.6'),
         os.path.join(dir_path, 'lib', 'mock'),
         os.path.join(dir_path, 'lib', 'oauthlib'),
         os.path.join(dir_path, 'lib', 'portpicker'),
@@ -273,10 +322,24 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'requests'),
         os.path.join(dir_path, 'lib', 'ruamel'),
         os.path.join(dir_path, 'lib', 'urllib3'),
-        os.path.join(dir_path, 'lib', 'webapp2'),
-        os.path.join(dir_path, 'lib', 'webapp2-2.5.1'),
-        os.path.join(dir_path, 'lib', 'webob-1.2.3'),
     ]
+    if enable_python3():
+      devappserver2_paths.extend([
+          os.path.join(dir_path, 'lib', 'jinja2'),
+          os.path.join(dir_path, 'lib', 'markupsafe'),
+          os.path.join(dir_path, 'lib', 'pyparsing'),
+          os.path.join(dir_path, 'lib', 'webapp2'),
+          os.path.join(dir_path, 'lib', 'webapp2', 'webapp2'),
+          os.path.join(dir_path, 'lib', 'webob'),
+      ])
+    else:
+      devappserver2_paths.extend([
+          os.path.join(dir_path, 'lib', 'jinja2-2.6'),
+          os.path.join(dir_path, 'lib', 'webob-1.2.3'),
+          os.path.join(dir_path, 'lib', 'webapp2'),
+          os.path.join(dir_path, 'lib', 'webapp2-2.5.1'),
+      ])
+
     if grpc_importable:
       devappserver2_paths.append(grpc_path)
 
@@ -308,8 +371,6 @@ class Paths(object):
         'api_server.py': self.v1_extra_paths + self.api_server_extra_paths,
         'backends_conversion.py': self.v1_extra_paths,
         'dev_appserver.py': devappserver2_paths,
-        'download_appstats.py': self.v1_extra_paths,
-        'endpointscfg.py': self.v1_extra_paths + self.endpointscfg_extra_paths,
         'gen_protorpc.py': self.v1_extra_paths,
         'php_cli.py': devappserver2_paths,
         'remote_api_shell.py': self.v1_extra_paths,

@@ -106,6 +106,7 @@ if (!defined('GOOGLE_APPENGINE_CLASSLOADER')) {
         'google\appengine\runtime\overquotaerror' => 'google/appengine/runtime/OverQuotaError.php',
         'memcached' => 'google/appengine/runtime/Memcached.php',
         'google\appengine\runtime\memcacheutils' => 'google/appengine/runtime/MemcacheUtils.php',
+        'memcacheitemwithtimestamps' => 'google/appengine/runtime/MemcacheItemWithTimestamps.php',
         'memcache' => 'google/appengine/runtime/Memcache.php',
         'google\appengine\runtime\mail' => 'google/appengine/runtime/Mail.php',
         'google\appengine\runtime\glob' => 'google/appengine/runtime/Glob.php',

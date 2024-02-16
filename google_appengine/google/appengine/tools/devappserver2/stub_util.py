@@ -67,7 +67,7 @@ if six.PY2:
   # to use the Cloud Datastore API going forward, so we don't want to put these
   # entries in remote_api_servers.SERVICE_PB_MAP. But for our own implementation
   # of the Cloud Datastore API we need those methods to work when an instance
-  # issues them, specifically the DatstoreApiServlet running as a module inside
+  # issues them, specifically the DatastoreApiServlet running as a module inside
   # the app we are running. The consequence is that other app code can also
   # issue datastore_v4 API requests, but since we don't document these requests
   # or export them through any language bindings this is unlikely in practice.
@@ -290,6 +290,20 @@ def setup_stubs(request_data,
           default_http_server=taskqueue_default_http_server,
           request_data=request_data))
   apiproxy_stub_map.apiproxy.GetStub('taskqueue').StartBackgroundExecution()
+
+  if six.PY3:
+    urlfetch_stub.SetupSSL(
+        os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            '..',
+            '..',
+            '..',
+            'lib',
+            'cacerts',
+            'urlfetch_cacerts.txt',
+        )
+    )
 
   apiproxy_stub_map.apiproxy.RegisterStub('urlfetch',
                                           urlfetch_stub.URLFetchServiceStub())
