@@ -18,8 +18,9 @@
 
 """Allows applications to identify API outages and scheduled downtime.
 
-Example::
+   Example:
 
+   ```python
     def StoreUploadedProfileImage(self):
       uploaded_image = self.request.get('img')
       # If the images API is unavailable, we'll just skip the resize.
@@ -35,7 +36,7 @@ Example::
         # self.response.out('<p>Not accepting submissions right now: %s</p>' %
                             datastore_readonly.admin_message())
         # ...render form with form elements disabled...
-
+     ```
 
 Individual API wrapper modules should expose `CapabilitySet` objects
 for users rather than relying on users to create them.  They can
@@ -54,14 +55,14 @@ for example, `db.IsReadOnly()`.
 
 import warnings
 
-from google.appengine.api.capabilities import capability_service_pb
-from google.appengine.base import capabilities_pb
 from google.appengine.api import apiproxy_stub_map
+from google.appengine.api.capabilities import capability_service_pb2
+from google.appengine.base import capabilities_pb2
 
 
-IsEnabledRequest  = capability_service_pb.IsEnabledRequest
-IsEnabledResponse = capability_service_pb.IsEnabledResponse
-CapabilityConfig  = capabilities_pb.CapabilityConfig
+IsEnabledRequest = capability_service_pb2.IsEnabledRequest
+IsEnabledResponse = capability_service_pb2.IsEnabledResponse
+CapabilityConfig = capabilities_pb2.CapabilityConfig
 
 
 class UnknownCapabilityError(Exception):
@@ -75,6 +76,7 @@ class CapabilitySet(object):
   methods provided. If no capabilities or methods are provided, this will check
   whether the entire package is enabled.
   """
+
   def __init__(self, package, capabilities=None, methods=None,
                stub_map=apiproxy_stub_map):
     """Constructor.
@@ -102,16 +104,16 @@ class CapabilitySet(object):
       UnknownCapabilityError: If a specified capability was not recognized.
     """
     config = self._get_status()
-    return config.summary_status() in (IsEnabledResponse.DEFAULT,
-                                       IsEnabledResponse.ENABLED,
-                                       IsEnabledResponse.SCHEDULED_FUTURE,
-                                       IsEnabledResponse.SCHEDULED_NOW)
+    return config.summary_status in (IsEnabledResponse.DEFAULT,
+                                     IsEnabledResponse.ENABLED,
+                                     IsEnabledResponse.SCHEDULED_FUTURE,
+                                     IsEnabledResponse.SCHEDULED_NOW)
 
   def will_remain_enabled_for(self, time=60):
     """Returns whether a capability will remain enabled.
 
-    DEPRECATED: this method was never fully implemented and is considered
-    deprecated. Use `is_enabled()` instead.
+    DEPRECATED: Use `is_enabled()` instead. This method was never fully
+    implemented.
 
     Args:
       time: Number of seconds in the future to look when checking for scheduled
@@ -130,15 +132,15 @@ class CapabilitySet(object):
                   stacklevel=2)
     config = self._get_status()
 
-    status = config.summary_status()
+    status = config.summary_status
 
     if status in (IsEnabledResponse.DEFAULT, IsEnabledResponse.ENABLED):
       return True
     elif status == IsEnabledResponse.SCHEDULED_NOW:
       return False
     elif status == IsEnabledResponse.SCHEDULED_FUTURE:
-      if config.has_time_until_scheduled():
-        return config.time_until_scheduled() >= time
+      if config.HasField('time_until_scheduled'):
+        return config.time_until_scheduled >= time
       else:
 
         return True
@@ -160,8 +162,8 @@ class CapabilitySet(object):
       UnknownCapabilityError: If a specified capability was not recognized.
     """
     message_list = []
-    for config in self._get_status().config_list():
-      message = config.admin_message()
+    for config in self._get_status().config:
+      message = config.admin_message
       if message and message not in message_list:
         message_list.append(message)
     return '  '.join(message_list)
@@ -176,13 +178,13 @@ class CapabilitySet(object):
       UnknownCapabilityError: If an unknown capability was requested.
     """
     req = IsEnabledRequest()
-    req.set_package(self._package)
+    req.package = self._package
     for capability in self._capabilities:
-      req.add_capability(capability)
+      req.capability.append(capability)
     for method in self._methods:
-      req.add_call(method)
+      req.call.append(method)
 
-    resp = capability_service_pb.IsEnabledResponse()
+    resp = capability_service_pb2.IsEnabledResponse()
     if (self._package == 'datastore_v3' and 'write' in self._capabilities or
         self._methods != 0):
       self._stub_map.MakeSyncCall('capability_service', 'IsEnabled', req, resp)
@@ -196,3 +198,4 @@ class CapabilitySet(object):
             status=CapabilityConfig.ENABLED)
 
     return resp
+

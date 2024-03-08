@@ -15,7 +15,6 @@
 # limitations under the License.
 #
 
-
 """A module that handles deferred execution of callables via the task queue.
 
 Tasks consist of a callable and arguments to pass to it. The callable and its
@@ -57,28 +56,49 @@ original task from the datastore and execute it. This is much less efficient
 than the direct execution model, so it's a good idea to minimize the size of
 your tasks when possible.
 
-In order for tasks to be processed, you need to set up the handler. Add the
-following to your app.yaml handlers section:
+By default, the deferred module uses the URL '/_ah/queue/deferred',
+and the default queue.
 
-handlers:
-- url: /_ah/queue/deferred
-  script: $PYTHON_LIB/google/appengine/ext/deferred/handler.py
-  login: admin
+To enable the Deferred API, set 'use_deferred=True' in the call
+to 'wrap_wsgi_app()'.
 
-By default, the deferred module uses the URL above, and the default queue.
+Example for a Flask app:
 
-Example usage::
+app = Flask(__name__)
+app.wsgi_app = wrap_wsgi_app(app.wsgi_app, use_deferred=True)
 
-    def do_something_later(key, amount):
-      entity = MyModel.get(key)
-      entity.total += amount
-      entity.put()
+Deferring a task in Flask:
 
-    # Use default URL and queue name, no task name, execute ASAP.
-    deferred.defer(do_something_later, my_key, 20)
+```
+from flask import Flask, request
+from google.appengine.api import wrap_wsgi_app
+from google.appengine.ext import ndb
+from google.appengine.ext import deferred
 
-    # Providing non-default task queue arguments
-    deferred.defer(do_something_later, my_key, 20, _queue="foo", _countdown=60)
+class MyModel(ndb.Model):
+  total = ndb.IntegerProperty(indexed=True)
+
+my_key = "defaultKey"
+
+def do_something_later(key, amount):
+   entity = MyModel.get_or_insert(key, total=0)
+   entity.total += amount
+   entity.put()
+
+@app.route("/home")
+def hello_world():
+  # Use default URL and queue name, no task name, execute ASAP.
+  deferred.defer(do_something_later, my_key, 20)
+
+  # Execute after 60s
+  deferred.defer(do_something_later, my_key, 20, _countdown=60)
+
+  # Using a non-default queue (a TaskQueue 'foo' should already exist)
+  deferred.defer(do_something_later, my_key, 20, _queue="foo", _countdown=60)
+
+app = Flask(__name__)
+app.wsgi_app = wrap_wsgi_app(app.wsgi_app, use_deferred=True)
+```
 """
 
 
@@ -88,29 +108,18 @@ Example usage::
 
 
 
-
-
+import http
 import logging
 import os
 import pickle
 import types
-
-
-if os.environ.get("APPENGINE_RUNTIME") == "python27":
-  from google.appengine.api import taskqueue
-  from google.appengine.ext import db
-  from google.appengine.ext import webapp
-  from google.appengine.ext.webapp.util import run_wsgi_app
-else:
-  from google.appengine.api import taskqueue
-  from google.appengine.ext import db
-  from google.appengine.ext import webapp
-  from google.appengine.ext.webapp.util import run_wsgi_app
-
+from google.appengine.api import taskqueue
+from google.appengine.ext import db
 
 
 _DEFAULT_LOG_LEVEL = logging.INFO
 _TASKQUEUE_HEADERS = {"Content-Type": "application/octet-stream"}
+_TASKQUEUE_RESPONSE_HEADERS = ("Content-Type", "text/plain")
 _DEFAULT_URL = "/_ah/queue/deferred"
 _DEFAULT_QUEUE = "default"
 
@@ -142,8 +151,12 @@ def run(data):
 
   Args:
     data: A pickled tuple of (function, args, kwargs) to execute.
+
   Returns:
     The return value of the function invocation.
+
+  Raises:
+    PermanentTaskFailure if an error occurred during unpickling the task.
   """
   try:
     func, args, kwds = pickle.loads(data)
@@ -167,8 +180,12 @@ def run_from_datastore(key):
 
   Args:
     key: The datastore key of a _DeferredTaskEntity storing the task.
+
   Returns:
     The return value of the function invocation.
+
+  Raises:
+    PermanentTaskFailure: Raised if the task entity is missing.
   """
   entity = _DeferredTaskEntity.get(key)
   if not entity:
@@ -188,8 +205,9 @@ def invoke_member(obj, membername, *args, **kwargs):
   Args:
     obj: The object to operate on.
     membername: The name of the member to retrieve from ojb.
-    args: Positional arguments to pass to the method.
-    kwargs: Keyword arguments to pass to the method.
+    *args: Positional arguments to pass to the method.
+    **kwargs: Keyword arguments to pass to the method.
+
   Returns:
     The return value of the method invocation.
   """
@@ -204,26 +222,31 @@ def _curry_callable(obj, *args, **kwargs):
 
   Args:
     obj: The callable to curry. See the module docstring for restrictions.
-    args: Positional arguments to call the callable with.
-    kwargs: Keyword arguments to call the callable with.
+    *args: Positional arguments to call the callable with.
+    **kwargs: Keyword arguments to call the callable with.
+
   Returns:
-    A tuple consisting of (callable, args, kwargs) that can be evaluated by
+    A tuple consisting of  (callable, args, kwargs) that can be evaluated by
     run() with equivalent effect of executing the function directly.
   Raises:
     ValueError: If the passed in object is not of a valid callable type.
   """
   if isinstance(obj, types.MethodType):
-    return (invoke_member, (obj.im_self, obj.im_func.__name__) + args, kwargs)
+    return (invoke_member, (obj.__self__, obj.__func__.__name__) + args, kwargs)
   elif isinstance(obj, types.BuiltinMethodType):
     if not obj.__self__:
 
       return (obj, args, kwargs)
     else:
-      return (invoke_member, (obj.__self__, obj.__name__) + args, kwargs)
-  elif isinstance(obj, types.ObjectType) and hasattr(obj, "__call__"):
+
+
+      if isinstance(obj.__self__, types.ModuleType):
+        return (obj, args, kwargs)
+      else:
+        return (invoke_member, (obj.__self__, obj.__name__) + args, kwargs)
+  elif isinstance(obj, object) and hasattr(obj, "__call__"):
     return (obj, args, kwargs)
-  elif isinstance(obj, (types.FunctionType, types.BuiltinFunctionType,
-                        types.ClassType, types.UnboundMethodType)):
+  elif isinstance(obj, (types.FunctionType, types.BuiltinFunctionType, type)):
     return (obj, args, kwargs)
   else:
     raise ValueError("obj must be callable")
@@ -234,13 +257,18 @@ def serialize(obj, *args, **kwargs):
 
   Args:
     obj: The callable to serialize. See module docstring for restrictions.
-    args: Positional arguments to call the callable with.
-    kwargs: Keyword arguments to call the callable with.
+    *args: Positional arguments to call the callable with.
+    **kwargs: Keyword arguments to call the callable with.
+
   Returns:
     A serialized representation of the callable.
   """
   curried = _curry_callable(obj, *args, **kwargs)
-  return pickle.dumps(curried, protocol=pickle.HIGHEST_PROTOCOL)
+  if os.environ.get("DEFERRED_USE_CROSS_COMPATIBLE_PICKLE_PROTOCOL", False):
+    protocol = 0
+  else:
+    protocol = pickle.HIGHEST_PROTOCOL
+  return pickle.dumps(curried, protocol)
 
 
 def defer(obj, *args, **kwargs):
@@ -253,17 +281,18 @@ def defer(obj, *args, **kwargs):
 
   Args:
     obj: The callable to execute. See module docstring for restrictions.
-        _countdown, _eta, _headers, _name, _target, _transactional, _url,
-        _retry_options, _queue: Passed through to the task queue - see the
-        task queue documentation for details.
-    args: Positional arguments to call the callable with.
-    kwargs: Any other keyword arguments are passed through to the callable.
+      _countdown, _eta, _headers, _name, _target, _transactional, _url,
+        _retry_options, _queue: Passed through to the task queue - see the task
+          queue documentation for details.
+    *args: Positional arguments to call the callable with.
+    **kwargs: Any other keyword arguments are passed through to the callable.
+
   Returns:
     A taskqueue.Task object which represents an enqueued callable.
   """
-  taskargs = dict((x, kwargs.pop(("_%s" % x), None))
-                  for x in ("countdown", "eta", "name", "target",
-                            "retry_options"))
+  taskargs = dict(
+      (x, kwargs.pop(("_%s" % x), None))
+      for x in ("countdown", "eta", "name", "target", "retry_options"))
   taskargs["url"] = kwargs.pop("_url", _DEFAULT_URL)
   transactional = kwargs.pop("_transactional", False)
   taskargs["headers"] = dict(_TASKQUEUE_HEADERS)
@@ -281,61 +310,122 @@ def defer(obj, *args, **kwargs):
     return task.add(queue)
 
 
-class TaskHandler(webapp.RequestHandler):
-  """A webapp handler class that processes deferred invocations."""
+class Handler():
+  """A handler class for processesing deferred invocations."""
 
-  def run_from_request(self):
-    """Default behavior for POST requests to deferred handler."""
+  def run_from_request(self, environ):
+    """Executes deferred tasks after verifying the caller.
 
-    if "X-AppEngine-TaskName" not in self.request.headers:
-      logging.error("Detected an attempted XSRF attack. The header "
-                    '"X-AppEngine-Taskname" was not set.')
-      self.response.set_status(403)
-      return
+    This function assumes that the WSGI environ dict originated from a POST
+    request by the GAE TaskQueue service. It checks the caller IP and request
+    headers to verify the caller.
+    Args:
+      environ: a WSGI dict describing the HTTP request (See PEP 333).
+    Returns:
+      response: a string containing body of the response
+      status: HTTP status code of enum type http.HTTPStatus
+      headers: a dict containing response headers
+    Raises:
+      PermanentTaskFailure if an error occurred during unpickling the task.
+    """
+
+    if "HTTP_X_APPENGINE_TASKNAME" not in environ:
+      error_message = ("Detected an attempted XSRF attack. "
+                       "The header 'X-AppEngine-Taskname' was not set.")
+      logging.error(error_message)
+      return error_message, http.HTTPStatus.FORBIDDEN, [
+          _TASKQUEUE_RESPONSE_HEADERS
+      ]
 
 
 
     in_prod = (
-        not self.request.environ.get("SERVER_SOFTWARE").startswith("Devel"))
-    if in_prod and self.request.environ.get("REMOTE_ADDR") != "0.1.0.2":
-      logging.error("Detected an attempted XSRF attack. This request did "
-                    "not originate from Task Queue.")
-      self.response.set_status(403)
-      return
+        not environ.get("SERVER_SOFTWARE").startswith("Devel"))
+    if in_prod and environ.get("REMOTE_ADDR") != "0.1.0.2":
+      error_message = ("Detected an attempted XSRF attack. "
+                       "This request did not originate from Task Queue.")
+      logging.error(error_message)
+      return error_message, http.HTTPStatus.FORBIDDEN, [
+          _TASKQUEUE_RESPONSE_HEADERS
+      ]
 
 
-    headers = ["%s:%s" % (k, v) for k, v in self.request.headers.items()
-               if k.lower().startswith("x-appengine-")]
+    headers = [
+        "%s:%s" % (k[5:], v)
+        for k, v in environ.items()
+        if k.upper().startswith("HTTP_X_APPENGINE_")
+    ]
     logging.log(_DEFAULT_LOG_LEVEL, ", ".join(headers))
 
-    run(self.request.body)
-
-  def post(self):
 
     try:
-      self.run_from_request()
+      request_body_size = int(environ.get("CONTENT_LENGTH", 0))
+    except ValueError:
+      request_body_size = 0
+
+    request_body = environ["wsgi.input"].read(request_body_size)
+    run(request_body)
+    return "Success", http.HTTPStatus.OK, [_TASKQUEUE_RESPONSE_HEADERS]
+
+  def post(self, environ):
+    """Default behavior for POST requests to the deferred endpoint.
+
+    If the Deferred API has been enabled, this function is automatically called
+    after 'deferred.defer()' is used to defer a task. Behind the scenes,
+    the TaskQueue service calls the default Deferred endpoint
+    '/_ah/queue/deferred', which is routed to this function.
+
+    If deferred.defer() is passed a custom '_url' parameter, POST requests to
+    the custom endpoint needs to be handled by the app. To replicate the
+    default behavior of executing a deferred task, this function can be called
+    by the custom endpoint handler, and passed the WSGI 'environ' dictionary
+    of the POST request.
+
+    Args:
+      environ: a WSGI dict describing the HTTP request (See PEP 333)
+    Returns:
+      response: a string containing body of the response
+      status: HTTP status code of enum type http.HTTPStatus
+      headers: a dict containing response headers
+    """
+    try:
+      response, status, headers = self.run_from_request(environ)
     except SingularTaskFailure:
 
 
+      response, status, headers = ("SingularTaskFailure",
+                                   http.HTTPStatus.REQUEST_TIMEOUT,
+                                   [_TASKQUEUE_RESPONSE_HEADERS])
       logging.debug("Failure executing task, task retry forced")
-      self.response.set_status(408)
-      return
-    except PermanentTaskFailure as e:
+    except PermanentTaskFailure:
 
+      response, status, headers = ("PermanentTaskFailure", http.HTTPStatus.OK,
+                                   [_TASKQUEUE_RESPONSE_HEADERS])
       logging.exception("Permanent failure attempting to execute task")
+    return response, status, headers
+
+  def __call__(self, environ, start_response):
+    """WSGI app callable to handle POST requests to the deferred endpoint.
+
+    This function allows the 'Handler' class to behave like a WSGI app for
+    handling Deferred task execution.
+
+    If the parent WSGI app is required to handle multiple kinds of requests,
+    a dispatcher (compliant with the app's Web Framework) can be used to route
+    an endpoint/URL to be handled by this callable.
+
+    Args:
+      environ: a WSGI dict describing the HTTP request (See PEP 333)
+      start_response: callable (See PEP 3333)
+    Returns:
+      list of bytes response
+    """
+    if environ["REQUEST_METHOD"] != "POST":
+      return ("", http.HTTPStatus.METHOD_NOT_ALLOWED, [("Allow", "POST")])
+
+    response, status, headers = self.post(environ)
+    start_response(f"{status.value} {status.phrase}", headers)
+    return [response.encode("utf-8")]
 
 
-application = webapp.WSGIApplication([(".*", TaskHandler)])
-
-
-def main():
-  if os.environ["SERVER_SOFTWARE"].startswith("Devel"):
-    logging.warn("You are using deferred in a deprecated fashion. Please change"
-                 " the request handler path for /_ah/queue/deferred in app.yaml"
-                 " to $PYTHON_LIB/google/appengine/ext/deferred/handler.py to"
-                 " avoid encountering import errors.")
-  run_wsgi_app(application)
-
-
-if __name__ == "__main__":
-  main()
+application = Handler()

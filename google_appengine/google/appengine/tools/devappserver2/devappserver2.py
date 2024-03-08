@@ -74,7 +74,7 @@ class PhpVersionError(Exception):
 
 
 class PhpPathError(Exception):
-  """Raised when --php_executable_path is not specified for php72.
+  """Raised when --php_executable_path is not specified for php7/8x.
 
   This flag is optional for php55.
   """
@@ -288,7 +288,7 @@ class DevelopmentServer(object):
       options: An argparse.Namespace containing the command line arguments.
 
     Raises:
-      PhpPathError: php executable path is not specified for php72.
+      PhpPathError: php executable path is not specified for php7/8x.
       MissingDatastoreEmulatorError: dev_appserver.py is not invoked from the right
         directory.
     """
@@ -340,8 +340,9 @@ class DevelopmentServer(object):
     util.setup_environ(configuration.app_id)
 
     php_version = self._get_php_runtime(configuration)
-    if not options.php_executable_path and php_version == 'php72':
-      raise PhpPathError('For php72, --php_executable_path must be specified.')
+    if php_version and not options.php_executable_path:
+      raise PhpPathError(
+          'For %s, --php_executable_path must be specified.'%php_version)
 
     if options.ssl_certificate_path and options.ssl_certificate_key_path:
       ssl_certificate_paths = self._create_ssl_certificate_paths_if_valid(

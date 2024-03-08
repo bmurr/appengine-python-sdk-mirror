@@ -1,5 +1,6 @@
+#!/usr/bin/env python
 #
-# Copyright 2008 The ndb Authors. All Rights Reserved.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +13,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 """Low-level utilities used internally by NDB.
 
@@ -22,35 +37,44 @@ import functools
 import logging
 import os
 import sys
-import threading
+
+import six
 
 __all__ = []
 
-DEBUG = True  # Set to False for some speedups
+DEBUG = True
 
-# pylint: disable=invalid-name
+
 
 def logging_debug(*args):
-  # NOTE: If you want to see debug messages, set the logging level
-  # manually to logging.DEBUG - 1; or for tests use -v -v -v (see below).
+
+
   if DEBUG and logging.getLogger().level < logging.DEBUG:
     logging.debug(*args)
 
 
-def wrapping(wrapped):
-  # A decorator to decorate a decorator's wrapper.  Following the lead
-  # of Twisted and Monocle, this is supposed to make debugging heavily
-  # decorated code easier.  We'll see...
-  # TODO(pcostello): This copies the functionality of functools.wraps
+def _wrapping(wrapped):
+  """A decorator to decorate a decorator's wrapper.
+
+  Following the lead of Twisted and Monocle, this is supposed to make debugging
+  heavily decorated code easier.  We'll see...
+  # TODO: This copies the functionality of functools.wraps
   # following the patch in http://bugs.python.org/issue3445. We can replace
   # this once upgrading to python 3.3.
+
+  Args:
+    wrapped: The decorator to wrap.
+
+  Returns:
+    The decorator, now wrapped.
+  """
   def wrapping_wrapper(wrapper):
     try:
       wrapper.__wrapped__ = wrapped
       wrapper.__name__ = wrapped.__name__
       wrapper.__doc__ = wrapped.__doc__
       wrapper.__dict__.update(wrapped.__dict__)
-      # Local functions won't have __module__ attribute.
+
       if hasattr(wrapped, '__module__'):
         wrapper.__module__ = wrapped.__module__
     except Exception:
@@ -59,22 +83,20 @@ def wrapping(wrapped):
   return wrapping_wrapper
 
 
-# Define a base class for classes that need to be thread-local.
-# This is pretty subtle; we want to use threading.local if threading
-# is supported, but object if it is not.
-if threading.local.__module__ == 'thread':
-  logging_debug('Using threading.local')
-  threading_local = threading.local
-else:
-  logging_debug('Not using threading.local')
-  threading_local = object
+
+
+
+
+
+
+wrapping = _wrapping if six.PY2 else functools.wraps
 
 
 def get_stack(limit=10):
-  # Return a list of strings showing where the current frame was called.
+
   if not DEBUG:
     return ()
-  frame = sys._getframe(1)  # Always skip get_stack() itself.
+  frame = sys._getframe(1)
   lines = []
   while len(lines) < limit and frame is not None:
     f_locals = frame.f_locals
@@ -92,7 +114,7 @@ def func_info(func, lineno=None):
   if not DEBUG:
     return None
   func = getattr(func, '__wrapped__', func)
-  code = getattr(func, 'func_code', None)
+  code = getattr(func, 'func_code' if six.PY2 else '__code__', None)
   return code_info(code, lineno)
 
 
@@ -127,8 +149,8 @@ def code_info(code, lineno=None):
   if not DEBUG or not code:
     return ''
   funcname = code.co_name
-  # TODO: Be cleverer about stripping filename,
-  # e.g. strip based on sys.path.
+
+
   filename = os.path.basename(code.co_filename)
   if lineno is None:
     lineno = code.co_firstlineno
@@ -198,12 +220,12 @@ def decorator(wrapped_decorator):
       return inner_wrapper
 
     if _func is None:
-      # Form (2), with options.
+
       return outer_wrapper
 
-    # Form (1), vanilla.
+
     if options:
-      # Don't allow @decorator(foo, op1=5).
+
       raise TypeError('positional arguments not supported')
     return outer_wrapper(_func)
   helper.wrapped_decorator = wrapped_decorator
@@ -211,12 +233,12 @@ def decorator(wrapped_decorator):
 
 
 def tweak_logging():
-  # Hack for running tests with verbose logging.  If there are two or
-  # more -v flags, turn on INFO logging; if there are 3 or more, DEBUG.
-  # (A single -v just tells unittest.main() to print the name of each
-  # test; we don't want to interfere with that.)
-  # Also, if there is a -q flag, set DEBUG to False, suppressing more
-  # debug info even from warnings.
+
+
+
+
+
+
   q = 0
   v = 0
   for arg in sys.argv[1:]:

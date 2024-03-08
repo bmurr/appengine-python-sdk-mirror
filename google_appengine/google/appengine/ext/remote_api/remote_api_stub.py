@@ -55,64 +55,53 @@ A few caveats:
   entities or try and fetch or put many of them at once, your requests may fail.
 """
 
-
-
-
-
-
-
-
-
-
 import datetime
 import hashlib
 import inspect
-import os
 import pickle
 import random
 import sys
 import threading
 
-import Cookie
-import thread
-import yaml
+import google
+
+from google import auth as google_auth
+from google.appengine.api import api_base_pb2
+from google.appengine.api import apiproxy_rpc
+from google.appengine.api import apiproxy_stub
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import full_app_id
+from google.appengine.api.taskqueue import taskqueue_service_bytes_pb2 as taskqueue_service_pb2
+from google.appengine.api.taskqueue import taskqueue_stub
+from google.appengine.api.taskqueue import taskqueue_stub_service_bytes_pb2 as taskqueue_stub_service_pb2
+from google.appengine.datastore import datastore_pb
+from google.appengine.datastore import datastore_stub_util
+from google.appengine.ext.remote_api import remote_api_bytes_pb2 as remote_api_pb2
+from google.appengine.ext.remote_api import remote_api_services
+from google.appengine.runtime import apiproxy_errors
+from google.appengine.runtime import context
+from google.appengine.runtime.context import ctx_test_util
+from google.appengine.tools import google_auth_rpc
+from google.auth import jwt
+from ruamel import yaml
+import six
+from six.moves import map
+from six.moves import zip
+import six.moves._thread
+import six.moves.http_cookies
+
+from google.appengine.tools import appengine_rpc
 
 
 
 
-try:
-  from google.appengine.api import apiproxy_rpc
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.datastore import datastore_pb
-  from google.appengine.ext.remote_api import remote_api_pb
-  from google.appengine.ext.remote_api import remote_api_services
-  from google.appengine.runtime import apiproxy_errors
-  from google.appengine.api import api_base_pb
-  from google.appengine.api import apiproxy_stub
-  from google.appengine.api.taskqueue import taskqueue_service_pb
-  from google.appengine.api.taskqueue import taskqueue_stub
-  from google.appengine.api.taskqueue import taskqueue_stub_service_pb
-  from google.appengine.datastore import datastore_stub_util
-  import appengine_rpc
-except ImportError:
-  from google.appengine.api import apiproxy_rpc
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.datastore import datastore_pb
-  from google.appengine.ext.remote_api import remote_api_pb
-  from google.appengine.ext.remote_api import remote_api_services
-  from google.appengine.runtime import apiproxy_errors
-  from google.appengine.api import api_base_pb
-  from google.appengine.api import apiproxy_stub
-  from google.appengine.api.taskqueue import taskqueue_service_pb
-  from google.appengine.api.taskqueue import taskqueue_stub
-  from google.appengine.api.taskqueue import taskqueue_stub_service_pb
-  from google.appengine.datastore import datastore_stub_util
-  from google.appengine.tools import appengine_rpc
 
 
 _REQUEST_ID_HEADER = 'HTTP_X_APPENGINE_REQUEST_ID'
 _DEVAPPSERVER_LOGIN_COOKIE = 'test@example.com:True:'
 TIMEOUT_SECONDS = 10
+
+
 
 
 class Error(Exception):
@@ -121,6 +110,10 @@ class Error(Exception):
 
 class ConfigurationError(Error):
   """Exception for configuration errors."""
+
+
+class UnknownRemoteServerError(Error):
+  """Exception for exceptions returned from a remote_api handler."""
 
 
 class UnknownJavaServerError(Error):
@@ -155,7 +148,7 @@ def GetSourceName():
 
 def HashEntity(entity):
   """Return a very-likely-unique hash of an entity."""
-  return hashlib.sha1(entity.Encode()).digest()
+  return hashlib.sha1(entity.SerializeToString()).digest()
 
 
 class TransactionData(object):
@@ -242,30 +235,32 @@ class RemoteStub(object):
 
   def _MakeRealSyncCall(self, service, call, request, response):
     """Constructs, sends and receives remote_api.proto."""
-    request_pb = remote_api_pb.Request()
-    request_pb.set_service_name(service)
-    request_pb.set_method(call)
-    request_pb.set_request(request.Encode())
+    request_pb2 = remote_api_pb2.Request()
+    request_pb2.service_name = service
+    request_pb2.method = call
+    request_pb2.request = request.SerializeToString()
     if hasattr(self._local, 'request_id'):
-      request_pb.set_request_id(self._local.request_id)
+      request_pb2.request_id = self._local.request_id
 
-    response_pb = remote_api_pb.Response()
-    encoded_request = request_pb.Encode()
+    response_pb = remote_api_pb2.Response()
+    encoded_request = request_pb2.SerializeToString()
     encoded_response = self._server.Send(self._path, encoded_request)
 
     response_pb.ParseFromString(encoded_response)
 
-    if response_pb.has_application_error():
-      error_pb = response_pb.application_error()
-      raise apiproxy_errors.ApplicationError(error_pb.code(),
-                                             error_pb.detail())
-    elif response_pb.has_exception():
-      raise pickle.loads(response_pb.exception())
-    elif response_pb.has_java_exception():
+    if response_pb.HasField('application_error'):
+      error_pb = response_pb.application_error
+      raise apiproxy_errors.ApplicationError(error_pb.code, error_pb.detail)
+    elif response_pb.HasField('exception'):
+
+      raise UnknownRemoteServerError('An unknown error has occurred in the '
+                                     'remote_api handler for this call: ' +
+                                     str(response_pb.exception))
+    elif response_pb.HasField('java_exception'):
       raise UnknownJavaServerError('An unknown error has occurred in the '
                                    'Java remote_api handler for this call.')
     else:
-      response.ParseFromString(response_pb.response())
+      response.ParseFromString(response_pb.response)
 
   def CreateRPC(self):
     return apiproxy_rpc.RPC(stub=self)
@@ -308,7 +303,6 @@ class RemoteDatastoreStub(RemoteStub):
 
     explanation = []
     assert request.IsInitialized(explanation), explanation
-
     handler = getattr(self, '_Dynamic_' + call, None)
     if handler:
       handler(request, response)
@@ -319,21 +313,21 @@ class RemoteDatastoreStub(RemoteStub):
     assert response.IsInitialized(explanation), explanation
 
   def _Dynamic_RunQuery(self, query, query_result, cursor_id = None):
-    if query.has_transaction():
-      txdata = self.__transactions[query.transaction().handle()]
-      tx_result = remote_api_pb.TransactionQueryResult()
+    if query.HasField('transaction'):
+      txdata = self.__transactions[query.transaction.handle]
+      tx_result = remote_api_pb2.TransactionQueryResult()
       super(RemoteDatastoreStub, self).MakeSyncCall(
           'remote_datastore', 'TransactionQuery', query, tx_result)
-      query_result.CopyFrom(tx_result.result())
+      query_result.CopyFrom(tx_result.result)
 
 
 
 
-      eg_key = tx_result.entity_group_key()
-      encoded_eg_key = eg_key.Encode()
+      eg_key = tx_result.entity_group_key
+      encoded_eg_key = eg_key.SerializeToString()
       eg_hash = None
-      if tx_result.has_entity_group():
-        eg_hash = HashEntity(tx_result.entity_group())
+      if tx_result.HasField('entity_group'):
+        eg_hash = HashEntity(tx_result.entity_group)
       old_key, old_hash = txdata.preconditions.get(encoded_eg_key, (None, None))
       if old_key is None:
         txdata.preconditions[encoded_eg_key] = (eg_key, eg_hash)
@@ -353,20 +347,20 @@ class RemoteDatastoreStub(RemoteStub):
       finally:
         self.__local_cursor_lock.release()
 
-    if query_result.more_results():
-      query.set_offset(query.offset() + query_result.result_size())
-      if query.has_limit():
-        query.set_limit(query.limit() - query_result.result_size())
+    if query_result.more_results:
+      query.offset = query.offset + len(query_result.result)
+      if query.HasField('limit'):
+        query.limit = query.limit - len(query_result.result)
       self.__queries[cursor_id] = query
     else:
       self.__queries[cursor_id] = None
 
 
-    query_result.mutable_cursor().set_cursor(cursor_id)
+    query_result.cursor.cursor = cursor_id
 
   def _Dynamic_Next(self, next_request, query_result):
-    assert next_request.offset() == 0
-    cursor_id = next_request.cursor().cursor()
+    assert next_request.offset == 0
+    cursor_id = next_request.cursor.cursor
     if cursor_id not in self.__queries:
       raise apiproxy_errors.ApplicationError(datastore_pb.Error.BAD_REQUEST,
                                              'Cursor %d not found' % cursor_id)
@@ -374,96 +368,95 @@ class RemoteDatastoreStub(RemoteStub):
 
     if query is None:
 
-      query_result.set_more_results(False)
+      query_result.more_results = False
       return
     else:
-      if next_request.has_count():
-        query.set_count(next_request.count())
+      if next_request.HasField('count'):
+        query.count = next_request.count
       else:
-        query.clear_count()
+        query.ClearField('count')
 
     self._Dynamic_RunQuery(query, query_result, cursor_id)
 
 
 
 
-    query_result.set_skipped_results(0)
+    query_result.skipped_results = 0
 
   def _Dynamic_Get(self, get_request, get_response):
     txid = None
-    if get_request.has_transaction():
+    if get_request.HasField('transaction'):
 
-      txid = get_request.transaction().handle()
+      txid = get_request.transaction.handle
       txdata = self.__transactions[txid]
-      assert (txdata.thread_id ==
-          thread.get_ident()), "Transactions are single-threaded."
+      assert (txdata.thread_id == six.moves._thread.get_ident()
+             ), 'Transactions are single-threaded.'
 
 
-      keys = [(k, k.Encode()) for k in get_request.key_list()]
+      keys = [(k, k.SerializeToString()) for k in get_request.key]
 
 
       new_request = datastore_pb.GetRequest()
       for key, enckey in keys:
         if enckey not in txdata.entities:
-          new_request.add_key().CopyFrom(key)
+          new_request.key.add().CopyFrom(key)
     else:
       new_request = get_request
 
-    if new_request.key_size() > 0:
+    if new_request.key:
       super(RemoteDatastoreStub, self).MakeSyncCall(
           'datastore_v3', 'Get', new_request, get_response)
 
     if txid is not None:
 
-      newkeys = new_request.key_list()
-      entities = get_response.entity_list()
+      newkeys = new_request.key
+      entities = get_response.entity
       for key, entity in zip(newkeys, entities):
         entity_hash = None
-        if entity.has_entity():
-          entity_hash = HashEntity(entity.entity())
-        txdata.preconditions[key.Encode()] = (key, entity_hash)
+        if entity.HasField('entity'):
+          entity_hash = HashEntity(entity.entity)
+        txdata.preconditions[key.SerializeToString()] = (key, entity_hash)
 
 
 
 
 
       new_response = datastore_pb.GetResponse()
-      it = iter(get_response.entity_list())
+      it = iter(get_response.entity)
       for key, enckey in keys:
         if enckey in txdata.entities:
           cached_entity = txdata.entities[enckey][1]
           if cached_entity:
-            new_response.add_entity().mutable_entity().CopyFrom(cached_entity)
+            new_response.entity.add().entity.CopyFrom(cached_entity)
           else:
-            new_response.add_entity()
+            new_response.entity.add()
         else:
-          new_entity = it.next()
-          if new_entity.has_entity():
-            assert new_entity.entity().key() == key
-            new_response.add_entity().CopyFrom(new_entity)
+          new_entity = next(it)
+          if new_entity.HasField('entity'):
+            assert new_entity.entity.key == key
+            new_response.entity.add().CopyFrom(new_entity)
           else:
-            new_response.add_entity()
+            new_response.entity.add()
       get_response.CopyFrom(new_response)
 
   def _Dynamic_Put(self, put_request, put_response):
-    if put_request.has_transaction():
-      entities = put_request.entity_list()
+    if put_request.HasField('transaction'):
+      entities = put_request.entity
 
 
-      requires_id = lambda x: x.id() == 0 and not x.has_name()
-      new_ents = [e for e in entities
-                  if requires_id(e.key().path().element_list()[-1])]
+      requires_id = lambda x: x.id == 0 and not x.HasField('name')
+      new_ents = [e for e in entities if requires_id(e.key.path.element[-1])]
       id_request = datastore_pb.PutRequest()
 
-      txid = put_request.transaction().handle()
+      txid = put_request.transaction.handle
       txdata = self.__transactions[txid]
-      assert (txdata.thread_id ==
-          thread.get_ident()), "Transactions are single-threaded."
+      assert (txdata.thread_id == six.moves._thread.get_ident()
+             ), 'Transactions are single-threaded.'
       if new_ents:
         for ent in new_ents:
-          e = id_request.add_entity()
-          e.mutable_key().CopyFrom(ent.key())
-          e.mutable_entity_group()
+          e = id_request.entity.add()
+          e.key.CopyFrom(ent.key)
+          e.entity_group.SetInParent()
         id_response = datastore_pb.PutResponse()
 
 
@@ -474,27 +467,26 @@ class RemoteDatastoreStub(RemoteStub):
           rpc_name = 'GetIDs'
         super(RemoteDatastoreStub, self).MakeSyncCall(
             'remote_datastore', rpc_name, id_request, id_response)
-        assert id_request.entity_size() == id_response.key_size()
-        for key, ent in zip(id_response.key_list(), new_ents):
-          ent.mutable_key().CopyFrom(key)
-          ent.mutable_entity_group().add_element().CopyFrom(
-              key.path().element(0))
+        assert len(id_request.entity) == len(id_response.key)
+        for key, ent in zip(id_response.key, new_ents):
+          ent.key.CopyFrom(key)
+          ent.entity_group.element.add().CopyFrom(key.path.element[0])
 
       for entity in entities:
-        txdata.entities[entity.key().Encode()] = (entity.key(), entity)
-        put_response.add_key().CopyFrom(entity.key())
+        txdata.entities[entity.key.SerializeToString()] = (entity.key, entity)
+        put_response.key.add().CopyFrom(entity.key)
     else:
       super(RemoteDatastoreStub, self).MakeSyncCall(
           'datastore_v3', 'Put', put_request, put_response)
 
   def _Dynamic_Delete(self, delete_request, response):
-    if delete_request.has_transaction():
-      txid = delete_request.transaction().handle()
+    if delete_request.HasField('transaction'):
+      txid = delete_request.transaction.handle
       txdata = self.__transactions[txid]
-      assert (txdata.thread_id ==
-          thread.get_ident()), "Transactions are single-threaded."
-      for key in delete_request.key_list():
-        txdata.entities[key.Encode()] = (key, None)
+      assert (txdata.thread_id == six.moves._thread.get_ident()
+             ), 'Transactions are single-threaded.'
+      for key in delete_request.key:
+        txdata.entities[key.SerializeToString()] = (key, None)
     else:
       super(RemoteDatastoreStub, self).MakeSyncCall(
           'datastore_v3', 'Delete', delete_request, response)
@@ -503,41 +495,41 @@ class RemoteDatastoreStub(RemoteStub):
     self.__local_tx_lock.acquire()
     try:
       txid = self.__next_local_tx
-      self.__transactions[txid] = TransactionData(thread.get_ident(),
-                                                  request.allow_multiple_eg())
+      self.__transactions[txid] = TransactionData(six.moves._thread.get_ident(),
+                                                  request.allow_multiple_eg)
       self.__next_local_tx += 1
     finally:
       self.__local_tx_lock.release()
-    transaction.set_handle(txid)
-    transaction.set_app(request.app())
+    transaction.handle = txid
+    transaction.app = request.app
 
   def _Dynamic_Commit(self, transaction, transaction_response):
-    txid = transaction.handle()
+    txid = transaction.handle
     if txid not in self.__transactions:
       raise apiproxy_errors.ApplicationError(
           datastore_pb.Error.BAD_REQUEST,
           'Transaction %d not found.' % (txid,))
 
     txdata = self.__transactions[txid]
-    assert (txdata.thread_id ==
-        thread.get_ident()), "Transactions are single-threaded."
+    assert (txdata.thread_id == six.moves._thread.get_ident()
+           ), 'Transactions are single-threaded.'
     del self.__transactions[txid]
 
-    tx = remote_api_pb.TransactionRequest()
-    tx.set_allow_multiple_eg(txdata.is_xg)
+    tx = remote_api_pb2.TransactionRequest()
+    tx.allow_multiple_eg = txdata.is_xg
     for key, txhash in txdata.preconditions.values():
-      precond = tx.add_precondition()
-      precond.mutable_key().CopyFrom(key)
+      precond = tx.precondition.add()
+      precond.key.CopyFrom(key)
       if txhash:
-        precond.set_hash(txhash)
+        precond.hash = txhash
 
-    puts = tx.mutable_puts()
-    deletes = tx.mutable_deletes()
+    puts = tx.puts
+    deletes = tx.deletes
     for key, entity in txdata.entities.values():
       if entity:
-        puts.add_entity().CopyFrom(entity)
+        puts.entity.add().CopyFrom(entity)
       else:
-        deletes.add_key().CopyFrom(key)
+        deletes.key.add().CopyFrom(key)
 
 
     super(RemoteDatastoreStub, self).MakeSyncCall(
@@ -545,7 +537,7 @@ class RemoteDatastoreStub(RemoteStub):
         tx, datastore_pb.PutResponse())
 
   def _Dynamic_Rollback(self, transaction, transaction_response):
-    txid = transaction.handle()
+    txid = transaction.handle
     self.__local_tx_lock.acquire()
     try:
       if txid not in self.__transactions:
@@ -554,8 +546,8 @@ class RemoteDatastoreStub(RemoteStub):
             'Transaction %d not found.' % (txid,))
 
       txdata = self.__transactions[txid]
-      assert (txdata.thread_id ==
-          thread.get_ident()), "Transactions are single-threaded."
+      assert (txdata.thread_id == six.moves._thread.get_ident()
+             ), 'Transactions are single-threaded.'
       del self.__transactions[txid]
     finally:
       self.__local_tx_lock.release()
@@ -693,8 +685,8 @@ class TaskqueueStubTestbedDelegate(RemoteStub):
 
   def GetQueues(self):
     """Delegating TaskQueueServiceStub.GetQueues."""
-    request = api_base_pb.VoidProto()
-    response = taskqueue_stub_service_pb.GetQueuesResponse()
+    request = api_base_pb2.VoidProto()
+    response = taskqueue_stub_service_pb2.GetQueuesResponse()
     self.MakeSyncCall('taskqueue', 'GetQueues', request, response)
     return taskqueue_stub.ConvertGetQueuesResponseToQueuesDicts(response)
 
@@ -708,12 +700,12 @@ class TaskqueueStubTestbedDelegate(RemoteStub):
       A list of dictionaries, where each dictionary contains one task's
         attributes.
     """
-    request = taskqueue_stub_service_pb.GetFilteredTasksRequest()
-    request.add_queue_names(queue_name)
-    response = taskqueue_stub_service_pb.GetFilteredTasksResponse()
+    request = taskqueue_stub_service_pb2.GetFilteredTasksRequest()
+    request.queue_names.append(queue_name)
+    response = taskqueue_stub_service_pb2.GetFilteredTasksResponse()
     self.MakeSyncCall('taskqueue', 'GetFilteredTasks', request, response)
     res = []
-    for i, eta_delta in enumerate(response.eta_delta_list()):
+    for i, eta_delta in enumerate(response.eta_delta):
 
 
 
@@ -733,10 +725,10 @@ class TaskqueueStubTestbedDelegate(RemoteStub):
       queue_name: String, the name of the queue to delete the task from.
       task_name: String, the name of the task to delete.
     """
-    request = taskqueue_service_pb.TaskQueueDeleteRequest()
-    request.set_queue_name(queue_name)
-    request.add_task_name(task_name)
-    response = api_base_pb.VoidProto()
+    request = taskqueue_service_pb2.TaskQueueDeleteRequest()
+    request.queue_name = queue_name
+    request.task_name.append(task_name)
+    response = api_base_pb2.VoidProto()
     self.MakeSyncCall('taskqueue', 'DeleteTask', request, response)
 
   def FlushQueue(self, queue_name):
@@ -745,9 +737,9 @@ class TaskqueueStubTestbedDelegate(RemoteStub):
     Args:
       queue_name: String, the name of the queue to flush.
     """
-    request = taskqueue_stub_service_pb.FlushQueueRequest()
-    request.set_queue_name(queue_name)
-    response = api_base_pb.VoidProto()
+    request = taskqueue_stub_service_pb2.FlushQueueRequest()
+    request.queue_name = queue_name
+    response = api_base_pb2.VoidProto()
     self.MakeSyncCall('taskqueue', 'FlushQueue', request, response)
 
   def GetFilteredTasks(self, url='', name='', queue_names=()):
@@ -763,22 +755,23 @@ class TaskqueueStubTestbedDelegate(RemoteStub):
     Returns:
       A list of taskqueue.Task objects.
     """
-    request = taskqueue_stub_service_pb.GetFilteredTasksRequest()
-    request.set_url(url)
-    request.set_name(name)
+    request = taskqueue_stub_service_pb2.GetFilteredTasksRequest()
+    request.url = url
+    request.name = name
 
-    if isinstance(queue_names, basestring):
+    if isinstance(queue_names, six.string_types):
       queue_names = [queue_names]
-    map(request.add_queue_names, queue_names)
-    response = taskqueue_stub_service_pb.GetFilteredTasksResponse()
+    list(map(request.add_queue_names, queue_names))
+    response = taskqueue_stub_service_pb2.GetFilteredTasksResponse()
     self.MakeSyncCall('taskqueue', 'GetFilteredTasks', request, response)
 
     res = []
-    for i, eta_delta in enumerate(response.eta_delta_list()):
+    for i, eta_delta in enumerate(response.eta_delta):
 
       task_dict = taskqueue_stub.QueryTasksResponseToDict(
 
-          '', response.query_tasks_response().task(i),
+          '',
+          response.query_tasks_response.task[i],
           datetime.datetime.now())
       task_dict['eta_delta'] = eta_delta
       res.append(taskqueue_stub.ConvertTaskDictToTaskObject(task_dict))
@@ -796,10 +789,10 @@ class TaskqueueStubTestbedDelegate(RemoteStub):
       raise TypeError(
           'queue_yaml_parser should be callable. Received type: %s' %
           type(queue_yaml_parser))
-    request = taskqueue_stub_service_pb.PatchQueueYamlParserRequest()
-    request.set_patched_return_value(pickle.dumps(queue_yaml_parser(
-        self._root_path)))
-    response = api_base_pb.VoidProto()
+    request = taskqueue_stub_service_pb2.PatchQueueYamlParserRequest()
+    request.patched_return_value = pickle.dumps(
+        queue_yaml_parser(self._root_path))
+    response = api_base_pb2.VoidProto()
     self._queue_yaml_parser = queue_yaml_parser
     self.MakeSyncCall('taskqueue', 'PatchQueueYamlParser', request, response)
 
@@ -810,15 +803,15 @@ class TaskqueueStubTestbedDelegate(RemoteStub):
       **kwargs: Key word arguments that are passed to the service stub
         constructor.
     """
-    request = taskqueue_stub_service_pb.SetUpStubRequest()
-    init_args = inspect.getargspec(taskqueue_stub.TaskQueueServiceStub.__init__)
+    request = taskqueue_stub_service_pb2.SetUpStubRequest()
+    init_args = inspect.getfullargspec(
+        taskqueue_stub.TaskQueueServiceStub.__init__)
     for field in set(init_args.args[1:]) - set(['request_data']):
       if field in kwargs:
-        prefix = 'set' if field.startswith('_') else 'set_'
-        getattr(request, prefix + field)(kwargs[field])
+        setattr(request, field, kwargs[field])
     if 'request_data' in kwargs:
-      request.set_request_data(pickle.dumps(kwargs['request_data']))
-    response = api_base_pb.VoidProto()
+      request.request_data = pickle.dumps(kwargs['request_data'])
+    response = api_base_pb2.VoidProto()
     self.MakeSyncCall('taskqueue', 'SetUpStub', request, response)
 
 
@@ -846,7 +839,7 @@ def GetRemoteAppIdFromServer(server, path, remote_token=None):
   remote_token = str(remote_token)
   urlargs = {'rtok': remote_token}
   response = server.Send(path, payload=None, **urlargs)
-  if not response.startswith('{'):
+  if not response.startswith(b'{'):
     raise ConfigurationError(
         'Invalid response received from server: %s' % response)
   app_info = yaml.load(response)
@@ -899,8 +892,9 @@ def ConfigureRemoteApiFromServer(server,
       raise ConfigurationError('Unsupported service(s): %s'
                                % (', '.join(unsupported),))
 
-  os.environ['APPLICATION_ID'] = app_id
-  os.environ.setdefault('AUTH_DOMAIN', default_auth_domain or 'gmail.com')
+  full_app_id.put(app_id)
+  if not context.get('AUTH_DOMAIN', None):
+    ctx_test_util.set_both('AUTH_DOMAIN', default_auth_domain or 'gmail.com')
   if not apiproxy:
     apiproxy_stub_map.apiproxy = apiproxy_stub_map.APIProxyStubMap()
   if 'datastore_v3' in services and use_remote_datastore:
@@ -942,9 +936,13 @@ def GetRemoteAppId(servername,
   Returns:
     (app_id, server): The application ID and an AbstractRpcServer.
   """
+
+
+
   server = rpc_server_factory(servername, auth_func, GetUserAgent(),
                               GetSourceName(), save_cookies=save_cookies,
-                              debug_data=False, secure=secure)
+                              debug_data=False, secure=secure,
+                              ignore_certs=True)
   app_id = GetRemoteAppIdFromServer(server, path, rtok)
   return app_id, server
 
@@ -1001,44 +999,18 @@ def ConfigureRemoteApiForOAuth(
   if bool(service_account) != bool(key_file_path):
     raise ValueError('Must provide both service_account and key_file_path.')
 
-  try:
-
-    from oauth2client import client
-  except ImportError as e:
-    raise ImportError('Use of OAuth credentials requires the '
-                      'oauth2client module: %s' % e)
-
-  try:
-
-    from google.appengine.tools import appengine_rpc_httplib2
-  except ImportError as e:
-    raise ImportError('Use of OAuth credentials requires the '
-                      'appengine_rpc_httplib2 module. %s' % e)
-
-  rpc_server_factory = (rpc_server_factory
-                        or appengine_rpc_httplib2.HttpRpcServerOAuth2)
+  rpc_server_factory = (
+      rpc_server_factory or google_auth_rpc.GoogleAuthRpcServer)
 
   if not oauth2_parameters:
     if key_file_path:
-      if not client.HAS_CRYPTO:
-        raise ImportError('Use of a key file to access the Remote API '
-                          'requires an encryption library. Please install '
-                          'either PyOpenSSL or PyCrypto 2.6 or later.')
-
-      with open(key_file_path, 'rb') as key_file:
-        key = key_file.read()
-        credentials = client.SignedJwtAssertionCredentials(
-            service_account,
-            key,
-            _OAUTH_SCOPES)
+      credentials = jwt.Credentials.from_service_account_file(key_file_path)
     else:
-      credentials = client.GoogleCredentials.get_application_default()
-      if credentials and credentials.create_scoped_required():
-        credentials = credentials.create_scoped(_OAUTH_SCOPES)
+      credentials, _ = google_auth.default(_OAUTH_SCOPES)
 
 
     oauth2_parameters = (
-        appengine_rpc_httplib2.HttpRpcServerOAuth2.OAuth2Parameters(
+        google_auth_rpc.GoogleAuthRpcServer.OAuth2Parameters(
             access_token=None,
             client_id=None,
             client_secret=None,
@@ -1132,13 +1104,17 @@ def ConfigureRemoteApi(app_id,
 
 
 
-    cookie = Cookie.SimpleCookie()
+    cookie = six.moves.http_cookies.SimpleCookie()
     cookie['dev_appserver_login'] = _DEVAPPSERVER_LOGIN_COOKIE
     extra_headers['COOKIE'] = cookie['dev_appserver_login'].OutputString()
+
+
+
   server = rpc_server_factory(
       servername, auth_func, GetUserAgent(), GetSourceName(),
       extra_headers=extra_headers, save_cookies=save_cookies,
-      auth_tries=auth_tries, debug_data=False, secure=secure)
+      auth_tries=auth_tries, debug_data=False, secure=secure,
+      ignore_certs=True)
   if not app_id:
     app_id = GetRemoteAppIdFromServer(server, path, rtok)
 

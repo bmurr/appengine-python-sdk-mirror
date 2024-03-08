@@ -16,6 +16,8 @@
 #
 
 
+
+
 """Sends email on behalf of the application.
 
 This module provides functions for application developers to provide email
@@ -31,31 +33,28 @@ services for their applications. The module also provides a few utility methods.
 
 
 
-
+import binascii
+import cgi
+import codecs
+from collections.abc import MutableMapping
 import email
-from email import MIMEBase
-from email import MIMEMultipart
-from email import MIMEText
-from email import Parser
+from email import parser
 import email.header
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import functools
 import logging
-import os
+import typing
 
-
-if os.environ.get('APPENGINE_RUNTIME') == 'python27':
-  from google.appengine.api import api_base_pb
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import mail_service_pb
-  from google.appengine.api import users
-  from google.appengine.api.mail_errors import *
-  from google.appengine.runtime import apiproxy_errors
-else:
-  from google.appengine.api import api_base_pb
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import mail_service_pb
-  from google.appengine.api import users
-  from google.appengine.api.mail_errors import *
-  from google.appengine.runtime import apiproxy_errors
+from google.appengine.api import api_base_pb2
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import mail_service_pb2
+from google.appengine.api import users
+from google.appengine.api.mail_errors import *
+from google.appengine.runtime import apiproxy_errors
+import six
+from six.moves import map
 
 
 
@@ -67,16 +66,13 @@ else:
 
 
 ERROR_MAP = {
-    mail_service_pb.MailServiceError.BAD_REQUEST:
+    mail_service_pb2.MailServiceError.BAD_REQUEST:
       BadRequestError,
-
-    mail_service_pb.MailServiceError.UNAUTHORIZED_SENDER:
+    mail_service_pb2.MailServiceError.UNAUTHORIZED_SENDER:
       InvalidSenderError,
-
-    mail_service_pb.MailServiceError.INVALID_ATTACHMENT_TYPE:
+    mail_service_pb2.MailServiceError.INVALID_ATTACHMENT_TYPE:
       InvalidAttachmentTypeError,
-
-    mail_service_pb.MailServiceError.INVALID_HEADER_NAME:
+    mail_service_pb2.MailServiceError.INVALID_HEADER_NAME:
       InvalidHeaderNameError,
 }
 
@@ -150,14 +146,14 @@ EXTENSION_MIME_MAP = {
     'webp': 'image/webp',
     'xls': 'application/vnd.ms-excel',
     'xlsx': 'application/vnd.ms-excel',
-    'zip': 'application/zip'
-    }
+    'zip': 'application/zip',
+}
 
 
 
 
 
-EXTENSION_BLOCKLIST = [
+EXTENSION_BLACKLIST = [
     'ade',
     'adp',
     'bat',
@@ -187,27 +183,24 @@ EXTENSION_BLOCKLIST = [
     'wsc',
     'wsf',
     'wsh',
-    ]
+]
 
 
-EXTENSION_BLACKLIST = EXTENSION_BLOCKLIST
-
-
-
-HEADER_ALLOWLIST = frozenset([
+HEADER_WHITELIST = frozenset([
     'Auto-Submitted',
     'In-Reply-To',
     'List-Id',
     'List-Unsubscribe',
+    'List-Unsubscribe-Post',
     'On-Behalf-Of',
     'References',
     'Resent-Date',
     'Resent-From',
     'Resent-To',
-    ])
+])
 
-
-HEADER_WHITELIST = HEADER_ALLOWLIST
+INCOMING_MAIL_URL_PATTERN = '/_ah/mail/.+'
+BOUNCE_NOTIFICATION_URL_PATH = '/_ah/bounce'
 
 
 def invalid_email_reason(email_address, field):
@@ -226,7 +219,7 @@ def invalid_email_reason(email_address, field):
 
   if isinstance(email_address, users.User):
     email_address = email_address.email()
-  if not isinstance(email_address, basestring):
+  if not isinstance(email_address, six.string_types):
     return 'Invalid email address type for %s.' % field
   stripped_address = email_address.strip()
   if not stripped_address:
@@ -289,15 +282,15 @@ def invalid_headers_reason(headers):
     return 'Headers dictionary was None.'
   if not isinstance(headers, dict):
     return 'Invalid type for headers. Should be a dictionary.'
-  for k, v in headers.iteritems():
-    if not isinstance(k, basestring):
+  for k, v in six.iteritems(headers):
+    if not isinstance(k, six.string_types):
       return 'Header names should be strings.'
-    if not isinstance(v, basestring):
+    if not isinstance(v, six.string_types):
       return 'Header values should be strings.'
     if not is_ascii(k):
       return 'Header name should be an ASCII string.'
 
-    if k.strip() not in HEADER_ALLOWLIST:
+    if k.strip() not in HEADER_WHITELIST:
       return 'Header "%s" is not allowed.' % k.strip()
 
 
@@ -328,7 +321,7 @@ def _email_sequence(emails):
     A single tuple that contains the email address if only one email string is
     provided; otherwise returns email addresses as-is.
   """
-  if isinstance(emails, basestring):
+  if isinstance(emails, six.string_types):
     return [email_address.strip() for email_address in emails.split(',')]
   return emails
 
@@ -346,7 +339,7 @@ def _attachment_sequence(attachments):
     A single tuple that contains the attachment if only one attachment is
     provided; otherwise returns attachments as-is.
   """
-  if len(attachments) == 2 and isinstance(attachments[0], basestring):
+  if len(attachments) == 2 and isinstance(attachments[0], six.string_types):
     attachments = attachments,
   for attachment in attachments:
     if isinstance(attachment, Attachment):
@@ -355,20 +348,27 @@ def _attachment_sequence(attachments):
       yield Attachment(*attachment)
 
 
-def _parse_mime_message(mime_message):
-  """Helper function that converts `mime_message` into `email.Message.Message`.
+def _parse_mime_message(
+    mime_message: typing.Union[typing.Text, bytes, typing.TextIO,
+                               email.message.Message]
+) -> email.message.Message:
+  """Helper function that converts `mime_message` into `email.message.Message`.
 
   Args:
-    mime_message: MIME message, string, or file that contains the MIME message.
+    mime_message: MIME message, string, or file that contains the MIME
+    message.
 
   Returns:
-    An instance of `email.Message.Message`. This method will return
+    An instance of `email.message.Message`. This method will return
     the `mime_message` if the instance already exists.
   """
-  if isinstance(mime_message, email.Message.Message):
+  if isinstance(mime_message, email.message.Message):
     return mime_message
-  elif isinstance(mime_message, basestring):
+  elif isinstance(mime_message, six.string_types):
+
     return email.message_from_string(mime_message)
+  elif isinstance(mime_message, bytes):
+    return email.message_from_bytes(mime_message)
   else:
 
     return email.message_from_file(mime_message)
@@ -434,7 +434,7 @@ SendMailToAdmins = send_mail_to_admins
 
 
 def _GetMimeType(file_name):
-  """Determines the MINE type from the file name.
+  """Determines the `MINE` type from the file name.
 
   This function parses the file name and determines the MIME type based on
   an extension map.
@@ -456,7 +456,7 @@ def _GetMimeType(file_name):
     extension = ''
   else:
     extension = file_name[extension_index + 1:].lower()
-  if extension in EXTENSION_BLOCKLIST:
+  if extension in EXTENSION_BLACKLIST:
     raise InvalidAttachmentTypeError(
         'Extension %s is not supported.' % extension)
   mime_type = EXTENSION_MIME_MAP.get(extension, None)
@@ -475,11 +475,19 @@ def _GuessCharset(text):
   Returns:
     The character set that is needed by the string, either US-ASCII or UTF-8.
   """
-  try:
-    text.decode('us-ascii')
-    return 'us-ascii'
-  except UnicodeDecodeError:
-    return 'utf-8'
+  if isinstance(text, six.text_type):
+    try:
+      text.encode('us-ascii')
+      return 'us-ascii'
+    except UnicodeEncodeError:
+      return 'utf-8'
+
+  else:
+    try:
+      text.decode('us-ascii')
+      return 'us-ascii'
+    except UnicodeDecodeError:
+      return 'utf-8'
 
 
 def _I18nHeader(text):
@@ -516,59 +524,59 @@ def mail_message_to_mime_message(protocol_message):
     InvalidAttachmentTypeError: If the file type of the attachment is invalid.
   """
   parts = []
-  if protocol_message.has_textbody():
-    parts.append(MIMEText.MIMEText(
-        protocol_message.textbody(),
-        _charset=_GuessCharset(protocol_message.textbody())))
-  if protocol_message.has_amphtmlbody():
+  if protocol_message.HasField('TextBody'):
     parts.append(
-        MIMEText.MIMEText(
-            protocol_message.amphtmlbody(),
+        MIMEText(
+            protocol_message.TextBody,
+            _charset=_GuessCharset(protocol_message.TextBody)))
+  if protocol_message.HasField('AmpHtmlBody'):
+    parts.append(
+        MIMEText(
+            protocol_message.AmpHtmlBody,
             _subtype='x-amp-html',
-            _charset=_GuessCharset(protocol_message.amphtmlbody())))
-  if protocol_message.has_htmlbody():
+            _charset=_GuessCharset(protocol_message.AmpHtmlBody)))
+  if protocol_message.HasField('HtmlBody'):
     parts.append(
-        MIMEText.MIMEText(
-            protocol_message.htmlbody(),
+        MIMEText(
+            protocol_message.HtmlBody,
             _subtype='html',
-            _charset=_GuessCharset(protocol_message.htmlbody())))
+            _charset=_GuessCharset(protocol_message.HtmlBody)))
 
   if len(parts) == 1:
 
     payload = parts
   else:
 
-    payload = [MIMEMultipart.MIMEMultipart('alternative', _subparts=parts)]
+    payload = [MIMEMultipart('alternative', _subparts=parts)]
 
-  result = MIMEMultipart.MIMEMultipart(_subparts=payload)
+  result = MIMEMultipart(_subparts=payload)
 
-  for attachment in protocol_message.attachment_list():
-    file_name = attachment.filename()
+  for attachment in protocol_message.Attachment:
+    file_name = attachment.FileName
     mime_type = _GetMimeType(file_name)
     maintype, subtype = mime_type.split('/')
-    mime_attachment = MIMEBase.MIMEBase(maintype, subtype)
-    mime_attachment.add_header('Content-Disposition',
-                               'attachment',
-                               filename=attachment.filename())
-    mime_attachment.set_payload(attachment.data())
-    if attachment.has_contentid():
-      mime_attachment['content-id'] = attachment.contentid()
+    mime_attachment = MIMEBase(maintype, subtype)
+    mime_attachment.add_header(
+        'Content-Disposition', 'attachment', filename=attachment.FileName)
+    mime_attachment.set_payload(attachment.Data)
+    if attachment.HasField('ContentID'):
+      mime_attachment['content-id'] = attachment.ContentID
     result.attach(mime_attachment)
 
 
-  if protocol_message.to_size():
-    result['To'] = _I18nHeader(', '.join(protocol_message.to_list()))
-  if protocol_message.cc_size():
-    result['Cc'] = _I18nHeader(', '.join(protocol_message.cc_list()))
-  if protocol_message.bcc_size():
-    result['Bcc'] = _I18nHeader(', '.join(protocol_message.bcc_list()))
+  if protocol_message.To:
+    result['To'] = _I18nHeader(', '.join(protocol_message.To))
+  if protocol_message.Cc:
+    result['Cc'] = _I18nHeader(', '.join(protocol_message.Cc))
+  if protocol_message.Bcc:
+    result['Bcc'] = _I18nHeader(', '.join(protocol_message.Bcc))
 
-  result['From'] = _I18nHeader(protocol_message.sender())
-  result['Reply-To'] = _I18nHeader(protocol_message.replyto())
-  result['Subject'] = _I18nHeader(protocol_message.subject())
+  result['From'] = _I18nHeader(protocol_message.Sender)
+  result['Reply-To'] = _I18nHeader(protocol_message.ReplyTo)
+  result['Subject'] = _I18nHeader(protocol_message.Subject)
 
-  for header in protocol_message.header_list():
-    result[header.name()] = _I18nHeader(header.value())
+  for header in protocol_message.Header:
+    result[header.name] = _I18nHeader(header.value)
 
   return result
 
@@ -585,7 +593,7 @@ def _to_str(value):
   Returns:
     The UTF-8 encoded string of `value`; `value` remains otherwise unchanged.
   """
-  if isinstance(value, unicode):
+  if isinstance(value, six.text_type):
     return value.encode('utf-8')
   return value
 
@@ -609,8 +617,33 @@ def _decode_and_join_header(header, separator=u' '):
   if not header:
 
     return header
-  return separator.join(s.decode(charset or 'us-ascii', 'replace')
-                        for s, charset in email.header.decode_header(header))
+
+  def header_gen(header_string):
+    """Generate a sequence of header from header string.
+
+    A generator that consume header string and return a sequence of header in
+    decoded format (PY2: str; PY3: unicode).
+
+    Args:
+      header_string: A string that contains multiline of headers.
+
+    Yields:
+      string
+    """
+
+
+    for s, charset in email.header.decode_header(header_string):
+      if not charset:
+        charset = 'us-ascii'
+
+
+
+      if isinstance(s, bytes):
+        yield codecs.decode(s, charset, 'replace')
+      else:
+        yield s
+
+  return separator.join(header_gen(header))
 
 
 def _decode_address_list_field(address_list):
@@ -628,12 +661,12 @@ def _decode_address_list_field(address_list):
   if len(address_list) == 1:
     return _decode_and_join_header(address_list[0])
   else:
-    return map(_decode_and_join_header, address_list)
+    return list(map(_decode_and_join_header, address_list))
 
 
 
 
-def wrapping(wrapped):
+def _wrapping(wrapped):
   """A decorator that decorates a decorator's wrapper.
 
   This decorator makes it easier to debug code that is heavily decorated.
@@ -662,6 +695,15 @@ def wrapping(wrapped):
 
 
 
+
+
+
+
+
+wrapping = _wrapping if six.PY2 else functools.wraps
+
+
+
 def _positional(max_pos_args):
   """A decorator to declare that only the first N arguments can be positional.
 
@@ -677,7 +719,7 @@ def _positional(max_pos_args):
     arguments, a `TypeError` is raised.
   """
   def positional_decorator(wrapped):
-    @wrapping(wrapped)
+    @functools.wraps(wrapped)
     def positional_wrapper(*args, **kwds):
       if len(args) > max_pos_args:
         plural_s = ''
@@ -704,21 +746,21 @@ class Attachment(object):
       unpack to a `(filename, payload)` tuple, but will compare unequally to
       that tuple.
 
-      Thus, the following comparison will succeed::
+      Thus, the following comparison will succeed:
 
           attachment = mail.Attachment('foo.jpg', 'data')
           filename, payload = attachment
           attachment == filename, payload
 
 
-      ...while the following will fail::
+      ...while the following will fail:
 
           attachment = mail.Attachment('foo.jpg', 'data', content_id='<foo>')
           filename, payload = attachment
           attachment == filename, payload
 
 
-      The following comparison will pass::
+      The following comparison will pass:
 
         attachment = mail.Attachment('foo.jpg', 'data', content_id='<foo>')
         attachment == (attachment.filename,
@@ -799,7 +841,7 @@ class EncodedPayload(object):
         do not want the content to be encoded, set this argument to `None`.
   """
 
-  def __init__(self, payload, charset=None, encoding=None):
+  def __init__(self, payload: bytes, charset=None, encoding=None):
     """Constructor.
 
     Args:
@@ -807,6 +849,9 @@ class EncodedPayload(object):
       charset: Maps to an attribute of the same name.
       encoding: Maps to an attribute of the same name.
     """
+    if not isinstance(payload, bytes):
+      raise TypeError('EncodedPayload must be bytes, but got ' + type(payload))
+
     self.payload = payload
     self.charset = charset
     self.encoding = encoding
@@ -828,7 +873,7 @@ class EncodedPayload(object):
 
     if self.encoding and self.encoding.lower() not in ('7bit', '8bit'):
       try:
-        payload = payload.decode(self.encoding)
+        payload = codecs.decode(payload, self.encoding)
       except LookupError:
         raise UnknownEncodingError('Unknown decoding %s.' % self.encoding)
       except (Exception, Error) as e:
@@ -837,12 +882,11 @@ class EncodedPayload(object):
 
     if self.charset and str(self.charset).lower() != '7bit':
       try:
-        payload = payload.decode(str(self.charset))
+        payload = codecs.decode(payload, str(self.charset))
       except LookupError:
         raise UnknownCharsetError('Unknown charset %s.' % self.charset)
       except (Exception, Error) as e:
         raise PayloadEncodingError('Could read characters: %s' % e)
-
     return payload
 
   def __eq__(self, other):
@@ -863,7 +907,7 @@ class EncodedPayload(object):
       return NotImplemented
 
   def __hash__(self):
-    """Hashes an EncodedPayload."""
+    """Hashes an `EncodedPayload`."""
     return hash((self.payload, self.charset, self.encoding))
 
   def copy_to(self, mime_message):
@@ -885,7 +929,7 @@ class EncodedPayload(object):
     Returns:
       The MIME message instance of the payload.
     """
-    mime_message = email.Message.Message()
+    mime_message = email.message.Message()
     self.copy_to(mime_message)
     return mime_message
 
@@ -948,7 +992,7 @@ class _EmailMessageBase(object):
 
     Args:
       mime_message: The MIME message to initialize from. If the message is an
-          instance of `email.Message.Message`, `mime_message` will take
+          instance of `email.message.Message`, `mime_message` will take
           ownership as specified the original message.
       **kw: List of keyword properties as defined by `PROPERTIES`.
     """
@@ -975,7 +1019,7 @@ class _EmailMessageBase(object):
     Args:
       **kw: List of keyword properties as defined by `PROPERTIES`.
     """
-    for name, value in kw.iteritems():
+    for name, value in six.iteritems(kw):
       setattr(self, name, value)
 
 
@@ -1083,7 +1127,7 @@ class _EmailMessageBase(object):
 
     Unicode strings are converted to UTF-8 for all fields.
 
-    This method is overriden by `EmailMessage` to support the sender field.
+    This method is overridden by `EmailMessage` to support the sender field.
 
     Returns:
       The `MailMessage` protocol version of the mail message.
@@ -1092,43 +1136,43 @@ class _EmailMessageBase(object):
       Decoding errors when using `EncodedPayload` objects.
     """
     self.check_initialized()
-    message = mail_service_pb.MailMessage()
-    message.set_sender(_to_str(self.sender))
+    message = mail_service_pb2.MailMessage()
+    message.Sender = _to_str(self.sender)
 
     if hasattr(self, 'reply_to'):
-      message.set_replyto(_to_str(self.reply_to))
+      message.ReplyTo = _to_str(self.reply_to)
     if hasattr(self, 'subject'):
-      message.set_subject(_to_str(self.subject))
+      message.Subject = _to_str(self.subject)
     else:
-      message.set_subject('')
+      message.Subject = ''
 
     if hasattr(self, 'body'):
       body = self.body
       if isinstance(body, EncodedPayload):
         body = body.decode()
-      message.set_textbody(_to_str(body))
+      message.TextBody = _to_str(body)
 
     if hasattr(self, 'html'):
       html = self.html
       if isinstance(html, EncodedPayload):
         html = html.decode()
-      message.set_htmlbody(_to_str(html))
+      message.HtmlBody = _to_str(html)
 
     if hasattr(self, 'amp_html'):
       amp_html = self.amp_html
       if isinstance(amp_html, EncodedPayload):
         amp_html = amp_html.decode()
-      message.set_amphtmlbody(_to_str(amp_html))
+      message.AmpHtmlBody = _to_str(amp_html)
 
     if hasattr(self, 'attachments'):
       for attachment in _attachment_sequence(self.attachments):
         if isinstance(attachment.payload, EncodedPayload):
           attachment.payload = attachment.payload.decode()
-        protoattachment = message.add_attachment()
-        protoattachment.set_filename(_to_str(attachment.filename))
-        protoattachment.set_data(_to_str(attachment.payload))
+        protoattachment = message.Attachment.add()
+        protoattachment.FileName = _to_str(attachment.filename)
+        protoattachment.Data = _to_str(attachment.payload)
         if attachment.content_id:
-          protoattachment.set_contentid(attachment.content_id)
+          protoattachment.ContentID = attachment.content_id
     return message
 
   def to_mime_message(self):
@@ -1160,7 +1204,7 @@ class _EmailMessageBase(object):
       make_sync_call: Method that will make a synchronous call to the API proxy.
     """
     message = self.ToProto()
-    response = api_base_pb.VoidProto()
+    response = api_base_pb2.VoidProto()
 
     try:
       make_sync_call('mail', self._API_CALL, message, response)
@@ -1175,8 +1219,8 @@ class _EmailMessageBase(object):
 
   def _check_attachment(self, attachment):
 
-    if not (isinstance(attachment.filename, basestring) or
-            isinstance(attachment.payload, basestring)):
+    if not (isinstance(attachment.filename, six.string_types) or
+            isinstance(attachment.payload, six.string_types)):
       raise TypeError()
 
   def _check_attachments(self, attachments):
@@ -1213,7 +1257,7 @@ class _EmailMessageBase(object):
       if attr in ['sender', 'reply_to']:
         check_email_valid(value, attr)
 
-      if not value and not attr in self.ALLOWED_EMPTY_PROPERTIES:
+      if not value and attr not in self.ALLOWED_EMPTY_PROPERTIES:
         raise ValueError('May not set empty value for \'%s\'' % attr)
 
 
@@ -1241,14 +1285,14 @@ class _EmailMessageBase(object):
     elif content_type == 'text/html':
       self.html = payload
 
-  def _update_payload(self, mime_message):
+  def _update_payload(self, mime_message: email.message.Message):
     """Updates a payload of a mail message from `mime_message`.
 
-    This function works recusively when it receives a multi-part body. If the
-    function receives a non-multi-part MIME object, it will determine whether it
-    is an attachment by whether it contains a file name. Attachments and bodies
-    are then wrapped in `EncodedPayload` that use the correct character sets and
-    encodings.
+    This function works recursively when it receives a multi-part body. If the
+    function receives a non-multi-part MIME object, it will determine whether
+    it is an attachment by whether it contains a file name. Attachments and
+    bodies are then wrapped in `EncodedPayload` that use the correct character
+    sets and encodings.
 
     Args:
       mime_message: A Message MIME email object.
@@ -1256,7 +1300,7 @@ class _EmailMessageBase(object):
     payload = mime_message.get_payload()
 
     if payload:
-      if mime_message.get_content_maintype() == 'multipart':
+      if mime_message.is_multipart():
         for alternative in payload:
           self._update_payload(alternative)
       else:
@@ -1269,17 +1313,16 @@ class _EmailMessageBase(object):
           filename = mime_message.get_param('name')
 
 
-        payload = EncodedPayload(payload,
-                                 (mime_message.get_content_charset() or
-                                  mime_message.get_charset()),
-                                 mime_message['content-transfer-encoding'])
+        encoded_payload = EncodedPayload(
+            six.ensure_binary(payload),
+            (mime_message.get_content_charset() or mime_message.get_charset()),
+            mime_message['content-transfer-encoding'])
 
         if 'content-id' in mime_message:
-          attachment = Attachment(filename,
-                                  payload,
-                                  content_id=mime_message['content-id'])
+          attachment = Attachment(
+              filename, encoded_payload, content_id=mime_message['content-id'])
         else:
-          attachment = Attachment(filename, payload)
+          attachment = Attachment(filename, encoded_payload)
 
         if filename:
 
@@ -1288,12 +1331,12 @@ class _EmailMessageBase(object):
           except AttributeError:
             self.attachments = [attachment]
           else:
-            if isinstance(attachments[0], basestring):
+            if isinstance(attachments[0], six.string_types):
               self.attachments = [attachments]
               attachments = self.attachments
             attachments.append(attachment)
         else:
-          self._add_body(mime_message.get_content_type(), payload)
+          self._add_body(mime_message.get_content_type(), encoded_payload)
 
   def update_from_mime_message(self, mime_message):
     """Copies information from a MIME message.
@@ -1327,7 +1370,7 @@ class _EmailMessageBase(object):
 
     self._update_payload(mime_message)
 
-  def bodies(self, content_type=None):
+  def bodies(self, content_type: typing.Text = None):
     """Iterates over all bodies.
 
     Args:
@@ -1335,7 +1378,7 @@ class _EmailMessageBase(object):
           select only specific types of content. You can use the base type or
           the content type.
 
-          For example::
+          For example:
 
               content_type = 'text/html'  # Matches only HTML content.
               content_type = 'text'       # Matches text of any kind.
@@ -1367,7 +1410,7 @@ class EmailMessage(_EmailMessageBase):
   Mail API. To use this class, construct an instance, populate its fields and
   call `Send()`.
 
-  An EmailMessage can be built completely by the constructor::
+  An `EmailMessage` can be built completely by the constructor:
 
       EmailMessage(sender='sender@nowhere.com',
                    to='recipient@nowhere.com',
@@ -1376,7 +1419,7 @@ class EmailMessage(_EmailMessageBase):
 
 
   You might want your application to build an email in different places
-  throughout the code. For this usage, EmailMessage is mutable::
+  throughout the code. For this usage, `EmailMessage` is mutable:
 
         message = EmailMessage()
         message.sender = 'sender@nowhere.com'
@@ -1389,6 +1432,20 @@ class EmailMessage(_EmailMessageBase):
 
   _API_CALL = 'Send'
   PROPERTIES = set(_EmailMessageBase.PROPERTIES | set(('headers',)))
+
+
+  def __init__(
+      self,
+      mime_message: typing.Optional[typing.Union[typing.Text, bytes,
+                                                 typing.TextIO,
+                                                 email.message.Message]] = None,
+      **kw):
+    """
+    """
+
+
+    super().__init__(mime_message, **kw)
+
 
   def check_initialized(self):
     """Provides additional checks to ensure that recipients have been specified.
@@ -1417,23 +1474,23 @@ class EmailMessage(_EmailMessageBase):
     """
     message = super(EmailMessage, self).ToProto()
 
-    for attribute, adder in (('to', message.add_to),
-                             ('cc', message.add_cc),
-                             ('bcc', message.add_bcc)):
+    for attribute, adder in (('to', message.To.append),
+                             ('cc', message.Cc.append), ('bcc',
+                                                         message.Bcc.append)):
       if hasattr(self, attribute):
         for address in _email_sequence(getattr(self, attribute)):
           adder(_to_str(address))
-    for name, value in getattr(self, 'headers', {}).iteritems():
-      header = message.add_header()
-      header.set_name(name)
-      header.set_value(_to_str(value))
+    for name, value in six.iteritems(getattr(self, 'headers', {})):
+      header = message.Header.add()
+      header.name = name
+      header.value = _to_str(value)
     return message
 
   def __setattr__(self, attr, value):
     """Performs additional checks on recipient fields."""
 
     if attr in ['to', 'cc', 'bcc']:
-      if isinstance(value, basestring):
+      if isinstance(value, six.string_types):
         if value == '' and getattr(self, 'ALLOW_BLANK_EMAIL', False):
           return
         check_email_valid(value, attr)
@@ -1477,7 +1534,7 @@ class AdminEmailMessage(_EmailMessageBase):
   Unlike normal email messages, addresses in the recipient fields are ignored
   and not used to send the message.
 
-  An AdminEmailMessage can be built completely by the constructor::
+  An `AdminEmailMessage` can be built completely by the constructor:
 
       AdminEmailMessage(sender='sender@nowhere.com',
                         subject='a subject',
@@ -1485,7 +1542,7 @@ class AdminEmailMessage(_EmailMessageBase):
 
 
   You might want your application to build an administrator email in different
-  places throughout the code. For this, AdminEmailMessage is mutable::
+  places throughout the code. For this, `AdminEmailMessage` is mutable:
 
       message = AdminEmailMessage()
       message.sender = 'sender@nowhere.com'
@@ -1512,9 +1569,9 @@ class InboundEmailMessage(EmailMessage):
   bodies. These additional attributes make the email more flexible as required
   for incoming mail, where the developer has less control over the content.
 
-  Example::
+  Example:
 
-      # Read mail message from CGI input.
+      # Read mail message from `CGI` input.
       message = InboundEmailMessage(sys.stdin.read())
       logging.info('Received email message from %s at %s',
                    message.sender,
@@ -1523,15 +1580,48 @@ class InboundEmailMessage(EmailMessage):
       # ... Do something with body ...
   """
 
-  __HEADER_PROPERTIES = {'date': 'date',
-                         'message_id': 'message-id',
-                        }
+  __HEADER_PROPERTIES = {
+      'date': 'date',
+      'message_id': 'message-id',
+  }
 
-  PROPERTIES = frozenset(_EmailMessageBase.PROPERTIES |
-                         set(('alternate_bodies',)) |
-                         set(__HEADER_PROPERTIES.iterkeys()))
+  PROPERTIES = frozenset(_EmailMessageBase.PROPERTIES
+                         | set(('alternate_bodies',))
+                         | set(six.iterkeys(__HEADER_PROPERTIES)))
 
   ALLOW_BLANK_EMAIL = True
+
+  @classmethod
+  def from_environ(cls, environ):
+    """Creates an email message by parsing the HTTP request body in `environ`.
+
+    Example (WSGI)::
+
+      def app(environ, start_response):
+        mail_message = mail.InboundEmailMessage.from_environ(request.environ)
+
+        # Do something with the message
+        logging.info('Received greeting from %s: %s' % (mail_message.sender,
+                                                          mail_message.body))
+        start_response("200 OK", [])
+        return “Success”
+
+    Note: Flask (other web frameworks) can directly use
+          `new InboundEmailMessage(request_bytes)` to create the email message
+          if they have the request bytes of an HTTP request.
+
+    Args:
+      environ: a WSGI dict describing the HTTP request (See PEP 333).
+    Returns:
+      An InboundEmailMessage object.
+    """
+    try:
+      req_size = int(environ.get('CONTENT_LENGTH', 0))
+    except ValueError:
+      req_size = 0
+
+    request_bytes = environ['wsgi.input'].read(req_size)
+    return InboundEmailMessage(request_bytes)
 
   def update_from_mime_message(self, mime_message):
     """Updates the values of a MIME message.
@@ -1540,15 +1630,16 @@ class InboundEmailMessage(EmailMessage):
 
     Args:
       mime_message: The `email.Message` instance from which you want to copy
-          information.
+        information.
     """
     mime_message = _parse_mime_message(mime_message)
     super(InboundEmailMessage, self).update_from_mime_message(mime_message)
 
-    for property, header in InboundEmailMessage.__HEADER_PROPERTIES.iteritems():
+    for property_, header in six.iteritems(
+        InboundEmailMessage.__HEADER_PROPERTIES):
       value = mime_message[header]
       if value:
-        setattr(self, property, value)
+        setattr(self, property_, value)
 
   def _add_body(self, content_type, payload):
     """Adds a body to an inbound message.
@@ -1557,8 +1648,8 @@ class InboundEmailMessage(EmailMessage):
     plain or HTML body or have any unidentified bodies.
 
     This method will not overwrite existing HTML and body values. Therefore,
-    when the message is updated with the body, the text and HTML bodies that are
-    first in the MIME document order are assigned to the body and HTML
+    when the message is updated with the body, the text and HTML bodies that
+    are first in the MIME document order are assigned to the body and HTML
     properties.
 
     Args:
@@ -1578,7 +1669,7 @@ class InboundEmailMessage(EmailMessage):
       else:
         alternate_bodies.append((content_type, payload))
 
-  def bodies(self, content_type=None):
+  def bodies(self, content_type: typing.Text = None):
     """Iterates over all bodies.
 
     Args:
@@ -1586,10 +1677,8 @@ class InboundEmailMessage(EmailMessage):
           select only specific types of content. You can use the base type or
           the content type.
 
-          For example::
-
-              content_type = 'text/html'  # Matches only HTML content.
-              content_type = 'text'       # Matches text of any kind.
+          For example, `content_type = 'text/html'` matches only HTML content,
+          and `content_type = 'text'` matches text of any kind.
 
 
     Yields:
@@ -1628,9 +1717,10 @@ class InboundEmailMessage(EmailMessage):
     """
     mime_message = super(InboundEmailMessage, self).to_mime_message()
 
-    for property, header in InboundEmailMessage.__HEADER_PROPERTIES.iteritems():
+    for property_, header in six.iteritems(
+        InboundEmailMessage.__HEADER_PROPERTIES):
       try:
-        mime_message[header] = getattr(self, property)
+        mime_message[header] = getattr(self, property_)
       except AttributeError:
         pass
 
@@ -1645,5 +1735,222 @@ class InboundEmailMessage(EmailMessage):
 
 
 
-Parser.Parser
+parser.Parser
 
+
+
+class _MultiDict(MutableMapping):
+  """A slim version of the WebOb.MultiDict class.
+
+  This only includes functionality needed for accessing POST form vars
+  needed for for parsing a BounceNotification object.
+  Original WebOb class:
+  https://github.com/Pylons/webob/blob/master/src/webob/multidict.py
+  """
+
+  def __init__(self):
+    self._items = []
+
+  def __len__(self):
+    return len(self._items)
+
+  def __getitem__(self, key):
+    for k, v in reversed(self._items):
+      if k == key:
+        return v
+    raise KeyError(key)
+
+  def __setitem__(self, key, value):
+    try:
+      del self[key]
+    except KeyError:
+      pass
+    self._items.append((key, value))
+
+  def __delitem__(self, key):
+    items = self._items
+    found = False
+
+    for i in range(len(items) - 1, -1, -1):
+      if items[i][0] == key:
+        del items[i]
+        found = True
+
+    if not found:
+      raise KeyError(key)
+
+  def add(self, key, value):
+    """Add the key and value, not overwriting any previous value."""
+    self._items.append((key, value))
+
+  def keys(self):
+    for k, _ in self._items:
+      yield k
+
+  __iter__ = keys
+
+  @classmethod
+  def from_fieldstorage(cls, fs):
+    """Create a MultiDict from a cgi.FieldStorage instance.
+
+    This mimics functionality in webob.MultiDict without taking a dependency
+    on the WebOb package -
+    https://github.com/Pylons/webob/blob/259230aa2b8b9cf675c996e157c5cf021c256059/src/webob/multidict.py#L57
+
+    Args:
+      fs: cgi.FieldStorage object correspoinding to a POST request
+    Returns:
+      MultiDict that contains form variables from the POST request
+    """
+    obj = cls()
+
+
+    for field in fs.list or ():
+      charset = field.type_options.get('charset', 'utf8')
+      transfer_encoding = field.headers.get('Content-Transfer-Encoding', None)
+      supported_transfer_encoding = {
+          'base64': binascii.a2b_base64,
+          'quoted-printable': binascii.a2b_qp,
+      }
+
+      if charset == 'utf8':
+        def decode(b):
+          return b
+      else:
+        def decode(b):
+          return b.encode('utf8').decode(charset)
+
+      if field.filename:
+        field.filename = decode(field.filename)
+        obj.add(field.name, field)
+      else:
+        value = field.value
+
+        if transfer_encoding in supported_transfer_encoding:
+
+          value = value.encode('utf8')
+          value = supported_transfer_encoding[transfer_encoding](value)
+
+
+          value = value.decode('utf8')
+        obj.add(field.name, decode(value))
+
+    return obj
+
+
+class BounceNotification(object):
+  """Encapsulates a bounce notification received by the application."""
+
+  def __init__(self, post_vars: typing.Mapping[str, typing.Any]):
+    """Constructs a new BounceNotification from an HTTP request.
+
+    Properties:
+      original: a dict describing the message that caused the bounce.
+      notification: a dict describing the bounce itself.
+      original_raw_message: the raw message that caused the bounce.
+
+    The 'original' and 'notification' dicts contain the following keys:
+      to, cc, bcc, from, subject, text
+
+    Args:
+      post_vars: a dictionary with keys as strings. This should
+        contain bounce information, and the following keys are handled:
+          original-from
+          original-to
+          original-cc
+          original-bcc
+          original-subject
+          original-text
+          notification-from
+          notification-to
+          notification-cc
+          notification-bcc
+          notification-subject
+          notification-text
+          raw-message
+        For all keys except 'raw-message', the value can be anything.
+        The Bounce Notification object just assigns these values to the
+        `original` and `notification` properties of this instance,
+        which are dictionaries.
+        For example, original["to"] = post_vars.get("original-to")
+
+        The `raw-message` value is used to create an `InboundEmailMessage`
+        object. This value should be a valid input to the `EmailMessage`
+        constructor (inherited by 'InboundEmailMessage').
+
+        Flask- This is typically the `flask.request.form` field (if
+        the user wants to pass single (non-list) values for each key), or
+        'dict(flask.request.form.lists())' if the user wants to store a list for
+        each key (example use case is multiple `to` and `cc` recipients).
+
+        Webob- `webob.Request.POST` can be used for single values, and
+        `webob.Request.POST.dict_of_lists()` for multiple values.
+
+        Django- `request.POST` can be used for single values, and
+        `dict(request.POST.lists())` can be used for multiple values.
+    """
+    self.__original = {}
+    self.__notification = {}
+    for field in ['to', 'cc', 'bcc', 'from', 'subject', 'text']:
+      self.__original[field] = post_vars.get('original-' + field, '')
+      self.__notification[field] = post_vars.get('notification-' + field, '')
+
+    raw_message = post_vars.get('raw-message', '')
+
+    if isinstance(raw_message, list):
+      if not raw_message:
+
+        raw_message = ''
+      elif len(raw_message) > 1:
+        raise ValueError('Multiple values found for "raw-message" in post_vars.'
+                         ' Expected single value.')
+      else:
+        raw_message = raw_message[0]
+
+      raw_message = raw_message[0] if raw_message else ''
+    self.__original_raw_message = InboundEmailMessage(raw_message)
+
+  @classmethod
+  def from_environ(cls, environ):
+    """Transforms the HTTP request body to a bounce notification object.
+
+    Example(WSGI)::
+
+      def BounceReceiver(environ, start_response):
+        bounce_msg = mail.BounceNotification.from_environ(environ)
+
+        # Add logic for what to do with the bounce notification
+        print('Bounce original: %s', bounce_msg.original)
+        print('Bounce notification: %s', bounce_msg.notification)
+
+        # Return suitable response
+        response = http.HTTPStatus.OK
+        start_response(f'{response.value} {response.phrase}', [])
+        return ['success'.encode('utf-8')]
+
+    Args:
+      environ: a WSGI dict describing the HTTP request (See PEP 333).
+    Returns:
+      A BounceNotification object.
+    """
+    fs = cgi.FieldStorage(
+        fp=environ['wsgi.input'],
+        environ=environ,
+        keep_blank_values=True,
+        encoding='utf8',
+    )
+
+    post_vars = _MultiDict.from_fieldstorage(fs)
+    return BounceNotification(post_vars)
+
+  @property
+  def original(self):
+    return self.__original
+
+  @property
+  def notification(self):
+    return self.__notification
+
+  @property
+  def original_raw_message(self):
+    return self.__original_raw_message

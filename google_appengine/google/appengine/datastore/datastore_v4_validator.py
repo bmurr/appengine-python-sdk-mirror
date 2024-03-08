@@ -16,8 +16,6 @@
 #
 
 
-
-
 """Validators for v4 datastore protocol buffers.
 
 This module is internal and should not be used by client applications.
@@ -42,7 +40,7 @@ This module is internal and should not be used by client applications.
 import re
 
 from google.appengine.datastore import datastore_pbs
-from google.appengine.datastore import datastore_v4_pb
+from google.appengine.datastore import datastore_v4_pb2
 
 
 
@@ -396,30 +394,31 @@ class _EntityValidator(object):
     Raises:
       ValidationError: if the key is invalid
     """
-    _assert_condition(key.has_partition_id(), 'Key is missing partition id.')
-    self.validate_partition_id(constraint, key.partition_id())
-    num_key_path_elements = len(key.path_element_list())
+    _assert_condition(
+        key.HasField('partition_id'), 'Key is missing partition id.')
+    self.validate_partition_id(constraint, key.partition_id)
+    num_key_path_elements = len(key.path_element)
     _assert_condition(num_key_path_elements, 'Key path is empty.')
     _assert_condition((num_key_path_elements
                        <= datastore_pbs.MAX_KEY_PATH_LENGTH),
                       ('Key path has more than %d elements.'
                        % datastore_pbs.MAX_KEY_PATH_LENGTH))
     num_incomplete_elements = 0
-    for path_element in key.path_element_list():
-      _assert_valid_utf8(path_element.kind(), 'key path kind')
-      kind = path_element.kind()
+    for path_element in key.path_element:
+      _assert_valid_utf8(path_element.kind, 'key path kind')
+      kind = path_element.kind
       self.validate_kind(constraint, kind)
-      has_name = path_element.has_name()
-      if path_element.has_id():
+      has_name = path_element.HasField('name')
+      if path_element.HasField('id'):
         _assert_condition(not has_name,
                           'Key path element has both id (%d) and name ("%s").'
-                          % (path_element.id(), path_element.name()))
-        _assert_condition(path_element.id(),
+                          % (path_element.id, path_element.name))
+        _assert_condition(path_element.id,
                           'Key path element has an id of 0.')
       else:
         if has_name:
-          _assert_valid_utf8(path_element.name(), 'key path name')
-          name = path_element.name()
+          _assert_valid_utf8(path_element.name, 'key path name')
+          name = path_element.name
           _assert_string_not_empty(name, 'key path name')
           _assert_string_not_too_long(name,
                                       datastore_pbs.MAX_INDEXED_STRING_CHARS,
@@ -428,8 +427,9 @@ class _EntityValidator(object):
             _assert_string_not_reserved(name, 'key path name')
         else:
           num_incomplete_elements += 1
-    final_element = key.path_element(num_key_path_elements - 1)
-    final_element_complete = final_element.has_id() or final_element.has_name()
+    final_element = key.path_element[num_key_path_elements - 1]
+    final_element_complete = (final_element.HasField('id') or
+                              final_element.HasField('name'))
     if not constraint.complete_key_path_allowed:
       _assert_condition(not final_element_complete,
                         'Key path is complete: %s.'
@@ -452,17 +452,17 @@ class _EntityValidator(object):
 
     Args:
       constraint: a _ValidationConstraint to apply
-      partition_id: a datastore_v4_pb.PartitionId
+      partition_id: a datastore_v4_pb2.PartitionId
 
     Raises:
       ValidationError: if the partition ID is invalid
     """
-    _assert_condition(partition_id.has_dataset_id(),
+    _assert_condition(partition_id.HasField('dataset_id'),
                       'Partition id is missing dataset id.')
-    if partition_id.has_dataset_id():
-      self.validate_dataset_id(constraint, partition_id.dataset_id())
-    if partition_id.has_namespace():
-      self.validate_partition_id_dimension(constraint, partition_id.namespace(),
+    if partition_id.HasField('dataset_id'):
+      self.validate_dataset_id(constraint, partition_id.dataset_id)
+    if partition_id.HasField('namespace'):
+      self.validate_partition_id_dimension(constraint, partition_id.namespace,
                                            'namespace')
 
   def validate_dataset_id(self, constraint, dataset_id):
@@ -550,14 +550,14 @@ class _EntityValidator(object):
     Raises:
       ValidationError: if the entity is invalid
     """
-    if entity.has_key():
-      self.validate_key(constraint, entity.key())
+    if entity.HasField('key'):
+      self.validate_key(constraint, entity.key)
     else:
       _assert_condition(constraint.absent_key_allowed,
                         'Entity is missing key.')
     property_names = set()
-    for prop in entity.property_list():
-      property_name = prop.name()
+    for prop in entity.property:
+      property_name = prop.name
       _assert_condition(property_name not in property_names,
                         ('Entity has duplicate property name "%s".'
                          % property_name))
@@ -574,17 +574,17 @@ class _EntityValidator(object):
     Raises:
       ValidationError: if the property is invalid
     """
-    _assert_valid_utf8(prop.name(), 'property name')
-    property_name = prop.name()
+    _assert_valid_utf8(prop.name, 'property name')
+    property_name = prop.name
     self.validate_property_name(constraint, property_name)
 
-    _assert_condition(not prop.has_deprecated_multi(),
+    _assert_condition(not prop.HasField('deprecated_multi'),
                       'deprecated_multi field not supported.')
-    _assert_condition(not prop.deprecated_value_list(),
+    _assert_condition(not prop.deprecated_value,
                       'deprecated_value field not supported.')
-    _assert_condition(prop.has_value(),
+    _assert_condition(prop.HasField('value'),
                       'Property "%s" has no value.' % property_name)
-    self.validate_value(constraint, prop.value())
+    self.validate_value(constraint, prop.value)
 
   def validate_value(self, constraint, value):
     """Validates a value.
@@ -597,24 +597,24 @@ class _EntityValidator(object):
       ValidationError: if the value is invalid
     """
     self.__validate_value_union(value)
-    if value.has_string_value():
-      _assert_valid_utf8(value.string_value(), 'string value')
-    elif value.has_blob_key_value():
-      _assert_valid_utf8(value.blob_key_value(), 'blob key value')
-    elif value.has_key_value():
-      self.validate_key(KEY_IN_VALUE, value.key_value())
-    elif value.has_entity_value():
+    if value.HasField('string_value'):
+      _assert_valid_utf8(value.string_value, 'string value')
+    elif value.HasField('blob_key_value'):
+      _assert_valid_utf8(value.blob_key_value, 'blob key value')
+    elif value.HasField('key_value'):
+      self.validate_key(KEY_IN_VALUE, value.key_value)
+    elif value.HasField('entity_value'):
       entity_in_value_constraint = _get_entity_in_value_constraint(constraint)
-      self.validate_entity(entity_in_value_constraint, value.entity_value())
-    elif value.list_value_list():
-      _assert_condition(not value.has_indexed(),
+      self.validate_entity(entity_in_value_constraint, value.entity_value)
+    elif value.list_value:
+      _assert_condition(not value.HasField('indexed'),
                         ('A Value containing a list_value cannot specify '
                          'indexed.'))
-      _assert_condition(not value.has_meaning(),
+      _assert_condition(not value.HasField('meaning'),
                         ('A Value containing a list_value cannot specify '
                          'a meaning.'))
-      for sub_value in value.list_value_list():
-        _assert_condition(not sub_value.list_value_list(),
+      for sub_value in value.list_value:
+        _assert_condition(not sub_value.list_value,
                           ('list_value cannot contain a Value containing '
                            'another list_value.'))
         self.validate_value(constraint, sub_value)
@@ -631,16 +631,16 @@ class _EntityValidator(object):
     Raises:
       ValidationError: if the value contains more than one type
     """
-    num_sub_values = (value.has_boolean_value()
-                      + value.has_integer_value()
-                      + value.has_double_value()
-                      + value.has_timestamp_microseconds_value()
-                      + value.has_key_value()
-                      + value.has_blob_key_value()
-                      + value.has_string_value()
-                      + value.has_blob_value()
-                      + value.has_entity_value()
-                      + bool(value.list_value_list()))
+    num_sub_values = (value.HasField('boolean_value')
+                      + value.HasField('integer_value')
+                      + value.HasField('double_value')
+                      + value.HasField('timestamp_microseconds_value')
+                      + value.HasField('key_value')
+                      + value.HasField('blob_key_value')
+                      + value.HasField('string_value')
+                      + value.HasField('blob_value')
+                      + value.HasField('entity_value')
+                      + bool(value.list_value))
     _assert_condition(num_sub_values <= 1,
                       'Value has multiple <type>_value fields set.')
     return num_sub_values
@@ -654,28 +654,28 @@ class _EntityValidator(object):
     Raises:
       ValidationError: if the Value's value type does not match its meaning
     """
-    if not value.has_meaning():
+    if not value.HasField('meaning'):
       return
     message = 'Value meaning %d does not match %s field.'
-    meaning = value.meaning()
+    meaning = value.meaning
     if meaning in _STRING_VALUE_MEANINGS:
-      _assert_condition(value.has_string_value(),
+      _assert_condition(value.HasField('string_value'),
                         message % (meaning, 'string_value'))
     elif meaning in _BLOB_VALUE_MEANINGS:
-      _assert_condition(value.has_blob_value(),
+      _assert_condition(value.HasField('blob_value'),
                         message % (meaning, 'blob_value'))
     elif meaning in _ENTITY_VALUE_MEANINGS:
-      _assert_condition(value.has_entity_value(),
+      _assert_condition(value.HasField('entity_value'),
                         message % (meaning, 'entity_value'))
     elif meaning == datastore_pbs.MEANING_PERCENT:
-      _assert_condition(value.has_integer_value(),
+      _assert_condition(value.HasField('integer_value'),
                         message % (meaning, 'integer_value'))
     elif meaning == datastore_pbs.MEANING_INDEX_ONLY:
-      _assert_condition(not value.has_timestamp_microseconds_value(),
+      _assert_condition(not value.HasField('timestamp_microseconds_value'),
                         message % (meaning, 'timestamp_microseconds_value'))
-      _assert_condition(not value.has_blob_key_value(),
+      _assert_condition(not value.HasField('blob_key_value'),
                         message % (meaning, 'blob_key_value'))
-      _assert_condition(not value.has_entity_value(),
+      _assert_condition(not value.HasField('entity_value'),
                         message % (meaning, 'entity_value'))
     elif meaning == datastore_pbs.MEANING_EMPTY_LIST:
       _assert_condition(self.__validate_value_union(value) == 0,
@@ -696,43 +696,43 @@ class _EntityValidator(object):
     Raises:
       ValidationError: if the value is invalid
     """
-    if not value.has_meaning():
+    if not value.HasField('meaning'):
       return
-    meaning = value.meaning()
+    meaning = value.meaning
     if meaning == datastore_pbs.MEANING_BYTESTRING:
-      _assert_condition((len(value.blob_value())
+      _assert_condition((len(value.blob_value)
                          <= datastore_pbs.MAX_INDEXED_BLOB_BYTES),
                         ('Blob value with meaning %d has more than '
                          'permitted %d bytes.'
                          % (meaning, datastore_pbs.MAX_INDEXED_BLOB_BYTES)))
     elif meaning in (datastore_pbs.MEANING_TEXT, datastore_pbs.MEANING_ZLIB):
-      _assert_condition(not value.indexed(),
+      _assert_condition(not value.indexed,
                         'Indexed value has meaning %d.' % meaning)
     elif meaning == datastore_pbs.MEANING_URL:
-      _assert_condition((len(value.string_value())
+      _assert_condition((len(value.string_value)
                          <= datastore_pbs.MAX_URL_CHARS),
                         'URL value has more than permitted %d characters.'
                         % datastore_pbs.MAX_URL_CHARS)
     elif meaning == datastore_pbs.MEANING_PERCENT:
-      _assert_condition((value.integer_value() >= 0
-                         and value.integer_value() <= 100),
+      _assert_condition((value.integer_value >= 0
+                         and value.integer_value <= 100),
                         'Percent value outside permitted range [0, 100].')
     elif meaning == datastore_pbs.MEANING_GEORSS_POINT:
       property_map = self._validate_predefined_entity_value(
-          value.entity_value(), 'geo point', _POINT_ENTITY_PROPERTY_MAP,
+          value.entity_value, 'geo point', _POINT_ENTITY_PROPERTY_MAP,
           _POINT_ENTITY_REQUIRED_PROPERTIES)
-      latitude = property_map[datastore_pbs.PROPERTY_NAME_X].double_value()
-      longitude = property_map[datastore_pbs.PROPERTY_NAME_Y].double_value()
+      latitude = property_map[datastore_pbs.PROPERTY_NAME_X].double_value
+      longitude = property_map[datastore_pbs.PROPERTY_NAME_Y].double_value
       _assert_condition(abs(latitude) <= 90.0,
                         'Latitude outside permitted range [-90.0, 90.0].')
       _assert_condition(abs(longitude) <= 180.0,
                         'Longitude outside permitted range [-180.0, 180.0].')
     elif meaning == datastore_pbs.MEANING_PREDEFINED_ENTITY_POINT:
-      self._validate_predefined_entity_value(value.entity_value(), 'point',
+      self._validate_predefined_entity_value(value.entity_value, 'point',
                                              _POINT_ENTITY_PROPERTY_MAP,
                                              _POINT_ENTITY_REQUIRED_PROPERTIES)
     elif meaning == datastore_pbs.MEANING_PREDEFINED_ENTITY_USER:
-      self._validate_predefined_entity_value(value.entity_value(), 'user',
+      self._validate_predefined_entity_value(value.entity_value, 'user',
                                              _USER_ENTITY_PROPERTY_MAP,
                                              _USER_ENTITY_REQUIRED_PROPERTIES)
     elif meaning == datastore_pbs.MEANING_INDEX_ONLY:
@@ -753,29 +753,29 @@ class _EntityValidator(object):
       required_properties: a list of required property names
 
     Returns:
-      a dict of entity_v4_pb.Value objects keyed by property name
+      a dict of entity_v4_pb2.Value objects keyed by property name
 
     Raises:
       ValidationError: if the entity is invalid
     """
-    _assert_condition(not entity.has_key(),
+    _assert_condition(not entity.HasField('key'),
                       'The %s entity has a key.' % entity_name)
     property_map = {}
-    for prop in entity.property_list():
-      property_name = prop.name()
+    for prop in entity.property:
+      property_name = prop.name
       _assert_condition(property_name in allowed_property_map,
                         'The %s entity property "%s" is not allowed.'
                         % (entity_name, property_name))
-      value = prop.value()
-      hasser = 'has_%s_value' % allowed_property_map[property_name]
+      value = prop.value
+      hasser = '%s_value' % allowed_property_map[property_name]
       _assert_condition(
-          getattr(value, hasser)(),
+          value.HasField(hasser),
           ('The %s entity property "%s" is the wrong type.'
            % (entity_name, property_name)))
-      _assert_condition(not value.has_meaning(),
+      _assert_condition(not value.HasField('meaning'),
                         'The %s entity property "%s" has a meaning.'
                         % (entity_name, property_name))
-      _assert_condition(not value.indexed(),
+      _assert_condition(not value.indexed,
                         'The %s entity property "%s" is indexed.'
                         % (entity_name, property_name))
       property_map[property_name] = value
@@ -794,23 +794,23 @@ class _EntityValidator(object):
     Raises:
       ValidationError: if the value is invalid
     """
-    if not value.indexed():
+    if not value.indexed:
       return
-    if (value.has_string_value()
-        and value.meaning() != datastore_pbs.MEANING_URL):
+    if (value.HasField('string_value')
+        and value.meaning != datastore_pbs.MEANING_URL):
 
-      _assert_condition((len(value.string_value())
+      _assert_condition((len(value.string_value)
                          <= datastore_pbs.MAX_INDEXED_STRING_CHARS),
                         ('Indexed string value has more than %d permitted '
                          'characters.'
                          % datastore_pbs.MAX_INDEXED_STRING_CHARS))
-    elif value.has_blob_value():
-      _assert_condition((len(value.blob_value())
+    elif value.HasField('blob_value'):
+      _assert_condition((len(value.blob_value)
                          <= datastore_pbs.MAX_INDEXED_BLOB_BYTES),
                         ('Indexed blob value has more than %d permitted '
                          'bytes.' % datastore_pbs.MAX_INDEXED_BLOB_BYTES))
-    elif value.has_entity_value():
-      _assert_condition(value.has_meaning(),
+    elif value.HasField('entity_value'):
+      _assert_condition(value.HasField('meaning'),
                         'Entity value is indexed.')
 
   def validate_property_name(self, constraint, property_name):
@@ -853,7 +853,7 @@ class _QueryValidator(object):
     """Validates a Query.
 
     Args:
-      query: a datastore_v4_pb.Query
+      query: a datastore_v4_pb2.Query
       is_strong_read_consistency: whether the request containing the query
           requested strong read consistency
 
@@ -861,130 +861,131 @@ class _QueryValidator(object):
       ValidationError: if the query is invalid
     """
     _assert_condition((not is_strong_read_consistency
-                       or self._has_ancestor(query.filter())),
+                       or self._has_ancestor(query.filter)),
                       'Global queries do not support strong consistency.')
-    if query.has_filter():
-      self.validate_filter(query.filter())
-    for kind_expression in query.kind_list():
+    if query.HasField('filter'):
+      self.validate_filter(query.filter)
+    for kind_expression in query.kind:
       self.__validate_kind_expression(kind_expression)
     group_by_properties = set()
-    for property_reference in query.group_by_list():
+    for property_reference in query.group_by:
       self.__validate_property_reference(property_reference)
-      group_by_properties.add(property_reference.name())
-    for property_expression in query.projection_list():
+      group_by_properties.add(property_reference.name)
+    for property_expression in query.projection:
       self.__validate_property_expression(property_expression,
                                           group_by_properties)
-    for property_order in query.order_list():
+    for property_order in query.order:
       self.__validate_property_order(property_order)
 
   def validate_filter(self, filt):
     """Validates a Filter.
 
     Args:
-      filt: a datastore_v4_pb.Filter
+      filt: a datastore_v4_pb2.Filter
 
     Raises:
       ValidationError: if the filter is invalid
     """
-    _assert_condition((filt.has_composite_filter()
-                       + filt.has_property_filter() == 1),
+    _assert_condition((filt.HasField('composite_filter')
+                       + filt.HasField('property_filter') == 1),
                       'A filter must have exactly one of its fields set.')
-    if filt.has_composite_filter():
-      comp_filter = filt.composite_filter()
-      _assert_condition(comp_filter.filter_list(),
+    if filt.HasField('composite_filter'):
+      comp_filter = filt.composite_filter
+      _assert_condition(comp_filter.filter,
                         'A composite filter must have at least one sub-filter.')
-      for sub_filter in comp_filter.filter_list():
+      for sub_filter in comp_filter.filter:
         self.validate_filter(sub_filter)
-    elif filt.has_property_filter():
-      prop_filter = filt.property_filter()
-      self.__validate_property_reference(prop_filter.property())
-      _assert_condition(prop_filter.value().indexed(),
+    elif filt.HasField('property_filter'):
+      prop_filter = filt.property_filter
+      self.__validate_property_reference(prop_filter.property)
+      _assert_condition(prop_filter.value.indexed,
                         'A filter value must be indexed.')
       self.__entity_validator.validate_value(READ,
-                                             prop_filter.value())
+                                             prop_filter.value)
 
   def __validate_kind_expression(self, kind_expression):
     """Validates a KindExpression.
 
     Args:
-      kind_expression: a datastore_v4_pb.KindExpression
+      kind_expression: a datastore_v4_pb2.KindExpression
 
     Raises:
       ValidationError: if the kind expression is invalid
     """
-    _assert_valid_utf8(kind_expression.name(), 'kind')
+    _assert_valid_utf8(kind_expression.name, 'kind')
     self.__entity_validator.validate_kind(READ,
-                                          kind_expression.name())
+                                          kind_expression.name)
 
   def __validate_property_reference(self, property_reference):
     """Validates a PropertyReference.
 
     Args:
-      property_reference: a datastore_v4_pb.PropertyReference
+      property_reference: a datastore_v4_pb2.PropertyReference
 
     Raises:
       ValidationError: if the property reference is invalid
     """
-    _assert_valid_utf8(property_reference.name(), 'property name')
+    _assert_valid_utf8(property_reference.name, 'property name')
     self.__entity_validator.validate_property_name(READ,
-                                                   property_reference.name())
+                                                   property_reference.name)
 
   def __validate_property_expression(self, property_expression,
                                      group_by_properties):
     """Validates a PropertyExpression.
 
     Args:
-      property_expression: a datastore_v4_pb.PropertyExpression
+      property_expression: a datastore_v4_pb2.PropertyExpression
       group_by_properties: the set of property names specified as group by
           properties for the query
 
     Raises:
       ValidationError: if the property expression is invalid
     """
-    self.__validate_property_reference(property_expression.property())
+    self.__validate_property_reference(property_expression.property)
     if not group_by_properties:
-      _assert_condition(not property_expression.has_aggregation_function(),
-                        'Aggregation function is not allowed without group by.')
-    elif property_expression.property().name() in group_by_properties:
-      _assert_condition(not property_expression.has_aggregation_function(),
-                        ('Aggregation function is not allowed for properties '
-                         'in group by: %s.'
-                         % property_expression.property().name()))
+      _assert_condition(
+          not property_expression.HasField('aggregation_function'),
+          'Aggregation function is not allowed without group by.')
+    elif property_expression.property.name in group_by_properties:
+      _assert_condition(
+          not property_expression.HasField('aggregation_function'),
+          ('Aggregation function is not allowed for properties '
+           'in group by: %s.' % property_expression.property.name))
     else:
-      _assert_condition(property_expression.has_aggregation_function(),
+      _assert_condition(property_expression.HasField('aggregation_function'),
                         ('Aggregation function is required for properties '
                          'not in group by: %s.'
-                         % property_expression.property().name()))
+                         % property_expression.property.name))
 
   def __validate_property_order(self, property_order):
     """Validates a PropertyOrder.
 
     Args:
-      property_order: a datastore_v4_pb.PropertyOrder
+      property_order: a datastore_v4_pb2.PropertyOrder
 
     Raises:
       ValidationError: if the property expression is invalid
     """
-    self.__validate_property_reference(property_order.property())
+    self.__validate_property_reference(property_order.property)
 
   def _has_ancestor(self, filt):
     """Determines if a filter includes an ancestor filter.
 
     Args:
-      filt: a datastore_v4_pb.Filter
+      filt: a datastore_v4_pb2.Filter
 
     Returns:
       True if the filter includes an ancestor filter, False otherwise
     """
-    if filt.has_property_filter():
-      op = filt.property_filter().operator()
-      name = filt.property_filter().property().name()
-      return (op == datastore_v4_pb.PropertyFilter.HAS_ANCESTOR
+    if filt.HasField('property_filter'):
+      op = filt.property_filter.operator
+      name = filt.property_filter.property.name
+      return (op == datastore_v4_pb2.PropertyFilter.HAS_ANCESTOR
               and name == datastore_pbs.PROPERTY_NAME_KEY)
-    if filt.has_composite_filter():
-      if (filt.composite_filter().operator()
-          == datastore_v4_pb.CompositeFilter.AND):
-        for sub_filter in filt.composite_filter().filter_list():
+    if filt.HasField('composite_filter'):
+      if (filt.composite_filter.operator
+          == datastore_v4_pb2.CompositeFilter.AND):
+        for sub_filter in filt.composite_filter.filter:
           if self._has_ancestor(sub_filter):
             return True
     return False
@@ -1010,7 +1011,7 @@ class _ServiceValidator(object):
     """Validates a normalized BeginTransactionRequest.
 
     Args:
-      req: a datastore_v4_pb.BeginTransactionRequest
+      req: a datastore_v4_pb2.BeginTransactionRequest
 
     Raises:
       ValidationError: if the request is invalid
@@ -1021,7 +1022,7 @@ class _ServiceValidator(object):
     """Validates a normalized RunQueryRequest.
 
     Args:
-      req: a datastore_v4_pb.RunQueryRequest
+      req: a datastore_v4_pb2.RunQueryRequest
 
     Raises:
       ValidationError: if the request is invalid
@@ -1032,29 +1033,29 @@ class _ServiceValidator(object):
     """Validates a normalized CommitRequest.
 
     Args:
-      req: a datastore_v4_pb.CommitRequest
+      req: a datastore_v4_pb2.CommitRequest
 
     Raises:
       ValidationError: if the request is invalid
     """
     _assert_initialized(req)
-    if req.mode() == datastore_v4_pb.CommitRequest.TRANSACTIONAL:
-      _assert_condition(req.has_transaction(),
+    if req.mode == datastore_v4_pb2.CommitRequest.TRANSACTIONAL:
+      _assert_condition(req.HasField('transaction'),
                         'Transactional commit requires a transaction.')
-    elif req.mode() == datastore_v4_pb.CommitRequest.NON_TRANSACTIONAL:
-      _assert_condition(not req.has_transaction(),
+    elif req.mode == datastore_v4_pb2.CommitRequest.NON_TRANSACTIONAL:
+      _assert_condition(not req.HasField('transaction'),
                         ('Non-transactional commit cannot specify a '
                          'transaction.'))
     else:
       _assert_condition(False,
-                        'Unknown commit mode: %d.' % req.mode())
-    self.__validate_deprecated_mutation(req.deprecated_mutation())
+                        'Unknown commit mode: %d.' % req.mode)
+    self.__validate_deprecated_mutation(req.deprecated_mutation)
 
   def validate_run_query_req(self, req):
     """Validates a normalized RunQueryRequest.
 
     Args:
-      req: a normalized datastore_v4_pb.RunQueryRequest
+      req: a normalized datastore_v4_pb2.RunQueryRequest
 
     Raises:
       ValidationError: if the request is invalid
@@ -1062,18 +1063,18 @@ class _ServiceValidator(object):
 
 
 
-    _assert_condition(not req.has_gql_query(), 'GQL not supported.')
+    _assert_condition(not req.HasField('gql_query'), 'GQL not supported.')
     _assert_initialized(req)
-    self.validate_read_options(req.read_options())
+    self.validate_read_options(req.read_options)
     self.__entity_validator.validate_partition_id(READ,
-                                                  req.partition_id())
-    _assert_condition(req.has_query(),
+                                                  req.partition_id)
+    _assert_condition(req.HasField('query'),
                       ('One of fields Query.query and Query.gql_query '
                        'must be set.'))
     self.__query_validator.validate_query(
-        req.query(),
-        (req.read_options().read_consistency()
-         == datastore_v4_pb.ReadOptions.STRONG))
+        req.query,
+        (req.read_options.read_consistency
+         == datastore_v4_pb2.ReadOptions.STRONG))
 
   def validate_continue_query_req(self, req):
     _assert_initialized(req)
@@ -1082,50 +1083,50 @@ class _ServiceValidator(object):
     """Validates a LookupRequest.
 
     Args:
-      req: a datastore_v4_pb.LookupRequest
+      req: a datastore_v4_pb2.LookupRequest
 
     Raises:
       ValidationError: if the request is invalid
     """
     _assert_initialized(req)
-    self.validate_read_options(req.read_options())
-    self.__entity_validator.validate_keys(READ, req.key_list())
+    self.validate_read_options(req.read_options)
+    self.__entity_validator.validate_keys(READ, req.key)
 
   def validate_allocate_ids_req(self, req):
     """Validates an AllocateIdsRequest.
 
     Args:
-      req: a datastore_v4_pb.AllocateIdsRequest
+      req: a datastore_v4_pb2.AllocateIdsRequest
 
     Raises:
       ValidationError: if the request is invalid
     """
     _assert_initialized(req)
-    _assert_condition(not req.allocate_list() or not req.reserve_list(),
+    _assert_condition(not req.allocate or not req.reserve,
                       'Cannot reserve and allocate ids in the same request.')
     self.__entity_validator.validate_keys(ALLOCATE_KEY_ID,
-                                          req.allocate_list())
+                                          req.allocate)
     self.__entity_validator.validate_keys(WRITE,
-                                          req.reserve_list())
+                                          req.reserve)
 
   def validate_read_options(self, read_options):
-    _assert_condition((not read_options.has_read_consistency()
-                       or not read_options.has_transaction()),
+    _assert_condition((not read_options.HasField('read_consistency')
+                       or not read_options.HasField('transaction')),
                       ('Cannot specify both a read consistency and'
                        ' a transaction.'))
 
   def __validate_deprecated_mutation(self, deprecated_mutation):
     self.__entity_validator.validate_entities(WRITE,
-                                              deprecated_mutation.upsert_list())
+                                              deprecated_mutation.upsert)
     self.__entity_validator.validate_entities(WRITE,
-                                              deprecated_mutation.update_list())
+                                              deprecated_mutation.update)
     self.__entity_validator.validate_entities(WRITE,
-                                              deprecated_mutation.insert_list())
+                                              deprecated_mutation.insert)
     self.__entity_validator.validate_entities(
         WRITE_AUTO_ID,
-        deprecated_mutation.insert_auto_id_list())
+        deprecated_mutation.insert_auto_id)
     self.__entity_validator.validate_keys(WRITE,
-                                          deprecated_mutation.delete_list())
+                                          deprecated_mutation.delete)
 
 
 

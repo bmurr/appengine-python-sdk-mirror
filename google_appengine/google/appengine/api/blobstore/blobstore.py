@@ -33,12 +33,14 @@ API. The module defines a `db.Key`-like class that represents a blob key.
 import datetime
 import time
 
+import six
+
+from google.appengine.api import api_base_pb2
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import datastore
 from google.appengine.api import datastore_errors
 from google.appengine.api import datastore_types
-from google.appengine.api import api_base_pb
-from google.appengine.api.blobstore import blobstore_service_pb
+from google.appengine.api.blobstore import blobstore_service_pb2
 from google.appengine.runtime import apiproxy_errors
 
 
@@ -133,17 +135,17 @@ def _ToBlobstoreError(error):
     Otherwise, the original `ApplicationError` is returned.
   """
   error_map = {
-      blobstore_service_pb.BlobstoreServiceError.INTERNAL_ERROR:
-      InternalError,
-      blobstore_service_pb.BlobstoreServiceError.BLOB_NOT_FOUND:
-      BlobNotFoundError,
-      blobstore_service_pb.BlobstoreServiceError.DATA_INDEX_OUT_OF_RANGE:
-      DataIndexOutOfRangeError,
-      blobstore_service_pb.BlobstoreServiceError.BLOB_FETCH_SIZE_TOO_LARGE:
-      BlobFetchSizeTooLargeError,
-      blobstore_service_pb.BlobstoreServiceError.PERMISSION_DENIED:
-      PermissionDeniedError,
-      }
+      blobstore_service_pb2.BlobstoreServiceError.INTERNAL_ERROR:
+          InternalError,
+      blobstore_service_pb2.BlobstoreServiceError.BLOB_NOT_FOUND:
+          BlobNotFoundError,
+      blobstore_service_pb2.BlobstoreServiceError.DATA_INDEX_OUT_OF_RANGE:
+          DataIndexOutOfRangeError,
+      blobstore_service_pb2.BlobstoreServiceError.BLOB_FETCH_SIZE_TOO_LARGE:
+          BlobFetchSizeTooLargeError,
+      blobstore_service_pb2.BlobstoreServiceError.PERMISSION_DENIED:
+          PermissionDeniedError,
+  }
   desired_exc = error_map.get(error.application_error)
   return desired_exc(error.error_detail) if desired_exc else error
 
@@ -316,38 +318,37 @@ def create_upload_url_async(success_path,
     ValueError: If `max_bytes_per_blob` or `max_bytes_total` are not
         positive values.
   """
-  request = blobstore_service_pb.CreateUploadURLRequest()
-  response = blobstore_service_pb.CreateUploadURLResponse()
-  request.set_success_path(success_path)
+  request = blobstore_service_pb2.CreateUploadURLRequest()
+  response = blobstore_service_pb2.CreateUploadURLResponse()
+  request.success_path = success_path
 
   if max_bytes_per_blob is not None:
-    if not isinstance(max_bytes_per_blob, (int, long)):
+    if not isinstance(max_bytes_per_blob, six.integer_types):
       raise TypeError('max_bytes_per_blob must be integer.')
     if max_bytes_per_blob < 1:
       raise ValueError('max_bytes_per_blob must be positive.')
-    request.set_max_upload_size_per_blob_bytes(max_bytes_per_blob)
+    request.max_upload_size_per_blob_bytes = max_bytes_per_blob
 
   if max_bytes_total is not None:
-    if not isinstance(max_bytes_total, (int, long)):
+    if not isinstance(max_bytes_total, six.integer_types):
       raise TypeError('max_bytes_total must be integer.')
     if max_bytes_total < 1:
       raise ValueError('max_bytes_total must be positive.')
-    request.set_max_upload_size_bytes(max_bytes_total)
+    request.max_upload_size_bytes = max_bytes_total
 
-  if (request.has_max_upload_size_bytes() and
-      request.has_max_upload_size_per_blob_bytes()):
-    if (request.max_upload_size_bytes() <
-        request.max_upload_size_per_blob_bytes()):
+  if (request.HasField('max_upload_size_bytes') and
+      request.HasField('max_upload_size_per_blob_bytes')):
+    if request.max_upload_size_bytes < request.max_upload_size_per_blob_bytes:
       raise ValueError('max_bytes_total can not be less'
                        ' than max_upload_size_per_blob_bytes')
 
   if gs_bucket_name is not None:
-    if not isinstance(gs_bucket_name, basestring):
+    if not isinstance(gs_bucket_name, six.string_types):
       raise TypeError('gs_bucket_name must be a string.')
-    request.set_gs_bucket_name(gs_bucket_name)
+    request.gs_bucket_name = gs_bucket_name
 
   return _make_async_call(rpc, 'CreateUploadURL', request, response,
-                          _get_result_hook, lambda rpc: rpc.response.url())
+                          _get_result_hook, lambda rpc: rpc.response.url)
 
 
 
@@ -386,14 +387,14 @@ def delete_async(blob_keys, rpc=None, _token=None):
 
 
 
-  if isinstance(blob_keys, (basestring, BlobKey)):
+  if isinstance(blob_keys, (six.string_types, BlobKey)):
     blob_keys = [blob_keys]
-  request = blobstore_service_pb.DeleteBlobRequest()
+  request = blobstore_service_pb2.DeleteBlobRequest()
   for blob_key in blob_keys:
-    request.add_blob_key(str(blob_key))
+    request.blob_key.append(str(blob_key))
   if _token:
-    request.set_token(_token)
-  response = api_base_pb.VoidProto()
+    request.token = _token
+  response = api_base_pb2.VoidProto()
 
   return _make_async_call(rpc, 'DeleteBlob', request, response,
                           _get_result_hook, lambda rpc: None)
@@ -433,17 +434,17 @@ def fetch_data_async(blob_key, start_index, end_index, rpc=None):
   Returns:
     A UserRPC whose result will be a string as returned by `fetch_data()`.
   """
-  if not isinstance(start_index, (int, long)):
+  if not isinstance(start_index, six.integer_types):
     raise TypeError('start_index must be an integer.')
 
-  if not isinstance(end_index, (int, long)):
+  if not isinstance(end_index, six.integer_types):
     raise TypeError('end_index must be an integer.')
 
   if isinstance(blob_key, BlobKey):
-    blob_key = str(blob_key).decode('utf-8')
+    blob_key = str(blob_key)
   elif isinstance(blob_key, str):
-    blob_key = blob_key.decode('utf-8')
-  elif not isinstance(blob_key, unicode):
+    blob_key = blob_key
+  elif not isinstance(blob_key, six.text_type):
     raise TypeError('blob_key must be str, Unicode or BlobKey: %s' % blob_key)
 
 
@@ -463,15 +464,15 @@ def fetch_data_async(blob_key, start_index, end_index, rpc=None):
     raise BlobFetchSizeTooLargeError(
         'Blob fetch size is too large: %d' % fetch_size)
 
-  request = blobstore_service_pb.FetchDataRequest()
-  response = blobstore_service_pb.FetchDataResponse()
+  request = blobstore_service_pb2.FetchDataRequest()
+  response = blobstore_service_pb2.FetchDataResponse()
 
-  request.set_blob_key(blob_key)
-  request.set_start_index(start_index)
-  request.set_end_index(end_index)
+  request.blob_key = blob_key
+  request.start_index = start_index
+  request.end_index = end_index
 
   return _make_async_call(rpc, 'FetchData', request, response,
-                          _get_result_hook, lambda rpc: rpc.response.data())
+                          _get_result_hook, lambda rpc: rpc.response.data)
 
 
 def create_gs_key(filename, rpc=None):
@@ -510,7 +511,7 @@ def create_gs_key_async(filename, rpc=None):
         `/gs/bucket_name/object_name`.
   """
 
-  if not isinstance(filename, basestring):
+  if not isinstance(filename, six.string_types):
     raise TypeError('filename must be str: %s' % filename)
   if not filename.startswith(GS_PREFIX):
     raise ValueError('filename must start with "/gs/": %s' % filename)
@@ -518,14 +519,11 @@ def create_gs_key_async(filename, rpc=None):
     raise ValueError('filename must use the format '
                      '"/gs/bucket_name/object_name": %s' % filename)
 
-  request = blobstore_service_pb.CreateEncodedGoogleStorageKeyRequest()
-  response = blobstore_service_pb.CreateEncodedGoogleStorageKeyResponse()
+  request = blobstore_service_pb2.CreateEncodedGoogleStorageKeyRequest()
+  response = blobstore_service_pb2.CreateEncodedGoogleStorageKeyResponse()
 
-  request.set_filename(filename)
+  request.filename = filename
 
-  return _make_async_call(rpc,
-                          'CreateEncodedGoogleStorageKey',
-                          request,
+  return _make_async_call(rpc, 'CreateEncodedGoogleStorageKey', request,
                           response,
-                          _get_result_hook,
-                          lambda rpc: rpc.response.blob_key())
+                          _get_result_hook, lambda rpc: rpc.response.blob_key)

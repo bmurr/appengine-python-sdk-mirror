@@ -19,7 +19,7 @@ if False:  # MYPY
 _DEFAULT_YAML_VERSION = (1, 2)
 
 try:
-    from google.appengine._internal.ruamel.ordereddict import ordereddict
+    from ruamel.ordereddict import ordereddict
 except:  # NOQA
     try:
         from collections import OrderedDict
@@ -224,7 +224,7 @@ class Nprint(object):
 
 
 nprint = Nprint()
-nprintf = Nprint('/var/tmp/google.appengine._internal.ruamel.yaml.log')
+nprintf = Nprint('/var/tmp/ruamel.yaml.log')
 
 # char checkers following production rules
 
@@ -251,7 +251,7 @@ def check_anchorname_char(ch):
 
 def version_tnf(t1, t2=None):
     # type: (Any, Any) -> Any
-    from google.appengine._internal.ruamel.yaml import version_info  # NOQA
+    from ruamel.yaml import version_info  # NOQA
 
     if version_info < t1:
         return True

@@ -17,20 +17,20 @@
 
 
 
-"""Higher-level, semantic data types for the datastore. These types
-are expected to be set as attributes of Entities.  See "Supported Data Types"
-in the API Guide.
+"""Higher-level, semantic data types for the datastore.
+
+These types are expected to be set as attributes of `Entities`.
 
 Most of these types are based on XML elements from Atom and GData elements
-from the atom and gd namespaces. For more information, see:
+from the `atom` and `gd` namespaces. For more information, see:
 
-  http://www.atomenabled.org/developers/syndication/
-  https://developers.google.com/gdata/docs/1.0/elements
+- http://www.atomenabled.org/developers/syndication/
+- https://developers.google.com/gdata/docs/1.0/elements
 
 The namespace schemas are:
 
-  http://www.w3.org/2005/Atom
-  http://schemas.google.com/g/2005
+- http://www.w3.org/2005/Atom
+- http://schemas.google.com/g/2005
 """
 
 
@@ -40,28 +40,37 @@ The namespace schemas are:
 
 
 
-from __future__ import absolute_import
-
-
+import array
 import base64
+import binascii
 import calendar
 import datetime
-import os
 import re
+import struct
 import time
 from xml.sax import saxutils
 
-from google.appengine.datastore import entity_pb
-
+from google.appengine.api import cmp_compat
 from google.appengine.api import datastore_errors
+from google.appengine.api import full_app_id
 from google.appengine.api import namespace_manager
 from google.appengine.api import users
-from google.appengine.datastore import datastore_pb
 from google.appengine.datastore import datastore_pbs
-from google.appengine.datastore import entity_v4_pb
+from google.appengine.datastore import entity_v4_pb2
 from google.appengine.datastore import sortable_pb_encoder
+from google.appengine.runtime import context
+import six
+from six.moves import range
+from six.moves import urllib
+from six.moves import zip
 
-from google.appengine._internal import six_subset
+from google.appengine.datastore import entity_bytes_pb2 as entity_pb2
+
+
+
+
+
+
 
 if datastore_pbs._CLOUD_DATASTORE_ENABLED:
   from google.appengine.datastore.datastore_pbs import googledatastore
@@ -132,7 +141,7 @@ _EMPTY_NAMESPACE_ID = 1
 _EPOCH = datetime.datetime.utcfromtimestamp(0)
 
 
-if six_subset.PY2:
+if six.PY2:
   _PREFERRED_NUM_TYPE = long
 else:
   _PREFERRED_NUM_TYPE = int
@@ -151,8 +160,9 @@ UTC = UtcTzinfo()
 
 
 def typename(obj):
-  """Returns the type of obj as a string. More descriptive and specific than
-  type(obj), and safe for any object, unlike __class__."""
+  """Returns the type of obj as a string."""
+
+
   if hasattr(obj, '__class__'):
     return getattr(obj, '__class__').__name__
   else:
@@ -164,28 +174,38 @@ def ValidateString(value,
                    exception=datastore_errors.BadValueError,
                    max_len=_MAX_STRING_LENGTH,
                    empty_ok=False):
-  """Raises an exception if value is not a valid string or a subclass thereof.
+  """Raises an exception if the value is not a valid string or a subclass thereof.
 
-  A string is valid if it's not empty, no more than _MAX_STRING_LENGTH bytes,
+  A string is valid if it's not empty, no more than `_MAX_STRING_LENGTH` bytes,
   and not a Blob. The exception type can be specified with the exception
-  argument; it defaults to BadValueError.
+  argument; it defaults to `BadValueError`.
 
   Args:
-    value: the value to validate.
-    name: the name of this value; used in the exception message.
-    exception: the type of exception to raise.
-    max_len: the maximum allowed length, in bytes.
-    empty_ok: allow empty value.
+    value: The value to validate.
+    name: The name of this value; used in the exception message.
+    exception: The type of exception to raise.
+    max_len: The maximum allowed length, in bytes.
+    empty_ok: Allow empty value.
   """
   if value is None and empty_ok:
     return
-  if not isinstance(value, basestring) or isinstance(value, Blob):
+  if (
+      not isinstance(value, (six.text_type, six.binary_type)) or
+      isinstance(value, Blob)):
     raise exception('%s should be a string; received %s (a %s):' %
                     (name, value, typename(value)))
   if not value and not empty_ok:
     raise exception('%s must not be empty.' % name)
 
-  if len(value.encode('utf-8')) > max_len:
+
+
+
+  conversion_kwargs = {}
+  if six.PY3:
+    conversion_kwargs = dict(errors='surrogatepass')
+  if isinstance(value, six.text_type) and len(value.encode('utf-8', **conversion_kwargs)) > max_len:
+    raise exception('%s must be under %d bytes.' % (name, max_len))
+  if isinstance(value, str) and len(value) > max_len:
     raise exception('%s must be under %d bytes.' % (name, max_len))
 
 
@@ -198,20 +218,20 @@ def ValidateInteger(value,
   """Raises an exception if value is not a valid integer.
 
   An integer is valid if it's not negative or empty and is an integer
-  (either int or long).  The exception type raised can be specified
-  with the exception argument; it defaults to BadValueError.
+  (either `int` or `long`). The exception type raised can be specified
+  with the exception argument; it defaults to `BadValueError`.
 
   Args:
-    value: the value to validate.
-    name: the name of this value; used in the exception message.
-    exception: the type of exception to raise.
-    empty_ok: allow None value.
-    zero_ok: allow zero value.
-    negative_ok: allow negative value.
+    value: The value to validate.
+    name: The name of this value; used in the exception message.
+    exception: The type of exception to raise.
+    empty_ok: Allow `None` value.
+    zero_ok: Allow zero value.
+    negative_ok: Allow negative value.
   """
   if value is None and empty_ok:
     return
-  if not isinstance(value, six_subset.integer_types):
+  if not isinstance(value, six.integer_types):
     raise exception('%s should be an integer; received %s (a %s).' %
                     (name, value, typename(value)))
   if not value and not zero_ok:
@@ -220,29 +240,27 @@ def ValidateInteger(value,
     raise exception('%s must not be negative.' % name)
 
 def ResolveAppId(app):
-  """Validate app id, providing a default.
-
-  If the argument is None, $APPLICATION_ID is substituted.
+  """Validates the application ID, providing a default.
 
   Args:
-    app: The app id argument value to be validated.
+    app: The app ID argument value to be validated.
 
   Returns:
-    The value of app, or the substituted default.  Always a non-empty string.
+    The value of the app, or the substituted default. Always a non-empty string.
 
   Raises:
-    BadArgumentError if the value is empty or not a string.
+    `BadArgumentError` if the value is empty or not a string.
   """
   if app is None:
-    app = os.environ.get('APPLICATION_ID', '')
+    app = full_app_id.get()
   ValidateString(app, 'app', datastore_errors.BadArgumentError)
   return app
 
 
 def ResolveNamespace(namespace):
-  """Validate app namespace, providing a default.
+  """Validates the app namespace, providing a default.
 
-  If the argument is None, namespace_manager.get_namespace() is substituted.
+  If the argument is `None`, `namespace_manager.get_namespace()` is substituted.
 
   Args:
     namespace: The namespace argument value to be validated.
@@ -252,7 +270,7 @@ def ResolveNamespace(namespace):
     to denote the empty namespace.
 
   Raises:
-    BadArgumentError if the value is not a string.
+    `BadArgumentError` if the value is not a string.
   """
   if namespace is None:
     namespace = namespace_manager.get_namespace()
@@ -263,16 +281,16 @@ def ResolveNamespace(namespace):
 
 
 def EncodeAppIdNamespace(app_id, namespace):
-  """Concatenates app id and namespace into a single string.
+  """Concatenates the application ID and namespace into a single string.
 
-  This method is needed for xml and datastore_file_stub.
+  This method is needed for XML and `datastore_file_stub`.
 
   Args:
-    app_id: The application id to encode
-    namespace: The namespace to encode
+    app_id: The application ID to encode.
+    namespace: The namespace to encode.
 
   Returns:
-    The string encoding for the app_id, namespace pair.
+    The string encoding for the `app_id`, namespace pair.
   """
   if not namespace:
     return app_id
@@ -281,17 +299,17 @@ def EncodeAppIdNamespace(app_id, namespace):
 
 
 def DecodeAppIdNamespace(app_namespace_str):
-  """Decodes app_namespace_str into an (app_id, namespace) pair.
+  """Decodes `app_namespace_str` into an `(app_id, namespace)` pair.
 
-  This method is the reverse of EncodeAppIdNamespace and is needed for
-  datastore_file_stub.
+  This method is the reverse of `EncodeAppIdNamespace` and is needed for
+  `datastore_file_stub`.
 
   Args:
-    app_namespace_str: An encoded app_id, namespace pair created by
-      EncodeAppIdNamespace
+    app_namespace_str: An encoded `(app_id, namespace)` pair created by
+      `EncodeAppIdNamespace`.
 
   Returns:
-    (app_id, namespace) pair encoded in app_namespace_str
+    `(app_id, namespace)` pair encoded in `app_namespace_str`.
   """
   sep = app_namespace_str.find(_NAMESPACE_SEPARATOR)
   if sep < 0:
@@ -304,23 +322,24 @@ def SetNamespace(proto, namespace):
   """Sets the namespace for a protocol buffer or clears the field.
 
   Args:
-    proto: the protocol buffer to update
-    namespace: the new namespace (None or an empty string will clear out the
-        field).
+    proto: An `entity_pb2.Reference` to update
+    namespace: The new namespace. `None` or an empty string will clear out the
+        field.
   """
   if not namespace:
-    proto.clear_name_space()
+    proto.ClearField('name_space')
   else:
-    proto.set_name_space(namespace)
+    proto.name_space = namespace
 
 
 def PartitionString(value, separator):
-  """Equivalent to python2.5 str.partition()
-     TODO use str.partition() when python 2.5 is adopted.
+  """Returns a 3-element tuple containing the part before the separator and the part after the separator.
+
+  Equivalent to python2.5 `str.partition()`.
 
   Args:
-    value: String to be partitioned
-    separator: Separator string
+    value: String to be partitioned.
+    separator: Separator string.
   """
   index = value.find(separator)
   if index == -1:
@@ -329,15 +348,15 @@ def PartitionString(value, separator):
     return (value[0:index], separator, value[index+len(separator):len(value)])
 
 
-
+@cmp_compat.total_ordering_from_cmp
 class Key(object):
   """The primary key for a datastore entity.
 
-  A datastore GUID. A Key instance uniquely identifies an entity across all
+  A datastore `GUID`. A `Key` instance uniquely identifies an entity across all
   apps, and includes all information necessary to fetch the entity from the
-  datastore with Get().
+  datastore with `Get()`.
 
-  Key implements __hash__, and key instances are immutable, so Keys may be
+  `Key` implements `__hash__`, and key instances are immutable, so Keys may be
   used in sets and as dictionary keys.
   """
   __reference = None
@@ -349,9 +368,13 @@ class Key(object):
       # a base64-encoded primary key, generated by Key.__str__
       encoded: str
     """
-    self._str = None
+    self._bytes = None
     if encoded is not None:
-      if not isinstance(encoded, basestring):
+      if isinstance(encoded, bytes):
+        pass
+      elif isinstance(encoded, six.text_type):
+        encoded = encoded.encode('utf-8')
+      else:
         try:
           repr_encoded = repr(encoded)
         except:
@@ -363,38 +386,34 @@ class Key(object):
 
         modulo = len(encoded) % 4
         if modulo != 0:
-          encoded += ('=' * (4 - modulo))
+          encoded += (b'=' * (4 - modulo))
 
 
 
 
 
 
-
-        self._str = str(encoded)
-        encoded_pb = base64.urlsafe_b64decode(self._str)
-        self.__reference = entity_pb.Reference(encoded_pb)
+        self._bytes = encoded
+        encoded_pb = base64.urlsafe_b64decode(self._bytes)
+        self.__reference = entity_pb2.Reference.FromString(encoded_pb)
         assert self.__reference.IsInitialized()
 
 
-        self._str = self._str.rstrip('=')
+        self._bytes = self._bytes.rstrip(b'=')
 
-      except (AssertionError, TypeError) as e:
+      except (AssertionError, TypeError, binascii.Error) as e:
         raise datastore_errors.BadKeyError(
           'Invalid string key %s. Details: %s' % (encoded, e))
       except Exception as e:
 
-
-
-
-
-        if e.__class__.__name__ == 'ProtocolBufferDecodeError':
+        if (e.__class__.__name__ == 'ProtocolBufferDecodeError' or
+            e.__class__.__name__ == 'DecodeError'):
           raise datastore_errors.BadKeyError('Invalid string key %s.' % encoded)
         else:
           raise
     else:
 
-      self.__reference = entity_pb.Reference()
+      self.__reference = entity_pb2.Reference()
 
   def to_path(self, _default_id=None, _decode=True, _fail=True):
     """Construct the "path" of this key as a list.
@@ -411,22 +430,14 @@ class Key(object):
 
 
 
-    def Decode(s):
-      if _decode:
-        try:
-          return s.decode('utf-8')
-        except UnicodeDecodeError:
-          if _fail:
-            raise
-      return s
 
     path = []
-    for path_element in self.__reference.path().element_list():
-      path.append(Decode(path_element.type()))
-      if path_element.has_name():
-        path.append(Decode(path_element.name()))
-      elif path_element.has_id():
-        path.append(path_element.id())
+    for path_element in self.__reference.path.element:
+      path.append(path_element.type)
+      if path_element.HasField('name'):
+        path.append(path_element.name)
+      elif path_element.HasField('id'):
+        path.append(path_element.id)
       elif _default_id is not None:
         path.append(_default_id)
       else:
@@ -435,29 +446,29 @@ class Key(object):
 
   @staticmethod
   def from_path(*args, **kwds):
-    """Static method to construct a Key out of a "path" (kind, id or name, ...).
+    """Static method to construct a `Key` out of a "path" (`kind`, `id` or `name`, ...).
 
     This is useful when an application wants to use just the id or name portion
-    of a key in e.g. a URL, where the rest of the URL provides enough context to
-    fill in the rest, i.e. the app id (always implicit), the entity kind, and
-    possibly an ancestor key. Since ids and names are usually small, they're
-    more attractive for use in end-user-visible URLs than the full string
-    representation of a key.
+    of a key in, e.g., a URL, where the rest of the URL provides enough
+    context to fill in the other properties. For example, the app id (always
+    implicit), the entity kind, and possibly an ancestor key. Since ids and
+    names are usually small, they're more attractive for use in end-user-visible
+    URLs than the full string representation of a key.
 
     Args:
-      kind: the entity kind (a str or unicode instance)
-      id_or_name: the id (an int or long) or name (a str or unicode instance)
-      parent: optional parent Key; default None.
-      namespace: optional namespace to use otherwise namespace_manager's
+      kind: The entity kind (a str or unicode instance)
+      id_or_name: The id (an int or long) or name (a str or unicode instance)
+      parent: Optional parent `Key`; default `None`.
+      namespace: Optional namespace to use otherwise namespace_manager's
         default namespace is used.
 
     Returns:
-      A new Key instance whose .kind() and .id() or .name() methods return
-      the *last* kind and id or name positional arguments passed.
+      A new `Key` instance whose `.kind()` and `.id()` or `.name()` methods
+      return the *last* kind and id or name positional arguments passed.
 
     Raises:
-      BadArgumentError for invalid arguments.
-      BadKeyError if the parent key is incomplete.
+      `BadArgumentError` for invalid arguments.
+      `BadKeyError` if the parent key is incomplete.
     """
 
     parent = kwds.pop('parent', None)
@@ -505,27 +516,27 @@ class Key(object):
     if parent is not None:
       ref.CopyFrom(parent.__reference)
     else:
-      ref.set_app(app_id)
+      ref.app = app_id
       SetNamespace(ref, namespace)
 
 
 
-    path = ref.mutable_path()
-    for i in xrange(0, len(args), 2):
+    path = ref.path
+    for i in range(0, len(args), 2):
       kind, id_or_name = args[i:i+2]
-      if isinstance(kind, basestring):
+      if isinstance(kind, six.string_types):
         kind = kind.encode('utf-8')
       else:
         raise datastore_errors.BadArgumentError(
             'Expected a string kind as argument %d; received %r (a %s).' %
             (i + 1, kind, typename(kind)))
-      elem = path.add_element()
-      elem.set_type(kind)
-      if isinstance(id_or_name, six_subset.integer_types):
-        elem.set_id(id_or_name)
-      elif isinstance(id_or_name, basestring):
+      elem = path.element.add()
+      elem.type = kind
+      if isinstance(id_or_name, six.integer_types):
+        elem.id = id_or_name
+      elif isinstance(id_or_name, six.string_types):
         ValidateString(id_or_name, 'name')
-        elem.set_name(id_or_name.encode('utf-8'))
+        elem.name = id_or_name.encode('utf-8')
       else:
         raise datastore_errors.BadArgumentError(
             'Expected an integer id or string name as argument %d; '
@@ -537,15 +548,15 @@ class Key(object):
 
   def app(self):
     """Returns this entity's app id, a string."""
-    if self.__reference.app():
-      return self.__reference.app().decode('utf-8')
+    if self.__reference.app:
+      return self.__reference.app
     else:
       return None
 
   def namespace(self):
     """Returns this entity's namespace, a string."""
-    if self.__reference.has_name_space():
-      return self.__reference.name_space().decode('utf-8')
+    if self.__reference.HasField('name_space'):
+      return self.__reference.name_space
     else:
       return ''
 
@@ -553,25 +564,24 @@ class Key(object):
 
   def kind(self):
     """Returns this entity's kind, as a string."""
-    if self.__reference.path().element_size() > 0:
-      encoded = self.__reference.path().element_list()[-1].type()
-      return six_subset.text_type(encoded.decode('utf-8'))
+    if self.__reference.path.element:
+      return self.__reference.path.element[-1].type
     else:
       return None
 
   def id(self):
     """Returns this entity's id, or None if it doesn't have one."""
-    elems = self.__reference.path().element_list()
-    if elems and elems[-1].has_id() and elems[-1].id():
-      return elems[-1].id()
+    elems = self.__reference.path.element
+    if elems and elems[-1].HasField('id') and elems[-1].id:
+      return elems[-1].id
     else:
       return None
 
   def name(self):
     """Returns this entity's name, or None if it doesn't have one."""
-    elems = self.__reference.path().element_list()
-    if elems and elems[-1].has_name() and elems[-1].name():
-      return elems[-1].name().decode('utf-8')
+    elems = self.__reference.path.element
+    if elems and elems[-1].HasField('name') and elems[-1].name:
+      return elems[-1].name
     else:
       return None
 
@@ -586,20 +596,20 @@ class Key(object):
   def has_id_or_name(self):
     """Returns True if this entity has an id or name, False otherwise.
     """
-    elems = self.__reference.path().element_list()
+    elems = self.__reference.path.element
     if elems:
       e = elems[-1]
-      return bool(e.name() or e.id())
+      return bool(e.name or e.id)
     else:
       return False
 
   def parent(self):
     """Returns this entity's parent, as a Key. If this entity has no parent,
     returns None."""
-    if self.__reference.path().element_size() > 1:
+    if len(self.__reference.path.element) > 1:
       parent = Key()
       parent.__reference.CopyFrom(self.__reference)
-      del parent.__reference.path().element_list()[-1]
+      del parent.__reference.path.element[-1]
       return parent
     else:
       return None
@@ -607,7 +617,7 @@ class Key(object):
   def ToTagUri(self):
     """Returns a tag: URI for this entity for use in XML output.
 
-    Foreign keys for entities may be represented in XML output as tag URIs.
+    Foreign keys for entities may be represented in XML output as tag `URIs`.
     RFC 4151 describes the tag URI scheme. From http://taguri.org/:
 
       The tag algorithm lets people mint - create - identifiers that no one
@@ -616,26 +626,28 @@ class Key(object):
       and remember. The identifiers conform to the URI (URL) Syntax.
 
     Tag URIs for entities use the app's auth domain and the date that the URI
-     is generated. The namespace-specific part is <kind>[<key>].
+     is generated. The namespace-specific part is `<kind>[<key>]`.
 
     For example, here is the tag URI for a Kitten with the key "Fluffy" in the
     catsinsinks app:
 
       tag:catsinsinks.googleapps.com,2006-08-29:Kitten[Fluffy]
 
-    Raises a BadKeyError if this entity's key is incomplete.
+    Raises a `BadKeyError` if this entity's key is incomplete.
     """
     if not self.has_id_or_name():
       raise datastore_errors.BadKeyError(
-        'ToTagUri() called for an entity with an incomplete key.')
+          'ToTagUri() called for an entity with an incomplete key.'
+      )
 
-    return u'tag:%s.%s,%s:%s[%s]' % (
+    return 'tag:%s.%s,%s:%s[%s]' % (
 
         saxutils.escape(EncodeAppIdNamespace(self.app(), self.namespace())),
-        os.environ['AUTH_DOMAIN'],
+        context.get('AUTH_DOMAIN'),
         datetime.date.today().isoformat(),
         saxutils.escape(self.kind()),
-        saxutils.escape(str(self)))
+        saxutils.escape(str(self)),
+    )
 
   ToXml = ToTagUri
 
@@ -646,26 +658,31 @@ class Key(object):
     entity and it is incomplete.
     """
     group = Key._FromPb(self.__reference)
-    del group.__reference.path().element_list()[1:]
+    del group.__reference.path.element[1:]
     return group
 
   @staticmethod
   def _FromPb(pb):
-    """Static factory method. Creates a Key from an entity_pb.Reference.
+    """Static factory method.
+
+    Creates a Key from an entity_pb2.Reference.
 
     Not intended to be used by application developers. Enforced by hiding the
-    entity_pb classes.
+    entity_pb2 classes.
 
     Args:
-      pb: entity_pb.Reference
+      pb: entity_pb2.Reference
+
+    Returns:
+      A datastore_types.Key.
     """
-    if not isinstance(pb, entity_pb.Reference):
+    if not isinstance(pb, entity_pb2.Reference):
       raise datastore_errors.BadArgumentError(
-        'Key constructor takes an entity_pb.Reference; received %s (a %s).' %
-        (pb, typename(pb)))
+          'Key constructor takes an entity_pb2.Reference; received %s (a %s).' %
+          (pb, typename(pb)))
 
     key = Key()
-    key.__reference = entity_pb.Reference()
+    key.__reference = entity_pb2.Reference()
     key.__reference.CopyFrom(pb)
     return key
 
@@ -673,29 +690,23 @@ class Key(object):
     """Converts this Key to its protocol buffer representation.
 
     Not intended to be used by application developers. Enforced by hiding the
-    entity_pb classes.
+    entity_pb classes.e
 
     Returns:
-      # the Reference PB representation of this Key
-      entity_pb.Reference
+      # The `Reference` `PB` representation of this Key
+      entity_pb2.Reference
     """
-    pb = entity_pb.Reference()
+    pb = entity_pb2.Reference()
     pb.CopyFrom(self.__reference)
-
-
-
-    pb.app().decode('utf-8')
-    for pathelem in pb.path().element_list():
-      pathelem.type().decode('utf-8')
 
     return pb
 
   def __str__(self):
-    """Encodes this Key as an opaque string.
+    """Encodes this `Key` as an opaque string.
 
     Returns a string representation of this key, suitable for use in HTML,
     URLs, and other similar use cases. If the entity's key is incomplete,
-    raises a BadKeyError.
+    raises a `BadKeyError`.
 
     Unfortunately, this string encoding isn't particularly compact, and its
     length varies with the length of the path. If you want a shorter identifier
@@ -709,40 +720,35 @@ class Key(object):
 
 
     try:
-      if self._str is not None:
-        return self._str
+      if self._bytes is not None:
+        return self._bytes.decode('utf-8')
     except AttributeError:
       pass
     if (self.has_id_or_name()):
-      encoded = base64.urlsafe_b64encode(self.__reference.Encode())
-      self._str = encoded.replace('=', '')
+      encoded = base64.urlsafe_b64encode(self.__reference.SerializeToString())
+      self._bytes = encoded.replace(b'=', b'')
     else:
       raise datastore_errors.BadKeyError(
         'Cannot string encode an incomplete key!\n%s' % self.__reference)
-    return self._str
-
+    return self._bytes.decode('utf-8')
 
   def __repr__(self):
-    """Returns an eval()able string representation of this key.
-
-    Returns a Python string of the form 'datastore_types.Key.from_path(...)'
-    that can be used to recreate this key.
+    """Returns a Python string of the form `datastore_types.Key.from_path(...)` that can be used to recreate this key.
 
     Returns:
-      string
+      String
     """
     args = []
-    for elem in self.__reference.path().element_list():
-      args.append(repr(elem.type().decode('utf-8')))
-      if elem.has_name():
-        args.append(repr(elem.name().decode('utf-8')))
+    for elem in self.__reference.path.element:
+      args.append(six.text_type(repr(elem.type)))
+      if elem.HasField('name'):
+        args.append(six.text_type(repr(elem.name)))
       else:
-        args.append(repr(elem.id()))
+        args.append(repr(elem.id))
 
-    args.append('_app=%r' % self.__reference.app().decode('utf-8'))
-    if self.__reference.has_name_space():
-      args.append('namespace=%r' %
-          self.__reference.name_space().decode('utf-8'))
+    args.append('_app=%r' % self.__reference.app)
+    if self.__reference.HasField('name_space'):
+      args.append('namespace=%r' % six.ensure_text(self.__reference.name_space))
     return u'datastore_types.Key.from_path(%s)' % ', '.join(args)
 
   def __cmp__(self, other):
@@ -759,21 +765,22 @@ class Key(object):
       Zero if "other" is equal to self
       Positive if self is greater than "other"
     """
+
     if not isinstance(other, Key):
       return -2
 
-    self_args = [self.__reference.app(), self.__reference.name_space()]
+    self_args = [self.__reference.app, self.__reference.name_space]
     self_args += self.to_path(_default_id=0, _decode=False)
 
-    other_args = [other.__reference.app(), other.__reference.name_space()]
+    other_args = [other.__reference.app, other.__reference.name_space]
     other_args += other.to_path(_default_id=0, _decode=False)
 
     for self_component, other_component in zip(self_args, other_args):
-      comparison = cmp(self_component, other_component)
+      comparison = cmp_compat.cmp(self_component, other_component)
       if comparison != 0:
         return comparison
 
-    return cmp(len(self_args), len(other_args))
+    return cmp_compat.cmp(len(self_args), len(other_args))
 
   def __hash__(self):
     """Returns an integer hash of this key.
@@ -785,7 +792,7 @@ class Key(object):
       int
     """
     args = self.to_path(_default_id=0, _fail=False)
-    args.append(self.__reference.app())
+    args.append(self.__reference.app)
     return hash(type(args)) ^ hash(tuple(args))
 
 
@@ -819,18 +826,16 @@ def _When(val):
 
 
 
-class Category(six_subset.text_type):
+class Category(six.text_type):
   """A tag, ie a descriptive word or phrase. Entities may be tagged by users,
   and later returned by a queries for that tag. Tags can also be used for
   ranking results (frequency), photo captions, clustering, activity, etc.
 
-  Here's a more in-depth description:  http://www.zeldman.com/daily/0405d.shtml
-
-  This is the Atom "category" element. In XML output, the tag is provided as
+  This is the Atom `category` element. In XML output, the tag is provided as
   the term attribute. See:
   http://www.atomenabled.org/developers/syndication/#category
 
-  Raises BadValueError if tag is not a string or subtype.
+  Raises `BadValueError` if tag is not a string or subtype.
   """
   TERM = 'user-tag'
 
@@ -843,24 +848,24 @@ class Category(six_subset.text_type):
                                                  saxutils.quoteattr(self))
 
 
-class Link(six_subset.text_type):
+class Link(six.text_type):
   """A fully qualified URL. Usually http: scheme, but may also be file:, ftp:,
   news:, among others.
 
-  If you have email (mailto:) or instant messaging (aim:, xmpp:) links,
-  consider using the Email or IM classes instead.
+  If you have email (`mailto:`) or instant messaging (`aim:`, `xmpp:`) links,
+  consider using the `Email` or `IM` classes instead.
 
-  This is the Atom "link" element. In XML output, the link is provided as the
+  This is the Atom `link` element. In XML output, the link is provided as the
   href attribute. See:
   http://www.atomenabled.org/developers/syndication/#link
 
-  Raises BadValueError if link is not a fully qualified, well-formed URL.
+  Raises `BadValueError` if link is not a fully qualified, well-formed URL.
   """
   def __init__(self, link):
     super(Link, self).__init__()
     ValidateString(link, 'link', max_len=_MAX_LINK_PROPERTY_LENGTH)
 
-    scheme, domain, path, _, _, _ = six_subset.urlparse_fn(link)
+    scheme, domain, path, _, _, _ = urllib.parse.urlparse(link)
     if (not scheme or (scheme != 'file' and not domain) or
                       (scheme == 'file' and not path)):
       raise datastore_errors.BadValueError('Invalid URL: %s' % link)
@@ -869,15 +874,14 @@ class Link(six_subset.text_type):
     return u'<link href=%s />' % saxutils.quoteattr(self)
 
 
-class Email(six_subset.text_type):
-  """An RFC2822 email address. Makes no attempt at validation; apart from
-  checking MX records, email address validation is a rathole.
+class Email(six.text_type):
+  """An RFC2822 email address. Makes no attempt at validation.
 
-  This is the gd:email element. In XML output, the email address is provided as
-  the address attribute. See:
+  This is the `gd:email` element. In XML output, the email address is provided
+  as the address attribute. See:
   https://developers.google.com/gdata/docs/1.0/elements#gdEmail
 
-  Raises BadValueError if email is not a valid email address.
+  Raises `BadValueError` if email is not a valid email address.
   """
   def __init__(self, email):
     super(Email, self).__init__()
@@ -887,16 +891,16 @@ class Email(six_subset.text_type):
     return u'<gd:email address=%s />' % saxutils.quoteattr(self)
 
 
+@cmp_compat.total_ordering_from_cmp
 class GeoPt(object):
   """A geographical point, specified by floating-point latitude and longitude
   coordinates. Often used to integrate with mapping sites like Google Maps.
-  May also be used as ICBM coordinates.
 
-  This is the georss:point element. In XML output, the coordinates are
-  provided as the lat and lon attributes. See: http://georss.org/
+  This is the `georss:point` element. In XML output, the coordinates are
+  provided as the `lat` and `lon` attributes. See: http://georss.org/
 
-  Serializes to '<lat>,<lon>'. Raises BadValueError if it's passed an invalid
-  serialized string, or if lat and lon are not valid floating points in the
+  Serializes to `<lat>,<lon>`. Raises `BadValueError` if it's passed an invalid
+  serialized string, or if `lat` and `lon` are not valid floating points in the
   ranges [-90, 90] and [-180, 180], respectively.
   """
   lat = None
@@ -932,6 +936,8 @@ class GeoPt(object):
     self.lon = lon
 
   def __cmp__(self, other):
+    """Returns negative, zero, or positive when comparing two `GeoPts`."""
+
     if not isinstance(other, GeoPt):
       try:
         other = GeoPt(other)
@@ -939,16 +945,16 @@ class GeoPt(object):
         return NotImplemented
 
 
-    lat_cmp = cmp(self.lat, other.lat)
+    lat_cmp = cmp_compat.cmp(self.lat, other.lat)
     if lat_cmp != 0:
       return lat_cmp
     else:
-      return cmp(self.lon, other.lon)
+      return cmp_compat.cmp(self.lon, other.lon)
 
   def __hash__(self):
     """Returns an integer hash of this point.
 
-    Implements Python's hash protocol so that GeoPts may be used in sets and
+    Implements Python's hash protocol so that `GeoPts` may be used in sets and
     as dictionary keys.
 
     Returns:
@@ -957,26 +963,25 @@ class GeoPt(object):
     return hash((self.lat, self.lon))
 
   def __repr__(self):
-    """Returns an eval()able string representation of this GeoPt.
-
-    The returned string is of the form 'datastore_types.GeoPt([lat], [lon])'.
+    """Returns a string of the form `datastore_types.GeoPt([lat], [lon])`.
 
     Returns:
-      string
+      String
     """
     return 'datastore_types.GeoPt(%r, %r)' % (self.lat, self.lon)
 
   def __unicode__(self):
-    return u'%s,%s' % (six_subset.text_type(self.lat),
-                       six_subset.text_type(self.lon))
+    return u'%s,%s' % (six.text_type(self.lat),
+                       six.text_type(self.lon))
 
   __str__ = __unicode__
 
   def ToXml(self):
-    return u'<georss:point>%s %s</georss:point>' % (six_subset.text_type(
-        self.lat), six_subset.text_type(self.lon))
+    return u'<georss:point>%s %s</georss:point>' % (six.text_type(
+        self.lat), six.text_type(self.lon))
 
 
+@cmp_compat.total_ordering_from_cmp
 class IM(object):
   """An instant messaging handle. Includes both an address and its protocol.
   The protocol value is either a standard IM scheme or a URL identifying the
@@ -998,7 +1003,7 @@ class IM(object):
   provided as the address and protocol attributes, respectively. See:
   https://developers.google.com/gdata/docs/1.0/elements#gdIm
 
-  Serializes to '<protocol> <address>'. Raises BadValueError if tag is not a
+  Serializes to `<protocol> <address>`. Raises `BadValueError` if tag is not a
   standard IM scheme or a URL.
   """
   PROTOCOLS = [ 'sip', 'unknown', 'xmpp' ]
@@ -1026,6 +1031,8 @@ class IM(object):
     self.protocol = protocol
 
   def __cmp__(self, other):
+    """Returns negative, zero, or positive when comparing two `IM`s."""
+
     if not isinstance(other, IM):
       try:
         other = IM(other)
@@ -1042,15 +1049,11 @@ class IM(object):
 
 
 
-    return cmp((self.address, self.protocol),
-               (other.address, other.protocol))
+    return cmp_compat.cmp((self.address, self.protocol),
+                          (other.address, other.protocol))
 
   def __repr__(self):
-    """Returns an eval()able string representation of this IM.
-
-    The returned string is of the form:
-
-      datastore_types.IM('address', 'protocol')
+    """Returns a string of the form `datastore_types.IM('address', 'protocol')`.
 
     Returns:
       string
@@ -1068,10 +1071,10 @@ class IM(object):
              saxutils.quoteattr(self.address)))
 
   def __len__(self):
-    return len(six_subset.text_type(self))
+    return len(six.text_type(self))
 
 
-class PhoneNumber(six_subset.text_type):
+class PhoneNumber(six.text_type):
   """A human-readable phone number or address.
 
   No validation is performed. Phone numbers have many different formats -
@@ -1079,11 +1082,11 @@ class PhoneNumber(six_subset.text_type):
   VOIP, SMS, and alternative networks like Skype, XFire and Roger Wilco. They
   all have their own numbering and addressing formats.
 
-  This is the gd:phoneNumber element. In XML output, the phone number is
+  This is the `gd:phoneNumber` element. In XML output, the phone number is
   provided as the text of the element. See:
   https://developers.google.com/gdata/docs/1.0/elements#gdPhoneNumber
 
-  Raises BadValueError if phone is not a string or subtype.
+  Raises `BadValueError` if phone is not a string or subtype.
   """
   def __init__(self, phone):
     super(PhoneNumber, self).__init__()
@@ -1093,7 +1096,7 @@ class PhoneNumber(six_subset.text_type):
     return u'<gd:phoneNumber>%s</gd:phoneNumber>' % saxutils.escape(self)
 
 
-class PostalAddress(six_subset.text_type):
+class PostalAddress(six.text_type):
   """A human-readable mailing address. Again, mailing address formats vary
   widely, so no validation is performed.
 
@@ -1101,7 +1104,7 @@ class PostalAddress(six_subset.text_type):
   as the text of the element. See:
   https://developers.google.com/gdata/docs/1.0/elements#gdPostalAddress
 
-  Raises BadValueError if address is not a string or subtype.
+  Raises `BadValueError` if address is not a string or subtype.
   """
   def __init__(self, address):
     super(PostalAddress, self).__init__()
@@ -1120,7 +1123,7 @@ class Rating(_PREFERRED_NUM_TYPE):
   https://developers.google.com/gdata/docs/1.0/elements#gdRating
 
   Serializes to the decimal string representation of the rating. Raises
-  BadValueError if the rating is not an integer in the range [0, 100].
+  `BadValueError` if the rating is not an integer in the range [0, 100].
   """
   MIN = 0
   MAX = 100
@@ -1148,7 +1151,7 @@ class Rating(_PREFERRED_NUM_TYPE):
             (self, Rating.MIN, Rating.MAX))
 
 
-class Text(six_subset.text_type):
+class Text(six.text_type):
   """A long string type.
 
   Strings of any length can be stored in the datastore using this
@@ -1163,18 +1166,18 @@ class Text(six_subset.text_type):
 
     Args:
       arg: optional unicode or str instance; default u''
-      encoding: optional encoding; disallowed when isinstance(arg, unicode),
-                defaults to 'ascii' when isinstance(arg, str);
+      encoding: optional encoding; disallowed when `isinstance(arg, unicode)`,
+                defaults to `ascii` when `isinstance(arg, str)`;
     """
     if arg is None:
       arg = u''
-    if isinstance(arg, six_subset.text_type):
+    if isinstance(arg, six.text_type):
       if encoding is not None:
         raise TypeError('Text() with a unicode argument '
                         'should not specify an encoding')
       return super(Text, cls).__new__(cls, arg)
 
-    if isinstance(arg, six_subset.string_types):
+    if isinstance(arg, bytes):
       if encoding is None:
         encoding = 'ascii'
       return super(Text, cls).__new__(cls, arg, encoding)
@@ -1182,27 +1185,29 @@ class Text(six_subset.text_type):
     raise TypeError('Text() argument should be str or unicode, not %s' %
                     type(arg).__name__)
 
-class _BaseByteType(str):
+
+class _BaseByteType(bytes):
   """A base class for datastore types that are encoded as bytes.
 
-  This behaves identically to the Python str type, except for the
-  constructor, which only accepts str arguments.
+  This behaves identically to the Python bytes type, except for the
+  constructor, which only accepts bytes arguments.
   """
 
   def __new__(cls, arg=None):
     """Constructor.
 
-    We only accept str instances.
+    We only accept bytes instances.
 
     Args:
-      arg: optional str instance (default '')
+      arg: optional bytes instance (default b'')
     """
     if arg is None:
-      arg = ''
-    if isinstance(arg, str):
+      arg = b''
+
+    if isinstance(arg, bytes):
       return super(_BaseByteType, cls).__new__(cls, arg)
 
-    raise TypeError('%s() argument should be str instance, not %s' %
+    raise TypeError('%s() argument should be bytes instance, not %s' %
                     (cls.__name__, type(arg).__name__))
 
   def ToXml(self):
@@ -1211,20 +1216,27 @@ class _BaseByteType(str):
     Returns:
       Base64 encoded version of itself for safe insertion in to an XML document.
     """
-    encoded = base64.urlsafe_b64encode(self)
+    encoded = base64.urlsafe_b64encode(self).decode('utf-8')
     return saxutils.escape(encoded)
+
+  if six.PY3:
+
+
+    def __str__(self):
+      return self.decode('utf-8')
 
 
 class Blob(_BaseByteType):
   """A blob type, appropriate for storing binary data of any length.
 
-  This behaves identically to the Python str type, except for the
-  constructor, which only accepts str arguments.
+  This behaves identically to the Python bytes type, except for the
+  constructor, which only accepts bytes arguments.
   """
 
-  def __init__(self, *args, **kwargs):
-    super(Blob, self).__init__(*args, **kwargs)
+  def __new__(cls, *args, **kwargs):
+    self = super(Blob, cls).__new__(cls, *args, **kwargs)
     self._meaning_uri = None
+    return self
 
   @property
   def meaning_uri(self):
@@ -1236,22 +1248,23 @@ class Blob(_BaseByteType):
 
 
 class EmbeddedEntity(_BaseByteType):
-  """A proto encoded EntityProto.
+  """A proto encoded `EntityProto`.
 
   This behaves identically to Blob, except for the
-  constructor, which accepts a str or EntityProto argument.
+  constructor, which accepts a bytes or `EntityProto` argument.
 
-  Can be decoded using datastore.Entity.FromProto(), db.model_from_protobuf() or
-  ndb.LocalStructuredProperty.
+  Can be decoded using `datastore.Entity.FromProto()`,
+  `db.model_from_protobuf()`, or
+  `ndb.LocalStructuredProperty`.
   """
 
   def __new__(cls, arg=None):
     """Constructor.
 
     Args:
-      arg: optional str or EntityProto instance (default '')
+      arg: Optional str or `EntityProto` instance (default `''`).
     """
-    if isinstance(arg, entity_pb.EntityProto):
+    if isinstance(arg, entity_pb2.EntityProto):
       arg = arg.SerializePartialToString()
     return super(EmbeddedEntity, cls).__new__(cls, arg)
 
@@ -1265,41 +1278,39 @@ class ByteString(_BaseByteType):
   pass
 
 
+@cmp_compat.total_ordering_from_cmp
 class BlobKey(object):
   """Key used to identify a blob in Blobstore.
 
   This object wraps a string that gets used internally by the Blobstore API
-  to identify application blobs.  The BlobKey corresponds to the entity name
-  of the underlying BlobReference entity.
+  to identify application blobs. The `BlobKey` corresponds to the entity name
+  of the underlying `BlobReference` entity.
 
-  This class is exposed in the API in both google.appengine.ext.db and
-  google.appengine.ext.blobstore.
+  This class is exposed in the API in both `google.appengine.ext.db` and
+  `google.appengine.ext.blobstore`.
   """
 
   def __init__(self, blob_key):
     """Constructor.
 
-    Used to convert a string to a BlobKey.  Normally used internally by
+    Used to convert a string to a `BlobKey`.  Normally used internally by
     Blobstore API.
 
     Args:
-      blob_key:  Key name of BlobReference that this key belongs to.
+      blob_key:  Key name of `BlobReference` that this key belongs to.
     """
     ValidateString(blob_key, 'blob-key', empty_ok=True)
     self.__blob_key = blob_key
 
   def __str__(self):
     """Convert to string."""
-    return self.__blob_key
+    return six.ensure_str(self.__blob_key)
 
   def __repr__(self):
-    """Returns an eval()able string representation of this key.
-
-    Returns a Python string of the form 'datastore_types.BlobKey(...)'
-    that can be used to recreate this key.
+    """Returns a Python string of the form 'datastore_types.BlobKey(...)' that can be used to recreate this key.
 
     Returns:
-      string
+      String
     """
     return 'datastore_types.%s(%r)' % (type(self).__name__, self.__blob_key)
 
@@ -1307,9 +1318,9 @@ class BlobKey(object):
 
 
     if type(other) is type(self):
-      return cmp(str(self), str(other))
-    elif isinstance(other, six_subset.string_types):
-      return cmp(self.__blob_key, other)
+      return cmp_compat.cmp(str(self), str(other))
+    elif isinstance(other, six.string_types):
+      return cmp_compat.cmp(self.__blob_key, other)
     else:
       return NotImplemented
 
@@ -1325,23 +1336,23 @@ _PROPERTY_MEANINGS = {
 
 
 
-  Blob:              entity_pb.Property.BLOB,
-  EmbeddedEntity:    entity_pb.Property.ENTITY_PROTO,
-  ByteString:        entity_pb.Property.BYTESTRING,
-  Text:              entity_pb.Property.TEXT,
-  datetime.datetime: entity_pb.Property.GD_WHEN,
-  datetime.date:     entity_pb.Property.GD_WHEN,
-  datetime.time:     entity_pb.Property.GD_WHEN,
-  _OverflowDateTime: entity_pb.Property.GD_WHEN,
-  Category:          entity_pb.Property.ATOM_CATEGORY,
-  Link:              entity_pb.Property.ATOM_LINK,
-  Email:             entity_pb.Property.GD_EMAIL,
-  GeoPt:             entity_pb.Property.GEORSS_POINT,
-  IM:                entity_pb.Property.GD_IM,
-  PhoneNumber:       entity_pb.Property.GD_PHONENUMBER,
-  PostalAddress:     entity_pb.Property.GD_POSTALADDRESS,
-  Rating:            entity_pb.Property.GD_RATING,
-  BlobKey:           entity_pb.Property.BLOBKEY,
+    Blob: entity_pb2.Property.BLOB,
+    EmbeddedEntity: entity_pb2.Property.ENTITY_PROTO,
+    ByteString: entity_pb2.Property.BYTESTRING,
+    Text: entity_pb2.Property.TEXT,
+    datetime.datetime: entity_pb2.Property.GD_WHEN,
+    datetime.date: entity_pb2.Property.GD_WHEN,
+    datetime.time: entity_pb2.Property.GD_WHEN,
+    _OverflowDateTime: entity_pb2.Property.GD_WHEN,
+    Category: entity_pb2.Property.ATOM_CATEGORY,
+    Link: entity_pb2.Property.ATOM_LINK,
+    Email: entity_pb2.Property.GD_EMAIL,
+    GeoPt: entity_pb2.Property.GEORSS_POINT,
+    IM: entity_pb2.Property.GD_IM,
+    PhoneNumber: entity_pb2.Property.GD_PHONENUMBER,
+    PostalAddress: entity_pb2.Property.GD_POSTALADDRESS,
+    Rating: entity_pb2.Property.GD_RATING,
+    BlobKey: entity_pb2.Property.BLOBKEY,
 }
 
 
@@ -1367,17 +1378,18 @@ _PROPERTY_TYPES = frozenset([
     str,
     Text,
     type(None),
-    six_subset.text_type,
+    six.text_type,
     users.User,
     BlobKey,
+    bytes,
 ])
 
 
 
 
 _RAW_PROPERTY_TYPES = (Blob, Text, EmbeddedEntity)
-_RAW_PROPERTY_MEANINGS = (entity_pb.Property.BLOB, entity_pb.Property.TEXT,
-                          entity_pb.Property.ENTITY_PROTO)
+_RAW_PROPERTY_MEANINGS = (entity_pb2.Property.BLOB, entity_pb2.Property.TEXT,
+                          entity_pb2.Property.ENTITY_PROTO)
 
 
 def ValidatePropertyInteger(name, value):
@@ -1388,7 +1400,7 @@ def ValidatePropertyInteger(name, value):
     value: Integer value.
 
   Raises:
-    OverflowError if the value does not fit within a signed int64.
+    `OverflowError` if the value does not fit within a signed `int64`.
   """
   if not (-0x8000000000000000 <= value <= 0x7fffffffffffffff):
     raise OverflowError('%d is out of bounds for int64' % value)
@@ -1403,10 +1415,10 @@ def ValidateStringLength(name, value, max_len):
     max_len: Maximum length the string may be.
 
   Raises:
-    OverflowError if the value is larger than the maximum length.
+    `OverflowError` if the value is larger than the maximum length.
   """
 
-  if isinstance(value, six_subset.text_type):
+  if isinstance(value, six.text_type):
     value = value.encode('utf-8')
 
   if len(value) > max_len:
@@ -1427,7 +1439,7 @@ def ValidatePropertyString(name, value):
 
 
 def ValidatePropertyLink(name, value):
-  """Validates the length of an indexed Link property.
+  """Validates the length of an indexed `Link` property.
 
   Args:
     name: Name of the property this is for.
@@ -1447,14 +1459,14 @@ def ValidatePropertyNothing(name, value):
 
 
 def ValidatePropertyKey(name, value):
-  """Raises an exception if the supplied datastore.Key instance is invalid.
+  """Raises an exception if the supplied `datastore.Key` instance is invalid.
 
   Args:
     name: Name of the property this is for.
-    value: A datastore.Key instance.
+    value: A `datastore.Key` instance.
 
   Raises:
-    datastore_errors.BadValueError if the value is invalid.
+    `datastore_errors.BadValueError` if the value is invalid.
   """
   if not value.has_id_or_name():
     raise datastore_errors.BadValueError(
@@ -1488,40 +1500,53 @@ _VALIDATE_PROPERTY_VALUES = {
     str: ValidatePropertyNothing,
     Text: ValidatePropertyNothing,
     type(None): ValidatePropertyNothing,
-    six_subset.text_type: ValidatePropertyNothing,
+    six.text_type: ValidatePropertyNothing,
+    bytes: ValidatePropertyNothing,
     users.User: ValidatePropertyNothing,
     BlobKey: ValidatePropertyNothing,
 }
 
+
+
+
+
+
+
+
+
+
 _PROPERTY_TYPE_TO_INDEX_VALUE_TYPE = {
-    six_subset.string_types[0]: str,
-    Blob: str,
-    EmbeddedEntity: str,
-    ByteString: str,
+    six.text_type: bytes,
+    Blob: bytes,
+    EmbeddedEntity: bytes,
+    ByteString: bytes,
     bool: bool,
-    Category: str,
+    Category: bytes,
     datetime.datetime: _PREFERRED_NUM_TYPE,
     datetime.date: _PREFERRED_NUM_TYPE,
     datetime.time: _PREFERRED_NUM_TYPE,
     _OverflowDateTime: _PREFERRED_NUM_TYPE,
-    Email: str,
+    Email: six.binary_type,
     float: float,
     GeoPt: GeoPt,
-    IM: str,
+    IM: six.binary_type,
     int: _PREFERRED_NUM_TYPE,
     Key: Key,
-    Link: str,
+    Link: six.binary_type,
     _PREFERRED_NUM_TYPE: _PREFERRED_NUM_TYPE,
-    PhoneNumber: str,
-    PostalAddress: str,
+    PhoneNumber: six.binary_type,
+    PostalAddress: six.binary_type,
     Rating: _PREFERRED_NUM_TYPE,
-    str: str,
-    Text: str,
+    bytes: bytes,
+    Text: bytes,
     type(None): type(None),
-    six_subset.text_type: str,
     users.User: users.User,
-    BlobKey: str,
+    BlobKey: bytes,
 }
+if six.PY2:
+
+
+  _PROPERTY_TYPE_TO_INDEX_VALUE_TYPE[basestring] = bytes
 
 
 assert set(_VALIDATE_PROPERTY_VALUES.keys()) == _PROPERTY_TYPES
@@ -1533,12 +1558,12 @@ def ValidateProperty(name, values, read_only=False):
   Args:
     name: Name of the property this is for.
     value: Value for the property as a Python native type.
-    read_only: deprecated
+    read_only: Deprecated.
 
   Raises:
-    BadPropertyError if the property name is invalid. BadValueError if the
+    `BadPropertyError` if the property name is invalid. `BadValueError` if the
     property did not validate correctly or the value was an empty list. Other
-    exception types (like OverflowError) if the property value does not meet
+    exception types (like `OverflowError`) if the property value does not meet
     type-specific criteria.
   """
   ValidateString(name, 'property name', datastore_errors.BadPropertyError)
@@ -1578,44 +1603,53 @@ ValidateReadProperty = ValidateProperty
 
 
 def PackBlob(name, value, pbvalue):
-  """Packs a Blob property into a entity_pb.PropertyValue.
+  """Packs a Blob property into a `entity_pb2.PropertyValue`.
 
   Args:
     name: The name of the property as a string.
     value: A Blob instance.
-    pbvalue: The entity_pb.PropertyValue to pack this value into.
+    pbvalue: The `entity_pbs.PropertyValue` to pack this value into.
   """
-  pbvalue.set_stringvalue(value)
+  pbvalue.stringValue = value
 
 
 def PackString(name, value, pbvalue):
-  """Packs a string-typed property into a entity_pb.PropertyValue.
+  """Packs a string-typed property into a entity_pb2.PropertyValue.
 
   Args:
     name: The name of the property as a string.
     value: A string, unicode, or string-like value instance.
-    pbvalue: The entity_pb.PropertyValue to pack this value into.
+    pbvalue: The entity_pb2.PropertyValue to pack this value into.
   """
-  pbvalue.set_stringvalue(six_subset.text_type(value).encode('utf-8'))
+  if isinstance(value, bytes):
+
+
+
+    value.decode('ascii')
+    pbvalue.stringValue = value
+  else:
+    pbvalue.stringValue = six.text_type(value).encode('utf-8', 'surrogatepass')
 
 
 def PackDatetime(name, value, pbvalue):
-  """Packs a datetime-typed property into a entity_pb.PropertyValue.
+  """Packs a `datetime`-typed property into a `entity_pb2.PropertyValue`.
 
   Args:
     name: The name of the property as a string.
-    value: A datetime.datetime instance.
-    pbvalue: The entity_pb.PropertyValue to pack this value into.
+    value: A `datetime.datetime` instance.
+    pbvalue: The `entity_pb2.PropertyValue` to pack this value into.
   """
-  pbvalue.set_int64value(DatetimeToTimestamp(value))
+  pbvalue.int64Value = DatetimeToTimestamp(value)
 
 
 def DatetimeToTimestamp(value):
-  """Converts a datetime.datetime to microseconds since the epoch, as a float.
-  Args:
-    value: datetime.datetime
+  """Converts a `datetime.datetime` to microseconds since the epoch, as a float.
 
-  Returns: value as a long
+  Args:
+    value: `datetime.datetime`
+
+  Returns:
+    Value as a `long`.
   """
   if value.tzinfo:
 
@@ -1625,92 +1659,91 @@ def DatetimeToTimestamp(value):
 
 
 def PackGeoPt(name, value, pbvalue):
-  """Packs a GeoPt property into a entity_pb.PropertyValue.
+  """Packs a `GeoPt` property into a `entity_pb2.PropertyValue`.
 
   Args:
     name: The name of the property as a string.
-    value: A GeoPt instance.
-    pbvalue: The entity_pb.PropertyValue to pack this value into.
+    value: A `GeoPt` instance.
+    pbvalue: The `entity_pb2.PropertyValue` to pack this value into.
   """
-  pbvalue.mutable_pointvalue().set_x(value.lat)
-  pbvalue.mutable_pointvalue().set_y(value.lon)
+  pbvalue.pointvalue.x = value.lat
+  pbvalue.pointvalue.y = value.lon
 
 
 def PackUser(name, value, pbvalue):
-  """Packs a User property into a entity_pb.PropertyValue.
+  """Packs a `User` property into a `entity_pb2.PropertyValue`.
 
   Args:
     name: The name of the property as a string.
-    value: A users.User instance.
-    pbvalue: The entity_pb.PropertyValue to pack this value into.
+    value: A `users.User` instance.
+    pbvalue: The `entity_pb2.PropertyValue` to pack this value into.
   """
-  pbvalue.mutable_uservalue().set_email(value.email().encode('utf-8'))
-  pbvalue.mutable_uservalue().set_auth_domain(
-      value.auth_domain().encode('utf-8'))
-  pbvalue.mutable_uservalue().set_gaiaid(0)
+  pbvalue.uservalue.email = value.email().encode('utf-8')
+  pbvalue.uservalue.auth_domain = value.auth_domain().encode('utf-8')
+  pbvalue.uservalue.gaiaid = 0
 
 
 
 
   if value.user_id() is not None:
-    pbvalue.mutable_uservalue().set_obfuscated_gaiaid(
-        value.user_id().encode('utf-8'))
+    pbvalue.uservalue.obfuscated_gaiaid = value.user_id().encode('utf-8')
 
   if value.federated_identity() is not None:
-    pbvalue.mutable_uservalue().set_federated_identity(
-        value.federated_identity().encode('utf-8'))
+    pbvalue.uservalue.federated_identity = value.federated_identity().encode(
+        'utf-8')
 
   if value.federated_provider() is not None:
-    pbvalue.mutable_uservalue().set_federated_provider(
-        value.federated_provider().encode('utf-8'))
+    pbvalue.uservalue.federated_provider = value.federated_provider().encode(
+        'utf-8')
 
 
 def PackKey(name, value, pbvalue):
-  """Packs a reference property into a entity_pb.PropertyValue.
+  """Packs a reference property into an `entity_pb2.PropertyValue`.
 
   Args:
     name: The name of the property as a string.
-    value: A Key instance.
-    pbvalue: The entity_pb.PropertyValue to pack this value into.
+    value: A `Key` instance.
+    pbvalue: The `entity_pb2.PropertyValue` to pack this value into.
   """
   ref = value._Key__reference
-  pbvalue.mutable_referencevalue().set_app(ref.app())
-  SetNamespace(pbvalue.mutable_referencevalue(), ref.name_space())
-  for elem in ref.path().element_list():
-    pbvalue.mutable_referencevalue().add_pathelement().CopyFrom(elem)
+  pbvalue.referencevalue.app = ref.app
+  SetNamespace(pbvalue.referencevalue, ref.name_space)
+  for elem in ref.path.element:
+    elementCopy = pbvalue.referencevalue.pathelement.add()
+    datastore_pbs.copy_path_element(elem, elementCopy)
 
 
 def PackBool(name, value, pbvalue):
-  """Packs a boolean property into a entity_pb.PropertyValue.
+  """Packs a boolean property into an `entity_pb2.PropertyValue`.
 
   Args:
     name: The name of the property as a string.
     value: A boolean instance.
-    pbvalue: The entity_pb.PropertyValue to pack this value into.
+    pbvalue: The `entity_pb2.PropertyValue` to pack this value into.
   """
-  pbvalue.set_booleanvalue(value)
+  pbvalue.booleanValue = value
 
 
 def PackInteger(name, value, pbvalue):
-  """Packs an integer property into a entity_pb.PropertyValue.
+  """Packs an integer property into an `entity_pb2.PropertyValue`.
 
   Args:
     name: The name of the property as a string.
     value: An int or long instance.
-    pbvalue: The entity_pb.PropertyValue to pack this value into.
+    pbvalue: The `entity_pb2.PropertyValue` to pack this value into.
   """
-  pbvalue.set_int64value(value)
+  pbvalue.int64Value = value
 
 
 def PackFloat(name, value, pbvalue):
-  """Packs a float property into a entity_pb.PropertyValue.
+  """Packs a float property into a `entity_pb2.PropertyValue`.
 
   Args:
     name: The name of the property as a string.
     value: A float instance.
-    pbvalue: The entity_pb.PropertyValue to pack this value into.
+    pbvalue: The `entity_pb2.PropertyValue` to pack this value into.
   """
-  pbvalue.set_doublevalue(value)
+  pbvalue.doubleValue = value
 
 
 
@@ -1739,10 +1772,11 @@ _PACK_PROPERTY_VALUES = {
     Rating: PackInteger,
     str: PackString,
     Text: PackString,
-    type(None): lambda name, value, pbvalue: None,
-    six_subset.text_type: PackString,
+    type(None): lambda name, value, pbvalue: pbvalue.ClearField('stringValue'),
+    six.text_type: PackString,
     users.User: PackUser,
     BlobKey: PackString,
+    bytes: PackString,
 }
 
 
@@ -1750,32 +1784,33 @@ assert set(_PACK_PROPERTY_VALUES.keys()) == _PROPERTY_TYPES
 
 
 def ToPropertyPb(name, values):
-  """Creates type-specific entity_pb.PropertyValues.
+  """Creates type-specific `entity_pb2.PropertyValues`.
 
-  Determines the type and meaning of the PropertyValue based on the Python
+  Determines the type and meaning of the `PropertyValue` based on the Python
   type of the input value(s).
 
   NOTE: This function does not validate anything!
 
   Args:
-    name: string or unicode; the property name
+    name: String or unicode; the property name.
     values: The values for this property, either a single one or a list of them.
       All values must be a supported type. Lists of values must all be of the
       same type.
 
   Returns:
-    A list of entity_pb.Property instances.
+    A list of `entity_pb2.Property` instances.
   """
-  encoded_name = name.encode('utf-8')
+  encoded_name = six.ensure_str(name)
 
   values_type = type(values)
   if values_type is list and len(values) == 0:
 
-    pb = entity_pb.Property()
-    pb.set_meaning(entity_pb.Property.EMPTY_LIST)
-    pb.set_name(encoded_name)
-    pb.set_multiple(False)
-    pb.mutable_value()
+    pb = entity_pb2.Property()
+    pb.meaning = entity_pb2.Property.EMPTY_LIST
+    pb.name = encoded_name
+    pb.multiple = False
+
+    pb.value.ClearField('stringValue')
     return pb
   elif values_type is list:
     multiple = True
@@ -1785,19 +1820,19 @@ def ToPropertyPb(name, values):
 
   pbs = []
   for v in values:
-    pb = entity_pb.Property()
-    pb.set_name(encoded_name)
-    pb.set_multiple(multiple)
+    pb = entity_pb2.Property()
+    pb.name = encoded_name
+    pb.multiple = multiple
 
     meaning = _PROPERTY_MEANINGS.get(v.__class__)
     if meaning is not None:
-      pb.set_meaning(meaning)
+      pb.meaning = meaning
 
     if hasattr(v, 'meaning_uri') and v.meaning_uri:
-      pb.set_meaning_uri(v.meaning_uri)
+      pb.meaning_uri = v.meaning_uri
 
     pack_prop = _PACK_PROPERTY_VALUES[v.__class__]
-    pbvalue = pack_prop(name, v, pb.mutable_value())
+    pack_prop(name, v, pb.value)
     pbs.append(pb)
 
   if multiple:
@@ -1807,28 +1842,29 @@ def ToPropertyPb(name, values):
 
 
 def FromReferenceProperty(value):
-  """Converts a reference PropertyValue to a Key.
+  """Converts a reference `PropertyValue` to a `Key`.
 
   Args:
-    value: entity_pb.PropertyValue
+    value: `entity_pb2.PropertyValue`
 
   Returns:
-    Key
+    `Key`
 
   Raises:
-    BadValueError if the value is not a PropertyValue.
+    `BadValueError` if the value is not a `PropertyValue`.
   """
-  assert isinstance(value, entity_pb.PropertyValue)
-  assert value.has_referencevalue()
-  ref = value.referencevalue()
+  assert isinstance(value, entity_pb2.PropertyValue)
+  assert value.HasField('referencevalue')
+  ref = value.referencevalue
 
   key = Key()
   key_ref = key._Key__reference
-  key_ref.set_app(ref.app())
-  SetNamespace(key_ref, ref.name_space())
+  key_ref.app = ref.app
+  SetNamespace(key_ref, ref.name_space)
 
-  for pathelem in ref.pathelement_list():
-    key_ref.mutable_path().add_element().CopyFrom(pathelem)
+  for pathelem in ref.pathelement:
+    element = key_ref.path.element.add()
+    datastore_pbs.copy_path_element(pathelem, element)
 
   return key
 
@@ -1841,74 +1877,68 @@ def FromReferenceProperty(value):
 
 
 _PROPERTY_CONVERSIONS = {
-  entity_pb.Property.GD_WHEN:           _When,
-  entity_pb.Property.ATOM_CATEGORY:     Category,
-  entity_pb.Property.ATOM_LINK:         Link,
-  entity_pb.Property.GD_EMAIL:          Email,
-  entity_pb.Property.GD_IM:             IM,
-  entity_pb.Property.GD_PHONENUMBER:    PhoneNumber,
-  entity_pb.Property.GD_POSTALADDRESS:  PostalAddress,
-  entity_pb.Property.GD_RATING:         Rating,
-  entity_pb.Property.BLOB:              Blob,
-  entity_pb.Property.ENTITY_PROTO:      EmbeddedEntity,
-  entity_pb.Property.BYTESTRING:        ByteString,
-  entity_pb.Property.TEXT:              Text,
-  entity_pb.Property.BLOBKEY:           BlobKey,
-  entity_pb.Property.EMPTY_LIST:        _EmptyList,
+    entity_pb2.Property.GD_WHEN: _When,
+    entity_pb2.Property.ATOM_CATEGORY: Category,
+    entity_pb2.Property.ATOM_LINK: Link,
+    entity_pb2.Property.GD_EMAIL: Email,
+    entity_pb2.Property.GD_IM: IM,
+    entity_pb2.Property.GD_PHONENUMBER: PhoneNumber,
+    entity_pb2.Property.GD_POSTALADDRESS: PostalAddress,
+    entity_pb2.Property.GD_RATING: Rating,
+    entity_pb2.Property.BLOB: Blob,
+    entity_pb2.Property.ENTITY_PROTO: EmbeddedEntity,
+    entity_pb2.Property.BYTESTRING: ByteString,
+    entity_pb2.Property.TEXT: Text,
+    entity_pb2.Property.BLOBKEY: BlobKey,
+    entity_pb2.Property.EMPTY_LIST: _EmptyList,
 }
 
-
-_NON_UTF8_MEANINGS = frozenset((entity_pb.Property.BLOB,
-                                entity_pb.Property.ENTITY_PROTO,
-                                entity_pb.Property.BYTESTRING,
-                                entity_pb.Property.INDEX_VALUE))
+_NON_UTF8_MEANINGS = frozenset(
+    (entity_pb2.Property.BLOB, entity_pb2.Property.ENTITY_PROTO,
+     entity_pb2.Property.BYTESTRING, entity_pb2.Property.INDEX_VALUE))
 
 
 def FromPropertyPb(pb):
-  """Converts a property PB to a python value.
+  """Converts a property `PB` to a python value.
 
   Args:
-    pb: entity_pb.Property
+    pb: `entity_pb2.Property`
 
   Returns:
-    # return type is determined by the type of the argument
-    string, int, bool, double, users.User, or one of the atom or gd types
+    The return type is determined by the type of the argument, such as
+    `string`, `int`, `bool`, `double`, `users.User`, or one of the `atom` or
+    `gd` types.
   """
+  pbval = pb.value
+  meaning = pb.meaning
+
+  if pbval.HasField('stringValue'):
+    value = pbval.stringValue
+    if not pb.HasField('meaning') or meaning not in _NON_UTF8_MEANINGS:
+
+      value = value.decode('utf-8', 'surrogatepass')
+  elif pbval.HasField('int64Value'):
 
 
-
-  pbval = pb.value()
-  meaning = pb.meaning()
-
-  if pbval.has_stringvalue():
-    value = pbval.stringvalue()
-    if not pb.has_meaning() or meaning not in _NON_UTF8_MEANINGS:
-      value = six_subset.text_type(value, 'utf-8')
-  elif pbval.has_int64value():
+    value = _PREFERRED_NUM_TYPE(pbval.int64Value)
+  elif pbval.HasField('booleanValue'):
 
 
-    value = _PREFERRED_NUM_TYPE(pbval.int64value())
-  elif pbval.has_booleanvalue():
-
-
-    value = bool(pbval.booleanvalue())
-  elif pbval.has_doublevalue():
-    value = pbval.doublevalue()
-  elif pbval.has_referencevalue():
+    value = bool(pbval.booleanValue)
+  elif pbval.HasField('doubleValue'):
+    value = pbval.doubleValue
+  elif pbval.HasField('referencevalue'):
     value = FromReferenceProperty(pbval)
-  elif pbval.has_pointvalue():
-    value = GeoPt(pbval.pointvalue().x(), pbval.pointvalue().y())
-  elif pbval.has_uservalue():
-    email = six_subset.text_type(pbval.uservalue().email(), 'utf-8')
-    auth_domain = six_subset.text_type(pbval.uservalue().auth_domain(), 'utf-8')
-    obfuscated_gaiaid = pbval.uservalue().obfuscated_gaiaid().decode('utf-8')
-    obfuscated_gaiaid = six_subset.text_type(
-        pbval.uservalue().obfuscated_gaiaid(), 'utf-8')
+  elif pbval.HasField('pointvalue'):
+    value = GeoPt(pbval.pointvalue.x, pbval.pointvalue.y)
+  elif pbval.HasField('uservalue'):
+    email = pbval.uservalue.email
+    auth_domain = pbval.uservalue.auth_domain
+    obfuscated_gaiaid = pbval.uservalue.obfuscated_gaiaid
 
     federated_identity = None
-    if pbval.uservalue().has_federated_identity():
-      federated_identity = six_subset.text_type(
-          pbval.uservalue().federated_identity(), 'utf-8')
+    if pbval.uservalue.HasField('federated_identity'):
+      federated_identity = pbval.uservalue.federated_identity
 
 
 
@@ -1921,12 +1951,11 @@ def FromPropertyPb(pb):
     value = None
 
   try:
-    if pb.has_meaning() and meaning in _PROPERTY_CONVERSIONS:
+    if pb.HasField('meaning') and meaning in _PROPERTY_CONVERSIONS:
       conversion = _PROPERTY_CONVERSIONS[meaning]
       value = conversion(value)
-      if (meaning == entity_pb.Property.BLOB
-          and pb.has_meaning_uri()):
-        value.meaning_uri = pb.meaning_uri()
+      if (meaning == entity_pb2.Property.BLOB and pb.HasField('meaning_uri')):
+        value.meaning_uri = pb.meaning_uri
   except (KeyError, ValueError, IndexError, TypeError, AttributeError) as msg:
     raise datastore_errors.BadValueError(
       'Error converting pb: %s\nException was: %s' % (pb, msg))
@@ -1935,27 +1964,27 @@ def FromPropertyPb(pb):
 
 
 def RestoreFromIndexValue(index_value, data_type):
-  """Restores a index value to the correct datastore type.
+  """Restores an index value to the correct datastore type.
 
-  Projection queries return property values direclty from a datastore index.
-  These values are the native datastore values, one of str, bool, long, float,
-  GeoPt, Key or User. This function restores the original value when the
-  original type is known.
+  Projection queries return property values directly from a datastore index.
+  These values are the native datastore values that can be one of the following:
+  `str`, `bool`, `long`, `float`, `GeoPt`, `Key`, or `User`. This function
+  restores the original value when the original type is known.
 
   This function returns the value type returned when decoding a normal entity,
-  not necessarily of type data_type. For example, data_type=int returns a
-  long instance.
+  not necessarily of type `data_type`. For example, `data_type=int` returns a
+  `long` instance.
 
   Args:
-    index_value: The value returned by FromPropertyPb for the projected
+    index_value: The value returned by `FromPropertyPb` for the projected
       property.
-    data_type: The type of the value originally given to ToPropertyPb
+    data_type: The type of the value originally given to `ToPropertyPb`.
 
   Returns:
     The restored property value.
 
   Raises:
-    datastore_errors.BadValueError if the value cannot be restored.
+    `datastore_errors.BadValueError` if the value cannot be restored.
   """
   raw_type = _PROPERTY_TYPE_TO_INDEX_VALUE_TYPE.get(data_type)
   if raw_type is None:
@@ -1969,14 +1998,14 @@ def RestoreFromIndexValue(index_value, data_type):
 
   if not isinstance(index_value, raw_type):
     raise datastore_errors.BadValueError(
-        'Unsupported converstion. Expected %r got %r' %
+        'Unsupported conversion. Expected %r got %r' %
         (type(index_value), raw_type))
 
   meaning = _PROPERTY_MEANINGS.get(data_type)
 
 
-  if isinstance(index_value, str) and meaning not in _NON_UTF8_MEANINGS:
-    index_value = six_subset.text_type(index_value, 'utf-8')
+  if isinstance(index_value, bytes) and meaning not in _NON_UTF8_MEANINGS:
+    index_value = six.text_type(index_value, 'utf-8')
 
 
   conv = _PROPERTY_CONVERSIONS.get(meaning)
@@ -1992,24 +2021,26 @@ def RestoreFromIndexValue(index_value, data_type):
 
 
 def PropertyTypeName(value):
-  """Returns the name of the type of the given property value, as a string.
+  """Returns the type name of the given property value, as a string.
 
-  Raises BadValueError if the value is not a valid property type.
+  Raises `BadValueError` if the value is not a valid property type.
 
   Args:
-    value: any valid property value
+    value: Any valid property value.
 
   Returns:
-    string
+    String.
   """
   if value.__class__ in _PROPERTY_MEANINGS:
     meaning = _PROPERTY_MEANINGS[value.__class__]
-    name = entity_pb.Property._Meaning_NAMES[meaning]
+    name = entity_pb2.Property.Meaning.DESCRIPTOR.values_by_number[meaning].name
     return name.lower().replace('_', ':')
-  elif isinstance(value, basestring):
+  elif isinstance(value, six.string_types):
     return 'string'
   elif isinstance(value, users.User):
     return 'user'
+  elif isinstance(value, bool):
+    return 'bool'
   elif isinstance(value, _PREFERRED_NUM_TYPE):
     return 'int'
   elif value is None:
@@ -2019,7 +2050,7 @@ def PropertyTypeName(value):
 
 
 _PROPERTY_TYPE_STRINGS = {
-    'string': six_subset.text_type,
+    'string': six.text_type,
     'bool': bool,
     'int': _PREFERRED_NUM_TYPE,
     'null': type(None),
@@ -2050,7 +2081,7 @@ def FromPropertyTypeName(type_name):
     type_name: A string representation of a datastore type name.
 
   Returns:
-    A python type.
+    A Python type.
   """
   return _PROPERTY_TYPE_STRINGS[type_name]
 
@@ -2060,21 +2091,22 @@ def PropertyValueFromString(type_,
                             _auth_domain=None):
   """Returns an instance of a property value given a type and string value.
 
-  The reverse of this method is just str() and type() of the python value.
+  The reverse of this method is just `str()` and `type()` of the Python value.
 
   Note that this does *not* support non-UTC offsets in ISO 8601-formatted
-  datetime strings, e.g. the -08:00 suffix in '2002-12-25 00:00:00-08:00'.
-  It only supports -00:00 and +00:00 suffixes, which are UTC.
+  datetime strings, e.g., the `-08:00` suffix in `2002-12-25 00:00:00-08:00`.
+  It only supports `-00:00` and `+00:00` suffixes, which are UTC.
 
   Args:
-    type_: A python class.
+    type_: A Python class.
     value_string: A string representation of the value of the property.
 
   Returns:
-    An instance of 'type'.
+    An instance of `type`.
 
   Raises:
-    ValueError if type_ is datetime and value_string has a timezone offset.
+    `ValueError` if `type_` is datetime and `value_string` has a timezone
+    offset.
   """
   if type_ == datetime.datetime:
     value_string = value_string.strip()
@@ -2107,17 +2139,19 @@ def PropertyValueFromString(type_,
     return users.User(value_string, _auth_domain)
   elif type_ == type(None):
     return None
+  elif type_ in (Blob, EmbeddedEntity, ByteString):
+    return type_(value_string.encode('utf-8'))
   return type_(value_string)
 
 
 def ReferenceToKeyValue(key, id_resolver=None):
-  """Converts a key into a comparable hashable "key" value.
+  """Converts a key into a comparable hashable `key` value.
 
   Args:
-    key: The entity_pb.Reference or googledatastore.Key from which to construct
-        the key value.
-    id_resolver: An optional datastore_pbs.IdResolver. Only necessary for
-        googledatastore.Key values.
+    key: The `entity_pb2.Reference` or `googledatastore.Key` from which to
+        construct the key value.
+    id_resolver: An optional `datastore_pbs.IdResolver`. Only necessary for
+        `googledatastore.Key` values.
   Returns:
     A comparable and hashable representation of the given key that is
     compatible with one derived from a key property value.
@@ -2125,115 +2159,153 @@ def ReferenceToKeyValue(key, id_resolver=None):
   if (datastore_pbs._CLOUD_DATASTORE_ENABLED
       and isinstance(key, googledatastore.Key)):
     v1_key = key
-    key = entity_pb.Reference()
+    key = entity_pb2.Reference()
     datastore_pbs.get_entity_converter(id_resolver).v1_to_v3_reference(v1_key,
                                                                        key)
-  elif isinstance(key, entity_v4_pb.Key):
+  elif isinstance(key, entity_v4_pb2.Key):
     v4_key = key
-    key = entity_pb.Reference()
+    key = entity_pb2.Reference()
     datastore_pbs.get_entity_converter().v4_to_v3_reference(v4_key, key)
 
-  if isinstance(key, entity_pb.Reference):
-    element_list = key.path().element_list()
-  elif isinstance(key, entity_pb.PropertyValue_ReferenceValue):
-    element_list = key.pathelement_list()
+  if isinstance(key, entity_pb2.Reference):
+    element_list = key.path.element
+  elif isinstance(key, entity_pb2.PropertyValue.ReferenceValue):
+    element_list = key.pathelement
   else:
     raise datastore_errors.BadArgumentError(
-        "key arg expected to be entity_pb.Reference or googledatastore.Key (%r)"
+        'key arg expected to be entity_pb2.Reference or googledatastore.Key (%r)'
         % (key,))
 
-  result = [entity_pb.PropertyValue.kReferenceValueGroup,
-            key.app(), key.name_space()]
+  result = [
+      entity_pb2.PropertyValue.REFERENCEVALUE_FIELD_NUMBER, key.app,
+      key.name_space
+  ]
   for element in element_list:
-    result.append(element.type())
-    if element.has_name():
-      result.append(element.name())
+    result.append(element.type)
+    if element.HasField('name'):
+      result.append(element.name)
     else:
-      result.append(element.id())
+      result.append(element.id)
   return tuple(result)
 
 
-def PropertyValueToKeyValue(prop_value):
-  """Converts a entity_pb.PropertyValue into a comparable hashable "key" value.
 
-  The values produces by this function mimic the native ording of the datastore
-  and uniquely identify the given PropertyValue.
+
+def _isFloatNegative(value, encoded):
+  if value == 0:
+    return encoded[0] == 128
+  return value < 0
+
+
+
+def _encodeDoubleSortably(value):
+  """Encode a double into a sortable byte buffer."""
+
+  encoded = array.array('B')
+  encoded.fromstring(struct.pack('>d', value))
+  if _isFloatNegative(value, encoded):
+
+
+    encoded[0] ^= 0xFF
+    encoded[1] ^= 0xFF
+    encoded[2] ^= 0xFF
+    encoded[3] ^= 0xFF
+    encoded[4] ^= 0xFF
+    encoded[5] ^= 0xFF
+    encoded[6] ^= 0xFF
+    encoded[7] ^= 0xFF
+  else:
+
+    encoded[0] ^= 0x80
+  return encoded
+
+
+def PropertyValueToKeyValue(prop_value):
+  """Converts an `entity_pb2.PropertyValue` into a comparable hashable `key` value.
+
+  The values produces by this function mimic the native ordering of the
+  datastore and uniquely identify the given `PropertyValue`.
 
   Args:
-    prop_value: The entity_pb.PropertyValue from which to construct the
-      key value.
+    prop_value: The `entity_pb2.PropertyValue` from which to construct the key
+      value.
 
   Returns:
     A comparable and hashable representation of the given property value.
   """
-  if not isinstance(prop_value, entity_pb.PropertyValue):
+  if not isinstance(prop_value, entity_pb2.PropertyValue):
     raise datastore_errors.BadArgumentError(
-        'prop_value arg expected to be entity_pb.PropertyValue (%r)' %
+        'prop_value arg expected to be entity_pb2.PropertyValue (%r)' %
         (prop_value,))
 
 
 
-  if prop_value.has_stringvalue():
-    return (entity_pb.PropertyValue.kstringValue, prop_value.stringvalue())
-  if prop_value.has_int64value():
-    return (entity_pb.PropertyValue.kint64Value, prop_value.int64value())
-  if prop_value.has_booleanvalue():
-    return (entity_pb.PropertyValue.kbooleanValue, prop_value.booleanvalue())
-  if prop_value.has_doublevalue():
+  if prop_value.HasField('stringValue'):
+    return (entity_pb2.PropertyValue.STRINGVALUE_FIELD_NUMBER,
+            prop_value.stringValue)
+  if prop_value.HasField('int64Value'):
+    return (entity_pb2.PropertyValue.INT64VALUE_FIELD_NUMBER,
+            prop_value.int64Value)
+  if prop_value.HasField('booleanValue'):
+    return (entity_pb2.PropertyValue.BOOLEANVALUE_FIELD_NUMBER,
+            prop_value.booleanValue)
+  if prop_value.HasField('doubleValue'):
 
-    encoder = sortable_pb_encoder.Encoder()
-    encoder.putDouble(prop_value.doublevalue())
-    return (entity_pb.PropertyValue.kdoubleValue, tuple(encoder.buf))
-  if prop_value.has_pointvalue():
-    return (entity_pb.PropertyValue.kPointValueGroup,
-            prop_value.pointvalue().x(), prop_value.pointvalue().y())
-  if prop_value.has_referencevalue():
-    return ReferenceToKeyValue(prop_value.referencevalue())
-  if prop_value.has_uservalue():
+    return (entity_pb2.PropertyValue.DOUBLEVALUE_FIELD_NUMBER,
+            tuple(sortable_pb_encoder.EncodeDouble(prop_value.doubleValue)))
+  if prop_value.HasField('pointvalue'):
+    return (entity_pb2.PropertyValue.POINTVALUE_FIELD_NUMBER,
+            prop_value.pointvalue.x, prop_value.pointvalue.y)
+  if prop_value.HasField('referencevalue'):
+    return ReferenceToKeyValue(prop_value.referencevalue)
+  if prop_value.HasField('uservalue'):
     result = []
-    uservalue = prop_value.uservalue()
-    if uservalue.has_email():
-      result.append((entity_pb.PropertyValue.kUserValueemail,
-                     uservalue.email()))
-    if uservalue.has_auth_domain():
-      result.append((entity_pb.PropertyValue.kUserValueauth_domain,
-                     uservalue.auth_domain()))
-    if uservalue.has_nickname():
-      result.append((entity_pb.PropertyValue.kUserValuenickname,
-                     uservalue.nickname()))
-    if uservalue.has_gaiaid():
-      result.append((entity_pb.PropertyValue.kUserValuegaiaid,
-                     uservalue.gaiaid()))
-    if uservalue.has_obfuscated_gaiaid():
-      result.append((entity_pb.PropertyValue.kUserValueobfuscated_gaiaid,
-                     uservalue.obfuscated_gaiaid()))
-    if uservalue.has_federated_identity():
-      result.append((entity_pb.PropertyValue.kUserValuefederated_identity,
-                     uservalue.federated_identity()))
-    if uservalue.has_federated_provider():
-      result.append((entity_pb.PropertyValue.kUserValuefederated_provider,
-                     uservalue.federated_provider()))
+    uservalue = prop_value.uservalue
+    if uservalue.HasField('email'):
+      result.append((entity_pb2.PropertyValue.UserValue.EMAIL_FIELD_NUMBER,
+                     uservalue.email))
+    if uservalue.HasField('auth_domain'):
+      result.append(
+          (entity_pb2.PropertyValue.UserValue.AUTH_DOMAIN_FIELD_NUMBER,
+           uservalue.auth_domain))
+    if uservalue.HasField('nickname'):
+      result.append((entity_pb2.PropertyValue.UserValue.NICKNAME_FIELD_NUMBER,
+                     uservalue.nickname))
+    if uservalue.HasField('gaiaid'):
+      result.append((entity_pb2.PropertyValue.UserValue.GAIAID_FIELD_NUMBER,
+                     uservalue.gaiaid))
+    if uservalue.HasField('obfuscated_gaiaid'):
+      result.append(
+          (entity_pb2.PropertyValue.UserValue.OBFUSCATED_GAIAID_FIELD_NUMBER,
+           uservalue.obfuscated_gaiaid))
+    if uservalue.HasField('federated_identity'):
+      result.append(
+          (entity_pb2.PropertyValue.UserValue.FEDERATED_IDENTITY_FIELD_NUMBER,
+           uservalue.federated_identity))
+    if uservalue.HasField('federated_provider'):
+      result.append(
+          (entity_pb2.PropertyValue.UserValue.FEDERATED_PROVIDER_FIELD_NUMBER,
+           uservalue.federated_provider))
     result.sort()
-    return (entity_pb.PropertyValue.kUserValueGroup, tuple(result))
+    return (entity_pb2.PropertyValue.USERVALUE_FIELD_NUMBER, tuple(result))
   return ()
 
 
 def GetPropertyValueTag(value_pb):
-  """Returns the tag constant associated with the given entity_pb.PropertyValue.
-  """
-  if value_pb.has_booleanvalue():
-    return entity_pb.PropertyValue.kbooleanValue
-  elif value_pb.has_doublevalue():
-    return entity_pb.PropertyValue.kdoubleValue
-  elif value_pb.has_int64value():
-    return entity_pb.PropertyValue.kint64Value
-  elif value_pb.has_pointvalue():
-    return entity_pb.PropertyValue.kPointValueGroup
-  elif value_pb.has_referencevalue():
-    return entity_pb.PropertyValue.kReferenceValueGroup
-  elif value_pb.has_stringvalue():
-    return entity_pb.PropertyValue.kstringValue
-  elif value_pb.has_uservalue():
-    return entity_pb.PropertyValue.kUserValueGroup
+  """Returns the tag constant associated with the given `entity_pb2.PropertyValue`."""
+  if value_pb.HasField('booleanValue'):
+    return entity_pb2.PropertyValue.BOOLEANVALUE_FIELD_NUMBER
+  elif value_pb.HasField('doubleValue'):
+    return entity_pb2.PropertyValue.DOUBLEVALUE_FIELD_NUMBER
+  elif value_pb.HasField('int64Value'):
+    return entity_pb2.PropertyValue.INT64VALUE_FIELD_NUMBER
+  elif value_pb.HasField('pointvalue'):
+    return entity_pb2.PropertyValue.POINTVALUE_FIELD_NUMBER
+  elif value_pb.HasField('referencevalue'):
+    return entity_pb2.PropertyValue.REFERENCEVALUE_FIELD_NUMBER
+  elif value_pb.HasField('stringValue'):
+    return entity_pb2.PropertyValue.STRINGVALUE_FIELD_NUMBER
+  elif value_pb.HasField('uservalue'):
+    return entity_pb2.PropertyValue.USERVALUE_FIELD_NUMBER
   else:
     return 0

@@ -1,45 +1,10 @@
-#!/usr/bin/env python
+# Protocol Buffers - Google's data interchange format
+# Copyright 2008 Google Inc.  All rights reserved.
 #
-# Copyright 2007 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-"""protobuf stub that searches for another 'google.protobuf' on sys.path."""
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file or at
+# https://developers.google.com/open-source/licenses/bsd
 
-import imp
-import os
-import sys
+# Copyright 2007 Google Inc. All Rights Reserved.
 
-import google
-
-
-default_path = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), '..', '..'))
-protobuf_paths = []
-
-default_google_path = os.path.join(default_path, 'google')
-for path in google.__path__:
-  if path != default_google_path:
-    protobuf_paths.append(path)
-
-for path in sys.path:
-  if path != default_path:
-    protobuf_path = os.path.join(path, 'google')
-    if os.path.exists(protobuf_path):
-      protobuf_paths.append(protobuf_path)
-
-protobuf_file, pathname, description = imp.find_module('protobuf',
-                                                       protobuf_paths)
-
-
-imp.load_module('google.protobuf', protobuf_file, pathname, description)
+__version__ = '5.27.0'

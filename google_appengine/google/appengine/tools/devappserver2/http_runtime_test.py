@@ -103,6 +103,12 @@ class ModuleConfigurationStub(object):
     self.application_root = application_root
     self.error_handlers = error_handlers
     self.runtime = runtime
+    self.application_external_name = 'foo'
+    self.partition = 'partition'
+    self.module_name = 'name'
+    self.major_version = 'version1'
+    self.minor_version = 'version2'
+    self.config_path = 'somepath'
 
 
 class HttpRuntimeProxyTest(wsgi_test_utils.WSGITestCase):
@@ -125,8 +131,24 @@ class HttpRuntimeProxyTest(wsgi_test_utils.WSGITestCase):
     self.runtime_config.auth_domain = 'gmail.com'
     self.runtime_config_getter = lambda: self.runtime_config
     self.proxy = http_runtime.HttpRuntimeProxy(
-        ['/runtime'], self.runtime_config_getter, module_configuration,
-        env={'foo': 'bar'})
+        ['/runtime'],
+        self.runtime_config_getter,
+        module_configuration,
+        env={
+            'foo': 'bar',
+            'API_HOST': 'localhost',
+            'API_PORT': '12345',
+            'GAE_LONG_APP_ID': 'foo',
+            'GAE_PARTITION': 'partition',
+            'GAE_MODULE_NAME': 'name',
+            'GAE_MODULE_VERSION': 'version1',
+            'GAE_MINOR_VERSION': 'version2',
+            'GAE_MODULE_INSTANCE': 'abc3dzac4',
+            'GAE_SERVER_PORT': '0',
+            'MODULE_YAML_PATH': 'somepath',
+            'SERVER_SOFTWARE': 'Development/2.0',
+        },
+    )
     self.proxy._port = 23456
     self.process = self.mox.CreateMock(subprocess.Popen)
     self.process.stdin = self.mox.CreateMockAnything()
@@ -141,7 +163,6 @@ class HttpRuntimeProxyTest(wsgi_test_utils.WSGITestCase):
     self.mox.StubOutWithMock(http_proxy.HttpProxy, 'wait_for_connection')
     http_proxy.HttpProxy.wait_for_connection(self.process)
     self._saved_quit_with_sigterm = None
-
 
   def tearDown(self):
     shutil.rmtree(self.tmpdir)
@@ -161,8 +182,22 @@ class HttpRuntimeProxyTest(wsgi_test_utils.WSGITestCase):
         base64.b64encode(self.runtime_config.SerializeToString()),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        env={'foo': 'bar'},
-        cwd=self.tmpdir).AndReturn(self.process)
+        env={
+            'foo': 'bar',
+            'API_HOST': 'localhost',
+            'API_PORT': '12345',
+            'GAE_LONG_APP_ID': 'foo',
+            'GAE_PARTITION': 'partition',
+            'GAE_MODULE_NAME': 'name',
+            'GAE_MODULE_VERSION': 'version1',
+            'GAE_MINOR_VERSION': 'version2',
+            'GAE_MODULE_INSTANCE': 'abc3dzac4',
+            'GAE_SERVER_PORT': '0',
+            'MODULE_YAML_PATH': 'somepath',
+            'SERVER_SOFTWARE': 'Development/2.0',
+        },
+        cwd=self.tmpdir,
+    ).AndReturn(self.process)
     self.process.stdout.readline().AndReturn('30000')
     self.proxy._stderr_tee = FakeTee('')
 
@@ -195,8 +230,22 @@ class HttpRuntimeProxyTest(wsgi_test_utils.WSGITestCase):
         base64.b64encode(self.runtime_config.SerializeToString()),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        env={'foo': 'bar'},
-        cwd=self.tmpdir).AndReturn(self.process)
+        env={
+            'foo': 'bar',
+            'API_HOST': 'localhost',
+            'API_PORT': '12345',
+            'GAE_LONG_APP_ID': 'foo',
+            'GAE_PARTITION': 'partition',
+            'GAE_MODULE_NAME': 'name',
+            'GAE_MODULE_VERSION': 'version1',
+            'GAE_MINOR_VERSION': 'version2',
+            'GAE_MODULE_INSTANCE': 'abc3dzac4',
+            'GAE_SERVER_PORT': '0',
+            'MODULE_YAML_PATH': 'somepath',
+            'SERVER_SOFTWARE': 'Development/2.0',
+        },
+        cwd=self.tmpdir,
+    ).AndReturn(self.process)
     self.process.stdout.readline().AndReturn('::1\t34567')
     self.proxy._stderr_tee = FakeTee('')
 
@@ -212,8 +261,22 @@ class HttpRuntimeProxyTest(wsgi_test_utils.WSGITestCase):
         base64.b64encode(self.runtime_config.SerializeToString()),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        env={'foo': 'bar'},
-        cwd=self.tmpdir).AndReturn(self.process)
+        env={
+            'foo': 'bar',
+            'API_HOST': 'localhost',
+            'API_PORT': '12345',
+            'GAE_LONG_APP_ID': 'foo',
+            'GAE_PARTITION': 'partition',
+            'GAE_MODULE_NAME': 'name',
+            'GAE_MODULE_VERSION': 'version1',
+            'GAE_MINOR_VERSION': 'version2',
+            'GAE_MODULE_INSTANCE': 'abc3dzac4',
+            'GAE_SERVER_PORT': '0',
+            'MODULE_YAML_PATH': 'somepath',
+            'SERVER_SOFTWARE': 'Development/2.0',
+        },
+        cwd=self.tmpdir,
+    ).AndReturn(self.process)
     self.process.stdout.readline().AndReturn('hello 30001')
     header = "bad runtime process port ['hello 30001']\n\n"
     stderr0 = "I've just picked up a fault in the AE35 unit.\n"
@@ -252,9 +315,25 @@ class HttpRuntimeProxyFileFlavorTest(wsgi_test_utils.WSGITestCase):
     self.runtime_config.auth_domain = 'gmail.com'
     self.runtime_config_getter = lambda: self.runtime_config
     self.proxy = http_runtime.HttpRuntimeProxy(
-        ['/runtime'], self.runtime_config_getter, module_configuration,
-        env={'foo': 'bar'},
-        start_process_flavor=http_runtime.START_PROCESS_FILE)
+        ['/runtime'],
+        self.runtime_config_getter,
+        module_configuration,
+        env={
+            'foo': 'bar',
+            'API_HOST': 'localhost',
+            'API_PORT': '12345',
+            'GAE_LONG_APP_ID': 'foo',
+            'GAE_PARTITION': 'partition',
+            'GAE_MODULE_NAME': 'name',
+            'GAE_MODULE_VERSION': 'version1',
+            'GAE_MINOR_VERSION': 'version2',
+            'GAE_MODULE_INSTANCE': 'abc3dzac4',
+            'GAE_SERVER_PORT': '0',
+            'MODULE_YAML_PATH': 'somepath',
+            'SERVER_SOFTWARE': 'Development/2.0',
+        },
+        start_process_flavor=http_runtime.START_PROCESS_FILE,
+    )
     self.mox.StubOutWithMock(self.proxy, '_process_lock')
     self.process = self.mox.CreateMock(subprocess.Popen)
     self.process.stdin = self.mox.CreateMockAnything()
@@ -282,9 +361,23 @@ class HttpRuntimeProxyFileFlavorTest(wsgi_test_utils.WSGITestCase):
       safe_subprocess.start_process_file(
           args=['/runtime'],
           input_string=self.runtime_config.SerializeToString(),
-          env={'foo': 'bar'},
+          env={
+              'foo': 'bar',
+              'API_HOST': 'localhost',
+              'API_PORT': '12345',
+              'GAE_LONG_APP_ID': 'foo',
+              'GAE_PARTITION': 'partition',
+              'GAE_MODULE_NAME': 'name',
+              'GAE_MODULE_VERSION': 'version1',
+              'GAE_MINOR_VERSION': 'version2',
+              'GAE_MODULE_INSTANCE': 'abc3dzac4',
+              'GAE_SERVER_PORT': '0',
+              'MODULE_YAML_PATH': 'somepath',
+              'SERVER_SOFTWARE': 'Development/2.0',
+          },
           cwd=self.tmpdir,
-          stderr=subprocess.PIPE).AndReturn(self.process)
+          stderr=subprocess.PIPE,
+      ).AndReturn(self.process)
     self.process.poll().AndReturn(None)
     self.process.child_out.seek(0).AndReturn(None)
     self.process.child_out.read().AndReturn('1234\n')
@@ -306,9 +399,23 @@ class HttpRuntimeProxyFileFlavorTest(wsgi_test_utils.WSGITestCase):
       safe_subprocess.start_process_file(
           args=['/runtime'],
           input_string=self.runtime_config.SerializeToString(),
-          env={'foo': 'bar'},
+          env={
+              'foo': 'bar',
+              'API_HOST': 'localhost',
+              'API_PORT': '12345',
+              'GAE_LONG_APP_ID': 'foo',
+              'GAE_PARTITION': 'partition',
+              'GAE_MODULE_NAME': 'name',
+              'GAE_MODULE_VERSION': 'version1',
+              'GAE_MINOR_VERSION': 'version2',
+              'GAE_MODULE_INSTANCE': 'abc3dzac4',
+              'GAE_SERVER_PORT': '0',
+              'MODULE_YAML_PATH': 'somepath',
+              'SERVER_SOFTWARE': 'Development/2.0',
+          },
           cwd=self.tmpdir,
-          stderr=subprocess.PIPE).AndReturn(self.process)
+          stderr=subprocess.PIPE,
+      ).AndReturn(self.process)
     for response, sleeptime in [
         ('', .125), ('43', .25), ('4321', .5), ('4321\n', None)]:
       self.process.poll().AndReturn(None)
@@ -334,9 +441,23 @@ class HttpRuntimeProxyFileFlavorTest(wsgi_test_utils.WSGITestCase):
       safe_subprocess.start_process_file(
           args=['/runtime'],
           input_string=self.runtime_config.SerializeToString(),
-          env={'foo': 'bar'},
+          env={
+              'foo': 'bar',
+              'API_HOST': 'localhost',
+              'API_PORT': '12345',
+              'GAE_LONG_APP_ID': 'foo',
+              'GAE_PARTITION': 'partition',
+              'GAE_MODULE_NAME': 'name',
+              'GAE_MODULE_VERSION': 'version1',
+              'GAE_MINOR_VERSION': 'version2',
+              'GAE_MODULE_INSTANCE': 'abc3dzac4',
+              'GAE_SERVER_PORT': '0',
+              'MODULE_YAML_PATH': 'somepath',
+              'SERVER_SOFTWARE': 'Development/2.0',
+          },
           cwd=self.tmpdir,
-          stderr=subprocess.PIPE).AndReturn(self.process)
+          stderr=subprocess.PIPE,
+      ).AndReturn(self.process)
     self.process.poll().AndReturn(1)
     self.process.child_out.close().AndReturn(None)
     self.process.child_out.name = '/tmp/c-out.ABC'
@@ -369,9 +490,23 @@ class HttpRuntimeProxyFileFlavorTest(wsgi_test_utils.WSGITestCase):
       safe_subprocess.start_process_file(
           args=['/runtime'],
           input_string=self.runtime_config.SerializeToString(),
-          env={'foo': 'bar'},
+          env={
+              'foo': 'bar',
+              'API_HOST': 'localhost',
+              'API_PORT': '12345',
+              'GAE_LONG_APP_ID': 'foo',
+              'GAE_PARTITION': 'partition',
+              'GAE_MODULE_NAME': 'name',
+              'GAE_MODULE_VERSION': 'version1',
+              'GAE_MINOR_VERSION': 'version2',
+              'GAE_MODULE_INSTANCE': 'abc3dzac4',
+              'GAE_SERVER_PORT': '0',
+              'MODULE_YAML_PATH': 'somepath',
+              'SERVER_SOFTWARE': 'Development/2.0',
+          },
           cwd=self.tmpdir,
-          stderr=subprocess.PIPE).AndReturn(self.process)
+          stderr=subprocess.PIPE,
+      ).AndReturn(self.process)
     for response, sleeptime in [
         ('30000', .125), ('30000', .25), ('30000', .5), ('30000', 1.0),
         ('30000', 2.0), ('30000', 4.0), ('30000', 8.0), ('30000', 16.0),
@@ -421,9 +556,25 @@ class HttpRuntimeProxyReverseFlavorTest(wsgi_test_utils.WSGITestCase):
     self.runtime_config.auth_domain = 'gmail.com'
     self.runtime_config_getter = lambda: self.runtime_config
     self.proxy = http_runtime.HttpRuntimeProxy(
-        ['/runtime'], self.runtime_config_getter, module_configuration,
-        env={'foo': 'bar'},
-        start_process_flavor=http_runtime.START_PROCESS_REVERSE)
+        ['/runtime'],
+        self.runtime_config_getter,
+        module_configuration,
+        env={
+            'foo': 'bar',
+            'API_HOST': 'localhost',
+            'API_PORT': '12345',
+            'GAE_LONG_APP_ID': 'foo',
+            'GAE_PARTITION': 'partition',
+            'GAE_MODULE_NAME': 'name',
+            'GAE_MODULE_VERSION': 'version1',
+            'GAE_MINOR_VERSION': 'version2',
+            'GAE_MODULE_INSTANCE': 'abc3dzac4',
+            'GAE_SERVER_PORT': '0',
+            'MODULE_YAML_PATH': 'somepath',
+            'SERVER_SOFTWARE': 'Development/2.0',
+        },
+        start_process_flavor=http_runtime.START_PROCESS_REVERSE,
+    )
     self.mox.StubOutWithMock(self.proxy, '_process_lock')
     self.process = self.mox.CreateMock(subprocess.Popen)
     self.process.stdin = self.mox.CreateMockAnything()
@@ -449,10 +600,24 @@ class HttpRuntimeProxyReverseFlavorTest(wsgi_test_utils.WSGITestCase):
       safe_subprocess.start_process_file(
           args=['/runtime'],
           input_string=self.runtime_config.SerializeToString(),
-          env={'foo': 'bar',
-               'PORT': '2345'},
+          env={
+              'foo': 'bar',
+              'API_HOST': 'localhost',
+              'API_PORT': '12345',
+              'GAE_LONG_APP_ID': 'foo',
+              'GAE_PARTITION': 'partition',
+              'GAE_MODULE_NAME': 'name',
+              'GAE_MODULE_VERSION': 'version1',
+              'GAE_MINOR_VERSION': 'version2',
+              'GAE_MODULE_INSTANCE': 'abc3dzac4',
+              'GAE_SERVER_PORT': '0',
+              'MODULE_YAML_PATH': 'somepath',
+              'SERVER_SOFTWARE': 'Development/2.0',
+              'PORT': '2345',
+          },
           cwd=self.tmpdir,
-          stderr=subprocess.PIPE).AndReturn(self.process)
+          stderr=subprocess.PIPE,
+      ).AndReturn(self.process)
     self.proxy._stderr_tee = FakeTee('')
 
     self.mox.ReplayAll()

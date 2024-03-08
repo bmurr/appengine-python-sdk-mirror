@@ -9,34 +9,34 @@ import glob
 from importlib import import_module
 
 
-import google.appengine._internal.ruamel.yaml
-from google.appengine._internal.ruamel.yaml.error import UnsafeLoaderWarning, YAMLError  # NOQA
+import ruamel.yaml
+from ruamel.yaml.error import UnsafeLoaderWarning, YAMLError  # NOQA
 
-from google.appengine._internal.ruamel.yaml.tokens import *  # NOQA
-from google.appengine._internal.ruamel.yaml.events import *  # NOQA
-from google.appengine._internal.ruamel.yaml.nodes import *  # NOQA
+from ruamel.yaml.tokens import *  # NOQA
+from ruamel.yaml.events import *  # NOQA
+from ruamel.yaml.nodes import *  # NOQA
 
-from google.appengine._internal.ruamel.yaml.loader import BaseLoader, SafeLoader, Loader, RoundTripLoader  # NOQA
-from google.appengine._internal.ruamel.yaml.dumper import BaseDumper, SafeDumper, Dumper, RoundTripDumper  # NOQA
-from google.appengine._internal.ruamel.yaml.compat import StringIO, BytesIO, with_metaclass, PY3, nprint
-from google.appengine._internal.ruamel.yaml.resolver import VersionedResolver, Resolver  # NOQA
-from google.appengine._internal.ruamel.yaml.representer import (
+from ruamel.yaml.loader import BaseLoader, SafeLoader, Loader, RoundTripLoader  # NOQA
+from ruamel.yaml.dumper import BaseDumper, SafeDumper, Dumper, RoundTripDumper  # NOQA
+from ruamel.yaml.compat import StringIO, BytesIO, with_metaclass, PY3, nprint
+from ruamel.yaml.resolver import VersionedResolver, Resolver  # NOQA
+from ruamel.yaml.representer import (
     BaseRepresenter,
     SafeRepresenter,
     Representer,
     RoundTripRepresenter,
 )
-from google.appengine._internal.ruamel.yaml.constructor import (
+from ruamel.yaml.constructor import (
     BaseConstructor,
     SafeConstructor,
     Constructor,
     RoundTripConstructor,
 )
-from google.appengine._internal.ruamel.yaml.loader import Loader as UnsafeLoader
+from ruamel.yaml.loader import Loader as UnsafeLoader
 
 if False:  # MYPY
     from typing import List, Set, Dict, Union, Any, Callable  # NOQA
-    from google.appengine._internal.ruamel.yaml.compat import StreamType, StreamTextType, VersionType  # NOQA
+    from ruamel.yaml.compat import StreamType, StreamTextType, VersionType  # NOQA
 
     if PY3:
         from pathlib import Path
@@ -89,7 +89,7 @@ class YAML(object):
         for pu in ([] if plug_ins is None else plug_ins) + self.official_plug_ins():
             file_name = pu.replace(os.sep, '.')
             self.plug_ins.append(import_module(file_name))
-        self.Resolver = google.appengine._internal.ruamel.yaml.resolver.VersionedResolver  # type: Any
+        self.Resolver = ruamel.yaml.resolver.VersionedResolver  # type: Any
         self.allow_unicode = True
         self.Reader = None  # type: Any
         self.Scanner = None  # type: Any
@@ -98,36 +98,36 @@ class YAML(object):
         if self.typ == 'rt':
             self.default_flow_style = False
             # no optimized rt-dumper yet
-            self.Emitter = google.appengine._internal.ruamel.yaml.emitter.Emitter  # type: Any
-            self.Serializer = google.appengine._internal.ruamel.yaml.serializer.Serializer  # type: Any
-            self.Representer = google.appengine._internal.ruamel.yaml.representer.RoundTripRepresenter  # type: Any
-            self.Scanner = google.appengine._internal.ruamel.yaml.scanner.RoundTripScanner  # type: Any
+            self.Emitter = ruamel.yaml.emitter.Emitter  # type: Any
+            self.Serializer = ruamel.yaml.serializer.Serializer  # type: Any
+            self.Representer = ruamel.yaml.representer.RoundTripRepresenter  # type: Any
+            self.Scanner = ruamel.yaml.scanner.RoundTripScanner  # type: Any
             # no optimized rt-parser yet
-            self.Parser = google.appengine._internal.ruamel.yaml.parser.RoundTripParser  # type: Any
-            self.Composer = google.appengine._internal.ruamel.yaml.composer.Composer  # type: Any
-            self.Constructor = google.appengine._internal.ruamel.yaml.constructor.RoundTripConstructor  # type: Any
+            self.Parser = ruamel.yaml.parser.RoundTripParser  # type: Any
+            self.Composer = ruamel.yaml.composer.Composer  # type: Any
+            self.Constructor = ruamel.yaml.constructor.RoundTripConstructor  # type: Any
         elif self.typ == 'safe':
             self.Emitter = (
-                google.appengine._internal.ruamel.yaml.emitter.Emitter if pure or CEmitter is None else CEmitter
+                ruamel.yaml.emitter.Emitter if pure or CEmitter is None else CEmitter
             )
-            self.Representer = google.appengine._internal.ruamel.yaml.representer.SafeRepresenter
-            self.Parser = google.appengine._internal.ruamel.yaml.parser.Parser if pure or CParser is None else CParser
-            self.Composer = google.appengine._internal.ruamel.yaml.composer.Composer
-            self.Constructor = google.appengine._internal.ruamel.yaml.constructor.SafeConstructor
+            self.Representer = ruamel.yaml.representer.SafeRepresenter
+            self.Parser = ruamel.yaml.parser.Parser if pure or CParser is None else CParser
+            self.Composer = ruamel.yaml.composer.Composer
+            self.Constructor = ruamel.yaml.constructor.SafeConstructor
         elif self.typ == 'base':
-            self.Emitter = google.appengine._internal.ruamel.yaml.emitter.Emitter
-            self.Representer = google.appengine._internal.ruamel.yaml.representer.BaseRepresenter
-            self.Parser = google.appengine._internal.ruamel.yaml.parser.Parser if pure or CParser is None else CParser
-            self.Composer = google.appengine._internal.ruamel.yaml.composer.Composer
-            self.Constructor = google.appengine._internal.ruamel.yaml.constructor.BaseConstructor
+            self.Emitter = ruamel.yaml.emitter.Emitter
+            self.Representer = ruamel.yaml.representer.BaseRepresenter
+            self.Parser = ruamel.yaml.parser.Parser if pure or CParser is None else CParser
+            self.Composer = ruamel.yaml.composer.Composer
+            self.Constructor = ruamel.yaml.constructor.BaseConstructor
         elif self.typ == 'unsafe':
             self.Emitter = (
-                google.appengine._internal.ruamel.yaml.emitter.Emitter if pure or CEmitter is None else CEmitter
+                ruamel.yaml.emitter.Emitter if pure or CEmitter is None else CEmitter
             )
-            self.Representer = google.appengine._internal.ruamel.yaml.representer.Representer
-            self.Parser = google.appengine._internal.ruamel.yaml.parser.Parser if pure or CParser is None else CParser
-            self.Composer = google.appengine._internal.ruamel.yaml.composer.Composer
-            self.Constructor = google.appengine._internal.ruamel.yaml.constructor.Constructor
+            self.Representer = ruamel.yaml.representer.Representer
+            self.Parser = ruamel.yaml.parser.Parser if pure or CParser is None else CParser
+            self.Composer = ruamel.yaml.composer.Composer
+            self.Constructor = ruamel.yaml.constructor.Constructor
         else:
             for module in self.plug_ins:
                 if getattr(module, 'typ', None) == self.typ:
@@ -379,20 +379,20 @@ class YAML(object):
         """
         if self.Parser is not CParser:
             if self.Reader is None:
-                self.Reader = google.appengine._internal.ruamel.yaml.reader.Reader
+                self.Reader = ruamel.yaml.reader.Reader
             if self.Scanner is None:
-                self.Scanner = google.appengine._internal.ruamel.yaml.scanner.Scanner
+                self.Scanner = ruamel.yaml.scanner.Scanner
             self.reader.stream = stream
         else:
             if self.Reader is not None:
                 if self.Scanner is None:
-                    self.Scanner = google.appengine._internal.ruamel.yaml.scanner.Scanner
-                self.Parser = google.appengine._internal.ruamel.yaml.parser.Parser
+                    self.Scanner = ruamel.yaml.scanner.Scanner
+                self.Parser = ruamel.yaml.parser.Parser
                 self.reader.stream = stream
             elif self.Scanner is not None:
                 if self.Reader is None:
-                    self.Reader = google.appengine._internal.ruamel.yaml.reader.Reader
-                self.Parser = google.appengine._internal.ruamel.yaml.parser.Parser
+                    self.Reader = ruamel.yaml.reader.Reader
+                self.Parser = ruamel.yaml.parser.Parser
                 self.reader.stream = stream
             else:
                 # combined C level reader>scanner>parser
@@ -400,8 +400,8 @@ class YAML(object):
                 # if you just initialise the CParser, to much of resolver.py
                 # is actually used
                 rslvr = self.Resolver
-                # if rslvr is google.appengine._internal.ruamel.yaml.resolver.VersionedResolver:
-                #     rslvr = google.appengine._internal.ruamel.yaml.resolver.Resolver
+                # if rslvr is ruamel.yaml.resolver.VersionedResolver:
+                #     rslvr = ruamel.yaml.resolver.Resolver
 
                 class XLoader(self.Parser, self.Constructor, rslvr):  # type: ignore
                     def __init__(selfx, stream, version=self.version, preserve_quotes=None):
@@ -515,22 +515,22 @@ class YAML(object):
         # we have only .Serializer to deal with (vs .Reader & .Scanner), much simpler
         if self.Emitter is not CEmitter:
             if self.Serializer is None:
-                self.Serializer = google.appengine._internal.ruamel.yaml.serializer.Serializer
+                self.Serializer = ruamel.yaml.serializer.Serializer
             self.emitter.stream = stream
             self.emitter.top_level_colon_align = tlca
             return self.serializer, self.representer, self.emitter
         if self.Serializer is not None:
             # cannot set serializer with CEmitter
-            self.Emitter = google.appengine._internal.ruamel.yaml.emitter.Emitter
+            self.Emitter = ruamel.yaml.emitter.Emitter
             self.emitter.stream = stream
             self.emitter.top_level_colon_align = tlca
             return self.serializer, self.representer, self.emitter
         # C routines
 
         rslvr = (
-            google.appengine._internal.ruamel.yaml.resolver.BaseResolver
+            ruamel.yaml.resolver.BaseResolver
             if self.typ == 'base'
-            else google.appengine._internal.ruamel.yaml.resolver.Resolver
+            else ruamel.yaml.resolver.Resolver
         )
 
         class XDumper(CEmitter, self.Representer, rslvr):  # type: ignore
@@ -596,7 +596,7 @@ class YAML(object):
     def map(self, **kw):
         # type: (Any) -> Any
         if self.typ == 'rt':
-            from google.appengine._internal.ruamel.yaml.comments import CommentedMap
+            from ruamel.yaml.comments import CommentedMap
 
             return CommentedMap(**kw)
         else:
@@ -605,7 +605,7 @@ class YAML(object):
     def seq(self, *args):
         # type: (Any) -> Any
         if self.typ == 'rt':
-            from google.appengine._internal.ruamel.yaml.comments import CommentedSeq
+            from ruamel.yaml.comments import CommentedSeq
 
             return CommentedSeq(*args)
         else:
@@ -1320,7 +1320,7 @@ def add_implicit_resolver(
         if hasattr(Loader, 'add_implicit_resolver'):
             Loader.add_implicit_resolver(tag, regexp, first)
         elif issubclass(
-            Loader, (BaseLoader, SafeLoader, google.appengine._internal.ruamel.yaml.loader.Loader, RoundTripLoader)
+            Loader, (BaseLoader, SafeLoader, ruamel.yaml.loader.Loader, RoundTripLoader)
         ):
             Resolver.add_implicit_resolver(tag, regexp, first)
         else:
@@ -1329,7 +1329,7 @@ def add_implicit_resolver(
         if hasattr(Dumper, 'add_implicit_resolver'):
             Dumper.add_implicit_resolver(tag, regexp, first)
         elif issubclass(
-            Dumper, (BaseDumper, SafeDumper, google.appengine._internal.ruamel.yaml.dumper.Dumper, RoundTripDumper)
+            Dumper, (BaseDumper, SafeDumper, ruamel.yaml.dumper.Dumper, RoundTripDumper)
         ):
             Resolver.add_implicit_resolver(tag, regexp, first)
         else:
@@ -1352,7 +1352,7 @@ def add_path_resolver(tag, path, kind=None, Loader=None, Dumper=None, resolver=R
         if hasattr(Loader, 'add_path_resolver'):
             Loader.add_path_resolver(tag, path, kind)
         elif issubclass(
-            Loader, (BaseLoader, SafeLoader, google.appengine._internal.ruamel.yaml.loader.Loader, RoundTripLoader)
+            Loader, (BaseLoader, SafeLoader, ruamel.yaml.loader.Loader, RoundTripLoader)
         ):
             Resolver.add_path_resolver(tag, path, kind)
         else:
@@ -1361,7 +1361,7 @@ def add_path_resolver(tag, path, kind=None, Loader=None, Dumper=None, resolver=R
         if hasattr(Dumper, 'add_path_resolver'):
             Dumper.add_path_resolver(tag, path, kind)
         elif issubclass(
-            Dumper, (BaseDumper, SafeDumper, google.appengine._internal.ruamel.yaml.dumper.Dumper, RoundTripDumper)
+            Dumper, (BaseDumper, SafeDumper, ruamel.yaml.dumper.Dumper, RoundTripDumper)
         ):
             Resolver.add_path_resolver(tag, path, kind)
         else:
@@ -1411,7 +1411,7 @@ def add_multi_constructor(tag_prefix, multi_constructor, Loader=None, constructo
             BaseConstructor.add_multi_constructor(tag_prefix, multi_constructor)
         elif issubclass(Loader, SafeLoader):
             SafeConstructor.add_multi_constructor(tag_prefix, multi_constructor)
-        elif issubclass(Loader, google.appengine._internal.ruamel.yaml.loader.Loader):
+        elif issubclass(Loader, ruamel.yaml.loader.Loader):
             Constructor.add_multi_constructor(tag_prefix, multi_constructor)
         elif issubclass(Loader, RoundTripLoader):
             RoundTripConstructor.add_multi_constructor(tag_prefix, multi_constructor)

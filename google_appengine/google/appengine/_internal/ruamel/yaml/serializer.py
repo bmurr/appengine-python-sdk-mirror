@@ -2,11 +2,11 @@
 
 from __future__ import absolute_import
 
-from google.appengine._internal.ruamel.yaml.error import YAMLError
-from google.appengine._internal.ruamel.yaml.compat import nprint, DBG_NODE, dbg, string_types, nprintf  # NOQA
-from google.appengine._internal.ruamel.yaml.util import RegExp
+from ruamel.yaml.error import YAMLError
+from ruamel.yaml.compat import nprint, DBG_NODE, dbg, string_types, nprintf  # NOQA
+from ruamel.yaml.util import RegExp
 
-from google.appengine._internal.ruamel.yaml.events import (
+from ruamel.yaml.events import (
     StreamStartEvent,
     StreamEndEvent,
     MappingStartEvent,
@@ -18,11 +18,11 @@ from google.appengine._internal.ruamel.yaml.events import (
     DocumentStartEvent,
     DocumentEndEvent,
 )
-from google.appengine._internal.ruamel.yaml.nodes import MappingNode, ScalarNode, SequenceNode
+from ruamel.yaml.nodes import MappingNode, ScalarNode, SequenceNode
 
 if False:  # MYPY
     from typing import Any, Dict, Union, Text, Optional  # NOQA
-    from google.appengine._internal.ruamel.yaml.compat import VersionType  # NOQA
+    from ruamel.yaml.compat import VersionType  # NOQA
 
 __all__ = ['Serializer', 'SerializerError']
 

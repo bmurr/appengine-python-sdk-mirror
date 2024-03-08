@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 """A Python Search API used by app developers.
 
 Contains methods used to interface with Search API.
@@ -30,35 +31,25 @@ Contains API classes that forward to apiproxy.
 import base64
 import datetime
 import logging
-import os
 import re
 import string
 import sys
 import warnings
-from google.net.proto import ProtocolBuffer
 
-if os.environ.get('APPENGINE_RUNTIME') == 'python27':
-  from google.appengine.datastore import document_pb
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import datastore_types
-  from google.appengine.api import namespace_manager
-  from google.appengine.api.search import expression_parser
-  from google.appengine.api.search import query_parser
-  from google.appengine.api.search import search_service_pb
-  from google.appengine.api.search import search_util
-  from google.appengine.datastore import datastore_rpc
-  from google.appengine.runtime import apiproxy_errors
-else:
-  from google.appengine.datastore import document_pb
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import datastore_types
-  from google.appengine.api import namespace_manager
-  from google.appengine.api.search import expression_parser
-  from google.appengine.api.search import query_parser
-  from google.appengine.api.search import search_service_pb
-  from google.appengine.api.search import search_util
-  from google.appengine.datastore import datastore_rpc
-  from google.appengine.runtime import apiproxy_errors
+import six
+from six import unichr
+from six.moves import zip
+
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import datastore_types
+from google.appengine.api import namespace_manager
+from google.appengine.api.search import expression_parser
+from google.appengine.api.search import query_parser
+from google.appengine.api.search import search_service_pb2
+from google.appengine.api.search import search_util
+from google.appengine.datastore import datastore_rpc
+from google.appengine.runtime import apiproxy_errors
+from google.appengine.datastore import document_pb2
 
 
 __all__ = [
@@ -139,7 +130,9 @@ __all__ = [
     'UntokenizedPrefixField',
     'VECTOR_FIELD_MAX_SIZE',
     'VectorField',
-    ]
+    'unichr',
+    'zip',
+]
 
 MAXIMUM_INDEX_NAME_LENGTH = 100
 MAXIMUM_FIELD_VALUE_LENGTH = 1024 * 1024
@@ -198,12 +191,11 @@ MAX_NUMBER_VALUE = 2147483647
 MIN_NUMBER_VALUE = -2147483647
 
 
-_PROTO_FIELDS_STRING_VALUE = frozenset(
-    [document_pb.FieldValue.TEXT,
-     document_pb.FieldValue.HTML,
-     document_pb.FieldValue.ATOM,
-     document_pb.FieldValue.UNTOKENIZED_PREFIX,
-     document_pb.FieldValue.TOKENIZED_PREFIX])
+_PROTO_FIELDS_STRING_VALUE = frozenset([
+    document_pb2.FieldValue.TEXT, document_pb2.FieldValue.HTML,
+    document_pb2.FieldValue.ATOM, document_pb2.FieldValue.UNTOKENIZED_PREFIX,
+    document_pb2.FieldValue.TOKENIZED_PREFIX
+])
 
 
 class Error(Exception):
@@ -242,15 +234,15 @@ def _ConvertToUnicode(some_string):
   """Convert UTF-8 encoded string to unicode."""
   if some_string is None:
     return None
-  if isinstance(some_string, unicode):
+  if isinstance(some_string, six.text_type):
     return some_string
-  return unicode(some_string, 'utf-8')
+  return six.text_type(some_string, 'utf-8')
 
 
 def _ConcatenateErrorMessages(prefix, status):
-  """Returns an error message combining prefix and status.error_detail()."""
-  if status.error_detail():
-    return prefix + ': ' + status.error_detail()
+  """Returns an error message combining prefix and status.error_detail."""
+  if status.error_detail:
+    return prefix + ': ' + status.error_detail
   return prefix
 
 
@@ -295,7 +287,7 @@ class _PutOperationFuture(_RpcOperationFuture):
     try:
       return super(_PutOperationFuture, self).get_result()
     except apiproxy_errors.OverQuotaError as e:
-      message = e.message + '; index = ' + self._index.name
+      message = str(e) + '; index = ' + self._index.name
       if self._index.namespace:
         message = message + ' in namespace ' + self._index.namespace
       raise apiproxy_errors.OverQuotaError(message)
@@ -328,9 +320,9 @@ def _ConvertToUTF8(value):
     value = {'inf': 'Infinity',
              '-inf': '-Infinity',
              'nan': 'NaN'}.get(value, value)
-  elif isinstance(value, (int, long)):
+  elif isinstance(value, six.integer_types):
     value = str(value)
-  return _ConvertToUnicode(value).encode('utf-8')
+  return six.ensure_binary(_ConvertToUnicode(value))
 
 
 class OperationResult(object):
@@ -387,18 +379,19 @@ class OperationResult(object):
 
 
 _ERROR_OPERATION_CODE_MAP = {
-    search_service_pb.SearchServiceError.OK: OperationResult.OK,
-    search_service_pb.SearchServiceError.INVALID_REQUEST:
-    OperationResult.INVALID_REQUEST,
-    search_service_pb.SearchServiceError.TRANSIENT_ERROR:
-    OperationResult.TRANSIENT_ERROR,
-    search_service_pb.SearchServiceError.INTERNAL_ERROR:
-    OperationResult.INTERNAL_ERROR,
-    search_service_pb.SearchServiceError.TIMEOUT:
-    OperationResult.TIMEOUT,
-    search_service_pb.SearchServiceError.CONCURRENT_TRANSACTION:
-    OperationResult.CONCURRENT_TRANSACTION,
-    }
+    search_service_pb2.SearchServiceError.OK:
+        OperationResult.OK,
+    search_service_pb2.SearchServiceError.INVALID_REQUEST:
+        OperationResult.INVALID_REQUEST,
+    search_service_pb2.SearchServiceError.TRANSIENT_ERROR:
+        OperationResult.TRANSIENT_ERROR,
+    search_service_pb2.SearchServiceError.INTERNAL_ERROR:
+        OperationResult.INTERNAL_ERROR,
+    search_service_pb2.SearchServiceError.TIMEOUT:
+        OperationResult.TIMEOUT,
+    search_service_pb2.SearchServiceError.CONCURRENT_TRANSACTION:
+        OperationResult.CONCURRENT_TRANSACTION,
+}
 
 
 class PutResult(OperationResult):
@@ -431,7 +424,7 @@ class PutError(Error):
 
 
 class DeleteError(Error):
-  """Indicates some error occured deleting one of the objects requested."""
+  """Indicates some error occurred deleting one of the objects requested."""
 
   def __init__(self, message, results):
     """Initializer.
@@ -452,13 +445,17 @@ class DeleteError(Error):
 
 
 _ERROR_MAP = {
-    search_service_pb.SearchServiceError.INVALID_REQUEST: InvalidRequest,
-    search_service_pb.SearchServiceError.TRANSIENT_ERROR: TransientError,
-    search_service_pb.SearchServiceError.INTERNAL_ERROR: InternalError,
-    search_service_pb.SearchServiceError.TIMEOUT: Timeout,
-    search_service_pb.SearchServiceError.CONCURRENT_TRANSACTION:
-    ConcurrentTransactionError,
-    }
+    search_service_pb2.SearchServiceError.INVALID_REQUEST:
+        InvalidRequest,
+    search_service_pb2.SearchServiceError.TRANSIENT_ERROR:
+        TransientError,
+    search_service_pb2.SearchServiceError.INTERNAL_ERROR:
+        InternalError,
+    search_service_pb2.SearchServiceError.TIMEOUT:
+        Timeout,
+    search_service_pb2.SearchServiceError.CONCURRENT_TRANSACTION:
+        ConcurrentTransactionError,
+}
 
 
 def _ToSearchError(error):
@@ -493,7 +490,11 @@ def _CheckInteger(value, name, zero_ok=True, upper_bound=None):
   """
   datastore_types.ValidateInteger(value, name, ValueError, empty_ok=True,
                                   zero_ok=zero_ok)
-  if upper_bound is not None and value > upper_bound:
+
+
+
+
+  if value is not None and upper_bound is not None and value > upper_bound:
     raise ValueError('%s, %d must be <= %d' % (name, value, upper_bound))
   return value
 
@@ -529,7 +530,7 @@ def _IsFinite(value):
 
   if isinstance(value, float) and -1e30000 < value < 1e30000:
     return True
-  elif isinstance(value, (int, long)):
+  elif isinstance(value, six.integer_types):
     return True
   else:
     return False
@@ -550,7 +551,7 @@ def _CheckNumber(value, name, should_be_finite=False):
     TypeError: If the value is not a number.
     ValueError: If should_be_finite is set and the value is not finite.
   """
-  if not isinstance(value, (int, long, float)):
+  if not isinstance(value, (six.integer_types, float)):
     raise TypeError('%s must be a int, long or float, got %s' %
                     (name, value.__class__.__name__))
   if should_be_finite and not _IsFinite(value):
@@ -592,11 +593,11 @@ def _CheckStatus(status):
       The subclass of Error is chosen based on value of the status code.
     InternalError: If the status value is unknown.
   """
-  if status.code() != search_service_pb.SearchServiceError.OK:
-    if status.code() in _ERROR_MAP:
-      raise _ERROR_MAP[status.code()](status.error_detail())
+  if status.code != search_service_pb2.SearchServiceError.OK:
+    if status.code in _ERROR_MAP:
+      raise _ERROR_MAP[status.code](status.error_detail)
     else:
-      raise InternalError(status.error_detail())
+      raise InternalError(status.error_detail)
 
 
 def _ValidateString(value,
@@ -628,13 +629,13 @@ def _ValidateString(value,
   """
   if value is None and empty_ok:
     return
-  if value is not None and not isinstance(value, basestring):
+  if value is not None and not isinstance(value, six.string_types):
     raise type_exception('%s must be a basestring; got %s:' %
                          (name, value.__class__.__name__))
   if not value and not empty_ok:
     raise value_exception('%s must not be empty.' % name)
 
-  if len(value.encode('utf-8')) > max_len:
+  if len(six.ensure_binary(value)) > max_len:
     raise value_exception('%s must be under %d bytes.' % (name, max_len))
   return value
 
@@ -727,7 +728,7 @@ def _GetList(a_list):
 
 def _ConvertToList(arg):
   """Converts arg to a list, empty if None, single element if not a list."""
-  if isinstance(arg, basestring):
+  if isinstance(arg, six.string_types):
     return [arg]
   if arg is not None:
     try:
@@ -812,7 +813,7 @@ def _CheckLanguage(language):
   """Checks language is None or a string that matches _LANGUAGE_RE."""
   if language is None:
     return None
-  if not isinstance(language, basestring):
+  if not isinstance(language, six.string_types):
     raise TypeError('language must be a basestring, got %s' %
                     language.__class__.__name__)
   if not re.match(_LANGUAGE_RE, language):
@@ -872,16 +873,17 @@ def _Repr(class_instance, ordered_dictionary):
 
 def _ListIndexesResponsePbToGetResponse(response, include_schema):
   """Returns a GetResponse constructed from get_indexes response pb."""
-  return GetResponse(
-      results=[_NewIndexFromPb(index, include_schema)
-               for index in response.index_metadata_list()])
+  return GetResponse(results=[
+      _NewIndexFromPb(index, include_schema)
+      for index in response.index_metadata
+  ])
 
 
 @datastore_rpc._positional(7)
 def get_indexes(namespace='', offset=None, limit=20,
                 start_index_name=None, include_start_index=True,
                 index_name_prefix=None, fetch_schema=False, deadline=None,
-                **kwargs):
+                all_namespaces=None, **kwargs):
   """Returns a list of available indexes.
 
   Args:
@@ -893,9 +895,9 @@ def get_indexes(namespace='', offset=None, limit=20,
     include_start_index: Whether or not to return the start index.
     index_name_prefix: The prefix used to select returned indexes.
     fetch_schema: Whether to retrieve Schema for each Index or not.
-
-  Kwargs:
-    deadline: Deadline for RPC call in seconds; if None use the default.
+    deadline: Deadline for RPC calls in seconds; if None use the default.
+    all_namespaces: Whether to return indexes from all namespaces.
+    **kwargs: Additional kwargs.
 
   Returns:
     The GetResponse containing a list of available indexes.
@@ -909,59 +911,89 @@ def get_indexes(namespace='', offset=None, limit=20,
   """
   return get_indexes_async(
       namespace, offset, limit, start_index_name, include_start_index,
-      index_name_prefix, fetch_schema, deadline=deadline, **kwargs).get_result()
+      index_name_prefix, fetch_schema, deadline=deadline,
+      all_namespaces=all_namespaces, **kwargs).get_result()
 
 
 @datastore_rpc._positional(7)
 def get_indexes_async(namespace='', offset=None, limit=20,
                       start_index_name=None, include_start_index=True,
                       index_name_prefix=None, fetch_schema=False, deadline=None,
-                      **kwargs):
+                      all_namespaces=None, **kwargs):
   """Asynchronously returns a list of available indexes.
 
-  Identical to get_indexes() except that it returns a future. Call
-  get_result() on the return value to block on the call and get its result.
+  Identical to get_indexes() except that it returns a future.
+
+  Args:
+    namespace: The namespace of indexes to be returned. If not set
+      then the current namespace is used.
+    offset: The offset of the first returned index.
+    limit: The number of indexes to return.
+    start_index_name: The name of the first index to be returned.
+    include_start_index: Whether or not to return the start index.
+    index_name_prefix: The prefix used to select returned indexes.
+    fetch_schema: Whether to retrieve Schema for each Index or not.
+    deadline: Deadline for RPC calls in seconds; if None use the default.
+    all_namespaces: Whether to return indexes from all namespaces.
+    **kwargs: Additional kwargs.
+
+  Returns:
+    A future. Call get_result() on the return value to block on the call and get
+    its result.
+
+  Raises:
+    InternalError: If the request fails on internal servers.
+    TypeError: If any of the parameters have invalid types, or an unknown
+      attribute is passed.
+    ValueError: If any of the parameters have invalid values (e.g., a
+      negative deadline).
   """
 
   app_id = kwargs.pop('app_id', None)
   if kwargs:
     raise TypeError('Invalid arguments: %s' % ', '.join(kwargs))
 
-  request = search_service_pb.ListIndexesRequest()
-  params = request.mutable_params()
+  request = search_service_pb2.ListIndexesRequest()
+  params = request.params
 
   if namespace is None:
     namespace = namespace_manager.get_namespace()
   if namespace is None:
     namespace = u''
   namespace_manager.validate_namespace(namespace, exception=ValueError)
-  params.set_namespace(namespace)
+  params.namespace = namespace
   if offset is not None:
-    params.set_offset(_CheckInteger(offset, 'offset', zero_ok=True,
-                                    upper_bound=MAXIMUM_GET_INDEXES_OFFSET))
-  params.set_limit(_CheckInteger(
-      limit, 'limit', zero_ok=False,
-      upper_bound=MAXIMUM_INDEXES_RETURNED_PER_GET_REQUEST))
+    params.offset = _CheckInteger(
+        offset, 'offset', zero_ok=True, upper_bound=MAXIMUM_GET_INDEXES_OFFSET)
+  params.limit = _CheckInteger(
+      limit,
+      'limit',
+      zero_ok=False,
+      upper_bound=MAXIMUM_INDEXES_RETURNED_PER_GET_REQUEST)
   if start_index_name is not None:
-    params.set_start_index_name(
-        _ValidateString(start_index_name, 'start_index_name',
-                        MAXIMUM_INDEX_NAME_LENGTH,
-                        empty_ok=False))
+    params.start_index_name = _ValidateString(
+        start_index_name,
+        'start_index_name',
+        MAXIMUM_INDEX_NAME_LENGTH,
+        empty_ok=False)
   if include_start_index is not None:
-    params.set_include_start_index(bool(include_start_index))
+    params.include_start_index = bool(include_start_index)
   if index_name_prefix is not None:
-    params.set_index_name_prefix(
-        _ValidateString(index_name_prefix, 'index_name_prefix',
-                        MAXIMUM_INDEX_NAME_LENGTH,
-                        empty_ok=False))
-  params.set_fetch_schema(fetch_schema)
+    params.index_name_prefix = _ValidateString(
+        index_name_prefix,
+        'index_name_prefix',
+        MAXIMUM_INDEX_NAME_LENGTH,
+        empty_ok=False)
+  if all_namespaces is not None:
+    params.all_namespaces = bool(all_namespaces)
+  params.fetch_schema = fetch_schema
 
-  response = search_service_pb.ListIndexesResponse()
+  response = search_service_pb2.ListIndexesResponse()
   if app_id:
-    request.set_app_id(app_id)
+    request.app_id = app_id
 
   def hook():
-    _CheckStatus(response.status())
+    _CheckStatus(response.status)
     return _ListIndexesResponsePbToGetResponse(response, fetch_schema)
   return _RpcOperationFuture(
       'ListIndexes', request, response, deadline, hook)
@@ -1051,7 +1083,7 @@ class Field(object):
 
   def _CopyStringValueToProtocolBuffer(self, field_value_pb):
     """Copies value to a string value in proto buf."""
-    field_value_pb.set_string_value(self.value.encode('utf-8'))
+    field_value_pb.string_value = six.ensure_binary(self.value, 'utf-8')
 
 
 class Facet(object):
@@ -1100,13 +1132,13 @@ class Facet(object):
 
   def _CopyStringValueToProtocolBuffer(self, facet_value_pb):
     """Copies value to a string value in proto buf."""
-    facet_value_pb.set_string_value(self.value.encode('utf-8'))
+    facet_value_pb.string_value = six.ensure_binary(self.value, 'utf-8')
 
   def _CopyToProtocolBuffer(self, pb):
-    """Copies facet's contents to a document_pb.Facet proto buffer."""
-    pb.set_name(self.name)
+    """Copies facet's contents to a document_pb2.Facet proto buffer."""
+    pb.name = self.name
     if self.value is not None:
-      facet_value_pb = pb.mutable_value()
+      facet_value_pb = pb.value
       self._CopyValueToProtocolBuffer(facet_value_pb)
     return pb
 
@@ -1152,7 +1184,7 @@ class AtomFacet(Facet):
     return _CheckAtom(value)
 
   def _CopyValueToProtocolBuffer(self, facet_value_pb):
-    facet_value_pb.set_type(document_pb.FacetValue.ATOM)
+    facet_value_pb.type = document_pb2.FacetValue.ATOM
     self._CopyStringValueToProtocolBuffer(facet_value_pb)
 
 
@@ -1185,24 +1217,24 @@ class NumberFacet(Facet):
                      (MIN_NUMBER_VALUE, MAX_NUMBER_VALUE, value))
 
   def _CopyValueToProtocolBuffer(self, facet_value_pb):
-    facet_value_pb.set_type(document_pb.FacetValue.NUMBER)
-    facet_value_pb.set_string_value(_ConvertToUTF8(self.value))
+    facet_value_pb.type = document_pb2.FacetValue.NUMBER
+    facet_value_pb.string_value = _ConvertToUTF8(self.value)
 
 
 def _NewFacetFromPb(pb):
-  """Constructs a Facet from a document_pb.Facet protocol buffer."""
-  name = _DecodeUTF8(pb.name())
-  val_type = pb.value().type()
-  value = _DecodeValue(_GetFacetValue(pb.value()), val_type)
-  if val_type == document_pb.FacetValue.ATOM:
+  """Constructs a Facet from a document_pb2.Facet protocol buffer."""
+  name = _DecodeUTF8(pb.name)
+  val_type = pb.value.type
+  value = _DecodeValue(_GetFacetValue(pb.value), val_type)
+  if val_type == document_pb2.FacetValue.ATOM:
     return AtomFacet(name, value)
-  elif val_type == document_pb.FacetValue.NUMBER:
+  elif val_type == document_pb2.FacetValue.NUMBER:
     return NumberFacet(name, value)
   return InvalidRequest('Unknown facet value type %d' % val_type)
 
 
 def _NewFacetsFromPb(facet_list):
-  """Returns a list of Facet copied from a document_pb.Document proto buf."""
+  """Returns a list of Facet copied from a document_pb2.Document proto buf."""
   return [_NewFacetFromPb(f) for f in facet_list]
 
 
@@ -1229,7 +1261,7 @@ class FacetRange(object):
     if start is None and end is None:
       raise ValueError(
           'Either start or end need to be provided for a facet range.')
-    none_or_numeric_type = (type(None), int, float, long)
+    none_or_numeric_type = (type(None), six.integer_types, float)
     self._start = _CheckType(start, none_or_numeric_type, 'start')
     self._end = _CheckType(end, none_or_numeric_type, 'end')
     if self._start is not None:
@@ -1253,9 +1285,9 @@ class FacetRange(object):
 
   def _CopyToProtocolBuffer(self, range_pb):
     if self.start is not None:
-      range_pb.set_start(_ConvertToUTF8(self.start))
+      range_pb.start = _ConvertToUTF8(self.start)
     if self.end is not None:
-      range_pb.set_end(_ConvertToUTF8(self.end))
+      range_pb.end = _ConvertToUTF8(self.end)
 
 
 class FacetRequest(object):
@@ -1298,9 +1330,9 @@ class FacetRequest(object):
     self._ranges = _ConvertToListAndCheckType(
         ranges, FacetRange, 'ranges')
     self._values = _ConvertToListAndCheckType(
-        values, (basestring, int, float, long), 'values')
+        values, (six.string_types, six.integer_types, float), 'values')
     for value in self._values:
-      if isinstance(value, (int, float, long)):
+      if isinstance(value, (six.integer_types, float)):
         NumberFacet._CheckValue(value)
 
   @property
@@ -1324,14 +1356,14 @@ class FacetRequest(object):
     return self._values
 
   def _CopyToProtocolBuffer(self, facet_request_pb):
-    """Converts this object to a search_service_pb.FacetRequest proto buff."""
-    facet_request_pb.set_name(self.name)
-    request_param_pb = facet_request_pb.mutable_params()
-    request_param_pb.set_value_limit(self.value_limit)
+    """Converts this object to a search_service_pb2.FacetRequest proto buff."""
+    facet_request_pb.name = self.name
+    request_param_pb = facet_request_pb.params
+    request_param_pb.value_limit = self.value_limit
     for facet_range in self.ranges:
-      facet_range._CopyToProtocolBuffer(request_param_pb.add_range())
+      facet_range._CopyToProtocolBuffer(request_param_pb.range.add())
     for constraint in self.values:
-      request_param_pb.add_value_constraint(_ConvertToUTF8(constraint))
+      request_param_pb.value_constraint.append(_ConvertToUTF8(constraint))
 
   def __repr__(self):
     return _Repr(self, [('name', self.name),
@@ -1396,7 +1428,7 @@ class FacetRefinement(object):
     Returns:
       A token string safe to be used in HTML for this facet refinement.
     """
-    facet_refinement = search_service_pb.FacetRefinement()
+    facet_refinement = search_service_pb2.FacetRefinement()
     self._CopyToProtocolBuffer(facet_refinement)
     return base64.b64encode(facet_refinement.SerializeToString())
 
@@ -1415,34 +1447,35 @@ class FacetRefinement(object):
     Raises:
       ValueError: If the token_string is invalid.
     """
-    ref_pb = search_service_pb.FacetRefinement()
+    ref_pb = search_service_pb2.FacetRefinement()
 
     try:
       ref_pb.ParseFromString(base64.b64decode(token_string))
-    except (ProtocolBuffer.ProtocolBufferDecodeError, TypeError) as e:
+    except TypeError as e:
 
 
       raise ValueError('Invalid refinement token %s' % token_string, e)
 
     facet_range = None
-    if ref_pb.has_range():
-      range_pb = ref_pb.range()
+    if ref_pb.HasField('range'):
+      range_pb = ref_pb.range
       facet_range = FacetRange(
-          start=float(range_pb.start()) if range_pb.has_start() else None,
-          end=float(range_pb.end()) if range_pb.has_end() else None)
+          start=float(range_pb.start) if range_pb.HasField('start') else None,
+          end=float(range_pb.end) if range_pb.HasField('end') else None)
 
-    return FacetRefinement(ref_pb.name(),
-                           value=ref_pb.value() if ref_pb.has_value() else None,
-                           facet_range=facet_range)
+    return FacetRefinement(
+        ref_pb.name,
+        value=ref_pb.value if ref_pb.HasField('value') else None,
+        facet_range=facet_range)
 
   def _CopyToProtocolBuffer(self, facet_refinement_pb):
-    """Copies This object to a search_service_pb.FacetRefinement."""
-    facet_refinement_pb.set_name(self.name)
+    """Copies This object to a search_service_pb2.FacetRefinement."""
+    facet_refinement_pb.name = self.name
     if self.value is not None:
-      facet_refinement_pb.set_value(_ConvertToUTF8(self.value))
+      facet_refinement_pb.value = _ConvertToUTF8(self.value)
     if self.facet_range is not None:
       self.facet_range._CopyToProtocolBuffer(
-          facet_refinement_pb.mutable_range())
+          facet_refinement_pb.range)
 
   def __repr__(self):
     return _Repr(self, [('name', self.name),
@@ -1451,11 +1484,11 @@ class FacetRefinement(object):
 
 
 def _CopyFieldToProtocolBuffer(field, pb):
-  """Copies field's contents to a document_pb.Field protocol buffer."""
-  pb.set_name(field.name.encode('utf-8'))
-  field_value_pb = pb.mutable_value()
+  """Copies field's contents to a document_pb2.Field protocol buffer."""
+  pb.name = six.ensure_binary(field.name, 'utf-8')
+  field_value_pb = pb.value
   if field.language:
-    field_value_pb.set_language(field.language.encode('utf-8'))
+    field_value_pb.language = six.ensure_binary(field.language, 'utf-8')
   if field.value is not None:
     field._CopyValueToProtocolBuffer(field_value_pb)
   return pb
@@ -1486,7 +1519,7 @@ class TextField(Field):
     return _CheckText(value)
 
   def _CopyValueToProtocolBuffer(self, field_value_pb):
-    field_value_pb.set_type(document_pb.FieldValue.TEXT)
+    field_value_pb.type = document_pb2.FieldValue.TEXT
     self._CopyStringValueToProtocolBuffer(field_value_pb)
 
 
@@ -1516,7 +1549,7 @@ class HtmlField(Field):
     return _CheckHtml(value)
 
   def _CopyValueToProtocolBuffer(self, field_value_pb):
-    field_value_pb.set_type(document_pb.FieldValue.HTML)
+    field_value_pb.type = document_pb2.FieldValue.HTML
     self._CopyStringValueToProtocolBuffer(field_value_pb)
 
 
@@ -1545,7 +1578,7 @@ class AtomField(Field):
     return _CheckAtom(value)
 
   def _CopyValueToProtocolBuffer(self, field_value_pb):
-    field_value_pb.set_type(document_pb.FieldValue.ATOM)
+    field_value_pb.type = document_pb2.FieldValue.ATOM
     self._CopyStringValueToProtocolBuffer(field_value_pb)
 
 
@@ -1575,9 +1608,9 @@ class VectorField(Field):
     return _CheckVector(value)
 
   def _CopyValueToProtocolBuffer(self, field_value_pb):
-    field_value_pb.set_type(document_pb.FieldValue.VECTOR)
+    field_value_pb.type = document_pb2.FieldValue.VECTOR
     for d in self.value:
-      field_value_pb.add_vector_value(d)
+      field_value_pb.vector_value.append(d)
 
 
 class UntokenizedPrefixField(Field):
@@ -1605,7 +1638,7 @@ class UntokenizedPrefixField(Field):
     return _CheckPrefix(value)
 
   def _CopyValueToProtocolBuffer(self, field_value_pb):
-    field_value_pb.set_type(document_pb.FieldValue.UNTOKENIZED_PREFIX)
+    field_value_pb.type = document_pb2.FieldValue.UNTOKENIZED_PREFIX
     self._CopyStringValueToProtocolBuffer(field_value_pb)
 
 
@@ -1634,7 +1667,7 @@ class TokenizedPrefixField(Field):
     return _CheckPrefix(value)
 
   def _CopyValueToProtocolBuffer(self, field_value_pb):
-    field_value_pb.set_type(document_pb.FieldValue.TOKENIZED_PREFIX)
+    field_value_pb.type = document_pb2.FieldValue.TOKENIZED_PREFIX
     self._CopyStringValueToProtocolBuffer(field_value_pb)
 
 
@@ -1663,8 +1696,8 @@ class DateField(Field):
     return _CheckDate(value)
 
   def _CopyValueToProtocolBuffer(self, field_value_pb):
-    field_value_pb.set_type(document_pb.FieldValue.DATE)
-    field_value_pb.set_string_value(search_util.SerializeDate(self.value))
+    field_value_pb.type = document_pb2.FieldValue.DATE
+    field_value_pb.string_value = search_util.SerializeDate(self.value)
 
 
 class NumberField(Field):
@@ -1696,8 +1729,8 @@ class NumberField(Field):
     return value
 
   def _CopyValueToProtocolBuffer(self, field_value_pb):
-    field_value_pb.set_type(document_pb.FieldValue.NUMBER)
-    field_value_pb.set_string_value(str(self.value))
+    field_value_pb.type = document_pb2.FieldValue.NUMBER
+    field_value_pb.string_value = str(self.value)
 
 
 class GeoPoint(object):
@@ -1745,8 +1778,10 @@ class GeoPoint(object):
     return value
 
   def __eq__(self, other):
-    return (self.latitude == other.latitude and
-      self.longitude == other.longitude)
+    return (
+        isinstance(other, type(self)) and
+        self.latitude == other.latitude and
+        self.longitude == other.longitude)
 
   def __repr__(self):
     return _Repr(self,
@@ -1786,62 +1821,62 @@ class GeoField(Field):
     return _CheckGeoPoint(value)
 
   def _CopyValueToProtocolBuffer(self, field_value_pb):
-    field_value_pb.set_type(document_pb.FieldValue.GEO)
-    geo_pb = field_value_pb.mutable_geo()
-    geo_pb.set_lat(self.value.latitude)
-    geo_pb.set_lng(self.value.longitude)
+    field_value_pb.type = document_pb2.FieldValue.GEO
+    geo_pb = field_value_pb.geo
+    geo_pb.lat = self.value.latitude
+    geo_pb.lng = self.value.longitude
 
 
 def _GetFacetValue(value_pb):
   """Gets the value from the facet value_pb."""
-  if value_pb.type() == document_pb.FacetValue.ATOM:
-    if value_pb.has_string_value():
-      return value_pb.string_value()
+  if value_pb.type == document_pb2.FacetValue.ATOM:
+    if value_pb.HasField('string_value'):
+      return value_pb.string_value
     return None
-  if value_pb.type() == document_pb.FieldValue.NUMBER:
-    if value_pb.has_string_value():
-      return float(value_pb.string_value())
+  if value_pb.type == document_pb2.FieldValue.NUMBER:
+    if value_pb.HasField('string_value'):
+      return float(value_pb.string_value)
     return None
-  raise TypeError('unknown FacetValue type %d' % value_pb.type())
+  raise TypeError('unknown FacetValue type %d' % value_pb.type)
 
 
 def _GetValue(value_pb):
   """Gets the value from the value_pb."""
-  if value_pb.type() in _PROTO_FIELDS_STRING_VALUE:
-    if value_pb.has_string_value():
-      return value_pb.string_value()
+  if value_pb.type in _PROTO_FIELDS_STRING_VALUE:
+    if value_pb.HasField('string_value'):
+      return value_pb.string_value
     return None
-  if value_pb.type() == document_pb.FieldValue.DATE:
-    if value_pb.has_string_value():
-      return search_util.DeserializeDate(value_pb.string_value())
+  if value_pb.type == document_pb2.FieldValue.DATE:
+    if value_pb.HasField('string_value'):
+      return search_util.DeserializeDate(value_pb.string_value)
     return None
-  if value_pb.type() == document_pb.FieldValue.NUMBER:
-    if value_pb.has_string_value():
-      return float(value_pb.string_value())
+  if value_pb.type == document_pb2.FieldValue.NUMBER:
+    if value_pb.HasField('string_value'):
+      return float(value_pb.string_value)
     return None
-  if value_pb.type() == document_pb.FieldValue.GEO:
-    if value_pb.has_geo():
-      geo_pb = value_pb.geo()
-      return GeoPoint(latitude=geo_pb.lat(), longitude=geo_pb.lng())
+  if value_pb.type == document_pb2.FieldValue.GEO:
+    if value_pb.HasField('geo'):
+      geo_pb = value_pb.geo
+      return GeoPoint(latitude=geo_pb.lat, longitude=geo_pb.lng)
     return None
-  if value_pb.type() == document_pb.FieldValue.VECTOR:
-    if value_pb.vector_value_size():
-      return value_pb.vector_value_list()
+  if value_pb.type == document_pb2.FieldValue.VECTOR:
+    if value_pb.vector_value:
+      return value_pb.vector_value
     return None
-  raise TypeError('unknown FieldValue type %d' % value_pb.type())
+  raise TypeError('unknown FieldValue type %d' % value_pb.type)
 
 
-_STRING_TYPES = set([document_pb.FieldValue.TEXT,
-                     document_pb.FieldValue.HTML,
-                     document_pb.FieldValue.ATOM,
-                     document_pb.FieldValue.UNTOKENIZED_PREFIX,
-                     document_pb.FieldValue.TOKENIZED_PREFIX])
+_STRING_TYPES = set([
+    document_pb2.FieldValue.TEXT, document_pb2.FieldValue.HTML,
+    document_pb2.FieldValue.ATOM, document_pb2.FieldValue.UNTOKENIZED_PREFIX,
+    document_pb2.FieldValue.TOKENIZED_PREFIX
+])
 
 
 def _DecodeUTF8(pb_value):
   """Decodes a UTF-8 encoded string into unicode."""
   if pb_value is not None:
-    return pb_value.decode('utf-8')
+    return pb_value
   return None
 
 
@@ -1853,30 +1888,30 @@ def _DecodeValue(pb_value, val_type):
 
 
 def _NewFieldFromPb(pb):
-  """Constructs a Field from a document_pb.Field protocol buffer."""
-  name = _DecodeUTF8(pb.name())
-  val_type = pb.value().type()
-  value = _DecodeValue(_GetValue(pb.value()), val_type)
+  """Constructs a Field from a document_pb2.Field protocol buffer."""
+  name = _DecodeUTF8(pb.name)
+  val_type = pb.value.type
+  value = _DecodeValue(_GetValue(pb.value), val_type)
   lang = None
-  if pb.value().has_language():
-    lang = _DecodeUTF8(pb.value().language())
-  if val_type == document_pb.FieldValue.TEXT:
+  if pb.value.HasField('language'):
+    lang = _DecodeUTF8(pb.value.language)
+  if val_type == document_pb2.FieldValue.TEXT:
     return TextField(name, value, lang)
-  elif val_type == document_pb.FieldValue.HTML:
+  elif val_type == document_pb2.FieldValue.HTML:
     return HtmlField(name, value, lang)
-  elif val_type == document_pb.FieldValue.ATOM:
+  elif val_type == document_pb2.FieldValue.ATOM:
     return AtomField(name, value, lang)
-  elif val_type == document_pb.FieldValue.UNTOKENIZED_PREFIX:
+  elif val_type == document_pb2.FieldValue.UNTOKENIZED_PREFIX:
     return UntokenizedPrefixField(name, value, lang)
-  elif val_type == document_pb.FieldValue.TOKENIZED_PREFIX:
+  elif val_type == document_pb2.FieldValue.TOKENIZED_PREFIX:
     return TokenizedPrefixField(name, value, lang)
-  elif val_type == document_pb.FieldValue.DATE:
+  elif val_type == document_pb2.FieldValue.DATE:
     return DateField(name, value)
-  elif val_type == document_pb.FieldValue.NUMBER:
+  elif val_type == document_pb2.FieldValue.NUMBER:
     return NumberField(name, value)
-  elif val_type == document_pb.FieldValue.GEO:
+  elif val_type == document_pb2.FieldValue.GEO:
     return GeoField(name, value)
-  elif val_type == document_pb.FieldValue.VECTOR:
+  elif val_type == document_pb2.FieldValue.VECTOR:
     return VectorField(name, value)
   return InvalidRequest('Unknown field value type %d' % val_type)
 
@@ -2045,7 +2080,7 @@ class Document(object):
 
   def _CheckRank(self, rank):
     """Checks if rank is valid, then returns it."""
-    return _CheckInteger(rank, 'rank', upper_bound=sys.maxint)
+    return _CheckInteger(rank, 'rank', upper_bound=sys.maxsize)
 
   def _GetDefaultRank(self):
     """Returns a default rank as total seconds since 1st Jan 2011."""
@@ -2077,45 +2112,46 @@ class Document(object):
 
 
 def _CopyDocumentToProtocolBuffer(document, pb):
-  """Copies Document to a document_pb.Document protocol buffer."""
-  pb.set_storage(document_pb.Document.DISK)
+  """Copies Document to a document_pb2.Document protocol buffer."""
+  pb.storage = document_pb2.Document.DISK
   if document.doc_id:
-    pb.set_id(document.doc_id.encode('utf-8'))
+    pb.id = six.ensure_binary(document.doc_id, 'utf-8')
   if document.language:
-    pb.set_language(document.language.encode('utf-8'))
+    pb.language = six.ensure_binary(document.language, 'utf-8')
   for field in document.fields:
-    field_pb = pb.add_field()
+    field_pb = pb.field.add()
     _CopyFieldToProtocolBuffer(field, field_pb)
   for facet in document.facets:
-    facet_pb = pb.add_facet()
+    facet_pb = pb.facet.add()
     facet._CopyToProtocolBuffer(facet_pb)
-  pb.set_order_id(document.rank)
+  pb.order_id = document.rank
 
 
   if hasattr(document, '_rank_defaulted'):
     if document._rank_defaulted:
-      pb.set_order_id_source(document_pb.Document.DEFAULTED)
+      pb.order_id_source = document_pb2.Document.DEFAULTED
     else:
-      pb.set_order_id_source(document_pb.Document.SUPPLIED)
+      pb.order_id_source = document_pb2.Document.SUPPLIED
 
   return pb
 
 
 def _NewFieldsFromPb(field_list):
-  """Returns a list of Field copied from a document_pb.Document proto buf."""
+  """Returns a list of Field copied from a document_pb2.Document proto buf."""
   return [_NewFieldFromPb(f) for f in field_list]
 
 
 def _NewDocumentFromPb(doc_pb):
-  """Constructs a Document from a document_pb.Document protocol buffer."""
+  """Constructs a Document from a document_pb2.Document protocol buffer."""
   lang = None
-  if doc_pb.has_language():
-    lang = _DecodeUTF8(doc_pb.language())
-  return Document(doc_id=_DecodeUTF8(doc_pb.id()),
-                  fields=_NewFieldsFromPb(doc_pb.field_list()),
-                  language=lang,
-                  rank=doc_pb.order_id(),
-                  facets=_NewFacetsFromPb(doc_pb.facet_list()))
+  if doc_pb.HasField('language'):
+    lang = _DecodeUTF8(doc_pb.language)
+  return Document(
+      doc_id=_DecodeUTF8(doc_pb.id),
+      fields=_NewFieldsFromPb(doc_pb.field),
+      language=lang,
+      rank=doc_pb.order_id,
+      facets=_NewFacetsFromPb(doc_pb.facet))
 
 
 def _QuoteString(argument):
@@ -2155,7 +2191,7 @@ class FieldExpression(object):
     self._name = _CheckFieldName(_ConvertToUnicode(name))
     if expression is None:
       raise ValueError('expression must be a FieldExpression, got None')
-    if not isinstance(expression, basestring):
+    if not isinstance(expression, six.string_types):
       raise TypeError('expression must be a FieldExpression, got %s' %
                       expression.__class__.__name__)
     self._expression = _CheckExpression(_ConvertToUnicode(expression))
@@ -2176,9 +2212,9 @@ class FieldExpression(object):
 
 
 def _CopyFieldExpressionToProtocolBuffer(field_expression, pb):
-  """Copies FieldExpression to a search_service_pb.FieldSpec_Expression."""
-  pb.set_name(field_expression.name.encode('utf-8'))
-  pb.set_expression(field_expression.expression.encode('utf-8'))
+  """Copies FieldExpression to a search_service_pb2.FieldSpec.Expression."""
+  pb.name = six.ensure_binary(field_expression.name, 'utf-8')
+  pb.expression = six.ensure_binary(field_expression.expression, 'utf-8')
 
 
 class SortOptions(object):
@@ -2304,48 +2340,49 @@ class RescoringMatchScorer(MatchScorer):
 
 
 def _CopySortExpressionToProtocolBuffer(sort_expression, pb):
-  """Copies a SortExpression to a search_service_pb.SortSpec protocol buffer."""
-  pb.set_sort_expression(sort_expression.expression.encode('utf-8'))
+  """Copies a SortExpression to a search_service_pb2.SortSpec protocol buffer."""
+  pb.sort_expression = six.ensure_binary(sort_expression.expression, 'utf-8')
   if sort_expression.direction == SortExpression.ASCENDING:
-    pb.set_sort_descending(False)
+    pb.sort_descending = False
   if sort_expression.default_value is not None:
-    if isinstance(sort_expression.default_value, basestring):
-      pb.set_default_value_text(sort_expression.default_value.encode('utf-8'))
+    if isinstance(sort_expression.default_value, six.string_types):
+      pb.default_value_text = six.ensure_binary(sort_expression.default_value,
+                                                'utf-8')
     elif (isinstance(sort_expression.default_value, datetime.datetime) or
           isinstance(sort_expression.default_value, datetime.date)):
-      pb.set_default_value_text(str(
-          search_util.EpochTime(sort_expression.default_value)))
+      pb.default_value_text = str(
+          search_util.EpochTime(sort_expression.default_value))
     else:
-      pb.set_default_value_numeric(sort_expression.default_value)
+      pb.default_value_numeric = sort_expression.default_value
   return pb
 
 
 def _CopyMatchScorerToScorerSpecProtocolBuffer(match_scorer, limit, pb):
-  """Copies a MatchScorer to a search_service_pb.ScorerSpec."""
+  """Copies a MatchScorer to a search_service_pb2.ScorerSpec."""
   if isinstance(match_scorer, RescoringMatchScorer):
-    pb.set_scorer(search_service_pb.ScorerSpec.RESCORING_MATCH_SCORER)
+    pb.scorer = search_service_pb2.ScorerSpec.RESCORING_MATCH_SCORER
   elif isinstance(match_scorer, MatchScorer):
-    pb.set_scorer(search_service_pb.ScorerSpec.MATCH_SCORER)
+    pb.scorer = search_service_pb2.ScorerSpec.MATCH_SCORER
   else:
     raise TypeError(
         'match_scorer must be a MatchScorer or RescoringMatchRescorer, '
         'got %s' % match_scorer.__class__.__name__)
-  pb.set_limit(limit)
+  pb.limit = limit
   return pb
 
 
 def _CopySortOptionsToProtocolBuffer(sort_options, params):
   """Copies the SortOptions into the SearchParams proto buf."""
   for expression in sort_options.expressions:
-    sort_spec_pb = params.add_sort_spec()
+    sort_spec_pb = params.sort_spec.add()
     _CopySortExpressionToProtocolBuffer(expression, sort_spec_pb)
   if sort_options.match_scorer:
-    scorer_spec = params.mutable_scorer_spec()
+    scorer_spec = params.scorer_spec
     _CopyMatchScorerToScorerSpecProtocolBuffer(
         sort_options.match_scorer, sort_options.limit, scorer_spec)
-    scorer_spec.set_limit(sort_options.limit)
+    scorer_spec.limit = sort_options.limit
   else:
-    params.mutable_scorer_spec().set_limit(sort_options.limit)
+    params.scorer_spec.limit = sort_options.limit
 
 
 class SortExpression(object):
@@ -2420,11 +2457,14 @@ class SortExpression(object):
     _CheckExpression(self._expression)
     self._default_value = default_value
     if self._default_value is not None:
-      if isinstance(self.default_value, basestring):
+      if isinstance(self.default_value, six.string_types):
         self._default_value = _ConvertToUnicode(default_value)
         _CheckText(self._default_value, 'default_value')
       elif not isinstance(self._default_value,
-                          (int, long, float, datetime.date, datetime.datetime)):
+                          (six.integer_types,
+                           float,
+                           datetime.date,
+                           datetime.datetime)):
         raise TypeError('default_value must be text, numeric or datetime, got '
                         '%s' % self._default_value.__class__.__name__)
 
@@ -2979,12 +3019,11 @@ class FacetOptions(object):
   def _CopyToProtocolBuffer(self, params):
     """Copies a FacetOptions object to a SearchParams proto buff."""
     if self.discovery_limit is not None:
-      params.set_auto_discover_facet_count(self.discovery_limit)
+      params.auto_discover_facet_count = self.discovery_limit
     if self.discovery_value_limit is not None:
-      params.mutable_facet_auto_detect_param().set_value_limit(
-          self.discovery_value_limit)
+      params.facet_auto_detect_param.value_limit = self.discovery_value_limit
     if self.depth is not None:
-      params.set_facet_depth(self.depth)
+      params.facet_depth = self.depth
 
 
 class QueryOptions(object):
@@ -3165,9 +3204,9 @@ def _CopyQueryOptionsObjectToProtocolBuffer(query, options, params):
   if options.cursor:
     cursor = options.cursor
     if cursor.per_result:
-      cursor_type = search_service_pb.SearchParams.PER_RESULT
+      cursor_type = search_service_pb2.SearchParams.PER_RESULT
     else:
-      cursor_type = search_service_pb.SearchParams.SINGLE
+      cursor_type = search_service_pb2.SearchParams.SINGLE
     if isinstance(cursor, Cursor) and cursor.web_safe_string:
       web_safe_string = cursor._internal_cursor
   _CopyQueryOptionsToProtocolBuffer(
@@ -3183,28 +3222,28 @@ def _CopyQueryOptionsToProtocolBuffer(
     params):
   """Copies fields of QueryOptions to params protobuf."""
   if offset:
-    params.set_offset(offset)
-  params.set_limit(limit)
+    params.offset = offset
+  params.limit = limit
   if number_found_accuracy is not None:
-    params.set_matched_count_accuracy(number_found_accuracy)
+    params.matched_count_accuracy = number_found_accuracy
   if cursor:
-    params.set_cursor(cursor.encode('utf-8'))
+    params.cursor = six.ensure_binary(cursor, 'utf-8')
   if cursor_type is not None:
-    params.set_cursor_type(cursor_type)
+    params.cursor_type = cursor_type
   if ids_only:
-    params.set_keys_only(ids_only)
+    params.keys_only = ids_only
   if returned_fields or snippeted_fields or returned_expressions:
-    field_spec_pb = params.mutable_field_spec()
+    field_spec_pb = params.field_spec
     for field in returned_fields:
-      field_spec_pb.add_name(field.encode('utf-8'))
+      field_spec_pb.name.append(six.ensure_binary(field, 'utf-8'))
     for snippeted_field in snippeted_fields:
       expression = u'snippet(%s, %s)' % (_QuoteString(query), snippeted_field)
       _CopyFieldExpressionToProtocolBuffer(
           FieldExpression(name=snippeted_field, expression=expression),
-          field_spec_pb.add_expression())
+          field_spec_pb.expression.add())
     for expression in returned_expressions:
-      _CopyFieldExpressionToProtocolBuffer(
-          expression, field_spec_pb.add_expression())
+      _CopyFieldExpressionToProtocolBuffer(expression,
+                                           field_spec_pb.expression.add())
 
   if sort_options is not None:
     _CopySortOptionsToProtocolBuffer(sort_options, params)
@@ -3291,7 +3330,7 @@ class Query(object):
         https://developers.google.com/appengine/docs/python/search/overview#Expressions
         for a list of expressions that can be used in queries.
       options: A QueryOptions describing post-processing of search results.
-      enable_facet_discovery: discovery top relevent facets to this search query
+      enable_facet_discovery: discovery top relevant facets to this search query
         and return them.
       return_facets: An iterable of FacetRequest or basestring as facet name to
         return specific facet with the result.
@@ -3309,14 +3348,15 @@ class Query(object):
     self._facet_options = facet_options
     self._enable_facet_discovery = enable_facet_discovery
     self._return_facets = _ConvertToListAndCheckType(
-        return_facets, (basestring, FacetRequest), 'return_facet')
+        return_facets, (six.string_types, FacetRequest), 'return_facet')
     for index, facet in enumerate(self._return_facets):
-      if isinstance(facet, basestring):
+      if isinstance(facet, six.string_types):
         self._return_facets[index] = FacetRequest(self._return_facets[index])
     self._facet_refinements = _ConvertToListAndCheckType(
-        facet_refinements, (basestring, FacetRefinement), 'facet_refinements')
+        facet_refinements, (six.string_types, FacetRefinement),
+        'facet_refinements')
     for index, refinement in enumerate(self._facet_refinements):
-      if isinstance(refinement, basestring):
+      if isinstance(refinement, six.string_types):
         self._facet_refinements[index] = FacetRefinement.FromTokenString(
             refinement)
 
@@ -3360,16 +3400,16 @@ class Query(object):
 
 def _CopyQueryToProtocolBuffer(query, params):
   """Copies Query object to params protobuf."""
-  params.set_query(query.encode('utf-8'))
+  params.query = six.ensure_binary(query, 'utf-8')
 
 
 def _CopyQueryObjectToProtocolBuffer(query, params):
-  """Copy a query object to search_service_pb.SearchParams object."""
+  """Copy a query object to search_service_pb2.SearchParams object."""
   _CopyQueryToProtocolBuffer(query.query_string, params)
   for refinement in query.facet_refinements:
-    refinement._CopyToProtocolBuffer(params.add_facet_refinement())
+    refinement._CopyToProtocolBuffer(params.facet_refinement.add())
   for return_facet in query.return_facets:
-    return_facet._CopyToProtocolBuffer(params.add_include_facet())
+    return_facet._CopyToProtocolBuffer(params.include_facet.add())
   options = query.options
   if query.options is None:
     options = QueryOptions()
@@ -3440,7 +3480,7 @@ class Index(object):
         namespace is used.
       source: Deprecated as of 1.7.6. The source of
         the index:
-          SEARCH - The Index was created by adding documents throught this
+          SEARCH - The Index was created by adding documents through this
             search API.
           DATASTORE - The Index was created as a side-effect of putting entities
             into Datastore.
@@ -3531,16 +3571,17 @@ class Index(object):
   def _NewPutResultFromPb(self, status_pb, doc_id):
     """Constructs PutResult from RequestStatus pb and doc_id."""
     message = None
-    if status_pb.has_error_detail():
-      message = _DecodeUTF8(status_pb.error_detail())
-    code = _ERROR_OPERATION_CODE_MAP.get(status_pb.code(),
+    if status_pb.HasField('error_detail'):
+      message = _DecodeUTF8(status_pb.error_detail)
+    code = _ERROR_OPERATION_CODE_MAP.get(status_pb.code,
                                          OperationResult.INTERNAL_ERROR)
     return PutResult(code=code, message=message, id=_DecodeUTF8(doc_id))
 
   def _NewPutResultList(self, response):
-    return [self._NewPutResultFromPb(status, doc_id)
-            for status, doc_id in zip(response.status_list(),
-                                      response.doc_id_list())]
+    return [
+        self._NewPutResultFromPb(status, doc_id)
+        for status, doc_id in zip(response.status, response.doc_id)
+    ]
 
   @datastore_rpc._positional(2)
   def put(self, documents, deadline=None):
@@ -3575,7 +3616,7 @@ class Index(object):
     Identical to put() except that it returns a future. Call
     get_result() on the return value to block on the call and get its result.
     """
-    if isinstance(documents, basestring):
+    if isinstance(documents, six.string_types):
       raise TypeError('documents must be a Document or sequence of '
                       'Documents, got %s' % documents.__class__.__name__)
     try:
@@ -3589,11 +3630,11 @@ class Index(object):
     if len(docs) > MAXIMUM_DOCUMENTS_PER_PUT_REQUEST:
       raise ValueError('too many documents to index')
 
-    request = search_service_pb.IndexDocumentRequest()
-    response = search_service_pb.IndexDocumentResponse()
+    request = search_service_pb2.IndexDocumentRequest()
+    response = search_service_pb2.IndexDocumentResponse()
 
-    params = request.mutable_params()
-    _CopyMetadataToProtocolBuffer(self, params.mutable_index_spec())
+    params = request.params
+    _CopyMetadataToProtocolBuffer(self, params.index_spec)
 
     seen_docs = {}
     for document in docs:
@@ -3608,17 +3649,17 @@ class Index(object):
 
           continue
         seen_docs[doc_id] = document
-      doc_pb = params.add_document()
+      doc_pb = params.document.add()
       _CopyDocumentToProtocolBuffer(document, doc_pb)
 
     def hook():
       results = self._NewPutResultList(response)
 
-      if response.status_size() != len(params.document_list()):
+      if len(response.status) != len(params.document):
         raise PutError('did not index requested number of documents', results)
 
-      for status in response.status_list():
-        if status.code() != search_service_pb.SearchServiceError.OK:
+      for status in response.status:
+        if status.code != search_service_pb2.SearchServiceError.OK:
           raise PutError(
               _ConcatenateErrorMessages(
                   'one or more put document operations failed', status), results)
@@ -3628,16 +3669,18 @@ class Index(object):
   def _NewDeleteResultFromPb(self, status_pb, doc_id):
     """Constructs DeleteResult from RequestStatus pb and doc_id."""
     message = None
-    if status_pb.has_error_detail():
-      message = _DecodeUTF8(status_pb.error_detail())
-    code = _ERROR_OPERATION_CODE_MAP.get(status_pb.code(),
+    if status_pb.HasField('error_detail'):
+      message = _DecodeUTF8(status_pb.error_detail)
+    code = _ERROR_OPERATION_CODE_MAP.get(status_pb.code,
                                          OperationResult.INTERNAL_ERROR)
 
     return DeleteResult(code=code, message=message, id=doc_id)
 
   def _NewDeleteResultList(self, document_ids, response):
-    return [self._NewDeleteResultFromPb(status, doc_id)
-            for status, doc_id in zip(response.status_list(), document_ids)]
+    return [
+        self._NewDeleteResultFromPb(status, doc_id)
+        for status, doc_id in zip(response.status, document_ids)
+    ]
 
   @datastore_rpc._positional(2)
   def delete(self, document_ids, deadline=None):
@@ -3676,23 +3719,23 @@ class Index(object):
     if len(doc_ids) > MAXIMUM_DOCUMENTS_PER_PUT_REQUEST:
       raise ValueError('too many documents to delete')
 
-    request = search_service_pb.DeleteDocumentRequest()
-    response = search_service_pb.DeleteDocumentResponse()
-    params = request.mutable_params()
-    _CopyMetadataToProtocolBuffer(self, params.mutable_index_spec())
+    request = search_service_pb2.DeleteDocumentRequest()
+    response = search_service_pb2.DeleteDocumentResponse()
+    params = request.params
+    _CopyMetadataToProtocolBuffer(self, params.index_spec)
     for document_id in doc_ids:
       _CheckDocumentId(document_id)
-      params.add_doc_id(document_id)
+      params.doc_id.append(document_id)
 
     def hook():
       results = self._NewDeleteResultList(doc_ids, response)
 
-      if response.status_size() != len(doc_ids):
+      if len(response.status) != len(doc_ids):
         raise DeleteError(
             'did not delete requested number of documents', results)
 
-      for status in response.status_list():
-        if status.code() != search_service_pb.SearchServiceError.OK:
+      for status in response.status:
+        if status.code != search_service_pb2.SearchServiceError.OK:
           raise DeleteError(
               _ConcatenateErrorMessages(
                   'one or more delete document operations failed', status),
@@ -3713,20 +3756,20 @@ class Index(object):
     Returns:
       None
     """
-    request = search_service_pb.DeleteSchemaRequest()
-    response = search_service_pb.DeleteSchemaResponse()
-    params = request.mutable_params()
-    _CopyMetadataToProtocolBuffer(self, params.add_index_spec())
+    request = search_service_pb2.DeleteSchemaRequest()
+    response = search_service_pb2.DeleteSchemaResponse()
+    params = request.params
+    _CopyMetadataToProtocolBuffer(self, params.index_spec.add())
 
     def hook():
 
       results = self._NewDeleteResultList([self.name], response)
 
-      if response.status_size() != 1:
+      if len(response.status) != 1:
         raise DeleteError('did not delete exactly one schema', results)
 
-      status = response.status_list()[0]
-      if status.code() != search_service_pb.SearchServiceError.OK:
+      status = response.status[0]
+      if status.code != search_service_pb2.SearchServiceError.OK:
         raise DeleteError(
             _ConcatenateErrorMessages('delete schema operation failed', status),
             results)
@@ -3734,71 +3777,82 @@ class Index(object):
         'DeleteSchema', request, response, None, hook).get_result()
 
   def _NewScoredDocumentFromPb(self, doc_pb, sort_scores, expressions, cursor):
-    """Constructs a Document from a document_pb.Document protocol buffer."""
+    """Constructs a Document from a document_pb2.Document protocol buffer."""
     lang = None
-    if doc_pb.has_language():
-      lang = _DecodeUTF8(doc_pb.language())
+    if doc_pb.HasField('language'):
+      lang = _DecodeUTF8(doc_pb.language)
     return ScoredDocument(
-        doc_id=_DecodeUTF8(doc_pb.id()),
-        fields=_NewFieldsFromPb(doc_pb.field_list()),
-        facets=_NewFacetsFromPb(doc_pb.facet_list()),
-        language=lang, rank=doc_pb.order_id(), sort_scores=sort_scores,
-        expressions=_NewFieldsFromPb(expressions), cursor=cursor)
+        doc_id=_DecodeUTF8(doc_pb.id),
+        fields=_NewFieldsFromPb(doc_pb.field),
+        facets=_NewFacetsFromPb(doc_pb.facet),
+        language=lang,
+        rank=doc_pb.order_id,
+        sort_scores=sort_scores,
+        expressions=_NewFieldsFromPb(expressions),
+        cursor=cursor)
 
   def _NewFacetResultFromPb(self, facet_result_pb):
     """Returns a FacetResult populated from search_service FacetResult pb."""
     values = []
-    for facet_value_pb in facet_result_pb.value_list():
-      refinement_pb = facet_value_pb.refinement()
-      if refinement_pb.has_range():
-        range_pb = refinement_pb.range()
+    for facet_value_pb in facet_result_pb.value:
+      refinement_pb = facet_value_pb.refinement
+      if refinement_pb.HasField('range'):
+        range_pb = refinement_pb.range
         facet_range = FacetRange(
-            start=(float(range_pb.start()) if range_pb.has_start() else None),
-            end=(float(range_pb.end()) if range_pb.has_end() else None))
+            start=(float(range_pb.start)
+                   if range_pb.HasField('start') else None),
+            end=(float(range_pb.end) if range_pb.HasField('end') else None))
       else:
         facet_range = None
       refinement = FacetRefinement(
-          name=refinement_pb.name(),
-          value=refinement_pb.value() if refinement_pb.has_value() else None,
+          name=refinement_pb.name,
+          value=refinement_pb.value
+          if refinement_pb.HasField('value') else None,
           facet_range=facet_range)
-      values.append(FacetResultValue(label=facet_value_pb.name(),
-                                     count=facet_value_pb.count(),
-                                     refinement=refinement))
-    return FacetResult(name=facet_result_pb.name(), values=values)
+      values.append(
+          FacetResultValue(
+              label=facet_value_pb.name,
+              count=facet_value_pb.count,
+              refinement=refinement))
+    return FacetResult(name=facet_result_pb.name, values=values)
 
   def _NewSearchResults(self, response, cursor):
     """Returns a SearchResults populated from a search_service response pb."""
     results = []
-    for result_pb in response.result_list():
+    for result_pb in response.result:
       per_result_cursor = None
-      if result_pb.has_cursor():
+      if result_pb.HasField('cursor'):
         if isinstance(cursor, Cursor):
 
-          per_result_cursor = Cursor(web_safe_string=_ToWebSafeString(
-              cursor.per_result, _DecodeUTF8(result_pb.cursor())))
+          per_result_cursor = Cursor(
+              web_safe_string=_ToWebSafeString(cursor.per_result,
+                                               _DecodeUTF8(result_pb.cursor)))
       results.append(
-          self._NewScoredDocumentFromPb(
-              result_pb.document(), result_pb.score_list(),
-              result_pb.expression_list(), per_result_cursor))
+          self._NewScoredDocumentFromPb(result_pb.document, result_pb.score,
+                                        result_pb.expression,
+                                        per_result_cursor))
     results_cursor = None
-    if response.has_cursor():
+    if response.HasField('cursor'):
       if isinstance(cursor, Cursor):
 
-        results_cursor = Cursor(web_safe_string=_ToWebSafeString(
-            cursor.per_result, _DecodeUTF8(response.cursor())))
+        results_cursor = Cursor(
+            web_safe_string=_ToWebSafeString(cursor.per_result,
+                                             _DecodeUTF8(response.cursor)))
     facets = []
-    for facet_result in response.facet_result_list():
+    for facet_result in response.facet_result:
       facets.append(self._NewFacetResultFromPb(facet_result))
     return SearchResults(
-        results=results, number_found=response.matched_count(),
-        cursor=results_cursor, facets=facets)
+        results=results,
+        number_found=response.matched_count,
+        cursor=results_cursor,
+        facets=facets)
 
   @datastore_rpc._positional(2)
   def get(self, doc_id, deadline=None):
     """Retrieve a document by document ID.
 
     Args:
-      doc_id: The ID of the document to retreive.
+      doc_id: The ID of the document to retrieve.
 
     Kwargs:
       deadline: Deadline for RPC call in seconds; if None use the default.
@@ -3902,12 +3956,13 @@ class Index(object):
     Identical to search() except that it returns a future. Call
     get_result() on the return value to block on the call and get its result.
     """
-    if isinstance(query, basestring):
+    if isinstance(query, six.string_types):
       query = Query(query_string=query)
     request = self._NewSearchRequest(query, deadline, **kwargs)
-    response = search_service_pb.SearchResponse()
+    response = search_service_pb2.SearchResponse()
+
     def hook():
-      _CheckStatus(response.status())
+      _CheckStatus(response.status)
       cursor = None
       if query.options:
         cursor = query.options.cursor
@@ -3920,21 +3975,21 @@ class Index(object):
     if kwargs:
       raise TypeError('Invalid arguments: %s' % ', '.join(kwargs))
 
-    request = search_service_pb.SearchRequest()
+    request = search_service_pb2.SearchRequest()
     if app_id:
-      request.set_app_id(app_id)
+      request.app_id = app_id
 
-    params = request.mutable_params()
-    if isinstance(query, basestring):
+    params = request.params
+    if isinstance(query, six.string_types):
       query = Query(query_string=query)
-    _CopyMetadataToProtocolBuffer(self, params.mutable_index_spec())
+    _CopyMetadataToProtocolBuffer(self, params.index_spec)
     _CopyQueryObjectToProtocolBuffer(query, params)
     return request
 
   def _NewGetResponse(self, response):
     """Returns a GetResponse from the list_documents response pb."""
     documents = []
-    for doc_proto in response.document_list():
+    for doc_proto in response.document:
       documents.append(_NewDocumentFromPb(doc_proto))
 
     return GetResponse(results=documents)
@@ -3982,81 +4037,84 @@ class Index(object):
     app_id = kwargs.pop('app_id', None)
     if kwargs:
       raise TypeError('Invalid arguments: %s' % ', '.join(kwargs))
-    request = search_service_pb.ListDocumentsRequest()
+    request = search_service_pb2.ListDocumentsRequest()
     if app_id:
-      request.set_app_id(app_id)
+      request.app_id = app_id
 
-    params = request.mutable_params()
-    _CopyMetadataToProtocolBuffer(self, params.mutable_index_spec())
+    params = request.params
+    _CopyMetadataToProtocolBuffer(self, params.index_spec)
 
     if start_id:
-      params.set_start_doc_id(start_id)
-    params.set_include_start_doc(include_start_object)
+      params.start_doc_id = start_id
+    params.include_start_doc = include_start_object
 
-    params.set_limit(_CheckInteger(
-        limit, 'limit', zero_ok=False,
-        upper_bound=MAXIMUM_DOCUMENTS_RETURNED_PER_SEARCH))
-    params.set_keys_only(ids_only)
+    params.limit = _CheckInteger(
+        limit,
+        'limit',
+        zero_ok=False,
+        upper_bound=MAXIMUM_DOCUMENTS_RETURNED_PER_SEARCH)
+    params.keys_only = ids_only
 
-    response = search_service_pb.ListDocumentsResponse()
+    response = search_service_pb2.ListDocumentsResponse()
+
     def hook():
-      _CheckStatus(response.status())
+      _CheckStatus(response.status)
       return self._NewGetResponse(response)
     return _RpcOperationFuture(
         'ListDocuments', request, response, deadline, hook)
 
 
 _CURSOR_TYPE_PB_MAP = {
-  None: search_service_pb.SearchParams.NONE,
-  Index.RESPONSE_CURSOR: search_service_pb.SearchParams.SINGLE,
-  Index.RESULT_CURSOR: search_service_pb.SearchParams.PER_RESULT
-  }
-
+    None: search_service_pb2.SearchParams.NONE,
+    Index.RESPONSE_CURSOR: search_service_pb2.SearchParams.SINGLE,
+    Index.RESULT_CURSOR: search_service_pb2.SearchParams.PER_RESULT
+}
 
 
 _SOURCES_TO_PB_MAP = {
-    Index.SEARCH: search_service_pb.IndexSpec.SEARCH,
-    Index.DATASTORE: search_service_pb.IndexSpec.DATASTORE,
-    Index.CLOUD_STORAGE: search_service_pb.IndexSpec.CLOUD_STORAGE}
-
+    Index.SEARCH: search_service_pb2.IndexSpec.SEARCH,
+    Index.DATASTORE: search_service_pb2.IndexSpec.DATASTORE,
+    Index.CLOUD_STORAGE: search_service_pb2.IndexSpec.CLOUD_STORAGE
+}
 
 
 _SOURCE_PB_TO_SOURCES_MAP = {
-    search_service_pb.IndexSpec.SEARCH: Index.SEARCH,
-    search_service_pb.IndexSpec.DATASTORE: Index.DATASTORE,
-    search_service_pb.IndexSpec.CLOUD_STORAGE: Index.CLOUD_STORAGE}
+    search_service_pb2.IndexSpec.SEARCH: Index.SEARCH,
+    search_service_pb2.IndexSpec.DATASTORE: Index.DATASTORE,
+    search_service_pb2.IndexSpec.CLOUD_STORAGE: Index.CLOUD_STORAGE
+}
 
 
 def _CopyMetadataToProtocolBuffer(index, spec_pb):
-  """Copies Index specification to a search_service_pb.IndexSpec."""
-  spec_pb.set_name(index.name.encode('utf-8'))
-  spec_pb.set_namespace(index.namespace.encode('utf-8'))
+  """Copies Index specification to a search_service_pb2.IndexSpec."""
+  spec_pb.name = six.ensure_binary(index.name, 'utf-8')
+  spec_pb.namespace = six.ensure_binary(index.namespace, 'utf-8')
 
 
   if index._source != Index.SEARCH:
-    spec_pb.set_source(_SOURCES_TO_PB_MAP.get(index._source))
+    spec_pb.source = _SOURCES_TO_PB_MAP.get(index._source)
 
 
 _FIELD_TYPE_MAP = {
-    document_pb.FieldValue.TEXT: Field.TEXT,
-    document_pb.FieldValue.HTML: Field.HTML,
-    document_pb.FieldValue.ATOM: Field.ATOM,
-    document_pb.FieldValue.UNTOKENIZED_PREFIX: Field.UNTOKENIZED_PREFIX,
-    document_pb.FieldValue.TOKENIZED_PREFIX: Field.TOKENIZED_PREFIX,
-    document_pb.FieldValue.DATE: Field.DATE,
-    document_pb.FieldValue.NUMBER: Field.NUMBER,
-    document_pb.FieldValue.GEO: Field.GEO_POINT,
-    document_pb.FieldValue.VECTOR: Field.VECTOR,
-    }
+    document_pb2.FieldValue.TEXT: Field.TEXT,
+    document_pb2.FieldValue.HTML: Field.HTML,
+    document_pb2.FieldValue.ATOM: Field.ATOM,
+    document_pb2.FieldValue.UNTOKENIZED_PREFIX: Field.UNTOKENIZED_PREFIX,
+    document_pb2.FieldValue.TOKENIZED_PREFIX: Field.TOKENIZED_PREFIX,
+    document_pb2.FieldValue.DATE: Field.DATE,
+    document_pb2.FieldValue.NUMBER: Field.NUMBER,
+    document_pb2.FieldValue.GEO: Field.GEO_POINT,
+    document_pb2.FieldValue.VECTOR: Field.VECTOR,
+}
 
 
 def _NewSchemaFromPb(field_type_pb_list):
-  """Creates map of field name to type list from document_pb.FieldTypes list."""
+  """Creates map of field name to type list from document_pb2.FieldTypes list."""
   field_types = {}
   for field_type_pb in field_type_pb_list:
-    for field_type in field_type_pb.type_list():
+    for field_type in field_type_pb.type:
       public_type = _FIELD_TYPE_MAP[field_type]
-      name = _DecodeUTF8(field_type_pb.name())
+      name = _DecodeUTF8(field_type_pb.name)
       if name in field_types:
         field_types[name].append(public_type)
       else:
@@ -4065,26 +4123,27 @@ def _NewSchemaFromPb(field_type_pb_list):
 
 
 def _NewIndexFromIndexSpecPb(index_spec_pb):
-  """Creates an Index from a search_service_pb.IndexSpec."""
-  source = _SOURCE_PB_TO_SOURCES_MAP.get(index_spec_pb.source())
+  """Creates an Index from a search_service_pb2.IndexSpec."""
+  source = _SOURCE_PB_TO_SOURCES_MAP.get(index_spec_pb.source)
   index = None
-  if index_spec_pb.has_namespace():
-    index = Index(name=index_spec_pb.name(),
-                  namespace=index_spec_pb.namespace(),
-                  source=source)
+  if index_spec_pb.HasField('namespace'):
+    index = Index(
+        name=index_spec_pb.name,
+        namespace=index_spec_pb.namespace,
+        source=source)
   else:
-    index = Index(name=index_spec_pb.name(), source=source)
+    index = Index(name=index_spec_pb.name, source=source)
   return index
 
 
 def _NewIndexFromPb(index_metadata_pb, include_schema):
-  """Creates an Index from a search_service_pb.IndexMetadata."""
-  index = _NewIndexFromIndexSpecPb(index_metadata_pb.index_spec())
+  """Creates an Index from a search_service_pb2.IndexMetadata."""
+  index = _NewIndexFromIndexSpecPb(index_metadata_pb.index_spec)
   if include_schema:
-    index._schema = _NewSchemaFromPb(index_metadata_pb.field_list())
-  if index_metadata_pb.has_storage():
-    index._storage_usage = index_metadata_pb.storage().amount_used()
-    index._storage_limit = index_metadata_pb.storage().limit()
+    index._schema = _NewSchemaFromPb(index_metadata_pb.field)
+  if index_metadata_pb.HasField('storage'):
+    index._storage_usage = index_metadata_pb.storage.amount_used
+    index._storage_limit = index_metadata_pb.storage.limit
   return index
 
 
@@ -4123,8 +4182,8 @@ def _MakeSyncSearchServiceCall(call, request, response, deadline):
 def _ValidateDeadline(deadline):
   if deadline is None:
     return
-  if (not isinstance(deadline, (int, long, float))
-      or isinstance(deadline, (bool,))):
+  if (not isinstance(deadline, (six.integer_types, float)) or
+      isinstance(deadline, (bool,))):
     raise TypeError('deadline argument should be int/long/float (%r)'
                     % (deadline,))
   if deadline <= 0:

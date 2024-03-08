@@ -90,9 +90,8 @@ class CapabilityServiceStub(apiproxy_stub.APIProxyStub):
     if package not in _SUPPORTED_CAPABILITIES:
 
 
-      raise KeyError(
-          'Unsupported package. Received "%s". Must be one of %s.' %
-          (package, self._packages.values()))
+      raise KeyError('Unsupported package. Received "%s". Must be one of %s.' %
+                     (package, list(self._packages.values())))
 
     status = CapabilityConfig.ENABLED if enabled else CapabilityConfig.DISABLED
     for capability in self._packages.get(package):
@@ -115,14 +114,14 @@ class CapabilityServiceStub(apiproxy_stub.APIProxyStub):
 
 
     if package not in _SUPPORTED_CAPABILITIES:
-      raise KeyError(
-          'Unsupported package. Received "%s". Must be one of %s.' %
-          (package, self._packages.values()))
+      raise KeyError('Unsupported package. Received "%s". Must be one of %s.' %
+                     (package, list(self._packages.values())))
 
     if capability not in _SUPPORTED_CAPABILITIES[package]:
       raise KeyError(
           'Unsupported capability for package "%s". Received "%s". Must be one '
-          'of %s.' % (package, capability, self._packages[package].values()))
+          'of %s.' %
+          (package, capability, list(self._packages[package].values())))
 
     self._packages[package][capability] = status
 
@@ -134,32 +133,32 @@ class CapabilityServiceStub(apiproxy_stub.APIProxyStub):
       response: An IsEnabledResponse.
     """
     capability_statuses = []
-    for capability in request.capability_list():
-      default_config = response.add_config()
-      default_config.set_package(request.package())
-      default_config.set_capability(capability)
+    for capability in request.capability:
+      default_config = response.config.add()
+      default_config.package = request.package
+      default_config.capability = capability
       try:
-        config_status = self._packages[request.package()][capability]
+        config_status = self._packages[request.package][capability]
       except KeyError:
         config_status = CapabilityConfig.UNKNOWN
-      default_config.set_status(config_status)
+      default_config.status = config_status
       capability_statuses.append(config_status)
 
 
 
 
     summary_status = _CONFIG_STATUS_TO_SUMMARY_STATUS[max(capability_statuses)]
-    response.set_summary_status(summary_status)
+    response.summary_status = summary_status
 
   def _Dynamic_SetCapabilityStatus(self, request, response):
     """Implementation of CapabilityStubService::SetCapabilityStatus().
 
     Args:
-      request: A capability_stub_service_pb.SetCapabilityStatusRequest.
-      response: A capability_stub_service_pb.SetCapabilityStatusResponse.
+      request: A capability_stub_service_pb2.SetCapabilityStatusRequest.
+      response: A capability_stub_service_pb2.SetCapabilityStatusResponse.
     """
     self.SetCapabilityStatus(
-        request.service_name(), request.call(), request.status())
+        request.service_name, request.call, request.status)
 
   def Clear(self):
     self._packages = copy.deepcopy(_SUPPORTED_CAPABILITIES)

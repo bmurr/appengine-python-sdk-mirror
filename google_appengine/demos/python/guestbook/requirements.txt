@@ -1,0 +1,4 @@
+flask
+appengine-python-standard>=0.0.2a
+jinja2
+gunicorn

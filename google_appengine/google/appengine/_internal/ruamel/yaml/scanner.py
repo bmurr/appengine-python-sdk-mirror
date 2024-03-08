@@ -30,13 +30,13 @@ from __future__ import print_function, absolute_import, division, unicode_litera
 # Read comments in the Scanner code for more details.
 #
 
-from google.appengine._internal.ruamel.yaml.error import MarkedYAMLError
-from google.appengine._internal.ruamel.yaml.tokens import *  # NOQA
-from google.appengine._internal.ruamel.yaml.compat import utf8, unichr, PY3, check_anchorname_char, nprint  # NOQA
+from ruamel.yaml.error import MarkedYAMLError
+from ruamel.yaml.tokens import *  # NOQA
+from ruamel.yaml.compat import utf8, unichr, PY3, check_anchorname_char, nprint  # NOQA
 
 if False:  # MYPY
     from typing import Any, Dict, Optional, List, Union, Text  # NOQA
-    from google.appengine._internal.ruamel.yaml.compat import VersionType  # NOQA
+    from ruamel.yaml.compat import VersionType  # NOQA
 
 __all__ = ['Scanner', 'RoundTripScanner', 'ScannerError']
 
@@ -1059,7 +1059,7 @@ class Scanner(object):
         length = 0
         ch = srp(length)
         # while u'0' <= ch <= u'9' or u'A' <= ch <= u'Z' or u'a' <= ch <= u'z' \
- #         or ch in u'-_':
+        #         or ch in u'-_':
         while check_anchorname_char(ch):
             length += 1
             ch = srp(length)

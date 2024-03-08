@@ -21,13 +21,13 @@
 
 
 
-
 import re
 
+import six
 
-from google.appengine.datastore import document_pb
 from google.appengine.api.search import search_util
 from google.appengine.api.search.stub import tokens
+from google.appengine.datastore import document_pb2
 
 
 
@@ -86,40 +86,44 @@ class SimpleTokenizer(object):
            remove accents, strip html tags.
     """
     text = self.SetCase(text)
-    if field_type == document_pb.FieldValue.HTML:
+    if field_type == document_pb2.FieldValue.HTML:
       text = self._StripHtmlTags(text)
-    if field_type == document_pb.FieldValue.ATOM:
+    if field_type == document_pb2.FieldValue.ATOM:
 
       return text
     text = text.strip()
     text = search_util.ConvertToNfkd(text)
-    if field_type == document_pb.FieldValue.UNTOKENIZED_PREFIX:
+    if field_type == document_pb2.FieldValue.UNTOKENIZED_PREFIX:
       return text
     text = _StripSeparators(text)
-    if field_type == document_pb.FieldValue.TOKENIZED_PREFIX:
+    if field_type == document_pb2.FieldValue.TOKENIZED_PREFIX:
       return text
     return search_util.RemoveAccents(text)
 
-  def TokenizeText(self, text, token_position=0,
-                   input_field_type=document_pb.FieldValue.TEXT):
+  def TokenizeText(self,
+                   text,
+                   token_position=0,
+                   input_field_type=document_pb2.FieldValue.TEXT):
     """Tokenizes the text into a sequence of Tokens."""
     return self._TokenizeForType(field_type=input_field_type,
                                  value=text, token_position=token_position)
 
   def TokenizeValue(self, field_value, token_position=0):
-    """Tokenizes a document_pb.FieldValue into a sequence of Tokens."""
-    if field_value.type() == document_pb.FieldValue.GEO:
-      return self._TokenizeForType(field_type=field_value.type(),
-                                   value=field_value.geo(),
-                                   token_position=token_position)
-    return self._TokenizeForType(field_type=field_value.type(),
-                                 value=field_value.string_value(),
-                                 token_position=token_position)
+    """Tokenizes a document_pb2.FieldValue into a sequence of Tokens."""
+    if field_value.type == document_pb2.FieldValue.GEO:
+      return self._TokenizeForType(
+          field_type=field_value.type,
+          value=field_value.geo,
+          token_position=token_position)
+    return self._TokenizeForType(
+        field_type=field_value.type,
+        value=field_value.string_value,
+        token_position=token_position)
 
   def _TokenizeString(self, value, field_type):
     value = self.Normalize(value, field_type)
-    if (field_type != document_pb.FieldValue.ATOM and
-        field_type != document_pb.FieldValue.UNTOKENIZED_PREFIX):
+    if (field_type != document_pb2.FieldValue.ATOM and
+        field_type != document_pb2.FieldValue.UNTOKENIZED_PREFIX):
       return value.split()
     else:
       return [value]
@@ -130,12 +134,14 @@ class SimpleTokenizer(object):
 
   def _TokenizeForType(self, field_type, value, token_position=0):
     """Tokenizes value into a sequence of Tokens."""
-    if field_type == document_pb.FieldValue.NUMBER:
+    if field_type == document_pb2.FieldValue.NUMBER:
       return [tokens.Token(chars=value, position=token_position)]
 
-    if field_type == document_pb.FieldValue.GEO:
-      return [tokens.GeoPoint(latitude=value.lat(), longitude=value.lng(),
-                              position=token_position)]
+    if field_type == document_pb2.FieldValue.GEO:
+      return [
+          tokens.GeoPoint(
+              latitude=value.lat, longitude=value.lng, position=token_position)
+      ]
 
     tokens_found = []
     token_strings = []
@@ -145,6 +151,7 @@ class SimpleTokenizer(object):
     else:
       token_strings = self._TokenizeString(value, field_type)
     for token in token_strings:
+      token = six.ensure_text(token)
       token = _SINGLE_QUOTE_RE.search(token).group(1)
       if ':' in token and self._split_restricts:
         for subtoken in token.split(':'):

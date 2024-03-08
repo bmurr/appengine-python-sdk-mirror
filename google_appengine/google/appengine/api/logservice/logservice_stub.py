@@ -26,7 +26,7 @@ import sqlite3
 
 from google.appengine.api import apiproxy_stub
 from google.appengine.api import appinfo
-from google.appengine.api.logservice import log_service_pb
+from google.appengine.api.logservice import log_service_pb2
 from google.appengine.runtime import apiproxy_errors
 
 
@@ -208,8 +208,8 @@ class LogServiceStub(apiproxy_stub.APIProxyStub):
 
   def _Dynamic_Flush(self, request, unused_response, request_id):
     """Writes application-level log messages for a request."""
-    group = log_service_pb.UserAppLogGroup(request.logs())
-    self._insert_app_logs(request_id, group.log_line_list())
+    group = log_service_pb2.UserAppLogGroup().FromString(request.logs)
+    self._insert_app_logs(request_id, group.log_line)
 
   @apiproxy_stub.Synchronized
   def _insert_app_logs(self, request_id, log_lines):
@@ -231,63 +231,63 @@ class LogServiceStub(apiproxy_stub.APIProxyStub):
 
     Args:
       request_id: The string request ID.
-      log_line: An instance of log_service_pb.LogLine or
-        log_service_pb.UserAppLogLine.
+      log_line: An instance of log_service_pb2.LogLine or
+        log_service_pb2.UserAppLogLine.
 
     Returns:
       A tuple of (request_id, timestamp, level, message).
     """
-    if isinstance(log_line, log_service_pb.UserAppLogLine):
-      message = log_line.message()
-      timestamp = log_line.timestamp_usec()
-    elif isinstance(log_line, log_service_pb.LogLine):
-      message = log_line.log_message()
-      timestamp = log_line.time()
+    if isinstance(log_line, log_service_pb2.UserAppLogLine):
+      message = log_line.message
+      timestamp = log_line.timestamp_usec
+    elif isinstance(log_line, log_service_pb2.LogLine):
+      message = log_line.log_message
+      timestamp = log_line.time
     else:
       raise TypeError(
-          'Expected an instance of log_service_pb.LogLine or '
-          'log_service_pb.UserAppLogLine. Received an instance of %s.' %
+          'Expected an instance of log_service_pb2.LogLine or '
+          'log_service_pb2.UserAppLogLine. Received an instance of %s.' %
           type(log_line))
-    if isinstance(message, str):
+    if isinstance(message, bytes):
       message = codecs.decode(message, 'utf-8', 'replace')
-    return (request_id, timestamp, log_line.level(), message)
+    return (request_id, timestamp, log_line.level, message)
 
   @apiproxy_stub.Synchronized
   def _Dynamic_Read(self, request, response, request_id):
-    if (request.module_version_size() < 1 and
-        request.version_id_size() < 1 and
-        request.request_id_size() < 1):
+    if (len(request.module_version) < 1 and
+        len(request.version_id_size) < 1 and
+        len(request.request_id) < 1):
       raise apiproxy_errors.ApplicationError(
-          log_service_pb.LogServiceError.INVALID_REQUEST)
+          log_service_pb2.LogServiceError.INVALID_REQUEST)
 
-    if request.module_version_size() > 0 and request.version_id_size() > 0:
+    if len(request.module_version) > 0 and len(request.version_id) > 0:
       raise apiproxy_errors.ApplicationError(
-          log_service_pb.LogServiceError.INVALID_REQUEST)
+          log_service_pb2.LogServiceError.INVALID_REQUEST)
 
-    if (request.request_id_size() and
-        (request.has_start_time() or request.has_end_time() or
-         request.has_offset())):
+    if (len(request.request_id) and
+        (request.HasField('start_time') or request.HasField('end_time') or
+         request.HasField('offset'))):
       raise apiproxy_errors.ApplicationError(
-          log_service_pb.LogServiceError.INVALID_REQUEST)
+          log_service_pb2.LogServiceError.INVALID_REQUEST)
 
-    if request.request_id_size():
-      for request_id in request.request_id_list():
+    if len(request.request_id):
+      for request_id in request.request_id:
         log_row = self._conn.execute(
             'SELECT * FROM RequestLogs WHERE user_request_id = ?',
-            (request_id,)).fetchone()
+            (request_id.decode('utf-8'),)).fetchone()
         if log_row:
-          log = response.add_log()
-          self._fill_request_log(log_row, log, request.include_app_logs())
+          log = response.log.add()
+          self._fill_request_log(log_row, log, request.include_app_logs)
       return
 
-    if request.has_count():
-      count = request.count()
+    if request.HasField('count'):
+      count = request.count
     else:
       count = self._DEFAULT_READ_COUNT
     filters, values = self._extract_read_filters(request)
     filter_string = ' WHERE %s' % ' and '.join(filters)
 
-    if request.has_minimum_log_level():
+    if request.HasField('minimum_log_level'):
       query = ('SELECT * FROM RequestLogs INNER JOIN AppLogs ON '
                'RequestLogs.id = AppLogs.request_id%s GROUP BY '
                'RequestLogs.id ORDER BY id DESC')
@@ -298,10 +298,10 @@ class LogServiceStub(apiproxy_stub.APIProxyStub):
     if logging.getLogger(__name__).isEnabledFor(logging.DEBUG):
       self._debug_query(filter_string, values, len(logs))
     for log_row in logs[:count]:
-      log = response.add_log()
-      self._fill_request_log(log_row, log, request.include_app_logs())
+      log = response.log.add()
+      self._fill_request_log(log_row, log, request.include_app_logs)
     if len(logs) > count:
-      response.mutable_offset().set_request_id(str(logs[-2]['id']))
+      response.offset.request_id = str(logs[-2]['id']).encode('utf-8')
 
   @apiproxy_stub.Synchronized
   def _Dynamic_AddRequestInfo(
@@ -309,49 +309,49 @@ class LogServiceStub(apiproxy_stub.APIProxyStub):
     """Adds a RequestLog to the local SQLite3 log db.
 
     Args:
-      request: An instance of log_stub_service_pb.AddRequestInfoRequest.
+      request: An instance of log_stub_service_pb2.AddRequestInfoRequest.
     """
-    log = request.request_log()
+    log = request.request_log
     items = {
-        'module': log.module_id(),
-        'version_id': log.version_id(),
-        'start_time': log.start_time(),
-        'end_time': log.end_time(),
-        'ip': log.ip(),
-        'nickname': log.nickname(),
-        'latency': log.latency(),
-        'mcycles': log.mcycles(),
-        'method': log.method(),
-        'resource': log.resource(),
-        'http_version': log.http_version(),
-        'response_size': log.response_size(),
-        'user_agent': log.user_agent(),
-        'finished': log.finished(),
-        'user_request_id': log.request_id(),
-        'app_id': log.app_id(),
-        'url_map_entry': log.url_map_entry(),
-        'host': log.host(),
-        'status': log.status(),
-        'referrer': log.referrer()
+        'module': log.module_id,
+        'version_id': log.version_id,
+        'start_time': log.start_time,
+        'end_time': log.end_time,
+        'ip': log.ip,
+        'nickname': log.nickname,
+        'latency': log.latency,
+        'mcycles': log.mcycles,
+        'method': log.method,
+        'resource': log.resource,
+        'http_version': log.http_version,
+        'response_size': log.response_size,
+        'user_agent': log.user_agent,
+        'finished': log.finished,
+        'user_request_id': log.request_id,
+        'app_id': log.app_id,
+        'url_map_entry': log.url_map_entry,
+        'host': log.host,
+        'status': log.status,
+        'referrer': log.referrer
     }
     query = (
         'INSERT OR REPLACE INTO RequestLogs ({keys}) VALUES ({values})'.format(
-            keys=', '.join(items.keys()),
+            keys=', '.join(list(items.keys())),
             values=', '.join(['?'] * len(items))))
 
-    cursor = self._conn.execute(query, items.values())
+    cursor = self._conn.execute(query, list(items.values()))
     self._request_id_to_request_row_id[
-        request.request_log().request_id()] = cursor.lastrowid
+        request.request_log.request_id] = cursor.lastrowid
     self._maybe_commit()
 
   @apiproxy_stub.Synchronized
   def _Dynamic_AddAppLogLine(self, request, unused_response, unused_request_id):
-    """Adds a log_service_pb.LogLine to the AppLogs table.
+    """Adds a log_service_pb2.LogLine to the AppLogs table.
 
     Args:
-      request: An instance of log_stub_service_pb.AddAppLogLineRequest.
+      request: An instance of log_stub_service_pb2.AddAppLogLineRequest.
     """
-    self._insert_app_logs(request.request_id(), [request.log_line()])
+    self._insert_app_logs(request.request_id, [request.log_line])
 
   @apiproxy_stub.Synchronized
   def _Dynamic_StartRequestLog(
@@ -362,22 +362,22 @@ class LogServiceStub(apiproxy_stub.APIProxyStub):
     call to cleanup resources allocated in StartRequestLog.
 
     Args:
-      request: An instance of log_stub_service_pb.StartRequestLogRequest.
+      request: An instance of log_stub_service_pb2.StartRequestLogRequest.
     """
     self.start_request(
-        request_id=request.request_id(),
-        user_request_id=request.user_request_id(),
-        ip=request.ip(),
-        app_id=request.app_id(),
-        version_id=request.version_id(),
-        nickname=request.nickname(),
-        user_agent=request.user_agent(),
-        host=request.host(),
-        method=request.method(),
-        resource=request.resource(),
-        http_version=request.http_version(),
-        start_time=request.start_time() if request.start_time() else None,
-        module=request.module() if request.module() else None)
+        request_id=request.request_id,
+        user_request_id=request.user_request_id,
+        ip=request.ip,
+        app_id=request.app_id,
+        version_id=request.version_id,
+        nickname=request.nickname,
+        user_agent=request.user_agent,
+        host=request.host,
+        method=request.method,
+        resource=request.resource,
+        http_version=request.http_version,
+        start_time=request.start_time if request.start_time else None,
+        module=request.module if request.module else None)
 
   @apiproxy_stub.Synchronized
   def _Dynamic_EndRequestLog(
@@ -385,10 +385,10 @@ class LogServiceStub(apiproxy_stub.APIProxyStub):
     """Ends logging for a request.
 
     Args:
-      request: An instance of log_stub_service_pb.EndRequestLogRequest.
+      request: An instance of log_stub_service_pb2.EndRequestLogRequest.
     """
     self.end_request(
-        request.request_id(), request.status(), request.response_size())
+        request.request_id, request.status, request.response_size)
 
   def _debug_query(self, filter_string, values, result_count):
     for l in self._conn.execute('SELECT * FROM RequestLogs'):
@@ -401,37 +401,37 @@ class LogServiceStub(apiproxy_stub.APIProxyStub):
                     l['id'])
 
   def _fill_request_log(self, log_row, log, include_app_logs):
-    log.set_request_id(str(log_row['user_request_id']))
-    log.set_app_id(log_row['app_id'])
-    log.set_version_id(log_row['version_id'])
-    log.set_module_id(log_row['module'])
-    log.set_ip(log_row['ip'])
-    log.set_nickname(log_row['nickname'])
-    log.set_start_time(log_row['start_time'])
-    log.set_host(log_row['host'])
-    log.set_end_time(log_row['end_time'])
-    log.set_method(log_row['method'])
-    log.set_resource(log_row['resource'])
-    log.set_status(log_row['status'])
-    log.set_response_size(log_row['response_size'])
-    log.set_http_version(log_row['http_version'])
-    log.set_user_agent(log_row['user_agent'])
-    log.set_url_map_entry(log_row['url_map_entry'])
-    log.set_latency(log_row['latency'])
-    log.set_mcycles(log_row['mcycles'])
-    log.set_finished(log_row['finished'])
-    log.mutable_offset().set_request_id(str(log_row['id']))
-    log.set_combined(_format_combined_field(log_row))
+    log.request_id = str(log_row['user_request_id']).encode('utf-8')
+    log.app_id = log_row['app_id']
+    log.version_id = log_row['version_id']
+    log.module_id = log_row['module']
+    log.ip = log_row['ip']
+    log.nickname = log_row['nickname']
+    log.start_time = log_row['start_time']
+    log.host = log_row['host']
+    log.end_time = log_row['end_time']
+    log.method = log_row['method']
+    log.resource = log_row['resource']
+    log.status = log_row['status']
+    log.response_size = log_row['response_size']
+    log.http_version = log_row['http_version']
+    log.user_agent = log_row['user_agent']
+    log.url_map_entry = log_row['url_map_entry']
+    log.latency = log_row['latency']
+    log.mcycles = log_row['mcycles']
+    log.finished = log_row['finished']
+    log.offset.request_id = str(log_row['id']).encode('utf-8')
+    log.combined = _format_combined_field(log_row)
     if include_app_logs:
       log_messages = self._conn.execute(
           'SELECT timestamp, level, message FROM AppLogs '
           'WHERE request_id = ?',
           (log_row['id'],)).fetchall()
       for message in log_messages:
-        line = log.add_line()
-        line.set_time(message['timestamp'])
-        line.set_level(message['level'])
-        line.set_log_message(message['message'])
+        line = log.line.add()
+        line.time = message['timestamp']
+        line.level = message['level']
+        line.log_message = message['message']
 
   @staticmethod
   def _extract_read_filters(request):
@@ -449,28 +449,28 @@ class LogServiceStub(apiproxy_stub.APIProxyStub):
 
     module_filters = []
     module_values = []
-    for module_version in request.module_version_list():
+    for module_version in request.module_version:
       module_filters.append('(version_id = ? AND module = ?)')
-      module_values.append(module_version.version_id())
+      module_values.append(module_version.version_id)
       module = appinfo.DEFAULT_MODULE
-      if module_version.has_module_id():
-        module = module_version.module_id()
+      if module_version.HasField('module_id'):
+        module = module_version.module_id
       module_values.append(module)
     if module_filters:
       filters.append('(' + ' or '.join(module_filters) + ')')
       values += module_values
 
-    if request.has_offset():
+    if request.HasField('offset'):
       try:
         filters.append('RequestLogs.id < ?')
-        values.append(int(request.offset().request_id()))
+        values.append(int(request.offset.request_id))
       except ValueError:
-        logging.error('Bad offset in log request: "%s"', request.offset())
+        logging.error('Bad offset in log request: "%s"', request.offset)
         raise apiproxy_errors.ApplicationError(
-            log_service_pb.LogServiceError.INVALID_REQUEST)
-    if request.has_minimum_log_level():
+            log_service_pb2.LogServiceError.INVALID_REQUEST)
+    if request.HasField('minimum_log_level'):
       filters.append('AppLogs.level >= ?')
-      values.append(request.minimum_log_level())
+      values.append(request.minimum_log_level)
 
 
 
@@ -482,18 +482,18 @@ class LogServiceStub(apiproxy_stub.APIProxyStub):
     unfinished_filter = 'finished = 0'
     unfinished_filter_values = []
 
-    if request.has_start_time():
+    if request.HasField('start_time'):
       finished_filter += ' and end_time >= ? '
-      finished_filter_values.append(request.start_time())
+      finished_filter_values.append(request.start_time)
       unfinished_filter += ' and start_time >= ? '
-      unfinished_filter_values.append(request.start_time())
-    if request.has_end_time():
+      unfinished_filter_values.append(request.start_time)
+    if request.HasField('end_time'):
       finished_filter += ' and end_time < ? '
-      finished_filter_values.append(request.end_time())
+      finished_filter_values.append(request.end_time)
       unfinished_filter += ' and start_time < ? '
-      unfinished_filter_values.append(request.end_time())
+      unfinished_filter_values.append(request.end_time)
 
-    if request.include_incomplete():
+    if request.include_incomplete:
       filters.append(
           '((' + finished_filter + ') or (' + unfinished_filter + '))')
       values += finished_filter_values + unfinished_filter_values
@@ -514,14 +514,14 @@ class LogServiceStub(apiproxy_stub.APIProxyStub):
 
 
 def _format_combined_field(log_row):
-  """Formats the combined field for log_service_pb.RequestLog.
+  """Formats the combined field for log_service_pb2.RequestLog.
 
   Args:
     log_row: A instance of sqlite3.Row containing data from the RequestLogs
       table.
 
   Returns:
-    A string representing the combined field in log_service_pb.RequestLog.
+    A string representing the combined field in log_service_pb2.RequestLog.
   """
   time_seconds = (log_row['end_time'] or log_row['start_time']) / 10**6
 

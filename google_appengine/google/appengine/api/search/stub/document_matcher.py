@@ -21,15 +21,17 @@ DocumentMatcher provides an approximation of the Search API's query matching.
 
 import datetime
 
-from google.appengine.datastore import document_pb
-
 from google.appengine._internal.antlr3 import tree
+import six
+from six.moves import zip
+
 from google.appengine.api.search import geo_util
 from google.appengine.api.search import query_parser
 from google.appengine.api.search import QueryParser
 from google.appengine.api.search import search_util
 from google.appengine.api.search.stub import simple_tokenizer
 from google.appengine.api.search.stub import tokens
+from google.appengine.datastore import document_pb2
 
 
 MSEC_PER_DAY = 86400000
@@ -81,9 +83,11 @@ class DistanceMatcher(object):
       return False
 
 
-    return self._IsDistanceMatch(min([
-        geo_util.LatLng(field_value.geo().lat(), field_value.geo().lng())
-        - self._geopoint for field_value in field_values]), op)
+    return self._IsDistanceMatch(
+        min([
+            geo_util.LatLng(field_value.geo.lat, field_value.geo.lng) -
+            self._geopoint for field_value in field_values
+        ]), op)
 
 
 class DocumentMatcher(object):
@@ -106,27 +110,27 @@ class DocumentMatcher(object):
 
   def _MatchRawPhraseWithRawAtom(self, field_text, phrase_text):
     tokenized_phrase = self._parser.TokenizeText(
-        phrase_text, input_field_type=document_pb.FieldValue.ATOM)
+        phrase_text, input_field_type=document_pb2.FieldValue.ATOM)
     tokenized_field_text = self._parser.TokenizeText(
-        field_text, input_field_type=document_pb.FieldValue.ATOM)
+        field_text, input_field_type=document_pb2.FieldValue.ATOM)
     return tokenized_phrase == tokenized_field_text
 
   def _MatchPhrase(self, field, match, document):
     """Match a textual field with a phrase query node."""
-    raw_field_text = field.value().string_value()
+    raw_field_text = field.value.string_value
     raw_phrase_text = query_parser.GetPhraseQueryNodeText(match)
 
 
-    if field.value().type() == document_pb.FieldValue.ATOM:
+    if field.value.type == document_pb2.FieldValue.ATOM:
       return self._MatchRawPhraseWithRawAtom(raw_field_text, raw_phrase_text)
 
 
     if not raw_phrase_text:
       return False
 
-    if field.value().type() == document_pb.FieldValue.UNTOKENIZED_PREFIX:
-      phrase = self._parser.Normalize(raw_phrase_text, field.value().type())
-      field_text = self._parser.Normalize(raw_field_text, field.value().type())
+    if field.value.type == document_pb2.FieldValue.UNTOKENIZED_PREFIX:
+      phrase = self._parser.Normalize(raw_phrase_text, field.value.type)
+      field_text = self._parser.Normalize(raw_field_text, field.value.type)
       return field_text.startswith(phrase)
 
     phrase = self._parser.TokenizeText(raw_phrase_text)
@@ -134,8 +138,8 @@ class DocumentMatcher(object):
     if not phrase:
       return True
     posting = None
-    for post in self._PostingsForFieldToken(field.name(), phrase[0].chars):
-      if post.doc_id == document.id():
+    for post in self._PostingsForFieldToken(field.name, phrase[0].chars):
+      if post.doc_id == document.id:
         posting = post
         break
     if not posting:
@@ -149,15 +153,15 @@ class DocumentMatcher(object):
 
 
 
-      match_words = zip(ExtractWords(field_text[position:]),
-                        ExtractWords(phrase))
+      match_words = list(
+          zip(ExtractWords(field_text[position:]), ExtractWords(phrase)))
       if len(match_words) != len(phrase):
         continue
 
 
       match = True
       for doc_word, match_word in match_words:
-        if (field.value().type() == document_pb.FieldValue.TOKENIZED_PREFIX and
+        if (field.value.type == document_pb2.FieldValue.TOKENIZED_PREFIX and
             doc_word.startswith(match_word)):
           continue
         if doc_word != match_word:
@@ -178,15 +182,15 @@ class DocumentMatcher(object):
         return self._MatchPhrase(field, match, document)
 
       normalized_query = self._parser.Normalize(
-          query_parser.GetQueryNodeText(match), field.value().type())
-      normalized_text_field = self._parser.Normalize(
-          field.value().string_value(), field.value().type())
+          query_parser.GetQueryNodeText(match), field.value.type)
+      normalized_text_field = self._parser.Normalize(field.value.string_value,
+                                                     field.value.type)
 
 
-      if field.value().type() == document_pb.FieldValue.ATOM:
+      if field.value.type == document_pb2.FieldValue.ATOM:
         return normalized_query == normalized_text_field
 
-      if field.value().type() == document_pb.FieldValue.UNTOKENIZED_PREFIX:
+      if field.value.type == document_pb2.FieldValue.UNTOKENIZED_PREFIX:
         return normalized_text_field.startswith(normalized_query)
 
       query_tokens = self._parser.TokenizeText(
@@ -201,17 +205,18 @@ class DocumentMatcher(object):
 
       if len(query_tokens) > 1:
         def QueryNode(token):
-          token_text = self._parser.Normalize(token.chars, field.value().type())
+          token_text = self._parser.Normalize(token.chars, field.value.type)
           return query_parser.CreateQueryNode(token_text, QueryParser.TEXT)
         return all(self._MatchTextField(field, QueryNode(token), document)
                    for token in query_tokens)
 
       token_text = self._parser.Normalize(query_tokens[0].chars,
-                                          field.value().type())
+                                          field.value.type)
       matching_docids = [
-          post.doc_id for post in self._PostingsForFieldToken(
-              field.name(), token_text)]
-      return document.id() in matching_docids
+          post.doc_id
+          for post in self._PostingsForFieldToken(field.name, token_text)
+      ]
+      return document.id in matching_docids
 
     def ExtractGlobalEq(node):
       op = node.getType()
@@ -230,7 +235,7 @@ class DocumentMatcher(object):
                  for child in match.children)
 
     if match.getType() == QueryParser.NEGATION:
-      raise ExpressionTreeException('Unable to compare \"' + field.name() +
+      raise ExpressionTreeException('Unable to compare \"' + field.name +
                                     '\" with negation')
 
 
@@ -279,7 +284,7 @@ class DocumentMatcher(object):
 
 
     try:
-      self._CheckValidDateComparison(field.name(), match)
+      self._CheckValidDateComparison(field.name, match)
     except ExpressionTreeException:
       return False
 
@@ -300,9 +305,11 @@ class DocumentMatcher(object):
       return False
 
     field = self._GetFieldName(field)
-    values = [field.value() for field in
-              search_util.GetAllFieldInDocument(document, field) if
-              field.value().type() == document_pb.FieldValue.GEO]
+    values = [
+        field.value
+        for field in search_util.GetAllFieldInDocument(document, field)
+        if field.value.type == document_pb2.FieldValue.GEO
+    ]
     return matcher.IsMatch(values, operator)
 
 
@@ -314,7 +321,7 @@ class DocumentMatcher(object):
     For our purposes, this is numbers and dates.
 
     Args:
-      field: The document_pb.Field to test
+      field: The document_pb2.Field to test
       match: The query node to match against
       cast_to_type: The type to cast the node string values to
       op: The query node type representing the type of comparison to perform
@@ -329,7 +336,7 @@ class DocumentMatcher(object):
       ExpressionTreeException: Raised when a != inequality operator is used.
     """
 
-    field_val = cast_to_type(field.value().string_value())
+    field_val = cast_to_type(field.value.string_value)
 
     if match.getType() == QueryParser.VALUE:
       try:
@@ -377,43 +384,43 @@ class DocumentMatcher(object):
     """Check if a field matches a query tree.
 
     Args:
-      field: a document_pb.Field instance to match.
+      field: a document_pb2.Field instance to match.
       match: A query node to match the field with.
       operator: The a query node type corresponding to the type of match to
         perform (eg QueryParser.EQ, QueryParser.GT, etc).
       document: The document to match.
     """
-    if field.value().type() in search_util.TEXT_DOCUMENT_FIELD_TYPES:
+    if field.value.type in search_util.TEXT_DOCUMENT_FIELD_TYPES:
       if operator != QueryParser.EQ and operator != QueryParser.HAS:
         return False
       return self._MatchTextField(field, match, document)
 
-    if field.value().type() in search_util.NUMBER_DOCUMENT_FIELD_TYPES:
+    if field.value.type in search_util.NUMBER_DOCUMENT_FIELD_TYPES:
       return self._MatchNumericField(field, match, operator, document)
 
-    if field.value().type() == document_pb.FieldValue.DATE:
+    if field.value.type == document_pb2.FieldValue.DATE:
       return self._MatchDateField(field, match, operator, document)
 
 
 
 
 
-    if field.value().type() == document_pb.FieldValue.GEO:
+    if field.value.type == document_pb2.FieldValue.GEO:
       return False
 
-    type_name = document_pb.FieldValue.ContentType_Name(
-        field.value().type()).lower()
+    type_name = document_pb2.FieldValue.ContentType_Name(
+        field.value.type).lower()
     raise search_util.UnsupportedOnDevError(
         'Matching fields of type %s is unsupported on dev server (searched for '
-        'field %s)' % (type_name, field.name()))
+        'field %s)' % (type_name, field.name))
 
   def _MatchGlobal(self, match, document):
-    for field in document.field_list():
-      if (field.value().type() == document_pb.FieldValue.UNTOKENIZED_PREFIX or
-          field.value().type() == document_pb.FieldValue.TOKENIZED_PREFIX):
+    for field in document.field:
+      if (field.value.type == document_pb2.FieldValue.UNTOKENIZED_PREFIX or
+          field.value.type == document_pb2.FieldValue.TOKENIZED_PREFIX):
         continue
       try:
-        if self._MatchAnyField(field.name(), match, QueryParser.EQ, document):
+        if self._MatchAnyField(field.name, match, QueryParser.EQ, document):
           return True
       except search_util.UnsupportedOnDevError:
 
@@ -437,9 +444,9 @@ class DocumentMatcher(object):
     if name.getText() == 'distance':
       x, y = args.children
       x, y = self._ResolveDistanceArg(x), self._ResolveDistanceArg(y)
-      if isinstance(x, geo_util.LatLng) and isinstance(y, basestring):
+      if isinstance(x, geo_util.LatLng) and isinstance(y, six.string_types):
         x, y = y, x
-      if isinstance(x, basestring) and isinstance(y, geo_util.LatLng):
+      if isinstance(x, six.string_types) and isinstance(y, geo_util.LatLng):
         match_val = query_parser.GetQueryNodeText(match)
         try:
           distance = float(match_val)
@@ -465,9 +472,8 @@ class DocumentMatcher(object):
     value_nodes = (child.children[1] for child in node.children)
     phrase_text = ' '.join(
         (query_parser.GetQueryNodeText(node) for node in value_nodes))
-    for field in document.field_list():
-      if self._MatchRawPhraseWithRawAtom(field.value().string_value(),
-                                         phrase_text):
+    for field in document.field:
+      if self._MatchRawPhraseWithRawAtom(field.value.string_value, phrase_text):
         return True
     return False
 

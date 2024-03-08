@@ -1,41 +1,61 @@
+#!/usr/bin/env python
+#
+# Copyright 2007 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """ANTLR3 runtime package"""
 
-# begin[licence]
-#
-# [The "BSD licence"]
-# Copyright (c) 2005-2008 Terence Parr
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions
-# are met:
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. The name of the author may not be used to endorse or promote products
-#    derived from this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
-# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
-# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-# end[licensc]
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from google.appengine._internal.antlr3.constants import EOF
 from google.appengine._internal.antlr3.exceptions import NoViableAltException, BacktrackingFailed
+from six.moves import range
 
 
 class DFA(object):
-    """@brief A DFA implemented as a set of transition tables.
+  """@brief A DFA implemented as a set of transition tables.
 
     Any state that has a semantic predicate edge is special; those states
     are generated with if-then-else structures in a specialStateTransition()
@@ -43,146 +63,134 @@ class DFA(object):
 
     """
 
-    def __init__(
-        self,
-        recognizer, decisionNumber,
-        eot, eof, min, max, accept, special, transition
-        ):
-        ## Which recognizer encloses this DFA?  Needed to check backtracking
-        self.recognizer = recognizer
+  def __init__(self, recognizer, decisionNumber, eot, eof, min, max, accept,
+               special, transition):
 
-        self.decisionNumber = decisionNumber
-        self.eot = eot
-        self.eof = eof
-        self.min = min
-        self.max = max
-        self.accept = accept
-        self.special = special
-        self.transition = transition
+    self.recognizer = recognizer
 
+    self.decisionNumber = decisionNumber
+    self.eot = eot
+    self.eof = eof
+    self.min = min
+    self.max = max
+    self.accept = accept
+    self.special = special
+    self.transition = transition
 
-    def predict(self, input):
-        """
+  def predict(self, input):
+    """
         From the input stream, predict what alternative will succeed
-	using this DFA (representing the covering regular approximation
-	to the underlying CFL).  Return an alternative number 1..n.  Throw
-	 an exception upon error.
-	"""
-        mark = input.mark()
-        s = 0 # we always start at s0
-        try:
-            for _ in xrange(50000):
-                #print "***Current state = %d" % s
-
-                specialState = self.special[s]
-                if specialState >= 0:
-                    #print "is special"
-                    s = self.specialStateTransition(specialState, input)
-                    if s == -1:
-                        self.noViableAlt(s, input)
-                        return 0
-                    input.consume()
-                    continue
-
-                if self.accept[s] >= 1:
-                    #print "accept state for alt %d" % self.accept[s]
-                    return self.accept[s]
-
-                # look for a normal char transition
-                c = input.LA(1)
-
-                #print "LA = %d (%r)" % (c, unichr(c) if c >= 0 else 'EOF')
-                #print "range = %d..%d" % (self.min[s], self.max[s])
-
-                if c >= self.min[s] and c <= self.max[s]:
-                    # move to next state
-                    snext = self.transition[s][c-self.min[s]]
-                    #print "in range, next state = %d" % snext
-
-                    if snext < 0:
-                        #print "not a normal transition"
-                        # was in range but not a normal transition
-                        # must check EOT, which is like the else clause.
-                        # eot[s]>=0 indicates that an EOT edge goes to another
-                        # state.
-                        if self.eot[s] >= 0: # EOT Transition to accept state?
-                            #print "EOT trans to accept state %d" % self.eot[s]
-
-                            s = self.eot[s]
-                            input.consume()
-                            # TODO: I had this as return accept[eot[s]]
-                            # which assumed here that the EOT edge always
-                            # went to an accept...faster to do this, but
-                            # what about predicated edges coming from EOT
-                            # target?
-                            continue
-
-                        #print "no viable alt"
-                        self.noViableAlt(s, input)
-                        return 0
-
-                    s = snext
-                    input.consume()
-                    continue
-
-                if self.eot[s] >= 0:
-                    #print "EOT to %d" % self.eot[s]
-
-                    s = self.eot[s]
-                    input.consume()
-                    continue
-
-                # EOF Transition to accept state?
-                if c == EOF and self.eof[s] >= 0:
-                    #print "EOF Transition to accept state %d" \
- #  % self.accept[self.eof[s]]
-                    return self.accept[self.eof[s]]
-
-                # not in range and not EOF/EOT, must be invalid symbol
-                self.noViableAlt(s, input)
-                return 0
-
-            else:
-                raise RuntimeError("DFA bang!")
-
-        finally:
-            input.rewind(mark)
+        using this DFA (representing the covering regular approximation
+        to the underlying CFL).  Return an alternative number 1..n.  Throw
+         an exception upon error.
+        """
+    mark = input.mark()
+    s = 0
+    try:
+      for _ in range(50000):
 
 
-    def noViableAlt(self, s, input):
-        if self.recognizer._state.backtracking > 0:
-            raise BacktrackingFailed
+        specialState = self.special[s]
+        if specialState >= 0:
 
-        nvae = NoViableAltException(
-            self.getDescription(),
-            self.decisionNumber,
-            s,
-            input
-            )
+          s = self.specialStateTransition(specialState, input)
+          if s == -1:
+            self.noViableAlt(s, input)
+            return 0
+          input.consume()
+          continue
 
-        self.error(nvae)
-        raise nvae
+        if self.accept[s] >= 1:
 
-
-    def error(self, nvae):
-        """A hook for debugging interface"""
-        pass
+          return self.accept[s]
 
 
-    def specialStateTransition(self, s, input):
-        return -1
+        c = input.LA(1)
 
 
-    def getDescription(self):
-        return "n/a"
 
 
-##     def specialTransition(self, state, symbol):
-##         return 0
+        if c >= self.min[s] and c <= self.max[s]:
+
+          snext = self.transition[s][c - self.min[s]]
 
 
-    def unpack(cls, string):
-        """@brief Unpack the runlength encoded table data.
+          if snext < 0:
+
+
+
+
+
+            if self.eot[s] >= 0:
+
+
+              s = self.eot[s]
+              input.consume()
+
+
+
+
+
+              continue
+
+
+            self.noViableAlt(s, input)
+            return 0
+
+          s = snext
+          input.consume()
+          continue
+
+        if self.eot[s] >= 0:
+
+
+          s = self.eot[s]
+          input.consume()
+          continue
+
+
+        if c == EOF and self.eof[s] >= 0:
+
+
+          return self.accept[self.eof[s]]
+
+
+        self.noViableAlt(s, input)
+        return 0
+
+      else:
+        raise RuntimeError("DFA bang!")
+
+    finally:
+      input.rewind(mark)
+
+  def noViableAlt(self, s, input):
+    if self.recognizer._state.backtracking > 0:
+      raise BacktrackingFailed
+
+    nvae = NoViableAltException(self.getDescription(), self.decisionNumber, s,
+                                input)
+
+    self.error(nvae)
+    raise nvae
+
+  def error(self, nvae):
+    """A hook for debugging interface"""
+    pass
+
+  def specialStateTransition(self, s, input):
+    return -1
+
+  def getDescription(self):
+    return "n/a"
+
+
+
+
+
+
+  def unpack(cls, string):
+    """@brief Unpack the runlength encoded table data.
 
         Terence implemented packed table initializers, because Java has a
         size restriction on .class files and the lookup tables can grow
@@ -198,16 +206,16 @@ class DFA(object):
 
         """
 
-        ret = []
-        for i in range(len(string) / 2):
-            (n, v) = ord(string[i*2]), ord(string[i*2+1])
+    ret = []
+    for i in range(len(string) // 2):
+      (n, v) = ord(string[i * 2]), ord(string[i * 2 + 1])
 
-            # Is there a bitwise operation to do this?
-            if v == 0xFFFF:
-                v = -1
 
-            ret += [v] * n
+      if v == 0xFFFF:
+        v = -1
 
-        return ret
+      ret += [v] * n
 
-    unpack = classmethod(unpack)
+    return ret
+
+  unpack = classmethod(unpack)

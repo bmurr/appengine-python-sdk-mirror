@@ -20,10 +20,9 @@
 
 Modeled after Django's abstraction layer on top of SQL databases,
 http://www.djangoproject.com/documentation/mode_api/. Ours is a little simpler
-and a lot less code because the datastore is so much simpler than SQL
-databases.
+and a lot less code because the datastore is so much simpler than SQL databases.
 
-The programming model is to declare Python subclasses of the Model class,
+The programming model is to declare Python subclasses of the `Model` class,
 declaring datastore properties as class members of that class. So if you want to
 publish a story with title, body, and created date, you would do it like this:
 
@@ -32,23 +31,23 @@ publish a story with title, body, and created date, you would do it like this:
       body = db.TextProperty()
       created = db.DateTimeProperty(auto_now_add=True)
 
-You can create a new Story in the datastore with this usage pattern:
+You can create a new `Story` in the datastore with this usage pattern:
 
-    story = Story(title='My title')
+    story = `Story(title='My title')`
     story.body = 'My body'
     story.put()
 
-You query for Story entities using built in query interfaces that map directly
+You query for `Story` entities using built in query interfaces that map directly
 to the syntax and semantics of the datastore:
 
     stories = Story.all().filter('date >=', yesterday).order('-date')
     for story in stories:
       print story.title
 
-The Property declarations enforce types by performing validation on assignment.
-For example, the DateTimeProperty enforces that you assign valid datetime
-objects, and if you supply the "required" option for a property, you will not
-be able to assign None to that property.
+The `Property` declarations enforce types by performing validation on
+assignment. For example, the `DateTimeProperty` enforces that you assign valid
+datetime objects, and if you supply the `required` option for a property, you
+will not be able to assign `None` to that property.
 
 We also support references between models, so if a story has comments, you
 would represent it like this:
@@ -57,16 +56,16 @@ would represent it like this:
       story = db.ReferenceProperty(Story)
       body = db.TextProperty()
 
-When you get a story out of the datastore, the story reference is resolved
+When you get a story out of the datastore, the `story` reference is resolved
 automatically the first time it is referenced, which makes it easy to use
-model instances without performing additional queries by hand:
+`Model` instances without performing additional queries by hand:
 
     comment = Comment.get(key)
     print comment.story.title
 
 Likewise, you can access the set of comments that refer to each story through
-this property through a reverse reference called comment_set, which is a Query
-preconfigured to return all matching comments:
+this property through a reverse reference called `comment_set`, which is a
+`Query` preconfigured to return all matching comments:
 
     story = Story.get(key)
     for comment in story.comment_set:
@@ -74,35 +73,34 @@ preconfigured to return all matching comments:
 
 """
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import copy
 import datetime
 import logging
 import re
 import time
-import urlparse
 import warnings
+
+import six
+from six.moves import map
+import six.moves.urllib.parse
 
 from google.appengine.api import datastore
 from google.appengine.api import datastore_errors
 from google.appengine.api import datastore_types
 from google.appengine.api import namespace_manager
 from google.appengine.api import users
-from google.appengine.datastore import datastore_rpc
 from google.appengine.datastore import datastore_query
+from google.appengine.datastore import datastore_rpc
+
+
+
+
+
+
+
+
+
+
 
 
 Error = datastore_errors.Error
@@ -156,13 +154,13 @@ ALLOWED = datastore_rpc.TransactionOptions.ALLOWED
 INDEPENDENT = datastore_rpc.TransactionOptions.INDEPENDENT
 
 
-KEY_RANGE_EMPTY = "Empty"
+KEY_RANGE_EMPTY = 'Empty'
 """Indicates the given key range is empty and the datastore's
 automatic ID allocator will not assign keys in this range to new
 entities.
 """
 
-KEY_RANGE_CONTENTION = "Contention"
+KEY_RANGE_CONTENTION = 'Contention'
 """Indicates the given key range is empty but the datastore's
 automatic ID allocator may assign new entities keys in this range.
 However it is safe to manually assign keys in this range
@@ -179,10 +177,10 @@ entity that will overwrite an existing entity, so once the range is
 populated there will no longer be any contention.
 """
 
-KEY_RANGE_COLLISION = "Collision"
+KEY_RANGE_COLLISION = 'Collision'
 """Indicates that entities with keys inside the given key range
 already exist and writing to this range will overwrite those entities.
-Additionally the implications of KEY_RANGE_COLLISION apply. If
+Additionally the implications of `KEY_RANGE_COLLISION` apply. If
 overwriting entities that exist in this range is acceptable it is safe
 to use the given range.
 
@@ -214,7 +212,7 @@ class NotSavedError(Error):
 
 
 class KindError(BadValueError):
-  """Raised when an entity is used with incorrect Model."""
+  """Raised when an entity is used with incorrect `Model`."""
 
 
 class PropertyError(Error):
@@ -237,10 +235,12 @@ class DerivedPropertyError(Error):
   """Raised when attempting to assign a value to a derived property."""
 
 
+if six.PY3:
+  long = int
+
 _ALLOWED_PROPERTY_TYPES = set([
-    basestring,
-    str,
-    unicode,
+    six.binary_type,
+    six.text_type,
     bool,
     int,
     long,
@@ -263,7 +263,13 @@ _ALLOWED_PROPERTY_TYPES = set([
     PostalAddress,
     Rating,
     BlobKey,
-    ])
+])
+if six.PY2:
+
+
+
+
+  _ALLOWED_PROPERTY_TYPES.add(basestring)
 
 _ALLOWED_EXPANDO_PROPERTY_TYPES = set(_ALLOWED_PROPERTY_TYPES)
 _ALLOWED_EXPANDO_PROPERTY_TYPES.update((list, tuple, type(None)))
@@ -277,19 +283,19 @@ _FILTER_REGEX = re.compile(
 
 
 def class_for_kind(kind):
-  """Return base-class responsible for implementing kind.
+  """Return base-class responsible for implementing `kind`.
 
   Necessary to recover the class responsible for implementing provided
-  kind.
+  `kind`.
 
   Args:
-    kind: Entity kind string.
+    kind: Entity `kind` string.
 
   Returns:
-    Class implementation for kind.
+    Class implementation for `kind`.
 
   Raises:
-    KindError when there is no implementation for kind.
+    `KindError` when there is no implementation for `kind`.
   """
   try:
     return _kind_map[kind]
@@ -304,7 +310,7 @@ def check_reserved_word(attr_name):
     attr_name: Name to check to see if it is a reserved word.
 
   Raises:
-    ReservedWordError when attr_name is determined to be a reserved word.
+    ReservedWordError when `attr_name` is determined to be a reserved word.
   """
   if datastore_types.RESERVED_PROPERTY_NAME.match(attr_name):
     raise ReservedWordError(
@@ -324,10 +330,10 @@ def query_descendants(model_instance):
   """Returns a query for all the descendants of a model instance.
 
   Args:
-    model_instance: Model instance to find the descendants of.
+    model_instance: `Model` instance to find the descendants of.
 
   Returns:
-    Query that will retrieve all entities that have the given model instance
+    `Query` that will retrieve all entities that have the given model instance
   as an ancestor. Unlike normal ancestor queries, this does not include the
   ancestor itself.
   """
@@ -344,9 +350,9 @@ def model_to_protobuf(model_instance, _entity_class=datastore.Entity):
   """Encodes a model instance as a protocol buffer.
 
   Args:
-    model_instance: Model instance to encode.
+    model_instance: `Model` instance to encode.
   Returns:
-    entity_pb.EntityProto representation of the model instance
+    `entity_pb.EntityProto` representation of the model instance
   """
 
   return model_instance._populate_entity(_entity_class).ToPb()
@@ -357,10 +363,10 @@ def model_from_protobuf(pb, _entity_class=datastore.Entity):
 
   Args:
     pb: The protocol buffer representation of the model instance. Can be an
-        entity_pb.EntityProto or str encoding of an entity_bp.EntityProto
+        `entity_pb.EntityProto` or `str` encoding of an `entity_bp.EntityProto`
 
   Returns:
-    Model instance resulting from decoding the protocol buffer
+    `Model` instance resulting from decoding the protocol buffer
   """
 
   entity = _entity_class.FromPb(pb, default_kind=Expando.kind())
@@ -368,17 +374,16 @@ def model_from_protobuf(pb, _entity_class=datastore.Entity):
 
 
 def model_is_projection(model_instance):
-  """Returns true if the given db.Model instance only contains a projection of
-  the full entity.
+  """Returns true if the given `db.Model instance` only contains a projection of the full entity.
   """
   return model_instance._entity and model_instance._entity.is_projection()
 
 
 def _initialize_properties(model_class, name, bases, dct):
-  """Initialize Property attributes for Model-class.
+  """Initialize `Property` attributes for `Model` class.
 
   Args:
-    model_class: Model class to initialize properties for.
+    model_class: `Model` class to initialize properties for.
   """
 
   model_class._properties = {}
@@ -444,16 +449,16 @@ def _coerce_to_key(value):
   """Returns the value's key.
 
   Args:
-    value: a Model or Key instance or string encoded key or None
+    value: a `Model` or `Key` instance or string encoded key or `None`
 
   Returns:
-    The corresponding key, or None if value is None.
+    The corresponding key, or `None` if value is `None`.
   """
   if value is None:
     return None
 
   value, multiple = datastore.NormalizeAndTypeCheck(
-    value, (Model, Key, basestring))
+      value, (Model, Key, six.string_types))
 
   if len(value) > 1:
     raise datastore_errors.BadArgumentError('Expected only one model or key')
@@ -461,29 +466,30 @@ def _coerce_to_key(value):
 
   if isinstance(value, Model):
     return value.key()
-  elif isinstance(value, basestring):
+  elif isinstance(value, six.string_types):
     return Key(value)
   else:
     return value
 
 
 class PropertiedClass(type):
-  """Meta-class for initializing Model classes properties.
+  """Meta-class for initializing `Model` classes properties.
 
-  Used for initializing Properties defined in the context of a model.
-  By using a meta-class much of the configuration of a Property
+  Used for initializing `Properties` defined in the context of a model.
+  By using a meta-class much of the configuration of a `Property`
   descriptor becomes implicit.  By using this meta-class, descriptors
-  that are of class Model are notified about which class they
+  that are of class `Model` are notified about which class they
   belong to and what attribute they are associated with and can
-  do appropriate initialization via __property_config__.
+  do appropriate initialization via `__property_config__`.
 
   Duplicate properties are not permitted.
   """
+  _HAS_DYNAMIC_ATTRIBUTES = True
 
   def __init__(cls, name, bases, dct, map_kind=True):
     """Initializes a class that might have property definitions.
 
-    This method is called when a class is created with the PropertiedClass
+    This method is called when a class is created with the `PropertiedClass`
     meta-class.
 
     Loads all properties for this model and its base classes in to a dictionary
@@ -495,9 +501,9 @@ class PropertiedClass(type):
     in two base classes are not permitted.
 
     Properties may not assigned to names which are in the list of
-    _RESERVED_WORDS.  It is still possible to store a property using a reserved
-    word in the datastore by using the 'name' keyword argument to the Property
-    constructor.
+    `_RESERVED_WORDS`.  It is still possible to store a property using a
+    reserved word in the datastore by using the `name` keyword argument to the
+    `Property` constructor.
 
     Args:
       cls: Class being initialized.
@@ -506,10 +512,10 @@ class PropertiedClass(type):
       dct: Dictionary of new definitions for class.
 
     Raises:
-      DuplicatePropertyError when a property is duplicated either in the new
+      `DuplicatePropertyError` when a property is duplicated either in the new
         class or separately in two base classes.
-      ReservedWordError when a property is given a name that is in the list of
-        reserved words, attributes of Model and names of the form '__.*__'.
+      `ReservedWordError` when a property is given a name that is in the list of
+        reserved words, attributes of `Model`, and names of the form '__.*__'.
     """
     super(PropertiedClass, cls).__init__(name, bases, dct)
 
@@ -526,12 +532,12 @@ AUTO_UPDATE_UNCHANGED = object()
 
 
 class Property(object):
-  """A Property is an attribute of a Model.
+  """A `Property` is an attribute of a `Model`.
 
   It defines the type of the attribute, which determines how it is stored
   in the datastore and how the property values are validated. Different property
   types support different options, which change validation rules, default
-  values, etc.  The simplest example of a property is a StringProperty:
+  values, etc.  The simplest example of a property is a `StringProperty`:
 
      class Story(db.Model):
        title = db.StringProperty()
@@ -548,12 +554,12 @@ class Property(object):
                validator=None,
                choices=None,
                indexed=True):
-    """Initializes this Property with the given options.
+    """Initializes this `Property` with the given options.
 
     Args:
       verbose_name: User friendly name of property.
-      name: Storage name for property.  By default, uses attribute name
-        as it is assigned in the Model sub-class.
+      name: Storage name for property.  By default, uses attribute name as it is
+        assigned in the `Model` sub-class.
       default: Default value for property if none is assigned.
       required: Whether property is required.
       validator: User provided method used for validation.
@@ -577,10 +583,10 @@ class Property(object):
     it belongs to.
 
     Args:
-      model_class: Model class which Property will belong to.
-      property_name: Name of property within Model instance to store property
-        values in.  By default this will be the property name preceded by
-        an underscore, but may change for different subclasses.
+      model_class: `Model` class which `Property` will belong to.
+      property_name: Name of `Property` within `Model` instance to store
+        property values in.  By default this will be the property name preceded
+        by an underscore, but may change for different subclasses.
     """
     self.model_class = model_class
     if self.name is None:
@@ -619,7 +625,7 @@ class Property(object):
     """Default value for unassigned values.
 
     Returns:
-      Default value as provided by __init__(default).
+      Default value as provided by `__init__(default)`.
     """
     return self.default
 
@@ -627,14 +633,14 @@ class Property(object):
     """Assert that provided value is compatible with this property.
 
     Args:
-      value: Value to validate against this Property.
+      value: Value to validate against this `Property`.
 
     Returns:
       A valid value, either the input unchanged or adapted to the
       required type.
 
     Raises:
-      BadValueError if the value is not appropriate for this
+      `BadValueError` if the value is not appropriate for this
       property in any way.
     """
     if self.empty(value):
@@ -653,15 +659,15 @@ class Property(object):
     """Determine if value is empty in the context of this property.
 
     For most kinds, this is equivalent to "not value", but for kinds like
-    bool, the test is more subtle, so subclasses can override this method
+    `bool`, the test is more subtle, so subclasses can override this method
     if necessary.
 
     Args:
-      value: Value to validate against this Property.
+      value: Value to validate against this `Property`.
 
     Returns:
-      True if this value is considered empty in the context of this Property
-      type, otherwise False.
+      `True` if this value is considered empty in the context of this `Property`
+      type, otherwise `False`.
     """
     return not value
 
@@ -673,9 +679,9 @@ class Property(object):
     entity.  Most critically, it will fetch the datastore key value for
     reference properties.
 
-    Some properies (e.g. DateTimeProperty, UserProperty) optionally update their
-    value on every put(). This call must return the current value for such
-    properties (get_updated_value_for_datastore returns the new value).
+    Some properies (e.g. `DateTimeProperty`, `UserProperty`) optionally update
+    their value on every `put()`. This call must return the current value for
+    such properties (`get_updated_value_for_datastore` returns the new value).
 
     Args:
       model_instance: Instance to fetch datastore value from.
@@ -689,17 +695,17 @@ class Property(object):
   def get_updated_value_for_datastore(self, model_instance):
     """Determine new value for auto-updated property.
 
-    Some properies (e.g. DateTimeProperty, UserProperty) optionally update their
-    value on every put(). This call must return the new desired value for such
-    properties. For all other properties, this call must return
-    AUTO_UPDATE_UNCHANGED.
+    Some properies (e.g. `DateTimeProperty`, `UserProperty`) optionally update
+    their value on every `put()`. This call must return the new desired value
+    for such properties. For all other properties, this call must return
+    `AUTO_UPDATE_UNCHANGED`.
 
     Args:
       model_instance: Instance to get new value for.
 
     Returns:
       Datastore representation of the new model value in a form that is
-      appropriate for storing in the datastore, or AUTO_UPDATE_UNCHANGED.
+      appropriate for storing in the datastore, or `AUTO_UPDATE_UNCHANGED`.
     """
     return AUTO_UPDATE_UNCHANGED
 
@@ -716,13 +722,13 @@ class Property(object):
     override this when it uses a different datatype on the model
     instance than on the entity.
 
-    This API is not quite symmetric with get_value_for_datastore(),
+    This API is not quite symmetric with `get_value_for_datastore()`,
     because the model instance on which to store the converted value
     may not exist yet -- we may be collecting values to be passed to a
     model constructor.
 
     Args:
-      value: value retrieved from the datastore entity.
+      value: Value retrieved from the datastore entity.
 
     Returns:
       The value converted for use as a model instance attribute.
@@ -730,12 +736,13 @@ class Property(object):
     return value
 
   def _require_parameter(self, kwds, parameter, value):
-    """Sets kwds[parameter] to value.
+    """Sets `kwds[parameter]` to value.
 
-    If kwds[parameter] exists and is not value, raises ConfigurationError.
+    If `kwds[parameter]` exists and is not value, raises `ConfigurationError`.
 
     Args:
-      kwds: The parameter dict, which maps parameter names (strings) to values.
+      kwds: The `parameter` dict, which maps parameter names (strings) to
+        values.
       parameter: The name of the parameter to set.
       value: The value to set it to.
     """
@@ -759,7 +766,7 @@ class Property(object):
   data_type = str
 
   def datastore_type(self):
-    """Deprecated backwards-compatible accessor method for self.data_type."""
+    """Deprecated backwards-compatible accessor method for `self.data_type`."""
 
     return self.data_type
 
@@ -773,10 +780,10 @@ class Index(datastore._BaseIndex):
   properties = datastore._BaseIndex._Properties
 
 
-class Model(object):
-  """Model is the superclass of all object entities in the datastore.
+class Model(six.with_metaclass(PropertiedClass, object)):
+  """`Model` is the superclass of all object entities in the datastore.
 
-  The programming model is to declare Python subclasses of the Model class,
+  The programming model is to declare Python subclasses of the `Model` class,
   declaring datastore properties as class members of that class. So if you want
   to publish a story with title, body, and created date, you would do it like
   this:
@@ -786,7 +793,7 @@ class Model(object):
       body = db.TextProperty()
       created = db.DateTimeProperty(auto_now_add=True)
 
-  A model instance can have a single parent.  Model instances without any
+  A model instance can have a single parent.  `Model` instances without any
   parent are root entities.  It is possible to efficiently query for
   instances by their shared parent.  All descendents of a single root
   instance also behave as a transaction group.  This means that when you
@@ -795,18 +802,17 @@ class Model(object):
   group are ACID.
   """
 
-
-  __metaclass__ = PropertiedClass
-
   def __new__(*args, **unused_kwds):
-    """Allow subclasses to call __new__() with arguments.
+    """Returns the newly created object.
 
-    Do NOT list 'cls' as the first argument, or in the case when
-    the 'unused_kwds' dictionary contains the key 'cls', the function
-    will complain about multiple argument values for 'cls'.
+    Allows subclasses to call `__new__()` with arguments.
+
+    Do NOT list `cls` as the first argument, or in the case when
+    the `unused_kwds` dictionary contains the key `cls`, the function
+    will complain about multiple argument values for `cls`.
 
     Raises:
-      TypeError if there are no positional arguments.
+      `TypeError` if there are no positional arguments.
     """
     if args:
       cls = args[0]
@@ -825,30 +831,30 @@ class Model(object):
                **kwds):
     """Creates a new instance of this model.
 
-    To create a new entity, you instantiate a model and then call put(),
+    To create a new entity, you instantiate a model and then call `put()`,
     which saves the entity to the datastore:
 
-       person = Person()
+       person = `Person()`
        person.name = 'Bret'
        person.put()
 
     You can initialize properties in the model in the constructor with keyword
     arguments:
 
-       person = Person(name='Bret')
+       person = `Person(name='Bret')`
 
     We initialize all other properties to the default value (as defined by the
     properties in the model definition) if they are not provided in the
     constructor.
 
     Args:
-      parent: Parent instance for this instance or None, indicating a top-
+      parent: Parent instance for this instance or `None`, indicating a top-
         level instance.
       key_name: Name for new model instance.
       _from_entity: Intentionally undocumented.
       kwds: Keyword arguments mapping to properties of model.  Also:
-        key: Key instance for this instance, if provided makes parent and
-             key_name redundant (they do not need to be set but if they are
+        key: `Key` instance for this instance, if provided makes `parent` and
+             `key_name` redundant (they do not need to be set but if they are
              they must match the key).
     """
 
@@ -875,7 +881,7 @@ class Model(object):
     if key is not None:
       if isinstance(key, (tuple, list)):
         key = Key.from_path(*key)
-      if isinstance(key, basestring):
+      if isinstance(key, six.string_types):
         key = Key(encoded=key)
       if not isinstance(key, Key):
         raise TypeError('Expected Key type; received %s (is %s)' %
@@ -905,7 +911,7 @@ class Model(object):
     else:
       if key_name == '':
         raise BadKeyError('Name cannot be empty.')
-      elif key_name is not None and not isinstance(key_name, basestring):
+      elif key_name is not None and not isinstance(key_name, six.string_types):
         raise BadKeyError('Name must be string type, not %s' %
                           key_name.__class__.__name__)
 
@@ -983,14 +989,14 @@ class Model(object):
 
     This property is only available if this entity is already stored in the
     datastore or if it has a full key, so it is available if this entity was
-    fetched returned from a query, or after put() is called the first time
+    fetched returned from a query, or after `put()` is called the first time
     for new entities, or if a complete key was given when constructed.
 
     Returns:
       Datastore key of persisted entity.
 
     Raises:
-      NotSavedError when entity is not persistent.
+      `NotSavedError` when entity is not persistent.
     """
     if self.is_saved():
       return self._entity.key()
@@ -1021,7 +1027,7 @@ class Model(object):
     """Copies information from this model to provided entity.
 
     Args:
-      entity: Entity to save information on.
+      entity: `Entity` to save information on.
     """
 
     for prop in self.properties().values():
@@ -1033,12 +1039,12 @@ class Model(object):
       set_unindexed_properties(self._unindexed_properties)
 
   def _populate_internal_entity(self, _entity_class=datastore.Entity):
-    """Populates self._entity, saving its state to the datastore.
+    """Populates `self._entity`, saving its state to the datastore.
 
-    After this method is called, calling is_saved() will return True.
+    After this method is called, calling `is_saved()` will return `True`.
 
     Returns:
-      Populated self._entity
+      Populated `self._entity`
     """
     self._entity = self._populate_entity(_entity_class=_entity_class)
 
@@ -1063,13 +1069,13 @@ class Model(object):
     same.
 
     Args:
-      config: datastore_rpc.Configuration to use for this request.
+      config: `datastore_rpc.Configuration` to use for this request.
 
     Returns:
       The key of the instance (either the existing key or a new key).
 
     Raises:
-      TransactionFailedError if the data could not be committed.
+      `TransactionFailedError` if the data could not be committed.
     """
     self._populate_internal_entity()
     return datastore.Put(self._entity, **kwargs)
@@ -1118,10 +1124,10 @@ class Model(object):
     """Deletes this entity from the datastore.
 
     Args:
-      config: datastore_rpc.Configuration to use for this request.
+      config: `datastore_rpc.Configuration` to use for this request.
 
     Raises:
-      TransactionFailedError if the data could not be committed.
+      `TransactionFailedError` if the data could not be committed.
     """
     datastore.Delete(self.key(), **kwargs)
 
@@ -1136,24 +1142,24 @@ class Model(object):
   def is_saved(self):
     """Determine if entity is persisted in the datastore.
 
-    New instances of Model do not start out saved in the data.  Objects which
-    are saved to or loaded from the Datastore will have a True saved state.
+    New instances of `Model` do not start out saved in the data.  Objects which
+    are saved to or loaded from the Datastore will have a `True` saved state.
 
     Returns:
-      True if object has been persisted to the datastore, otherwise False.
+      `True` if object has been persisted to the datastore, otherwise `False`.
     """
     return self._entity is not None
 
   def has_key(self):
     """Determine if this model instance has a complete key.
 
-    When not using a fully self-assigned Key, ids are not assigned until the
+    When not using a fully self-assigned `Key`, ids are not assigned until the
     data is saved to the Datastore, but instances with a key name always have
     a full key.
 
     Returns:
-      True if the object has been persisted to the datastore or has a key
-      or has a key_name, otherwise False.
+      `True` if the object has been persisted to the datastore or has a `key`
+      or has a `key_name`, otherwise `False`.
     """
     return self.is_saved() or self._key or self._key_name
 
@@ -1163,14 +1169,14 @@ class Model(object):
 
 
   def instance_properties(self):
-    """Alias for dyanmic_properties."""
+    """Alias for `dyanmic_properties`."""
     return self.dynamic_properties()
 
   def parent(self):
     """Get the parent of the model instance.
 
     Returns:
-      Parent of contained entity or parent provided in constructor, None if
+      Parent of contained entity or parent provided in constructor, `None` if
       instance has no parent.
     """
     if self._parent is None:
@@ -1184,10 +1190,10 @@ class Model(object):
     """Get the parent's key.
 
     This method is useful for avoiding a potential fetch from the datastore
-    but still get information about the instances parent.
+    but still get information about the instance's parent.
 
     Returns:
-      Parent key of entity, None if there is no parent.
+      Parent key of entity, `None` if there is no parent.
     """
     if self._parent_key is not None:
       return self._parent_key
@@ -1203,7 +1209,7 @@ class Model(object):
   def to_xml(self, _entity_class=datastore.Entity):
     """Generate an XML representation of this model instance.
 
-    atom and gd:namespace properties are converted to XML according to their
+    `atom` and `gd:namespace` properties are converted to XML according to their
     respective schemas. For more information, see:
 
       http://www.atomenabled.org/developers/syndication/
@@ -1214,31 +1220,31 @@ class Model(object):
 
   @classmethod
   def get(cls, keys, **kwargs):
-    """Fetch instance from the datastore of a specific Model type using key.
+    """Fetch instance from the datastore of a specific `Model` type using key.
 
-    We support Key objects and string keys (we convert them to Key objects
+    We support `Key` objects and string keys (we convert them to `Key` objects
     automatically).
 
     Useful for ensuring that specific instance types are retrieved from the
     datastore.  It also helps that the source code clearly indicates what
-    kind of object is being retreived.  Example:
+    kind of object is being retrieved.  Example:
 
       story = Story.get(story_key)
 
     Args:
-      keys: Key within datastore entity collection to find; or string key;
-        or list of Keys or string keys.
-      config: datastore_rpc.Configuration to use for this request.
+      keys: `Key` within datastore entity collection to find; or string key; or
+        list of `Keys` or string keys.
+      config: `datastore_rpc.Configuration` to use for this request.
 
     Returns:
-      If a single key was given: a Model instance associated with key
+      If a single key was given: a `Model` instance associated with key
       for the provided class if it exists in the datastore, otherwise
-      None. If a list of keys was given: a list where list[i] is the
-      Model instance for keys[i], or None if no instance exists.
+      `None`. If a list of keys was given: a list where `list[i]` is the
+      `Model` instance for `keys[i]`, or `None` if no instance exists.
 
     Raises:
-      KindError if any of the retreived objects are not instances of the
-      type associated with call to 'get'.
+      `KindError` if any of the retrieved objects are not instances of the
+      type associated with call to `get`.
     """
     results = get(keys, **kwargs)
     if results is None:
@@ -1258,20 +1264,21 @@ class Model(object):
 
   @classmethod
   def get_by_key_name(cls, key_names, parent=None, **kwargs):
-    """Get instance of Model class by its key's name.
+    """Returns instance of `Model` class by its key's name.
 
     Args:
-      key_names: A single key-name or a list of key-names.
+      key_names: A single `key-name` or a list of `key-names`.
       parent: Parent of instances to get.  Can be a model or key.
-      config: datastore_rpc.Configuration to use for this request.
+      config: `datastore_rpc.Configuration` to use for this request.
     """
     try:
       parent = _coerce_to_key(parent)
-    except BadKeyError, e:
+    except BadKeyError as e:
 
       raise BadArgumentError(str(e))
 
-    key_names, multiple = datastore.NormalizeAndTypeCheck(key_names, basestring)
+    key_names, multiple = datastore.NormalizeAndTypeCheck(
+        key_names, six.string_types)
     keys = [datastore.Key.from_path(cls.kind(), name, parent=parent)
             for name in key_names]
     if multiple:
@@ -1281,16 +1288,16 @@ class Model(object):
 
   @classmethod
   def get_by_id(cls, ids, parent=None, **kwargs):
-    """Get instance of Model class by id.
+    """Returns instance of `Model` class by id.
 
     Args:
       key_names: A single id or a list of ids.
       parent: Parent of instances to get.  Can be a model or key.
-      config: datastore_rpc.Configuration to use for this request.
+      config: `datastore_rpc.Configuration` to use for this request.
     """
     if isinstance(parent, Model):
       parent = parent.key()
-    ids, multiple = datastore.NormalizeAndTypeCheck(ids, (int, long))
+    ids, multiple = datastore.NormalizeAndTypeCheck(ids, six.integer_types)
     keys = [datastore.Key.from_path(cls.kind(), id, parent=parent)
             for id in ids]
     if multiple:
@@ -1303,21 +1310,21 @@ class Model(object):
 
   @classmethod
   def get_or_insert(cls, key_name, **kwds):
-    """Transactionally retrieve or create an instance of Model class.
+    """Transactionally retrieve or create an instance of `Model` class.
 
-    This acts much like the Python dictionary setdefault() method, where we
-    first try to retrieve a Model instance with the given key name and parent.
-    If it's not present, then we create a new instance (using the *kwds
-    supplied) and insert that with the supplied key name.
+    This acts much like the Python dictionary `setdefault()` method, where we
+    first try to retrieve a `Model` instance with the given key name and
+    `parent`. If it's not present, then we create a new instance (using the
+    `*kwds` supplied) and insert that with the supplied key name.
 
-    Subsequent calls to this method with the same key_name and parent will
+    Subsequent calls to this method with the same `key_name` and `parent` will
     always yield the same entity (though not the same actual object instance),
-    regardless of the *kwds supplied. If the specified entity has somehow
+    regardless of the `*kwds` supplied. If the specified entity has somehow
     been deleted separately, then the next call will create a new entity and
     return it.
 
-    If the 'parent' keyword argument is supplied, it must be a Model instance.
-    It will be used as the parent of the new instance of this Model class if
+    If the `parent` keyword argument is supplied, it must be a `Model` instance.
+    It will be used as the `parent` of the new instance of this `Model` class if
     one is created.
 
     This method is especially useful for having just one unique entity for
@@ -1332,30 +1339,30 @@ class Model(object):
 
       # The first time through we'll create the new topic.
       wiki_word = 'CommonIdioms'
-      topic = WikiTopic.get_or_insert(wiki_word,
+      topic = `WikiTopic`.get_or_insert(wiki_word,
                                       body='This topic is totally new!')
       assert topic.key().name() == 'CommonIdioms'
       assert topic.body == 'This topic is totally new!'
 
       # The second time through will just retrieve the entity.
-      overwrite_topic = WikiTopic.get_or_insert(wiki_word,
+      overwrite_topic = `WikiTopic`.get_or_insert(wiki_word,
                                       body='A totally different message!')
       assert topic.key().name() == 'CommonIdioms'
       assert topic.body == 'This topic is totally new!'
 
     Args:
       key_name: Key name to retrieve or create.
-      **kwds: Keyword arguments to pass to the constructor of the model class
-        if an instance for the specified key name does not already exist. If
-        an instance with the supplied key_name and parent already exists, the
+      **kwds: Keyword arguments to pass to the constructor of the model class if
+        an instance for the specified key name does not already exist. If an
+        instance with the supplied `key_name` and `parent` already exists, the
         rest of these arguments will be discarded.
 
     Returns:
-      Existing instance of Model class with the specified key_name and parent
-      or a new one that has just been created.
+      Existing instance of `Model` class with the specified `key_name` and
+      `parent` or a new one that has just been created.
 
     Raises:
-      TransactionFailedError if the specified Model instance could not be
+      `TransactionFailedError` if the specified `Model` instance could not be
       retrieved or created transactionally (due to high contention, etc).
     """
     def txn():
@@ -1371,7 +1378,7 @@ class Model(object):
     """Returns a query over all instances of this model from the datastore.
 
     Returns:
-      Query that will retrieve all instances from entity collection.
+      `Query` that will retrieve all instances from entity collection.
     """
     return Query(cls, **kwds)
 
@@ -1379,11 +1386,11 @@ class Model(object):
   def gql(cls, query_string, *args, **kwds):
     """Returns a query using GQL query string.
 
-    See appengine/ext/gql for more information about GQL.
+    See `appengine/ext/gql` for more information about GQL.
 
     Args:
       query_string: properly formatted GQL query string with the
-        'SELECT * FROM <entity>' part omitted
+        `SELECT * FROM <entity>` part omitted
       *args: rest of the positional arguments used to bind numeric references
         in the query.
       **kwds: dictionary-based arguments (for named parameters).
@@ -1401,7 +1408,7 @@ class Model(object):
     to the model instance.
 
     Args:
-      entity: Entity which contain values to search dyanmic properties for.
+      entity: Entity which contain values to search dynamic properties for.
     """
     entity_values = {}
     for prop in cls.properties().values():
@@ -1425,13 +1432,13 @@ class Model(object):
   def from_entity(cls, entity):
     """Converts the entity representation of this model to an instance.
 
-    Converts datastore.Entity instance to an instance of cls.
+    Converts `datastore.Entity` instance to an instance of `cls`.
 
     Args:
       entity: Entity loaded directly from datastore.
 
     Raises:
-      KindError when cls is incorrect model for entity.
+      `KindError` when `cls` is incorrect model for entity.
     """
     if cls.kind() != entity.kind():
       raise KindError('Class %s cannot handle kind \'%s\'' %
@@ -1452,7 +1459,7 @@ class Model(object):
 
   @classmethod
   def entity_type(cls):
-    """Soon to be removed alias for kind."""
+    """Soon to be removed alias for `kind`."""
     return cls.kind()
 
   @classmethod
@@ -1462,7 +1469,7 @@ class Model(object):
 
   @classmethod
   def fields(cls):
-    """Soon to be removed alias for properties."""
+    """Soon to be removed alias for `properties`."""
     return cls.properties()
 
 
@@ -1470,15 +1477,15 @@ def create_rpc(deadline=None, callback=None, read_policy=STRONG_CONSISTENCY):
   """Create an rpc for use in configuring datastore calls.
 
   NOTE: This functions exists for backwards compatibility.  Please use
-  create_config() instead.  NOTE: the latter uses 'on_completion',
-  which is a function taking an argument, wherease create_rpc uses
-  'callback' which is a function without arguments.
+  `create_config()` instead.  NOTE: the latter uses `on_completion`,
+  which is a function taking an argument, wherease `create_rpc` uses
+  `callback` which is a function without arguments.
 
   Args:
     deadline: float, deadline for calls in seconds.
     callback: callable, a callback triggered when this rpc completes,
       accepts one argument: the returned rpc.
-    read_policy: flag, set to EVENTUAL_CONSISTENCY to enable eventually
+    read_policy: flag, set to `EVENTUAL_CONSISTENCY` to enable eventually
       consistent reads
 
   Returns:
@@ -1489,10 +1496,10 @@ def create_rpc(deadline=None, callback=None, read_policy=STRONG_CONSISTENCY):
 
 
 def get_async(keys, **kwargs):
-  """Asynchronously fetch the specified Model instance(s) from the datastore.
+  """Returns the specified `Model` instance(s) from the datastore asynchronously.
 
   Identical to db.get() except returns an asynchronous object. Call
-  get_result() on the return value to block on the call and get the results.
+  `get_result()` on the return value to block on the call and get the results.
   """
   keys, multiple = datastore.NormalizeAndTypeCheckKeys(keys)
   def extra_hook(entities):
@@ -1518,31 +1525,33 @@ def get_async(keys, **kwargs):
 
 
 def get(keys, **kwargs):
-  """Fetch the specific Model instance with the given key from the datastore.
+  """Fetch the specific `Model` instance with the given key from the datastore.
 
-  We support Key objects and string keys (we convert them to Key objects
+  We support `Key` objects and string keys (we convert them to `Key` objects
   automatically).
 
   Args:
-    keys: Key within datastore entity collection to find; or string key;
-      or list of Keys or string keys.
-    config: datastore_rpc.Configuration to use for this request, must be
+    keys: `Key` within datastore entity collection to find; or string key; or
+      list of `Keys` or string keys.
+    config: `datastore_rpc.Configuration` to use for this request, must be
       specified as a keyword argument.
 
-    Returns:
-      If a single key was given: a Model instance associated with key
-      if it exists in the datastore, otherwise None. If a list of keys was
-      given: a list where list[i] is the Model instance for keys[i], or
-      None if no instance exists.
+  Returns:
+    If a single key was given: a `Model` instance associated with key
+    if it exists in the datastore, otherwise `None`. If a list of keys was
+    given: a list where `list[i]` is the `Model` instance for `keys[i]`, or
+    `None` if no instance exists.
   """
   return get_async(keys, **kwargs).get_result()
 
 
 def put_async(models, **kwargs):
-  """Asynchronously store one or more Model instances.
+  """Returns an asynchronous object that stores one or more `Model` instances.
 
-  Identical to db.put() except returns an asynchronous object. Call
-  get_result() on the return value to block on the call and get the results.
+  Asynchronously store one or more `Model` instances.
+
+  Identical to `db.put()` except returns an asynchronous object. Call
+  `get_result()` on the return value to block on the call and get the results.
   """
   models, multiple = datastore.NormalizeAndTypeCheck(models, Model)
   entities = [model._populate_internal_entity() for model in models]
@@ -1557,19 +1566,19 @@ def put_async(models, **kwargs):
 
 
 def put(models, **kwargs):
-  """Store one or more Model instances.
+  """Store one or more `Model` instances.
 
   Args:
-    models: Model instance or list of Model instances.
-    config: datastore_rpc.Configuration to use for this request, must be
+    models: `Model` instance or list of `Model` instances.
+    config: `datastore_rpc.Configuration` to use for this request, must be
       specified as a keyword argument.
 
   Returns:
-    A Key if models is an instance, a list of Keys in the same order
-    as models if models is a list.
+    A `Key` if `models` is an instance, a list of `Key`s in the same order
+    as `models` if `models` is a list.
 
   Raises:
-    TransactionFailedError if the data could not be committed.
+    `TransactionFailedError` if the data could not be committed.
   """
   return put_async(models, **kwargs).get_result()
 
@@ -1580,13 +1589,15 @@ save = put
 
 
 def delete_async(models, **kwargs):
-  """Asynchronous version of delete one or more Model instances.
+  """Returns an asynchronous object that deletes one or more `Model` instances.
 
-  Identical to db.delete() except returns an asynchronous object. Call
-  get_result() on the return value to block on the call.
+  Asynchronous version of delete one or more `Model` instances.
+
+  Identical to `db.delete()` except returns an asynchronous object. Call
+  `get_result()` on the return value to block on the call.
   """
 
-  if isinstance(models, (basestring, Model, Key)):
+  if isinstance(models, (six.string_types, Model, Key)):
     models = [models]
   else:
     try:
@@ -1599,15 +1610,15 @@ def delete_async(models, **kwargs):
 
 
 def delete(models, **kwargs):
-  """Delete one or more Model instances.
+  """Delete one or more `Model` instances.
 
   Args:
-    models: Model instance, key, key string or iterable thereof.
-    config: datastore_rpc.Configuration to use for this request, must be
+    models: `Model` instance, key, key string or iterable thereof.
+    config: `datastore_rpc.Configuration` to use for this request, must be
       specified as a keyword argument.
 
   Raises:
-    TransactionFailedError if the data could not be committed.
+    `TransactionFailedError` if the data could not be committed.
   """
   delete_async(models, **kwargs).get_result()
 
@@ -1615,29 +1626,29 @@ def delete(models, **kwargs):
 def allocate_ids_async(model, size, **kwargs):
   """Asynchronously allocates a range of IDs.
 
-  Identical to allocate_ids() except returns an asynchronous object. Call
-  get_result() on the return value to block on the call and return the result.
+  Identical to `allocate_ids()` except returns an asynchronous object. Call
+  `get_result()` on the return value to block on the call and return the result.
   """
   return datastore.AllocateIdsAsync(_coerce_to_key(model), size=size, **kwargs)
 
 
 def allocate_ids(model, size, **kwargs):
-  """Allocates a range of IDs of size for the model_key defined by model.
+  """Allocates a range of IDs of size for the `model_key` defined by model.
 
   Allocates a range of IDs in the datastore such that those IDs will not
   be automatically assigned to new entities. You can only allocate IDs
   for model keys from your app. If there is an error, raises a subclass of
-  datastore_errors.Error.
+  `datastore_errors.Error`.
 
   Args:
-    model: Model instance, Key or string to serve as a template specifying the
-      ID sequence in which to allocate IDs. Returned ids should only be used
+    model: `Model` instance, Key or string to serve as a template specifying the
+      `ID` sequence in which to allocate IDs. Returned ids should only be used
       in entities with the same parent (if any) and kind as this key.
     size: Number of IDs to allocate.
-    config: datastore_rpc.Configuration to use for this request.
+    config: `datastore_rpc.Configuration` to use for this request.
 
   Returns:
-    (start, end) of the allocated range, inclusive.
+    `(start, end)` of the allocated range, inclusive.
   """
   return allocate_ids_async(model, size, **kwargs).get_result()
 
@@ -1648,7 +1659,7 @@ def allocate_id_range(model, start, end, **kwargs):
   Once these IDs have been allocated they may be provided manually to
   newly created entities.
 
-  Since the datastore's automatic ID allocator will never assign
+  Since the datastore's automatic `ID` allocator will never assign
   a key to a new entity that will cause an existing entity to be
   overwritten, entities written to the given key range will never be
   overwritten. However, writing entities with manually assigned keys in this
@@ -1661,20 +1672,20 @@ def allocate_id_range(model, start, end, **kwargs):
   instead.
 
   Args:
-    model: Model instance, Key or string to serve as a template specifying the
-      ID sequence in which to allocate IDs. Allocated ids should only be used
+    model: `Model` instance, Key or string to serve as a template specifying the
+      `ID` sequence in which to allocate IDs. Allocated ids should only be used
       in entities with the same parent (if any) and kind as this key.
     start: first id of the range to allocate, inclusive.
     end: last id of the range to allocate, inclusive.
-    config: datastore_rpc.Configuration to use for this request.
+    config: `datastore_rpc.Configuration` to use for this request.
 
   Returns:
-    One of (KEY_RANGE_EMPTY, KEY_RANGE_CONTENTION, KEY_RANGE_COLLISION). If not
-    KEY_RANGE_EMPTY, this represents a potential issue with using the allocated
-    key range.
+    One of `(KEY_RANGE_EMPTY, KEY_RANGE_CONTENTION, KEY_RANGE_COLLISION)`. If
+    not `KEY_RANGE_EMPTY`, this represents a potential issue with using the
+    allocated key range.
   """
   key = _coerce_to_key(model)
-  datastore.NormalizeAndTypeCheck((start, end), (int, long))
+  datastore.NormalizeAndTypeCheck((start, end), six.integer_types)
   if start < 1 or end < 1:
     raise BadArgumentError('Start %d and end %d must both be > 0.' %
                            (start, end))
@@ -1720,8 +1731,8 @@ def _index_converter(index):
 def get_indexes_async(**kwargs):
   """Asynchronously retrieves the application indexes and their states.
 
-  Identical to get_indexes() except returns an asynchronous object. Call
-  get_result() on the return value to block on the call and get the results.
+  Identical to `get_indexes()` except returns an asynchronous object. Call
+  `get_result()` on the return value to block on the call and get the results.
   """
   def extra_hook(indexes):
     return [(_index_converter(index), state) for index, state in indexes]
@@ -1733,16 +1744,16 @@ def get_indexes(**kwargs):
   """Retrieves the application indexes and their states.
 
   Args:
-    config: datastore_rpc.Configuration to use for this request, must be
+    config: `datastore_rpc.Configuration` to use for this request, must be
       specified as a keyword argument.
 
   Returns:
-    A list of (Index, Index.[BUILDING|SERVING|DELETING|ERROR]) tuples.
+    A list of `(Index, Index.[BUILDING|SERVING|DELETING|ERROR])` tuples.
     An index can be in the following states:
-      Index.BUILDING: Index is being built and therefore can not serve queries
-      Index.SERVING: Index is ready to service queries
-      Index.DELETING: Index is being deleted
-      Index.ERROR: Index encounted an error in the BUILDING state
+      `Index.BUILDING`: Index is being built and therefore can not serve queries
+      `Index.SERVING`: Index is ready to service queries
+      `Index.DELETING`: Index is being deleted
+      Index.ERROR: Index encounted an error in the `BUILDING` state
   """
   return get_indexes_async(**kwargs).get_result()
 
@@ -1805,8 +1816,8 @@ class Expando(Model):
 
     3 - Expando's dynamic properties are not able to store empty lists.
         Attempting to assign an empty list to a dynamic property will raise
-        ValueError.  Static properties on Expando can still support empty
-        lists but like normal Model properties is restricted from using
+        `ValueError`.  Static properties on Expando can still support empty
+        lists but like normal `Model` properties is restricted from using
         None.
   """
 
@@ -1824,7 +1835,7 @@ class Expando(Model):
     """
     super(Expando, self).__init__(parent, key_name, _app, **kwds)
     self._dynamic_properties = {}
-    for prop, value in kwds.iteritems():
+    for prop, value in six.iteritems(kwds):
       if prop not in self._all_properties and prop != 'key':
 
 
@@ -1846,7 +1857,7 @@ class Expando(Model):
         datastore.
 
     Raises:
-      ValueError on attempt to assign empty list.
+      `ValueError` on attempt to assign empty list.
     """
     check_reserved_word(key)
     if (key[:1] != '_' and
@@ -1904,7 +1915,7 @@ class Expando(Model):
       key: Name of attribute.
 
     Raises:
-      AttributeError when there is no attribute for key on object or
+      `AttributeError` when there is no attribute for key on object or
         contained entity.
     """
     _dynamic_properties = self._dynamic_properties
@@ -1935,7 +1946,7 @@ class Expando(Model):
     """
     if self._dynamic_properties is None:
       return []
-    return self._dynamic_properties.keys()
+    return list(self._dynamic_properties.keys())
 
   def _to_entity(self, entity):
     """Store to entity, deleting dynamic properties that no longer exist.
@@ -1951,12 +1962,12 @@ class Expando(Model):
     if self._dynamic_properties is None:
       self._dynamic_properties = {}
 
-    for key, value in self._dynamic_properties.iteritems():
+    for key, value in six.iteritems(self._dynamic_properties):
       entity[key] = value
 
-    all_properties = set(self._dynamic_properties.iterkeys())
+    all_properties = set(six.iterkeys(self._dynamic_properties))
     all_properties.update(self._all_properties)
-    for key in entity.keys():
+    for key in list(entity.keys()):
       if key not in all_properties:
         del entity[key]
 
@@ -1965,14 +1976,14 @@ class Expando(Model):
     """Load dynamic properties from entity.
 
     Expando needs to do a second pass to add the entity values which were
-    ignored by Model because they didn't have an corresponding predefined
+    ignored by `Model` because they didn't have an corresponding predefined
     property on the model.
 
     Args:
-      entity: Entity which contain values to search dyanmic properties for.
+      entity: Entity which contain values to search dynamic properties for.
     """
     entity_values = super(Expando, cls)._load_entity_values(entity)
-    for key, value in entity.iteritems():
+    for key, value in six.iteritems(entity):
       if key not in entity_values:
 
         entity_values[str(key)] = value
@@ -1980,7 +1991,7 @@ class Expando(Model):
 
 
 class _BaseQuery(object):
-  """Base class for both Query and GqlQuery."""
+  """Base class for both `Query` and `GqlQuery`."""
 
   _last_raw_query = None
   _last_index_list = None
@@ -1991,7 +2002,7 @@ class _BaseQuery(object):
     """Constructor.
 
     Args:
-      model_class: Model class from which entities are constructed.
+      model_class: `Model` class from which entities are constructed.
       keys_only: Whether the query should return full entities or only keys.
       compile: Whether the query should also return a compiled query.
       cursor: A compiled query from which to resume.
@@ -2003,36 +2014,36 @@ class _BaseQuery(object):
     """Returns whether this query is keys only.
 
     Returns:
-      True if this query returns keys, False if it returns entities.
+      `True` if this query returns keys, `False` if it returns entities.
     """
     raise NotImplementedError
 
   def projection(self):
-    """Returns the tuple of properties in the projection or None.
+    """Returns the tuple of properties in the projection or `None`.
 
     Projected results differ from normal results in multiple ways:
     - they only contain a portion of the original entity and cannot be put;
     - properties defined on the model, but not included in the projections will
-      have a value of None, even if the property is required or has a default
+      have a value of `None`, even if the property is required or has a default
       value;
-    - multi-valued properties (such as a ListProperty) will only contain a single
-      value.
+    - multi-valued properties (such as a `ListProperty`) will only contain a
+      single value.
     - dynamic properties not included in the projection will not appear
       on the model instance.
     - dynamic properties included in the projection are deserialized into
-      their indexed type. Specifically one of str, bool, long, float, GeoPt, Key
-      or User. If the original type is known, it can be restored using
-      datastore_types.RestoreFromIndexValue.
+      their indexed type. Specifically one of `str`, `bool`, `long`, `float`,
+      `GeoPt`, `Key` or `User`. If the original type is known, it can be
+      restored using `datastore_types.RestoreFromIndexValue`.
 
     However, projection queries are significantly faster than normal queries.
 
     Projection queries on entities with multi-valued properties will return the
     same entity multiple times, once for each unique combination of values for
-    properties included in the order, an inequaly property, or the projected
+    properties included in the order, an inequality property, or the projected
     properties.
 
     Returns:
-      The list of properties in the projection, or None if no projection is
+      The list of properties in the projection, or `None` if no projection is
       set on this query.
     """
     raise NotImplementedError
@@ -2040,16 +2051,16 @@ class _BaseQuery(object):
   def is_distinct(self):
     """Returns true if the projection query should be distinct.
 
-    This is equivalent to the SQL syntax: SELECT DISTINCT. It is only available
-    for projection queries, it is not valid to specify distinct without also
-    specifying projection properties.
+    This is equivalent to the SQL syntax: `SELECT DISTINCT`. It is only
+    available for projection queries, it is not valid to specify `distinct`
+    without also specifying projection properties.
 
     Distinct projection queries on entities with multi-valued properties will
     return the same entity multiple times, once for each unique combination of
     properties included in the projection.
 
     Returns:
-      True if this projection query is distinct.
+      `True` if this projection query is distinct.
     """
     raise NotImplementedError
 
@@ -2057,19 +2068,20 @@ class _BaseQuery(object):
     """Subclass must override (and not call their super method).
 
     Returns:
-      A datastore.Query instance representing the query.
+      A `datastore.Query` instance representing the query.
     """
     raise NotImplementedError
 
   def run(self, **kwargs):
     """Iterator for this query.
 
-    If you know the number of results you need, use run(limit=...) instead,
-    or use a GQL query with a LIMIT clause. It's more efficient. If you want
-    all results use run(batch_size=<large number>).
+    If you know the number of results you need, use `run(limit=...)` instead,
+    or use a GQL query with a `LIMIT` clause. It's more efficient. If you want
+    all results use `run(batch_size=<large number>)`.
 
     Args:
-      kwargs: Any keyword arguments accepted by datastore_query.QueryOptions().
+      kwargs: Any keyword arguments accepted by
+      `datastore_query.QueryOptions()`.
 
     Returns:
       Iterator for this query.
@@ -2090,8 +2102,8 @@ class _BaseQuery(object):
   def __iter__(self):
     """Iterator for this query.
 
-    If you know the number of results you need, consider fetch() instead,
-    or use a GQL query with a LIMIT clause. It's more efficient.
+    If you know the number of results you need, consider `fetch()` instead,
+    or use a GQL query with a `LIMIT` clause. It's more efficient.
     """
     return self.run()
 
@@ -2103,30 +2115,32 @@ class _BaseQuery(object):
   def get(self, **kwargs):
     """Get first result from this.
 
-    Beware: get() ignores the LIMIT clause on GQL queries.
+    Beware: `get()` ignores the `LIMIT` clause on GQL queries.
 
     Args:
-      kwargs: Any keyword arguments accepted by datastore_query.QueryOptions().
+      kwargs: Any keyword arguments accepted by
+      `datastore_query.QueryOptions()`.
 
     Returns:
-      First result from running the query if there are any, else None.
+      First result from running the query if there are any, else `None`.
     """
     results = self.run(limit=1, **kwargs)
     try:
-      return results.next()
+      return next(results)
     except StopIteration:
       return None
 
   def count(self, limit=1000, **kwargs):
     """Number of entities this query fetches.
 
-    Beware: count() ignores the LIMIT clause on GQL queries.
+    Beware: `count()` ignores the `LIMIT` clause on GQL queries.
 
     Args:
       limit: A number. If there are more results than this, stop short and
         just return this number. Providing this argument makes the count
         operation more efficient.
-      kwargs: Any keyword arguments accepted by datastore_query.QueryOptions().
+      kwargs: Any keyword arguments accepted by
+        `datastore_query.QueryOptions()`.
 
     Returns:
       Number of entities this query fetches.
@@ -2140,18 +2154,20 @@ class _BaseQuery(object):
   def fetch(self, limit, offset=0, **kwargs):
     """Return a list of items selected using SQL-like limit and offset.
 
-    Always use run(limit=...) instead of fetch() when iterating over a query.
+    Always use `run(limit=...)` instead of `fetch()` when iterating over a
+    query.
 
     Beware: offset must read and discard all skipped entities. Use
-    cursor()/with_cursor() instead.
+    `cursor()`/`with_cursor()` instead.
 
     Args:
       limit: Maximum number of results to return.
       offset: Optional number of results to skip first; default zero.
-      kwargs: Any keyword arguments accepted by datastore_query.QueryOptions().
+      kwargs: Any keyword arguments accepted by
+      `datastore_query.QueryOptions()`.
 
     Returns:
-      A list of db.Model instances.  There may be fewer than 'limit'
+      A list of `db.Model` instances.  There may be fewer than 'limit'
       results if there aren't enough results to satisfy the request.
     """
     if limit is None:
@@ -2210,31 +2226,31 @@ class _BaseQuery(object):
       cursor:    1   2   3
       result: a b c d e f g h
 
-    The results returned by these queries would be [a, b], [c, d], [e, f],
-    [g, h] respectively.
+    The results returned by these queries would be `[a, b]`, `[c, d]`, `[e, f]`,
+    `[g, h]` respectively.
 
     Cursors are pinned to the position just after the previous result (last
     result, exclusive), so if results are inserted or deleted between the time
     the cursor was made and these queries are executed, the cursors stay pinned
     to these positions. For example:
 
-      delete(b, f, g, h)
-      put(a1, b1, c1, d1)
-      cursor:     1(b)      2(d)   3(f)
+      `delete(b, f, g, h)`
+      `put(a1, b1, c1, d1)`
+      cursor:     `1(b)      2(d)   3(f)`
       result: a a1 b1 c c1 d d1 e
 
-    The results returned by these queries would now be: [a, a1], [b1, c, c1, d],
-    [d1, e], [] respectively.
+    The results returned by these queries would now be: `[a, a1]`,
+    `[b1, c, c1, d]`, `[d1, e]`, `[]` respectively.
 
     Args:
-      start_cursor: The cursor position at which to start or None
-      end_cursor: The cursor position at which to end or None
+      start_cursor: The cursor position at which to start or `None`
+      end_cursor: The cursor position at which to end or `None`
 
     Returns:
-      This Query instance, for chaining.
+      This `Query` instance, for chaining.
 
     Raises:
-      BadValueError when cursor is not valid.
+      `BadValueError` when cursor is not valid.
     """
     if start_cursor is None:
       self._cursor = None
@@ -2249,18 +2265,18 @@ class _BaseQuery(object):
     return self
 
   def __getitem__(self, arg):
-    """Support for query[index] and query[start:stop].
+    """Support for `query[index]` and `query[start:stop]`.
 
-    Beware: this ignores the LIMIT clause on GQL queries.
+    Beware: this ignores the `LIMIT` clause on GQL queries.
 
     Args:
-      arg: Either a single integer, corresponding to the query[index]
-        syntax, or a Python slice object, corresponding to the
-        query[start:stop] or query[start:stop:step] syntax.
+      arg: Either a single integer, corresponding to the `query[index]` syntax,
+        or a Python `slice` object, corresponding to the
+        `query[start:stop]` or `query[start:stop:step]` syntax.
 
     Returns:
-      A single Model instance when the argument is a single integer.
-      A list of Model instances when the argument is a slice.
+      A single `Model` instance when the argument is a single integer.
+      A list of `Model` instances when the argument is a slice.
     """
 
     if isinstance(arg, slice):
@@ -2278,7 +2294,7 @@ class _BaseQuery(object):
       if limit < 0:
         return []
       return self.fetch(limit, start)
-    elif isinstance(arg, (int, long)):
+    elif isinstance(arg, six.integer_types):
       if arg < 0:
         raise ValueError('Only indices >= 0 are supported')
       results = self.fetch(1, arg)
@@ -2291,17 +2307,17 @@ class _BaseQuery(object):
 
 
 class _QueryIterator(object):
-  """Wraps the datastore iterator to return Model instances.
+  """Wraps the datastore iterator to return `Model` instances.
 
   The datastore returns entities. We wrap the datastore iterator to
-  return Model instances instead.
+  return `Model` instances instead.
   """
 
   def __init__(self, model_class, datastore_iterator):
     """Iterator constructor
 
     Args:
-      model_class: Model class from which entities are constructed.
+      model_class: `Model` class from which entities are constructed.
       datastore_iterator: Underlying datastore iterator.
     """
     self.__model_class = model_class
@@ -2315,20 +2331,23 @@ class _QueryIterator(object):
     """
     return self
 
+  def __next__(self):
+    return self.next()
+
   def next(self):
-    """Get next Model instance in query results.
+    """Get next `Model` instance in query results.
 
     Returns:
       Next model instance.
 
     Raises:
-      StopIteration when there are no more results in query.
+      `StopIteration` when there are no more results in query.
     """
     if self.__model_class is not None:
-      return self.__model_class.from_entity(self.__iterator.next())
+      return self.__model_class.from_entity(next(self.__iterator))
     else:
       while True:
-        entity = self.__iterator.next()
+        entity = next(self.__iterator)
         try:
           model_class = class_for_kind(entity.kind())
         except KindError:
@@ -2344,14 +2363,11 @@ def _normalize_query_parameter(value):
   """Make any necessary type conversions to a query parameter.
 
   The following conversions are made:
-    - Model instances are converted to Key instances.  This is necessary so
+    - `Model` instances are converted to `Key` instances.  This is necessary so
       that querying reference properties will work.
-    - datetime.date objects are converted to datetime.datetime objects (see
-      _date_to_datetime for details on this conversion).  This is necessary so
+    - `datetime.date` objects are converted to `datetime.datetime` objects (see
+      `_date_to_datetime` for details on this conversion).  This is necessary so
       that querying date properties with date objects will work.
-    - datetime.time objects are converted to datetime.datetime objects (see
-      _time_to_datetime for details on this conversion).  This is necessary so
-      that querying time properties with time objects will work.
 
   Args:
     value: The query parameter value.
@@ -2375,7 +2391,7 @@ def _normalize_query_parameter(value):
 
 
 class Query(_BaseQuery):
-  """A Query instance queries over instances of Models.
+  """A `Query` instance queries over instances of `Model`s.
 
   You construct a query with a model class, like this:
 
@@ -2383,7 +2399,7 @@ class Query(_BaseQuery):
        title = db.StringProperty()
        date = db.DateTimeProperty()
 
-     query = Query(Story)
+     query = `Query(Story)`
 
   You modify a query with filters and orders like this:
 
@@ -2401,7 +2417,7 @@ class Query(_BaseQuery):
   so the easiest way to use the query interface is to cascade all filters and
   orders in the iterator line like this:
 
-     for story in Query(story).filter('title =', 'Foo').order('-date'):
+     for story in `Query(story).filter('title =', 'Foo')`.order('-date'):
        print story.title
   """
 
@@ -2415,17 +2431,17 @@ class Query(_BaseQuery):
 
   def __init__(self, model_class=None, keys_only=False, cursor=None,
                namespace=None, _app=None, distinct=False, projection=None):
-    """Constructs a query over instances of the given Model.
+    """Constructs a query over instances of the given `Model`.
 
     Args:
-      model_class: Model class to build query for.
+      model_class: `Model` class to build query for.
       keys_only: Whether the query should return full entities or only keys.
       projection: A tuple of strings representing the property names to include
-        in the projection this query should produce or None. Setting a
-        projection is similar to specifying 'SELECT prop1, prop2, ...' in SQL.
-        See _BaseQuery.projection for details on projection queries.
-      distinct: A boolean, true if the projection should be distinct.
-        See _BaseQuery.is_distinct for details on distinct queries.
+        in the projection this query should produce or `None`. Setting a
+        projection is similar to specifying `SELECT prop1, prop2, ...` in SQL.
+        See `_BaseQuery.projection` for details on projection queries.
+      distinct: A boolean, true if the projection should be distinct. See
+        `_BaseQuery.is_distinct` for details on distinct queries.
       cursor: A compiled query from which to resume.
       namespace: The namespace to use for this query.
     """
@@ -2519,10 +2535,10 @@ class Query(_BaseQuery):
       operations: a string or list of strings. Each string contains a
         property name and an operator to filter by. The operators
         themselves must not require multiple queries to evaluate
-        (currently, this means that 'in' and '!=' are invalid).
+        (this means that `in` and `!=` are invalid).
 
       values: a value or list of filter values, normalized by
-        _normalize_query_parameter.
+        `_normalize_query_parameter`.
     """
     if not isinstance(operations, (list, tuple)):
       operations = [operations]
@@ -2556,7 +2572,7 @@ class Query(_BaseQuery):
       Self to support method chaining.
 
     Raises:
-      PropertyError if invalid property is provided.
+      `PropertyError` if invalid property is provided.
     """
     match = _FILTER_REGEX.match(property_operator)
     prop = match.group(1)
@@ -2598,8 +2614,8 @@ class Query(_BaseQuery):
   def order(self, property):
     """Set order of query result.
 
-    To use descending order, prepend '-' (minus) to the property
-    name, e.g., '-date' rather than 'date'.
+    To use descending order, prepend `-` (minus) to the property
+    name, e.g., `-date` rather than `date`.
 
     Args:
       property: Property to sort on.
@@ -2608,7 +2624,7 @@ class Query(_BaseQuery):
       Self to support method chaining.
 
     Raises:
-      PropertyError if invalid property is provided.
+      `PropertyError` if invalid property is provided.
     """
 
 
@@ -2647,13 +2663,13 @@ class Query(_BaseQuery):
     ancestor itself is also a possible result!
 
     Args:
-      ancestor: Model or Key (that has already been saved)
+      ancestor: `Model` or `Key` (that has already been saved)
 
     Returns:
       Self to support method chaining.
 
     Raises:
-      TypeError if the argument isn't a Key or Model; NotSavedError
+      `TypeError` if the argument isn't a `Key` or `Model`; `NotSavedError`
       if it is, but isn't saved yet.
     """
     if isinstance(ancestor, datastore.Key):
@@ -2672,7 +2688,7 @@ class Query(_BaseQuery):
 
 
 class GqlQuery(_BaseQuery):
-  """A Query class that uses GQL query syntax instead of .filter() etc."""
+  """A `Query` class that uses GQL query syntax instead of `.filter()` etc."""
 
 
 
@@ -2685,7 +2701,7 @@ class GqlQuery(_BaseQuery):
       **kwds: Dictionary-based arguments for named references.
 
     Raises:
-      PropertyError if the query filters or sorts on a property that's not
+      PropertyError: if the query filters or sorts on a property that's not
       indexed.
     """
 
@@ -2708,10 +2724,10 @@ class GqlQuery(_BaseQuery):
 
     if model_class is not None:
 
-      for property, unused in (self._proto_query.filters().keys() +
-                               self._proto_query.orderings()):
-        if property in model_class._unindexed_properties:
-          raise PropertyError('Property \'%s\' is not indexed' % property)
+      for prop, _ in (list(self._proto_query.filters().keys()) +
+                      self._proto_query.orderings()):
+        if prop in model_class._unindexed_properties:
+          raise PropertyError('Property \'%s\' is not indexed' % prop)
 
     self.bind(*args, **kwds)
 
@@ -2728,11 +2744,11 @@ class GqlQuery(_BaseQuery):
     """Bind arguments (positional or keyword) to the query.
 
     Note that you can also pass arguments directly to the query
-    constructor.  Each time you call bind() the previous set of
+    constructor.  Each time you call `bind()` the previous set of
     arguments is replaced with the new set.  This is useful because
     the hard work in in parsing the query; so if you expect to be
     using the same query with different sets of arguments, you should
-    hold on to the GqlQuery() object and call bind() on it each time.
+    hold on to the `GqlQuery()` object and call `bind()` on it each time.
 
     Args:
       *args: Positional arguments used to bind numeric references in the query.
@@ -2742,18 +2758,19 @@ class GqlQuery(_BaseQuery):
     for arg in args:
       self._args.append(_normalize_query_parameter(arg))
     self._kwds = {}
-    for name, arg in kwds.iteritems():
+    for name, arg in six.iteritems(kwds):
       self._kwds[name] = _normalize_query_parameter(arg)
 
   def run(self, **kwargs):
-    """Iterator for this query that handles the LIMIT clause property.
+    """Iterator for this query that handles the `LIMIT` clause property.
 
-    If the GQL query string contains a LIMIT clause, this function fetches
+    If the GQL query string contains a `LIMIT` clause, this function fetches
     all results before returning an iterator. Otherwise results are retrieved
     in batches by the iterator.
 
     Args:
-      kwargs: Any keyword arguments accepted by datastore_query.QueryOptions().
+      kwargs: Any keyword arguments accepted by
+        `datastore_query.QueryOptions()`.
 
     Returns:
       Iterator for this query.
@@ -2771,13 +2788,13 @@ class GqlQuery(_BaseQuery):
 class UnindexedProperty(Property):
   """A property that isn't indexed by either built-in or composite indices.
 
-  TextProperty and BlobProperty derive from this class.
+  `TextProperty` and `BlobProperty` derive from this class.
   """
   def __init__(self, *args, **kwds):
     """Construct property. See the Property class for details.
 
     Raises:
-      ConfigurationError if indexed=True.
+      `ConfigurationError` if `indexed=True`.
     """
     self._require_parameter(kwds, 'indexed', False)
 
@@ -2793,12 +2810,12 @@ class UnindexedProperty(Property):
       A valid value.
 
     Raises:
-      BadValueError if property is not an instance of data_type.
+      `BadValueError` if property is not an instance of `data_type`.
     """
     if value is not None and not isinstance(value, self.data_type):
       try:
         value = self.data_type(value)
-      except TypeError, err:
+      except TypeError as err:
 
 
 
@@ -2838,10 +2855,10 @@ class StringProperty(Property):
       A valid value.
 
     Raises:
-      BadValueError if property is not multi-line but value is.
+      `BadValueError` if property is not multi-line but value is.
     """
     value = super(StringProperty, self).validate(value)
-    if value is not None and not isinstance(value, basestring):
+    if value is not None and not isinstance(value, six.string_types):
       raise BadValueError(
           'Property %s must be a str or unicode instance, not a %s'
           % (self.name, type(value).__name__))
@@ -2854,25 +2871,25 @@ class StringProperty(Property):
     return value
 
   MAX_LENGTH = 1500
-  data_type = basestring
+  data_type = str
 
 
 class _CoercingProperty(Property):
-  """A Property subclass that extends validate() to coerce to self.data_type."""
+  """A `Property` subclass that extends `validate()` to coerce to `self.data_type`."""
 
   def validate(self, value):
-    """Coerce values (except None) to self.data_type.
+    """Coerce values (except `None`) to `self.data_type`.
 
     Args:
       value: The value to be validated and coerced.
 
     Returns:
       The coerced and validated value.  It is guaranteed that this is
-      either None or an instance of self.data_type; otherwise an exception
+      either `None` or an instance of `self.data_type`; otherwise an exception
       is raised.
 
     Raises:
-      BadValueError if the value could not be validated or coerced.
+      `BadValueError` if the value could not be validated or coerced.
     """
     value = super(_CoercingProperty, self).validate(value)
     if value is not None and not isinstance(value, self.data_type):
@@ -2882,20 +2899,21 @@ class _CoercingProperty(Property):
 
 
 class CategoryProperty(_CoercingProperty):
-  """A property whose values are Category instances."""
+  """A property whose values are `Category` instances."""
 
   data_type = Category
 
 
 class LinkProperty(_CoercingProperty):
-  """A property whose values are Link instances."""
+  """A property whose values are `Link` instances."""
 
   def validate(self, value):
     value = super(LinkProperty, self).validate(value)
     if value is not None:
 
 
-      scheme, netloc, path, query, fragment = urlparse.urlsplit(value)
+      scheme, netloc, _, _, _ = six.moves.urllib.parse.urlsplit(
+          value)
       if not scheme or not netloc:
         raise BadValueError('Property %s must be a full URL (\'%s\')' %
                             (self.name, value))
@@ -2907,31 +2925,31 @@ URLProperty = LinkProperty
 
 
 class EmailProperty(_CoercingProperty):
-  """A property whose values are Email instances."""
+  """A property whose values are `Email` instances."""
 
   data_type = Email
 
 
 class GeoPtProperty(_CoercingProperty):
-  """A property whose values are GeoPt instances."""
+  """A property whose values are `GeoPt` instances."""
 
   data_type = GeoPt
 
 
 class IMProperty(_CoercingProperty):
-  """A property whose values are IM instances."""
+  """A property whose values are `IM` instances."""
 
   data_type = IM
 
 
 class PhoneNumberProperty(_CoercingProperty):
-  """A property whose values are PhoneNumber instances."""
+  """A property whose values are `PhoneNumber` instances."""
 
   data_type = PhoneNumber
 
 
 class PostalAddressProperty(_CoercingProperty):
-  """A property whose values are PostalAddress instances."""
+  """A property whose values are `PostalAddress` instances."""
 
   data_type = PostalAddress
 
@@ -2946,22 +2964,23 @@ class ByteStringProperty(Property):
   """A short (<=1500 bytes) byte string.
 
   This type should be used for short binary values that need to be indexed. If
-  you do not require indexing (regardless of length), use BlobProperty instead.
+  you do not require indexing (regardless of length), use `BlobProperty`
+  instead.
   """
 
   def validate(self, value):
-    """Validate ByteString property.
+    """Validate `ByteString` property.
 
     Returns:
       A valid value.
 
     Raises:
-      BadValueError if property is not instance of 'ByteString'.
+      `BadValueError` if property is not instance of 'ByteString'.
     """
     if value is not None and not isinstance(value, ByteString):
       try:
-        value = ByteString(value)
-      except TypeError, err:
+        value = ByteString(six.ensure_binary(value))
+      except TypeError as err:
         raise BadValueError('Property %s must be convertible '
                             'to a ByteString instance (%s)' % (self.name, err))
     value = super(ByteStringProperty, self).validate(value)
@@ -2982,20 +3001,20 @@ class DateTimeProperty(Property):
   """The base class of all of our date/time properties.
 
   We handle common operations, like converting between time tuples and
-  datetime instances.
+  `datetime` instances.
   """
 
   def __init__(self, verbose_name=None, auto_now=False, auto_now_add=False,
                **kwds):
-    """Construct a DateTimeProperty
+    """Construct a `DateTimeProperty`.
 
     Args:
       verbose_name: Verbose name is always first parameter.
       auto_now: Date/time property is updated with the current time every time
         it is saved to the datastore.  Useful for properties that want to track
         the modification time of an instance.
-      auto_now_add: Date/time is set to the when its instance is created.
-        Useful for properties that record the creation time of an entity.
+      auto_now_add: Date/time is set to the when its instance is created. Useful
+        for properties that record the creation time of an entity.
     """
     super(DateTimeProperty, self).__init__(verbose_name, **kwds)
     self.auto_now = auto_now
@@ -3008,7 +3027,7 @@ class DateTimeProperty(Property):
       A valid value.
 
     Raises:
-      BadValueError if property is not instance of 'datetime'.
+      `BadValueError` if property is not instance of 'datetime'.
     """
     value = super(DateTimeProperty, self).validate(value)
     if value and not isinstance(value, self.data_type):
@@ -3020,8 +3039,9 @@ class DateTimeProperty(Property):
     """Default value for datetime.
 
     Returns:
-      value of now() as appropriate to the date-time instance if auto_now
-      or auto_now_add is set, else user configured default value implementation.
+      value of `now()` as appropriate to the date-time instance if `auto_now`
+      or `auto_now_add` is set, else user configured default value
+      implementation.
     """
     if self.auto_now or self.auto_now_add:
       return self.now()
@@ -3031,8 +3051,8 @@ class DateTimeProperty(Property):
     """Get new value for property to send to datastore.
 
     Returns:
-      now() as appropriate to the date-time instance in the odd case where
-      auto_now is set to True, else AUTO_UPDATE_UNCHANGED.
+      `now()` as appropriate to the date-time instance in the odd case where
+      `auto_now` is set to `True`, else `AUTO_UPDATE_UNCHANGED`.
     """
     if self.auto_now:
       return self.now()
@@ -3042,7 +3062,7 @@ class DateTimeProperty(Property):
 
   @staticmethod
   def now():
-    """Get now as a full datetime value.
+    """Get `now` as a full `datetime` value.
 
     Returns:
       'now' as a whole timestamp, including both time and date.
@@ -3051,26 +3071,26 @@ class DateTimeProperty(Property):
 
 
 def _date_to_datetime(value):
-  """Convert a date to a datetime for datastore storage.
+  """Convert a `date` to a `datetime` for datastore storage.
 
   Args:
-    value: A datetime.date object.
+    value: A `datetime.date` object.
 
   Returns:
-    A datetime object with time set to 0:00.
+    A `datetime` object with time set to `0:00`.
   """
   assert isinstance(value, datetime.date)
   return datetime.datetime(value.year, value.month, value.day)
 
 
 def _time_to_datetime(value):
-  """Convert a time to a datetime for datastore storage.
+  """Convert a `time` to a `datetime` for datastore storage.
 
   Args:
-    value: A datetime.time object.
+    value: A `datetime.time` object.
 
   Returns:
-    A datetime object with date set to 1970-01-01.
+    A `datetime` object with date set to `1970-01-01`.
   """
   assert isinstance(value, datetime.time)
   return datetime.datetime(1970, 1, 1,
@@ -3090,7 +3110,7 @@ class DateProperty(DateTimeProperty):
 
   @staticmethod
   def now():
-    """Get now as a date datetime value.
+    """Get `now` as a `date` `datetime` value.
 
     Returns:
       'date' part of 'now' only.
@@ -3098,13 +3118,13 @@ class DateProperty(DateTimeProperty):
     return datetime.datetime.utcnow().date()
 
   def validate(self, value):
-    """Validate date.
+    """Validate `date`.
 
     Returns:
       A valid value.
 
     Raises:
-      BadValueError if property is not instance of 'date',
+      `BadValueError` if property is not instance of 'date',
       or if it is an instance of 'datetime' (which is a subclass
       of 'date', but for all practical purposes a different type).
     """
@@ -3118,8 +3138,8 @@ class DateProperty(DateTimeProperty):
     """Get new value for property to send to datastore.
 
     Returns:
-      now() as appropriate to the date instance in the odd case where
-      auto_now is set to True, else AUTO_UPDATE_UNCHANGED.
+      `now()` as appropriate to the `date` instance in the odd case where
+      `auto_now` is set to `True`, else `AUTO_UPDATE_UNCHANGED`.
     """
     if self.auto_now:
       return _date_to_datetime(self.now())
@@ -3128,8 +3148,8 @@ class DateProperty(DateTimeProperty):
   def get_value_for_datastore(self, model_instance):
     """Get value from property to send to datastore.
 
-    We retrieve a datetime.date from the model instance and return a
-    datetime.datetime instance with the time set to zero.
+    We retrieve a `datetime.date` from the model instance and return a
+    `datetime.datetime` instance with the time set to zero.
 
     See base class method documentation for details.
     """
@@ -3142,8 +3162,8 @@ class DateProperty(DateTimeProperty):
   def make_value_from_datastore(self, value):
     """Native representation of this property.
 
-    We receive a datetime.datetime retrieved from the entity and return
-    a datetime.date instance representing its date portion.
+    We receive a `datetime.datetime` retrieved from the entity and return
+    a `datetime.date` instance representing its `date` portion.
 
     See base class method documentation for details.
     """
@@ -3156,7 +3176,7 @@ class DateProperty(DateTimeProperty):
 
 
 class TimeProperty(DateTimeProperty):
-  """A time property, which stores a time without a date."""
+  """A `time` property, which stores a `time` without a `date`."""
 
 
 
@@ -3167,7 +3187,7 @@ class TimeProperty(DateTimeProperty):
 
   @staticmethod
   def now():
-    """Get now as a time datetime value.
+    """Get `now` as a `time` `datetime` value.
 
     Returns:
       'time' part of 'now' only.
@@ -3175,12 +3195,12 @@ class TimeProperty(DateTimeProperty):
     return datetime.datetime.utcnow().time()
 
   def empty(self, value):
-    """Is time property empty.
+    """Is `time` property empty.
 
-    "0:0" (midnight) is not an empty value.
+    `0:0` (midnight) is not an empty value.
 
     Returns:
-      True if value is None, else False.
+      `True` if value is `None`, else `False`.
     """
     return value is None
 
@@ -3188,8 +3208,8 @@ class TimeProperty(DateTimeProperty):
     """Get new value for property to send to datastore.
 
     Returns:
-      now() as appropriate to the time instance in the odd case where
-      auto_now is set to True, else AUTO_UPDATE_UNCHANGED.
+      `now()` as appropriate to the `time` instance in the odd case where
+      `auto_now` is set to `True`, else `AUTO_UPDATE_UNCHANGED`.
     """
     if self.auto_now:
       return _time_to_datetime(self.now())
@@ -3198,8 +3218,8 @@ class TimeProperty(DateTimeProperty):
   def get_value_for_datastore(self, model_instance):
     """Get value from property to send to datastore.
 
-    We retrieve a datetime.time from the model instance and return a
-    datetime.datetime instance with the date set to 1/1/1970.
+    We retrieve a `datetime.time` from the model instance and return a
+    `datetime.datetime` instance with the `date` set to `1/1/1970`.
 
     See base class method documentation for details.
     """
@@ -3212,8 +3232,8 @@ class TimeProperty(DateTimeProperty):
   def make_value_from_datastore(self, value):
     """Native representation of this property.
 
-    We receive a datetime.datetime retrieved from the entity and return
-    a datetime.date instance representing its time portion.
+    We receive a `datetime.datetime` retrieved from the entity and return
+    a `datetime.date` instance representing its `time` portion.
 
     See base class method documentation for details.
     """
@@ -3235,7 +3255,7 @@ class IntegerProperty(Property):
       A valid value.
 
     Raises:
-      BadValueError if value is not an integer or long instance.
+      `BadValueError` if value is not an `integer` or `long` instance.
     """
     value = super(IntegerProperty, self).validate(value)
     if value is None:
@@ -3245,7 +3265,7 @@ class IntegerProperty(Property):
 
 
 
-    if not isinstance(value, (int, long)) or isinstance(value, bool):
+    if not isinstance(value, six.integer_types) or isinstance(value, bool):
       raise BadValueError('Property %s must be an int or long, not a %s'
                           % (self.name, type(value).__name__))
     if value < -0x8000000000000000 or value > 0x7fffffffffffffff:
@@ -3255,18 +3275,18 @@ class IntegerProperty(Property):
   data_type = int
 
   def empty(self, value):
-    """Is integer property empty.
+    """Is `integer` property empty.
 
-    0 is not an empty value.
+    `0` is not an empty value.
 
     Returns:
-      True if value is None, else False.
+      `True` if value is `None`, else `False`.
     """
     return value is None
 
 
 class RatingProperty(_CoercingProperty, IntegerProperty):
-  """A property whose values are Rating instances."""
+  """A property whose values are `Rating` instances."""
 
   data_type = Rating
 
@@ -3275,13 +3295,13 @@ class FloatProperty(Property):
   """A float property."""
 
   def validate(self, value):
-    """Validate float.
+    """Validate `float`.
 
     Returns:
       A valid value.
 
     Raises:
-      BadValueError if property is not instance of 'float'.
+      `BadValueError` if property is not instance of 'float'.
     """
     value = super(FloatProperty, self).validate(value)
     if value is not None and not isinstance(value, float):
@@ -3291,12 +3311,12 @@ class FloatProperty(Property):
   data_type = float
 
   def empty(self, value):
-    """Is float property empty.
+    """Is `float` property empty.
 
-    0.0 is not an empty value.
+    `0.0` is not an empty value.
 
     Returns:
-      True if value is None, else False.
+      `True` if value is `None`, else `False`.
     """
     return value is None
 
@@ -3311,7 +3331,7 @@ class BooleanProperty(Property):
       A valid value.
 
     Raises:
-      BadValueError if property is not instance of 'bool'.
+      `BadValueError` if property is not instance of 'bool'.
     """
     value = super(BooleanProperty, self).validate(value)
     if value is not None and not isinstance(value, bool):
@@ -3323,10 +3343,10 @@ class BooleanProperty(Property):
   def empty(self, value):
     """Is boolean property empty.
 
-    False is not an empty value.
+    `False` is not an empty value.
 
     Returns:
-      True if value is None, else False.
+      `True` if value is `None`, else `False`.
     """
     return value is None
 
@@ -3343,22 +3363,22 @@ class UserProperty(Property):
                auto_current_user=False,
                auto_current_user_add=False,
                indexed=True):
-    """Initializes this Property with the given options.
+    """Initializes this `Property` with the given options.
 
-    Note: this does *not* support the 'default' keyword argument.
-    Use auto_current_user_add=True instead.
+    Note: this does *not* support the `default` keyword argument.
+    Use `auto_current_user_add=True` instead.
 
     Args:
       verbose_name: User friendly name of property.
-      name: Storage name for property.  By default, uses attribute name
-        as it is assigned in the Model sub-class.
+      name: Storage name for property.  By default, uses attribute name as it is
+        assigned in the `Model` sub-class.
       required: Whether property is required.
       validator: User provided method used for validation.
       choices: User provided set of valid property values.
-      auto_current_user: If true, the value is set to the current user
-        each time the entity is written to the datastore.
-      auto_current_user_add: If true, the value is set to the current user
-        the first time the entity is written to the datastore.
+      auto_current_user: If true, the value is set to the current user each time
+        the entity is written to the datastore.
+      auto_current_user_add: If true, the value is set to the current user the
+        first time the entity is written to the datastore.
       indexed: Whether property is indexed.
     """
     super(UserProperty, self).__init__(verbose_name, name,
@@ -3376,7 +3396,7 @@ class UserProperty(Property):
       A valid value.
 
     Raises:
-      BadValueError if property is not instance of 'User'.
+      `BadValueError` if property is not instance of 'User'.
     """
     value = super(UserProperty, self).validate(value)
     if value is not None and not isinstance(value, users.User):
@@ -3387,9 +3407,9 @@ class UserProperty(Property):
     """Default value for user.
 
     Returns:
-      Value of users.get_current_user() if auto_current_user or
-      auto_current_user_add is set; else None. (But *not* the default
-      implementation, since we don't support the 'default' keyword
+      Value of `users.get_current_user()` if `auto_current_user` or
+      auto_current_user_add is set; else `None`. (But *not* the default
+      implementation, since we don't support the `default` keyword
       argument.)
     """
     if self.auto_current_user or self.auto_current_user_add:
@@ -3400,8 +3420,8 @@ class UserProperty(Property):
     """Get new value for property to send to datastore.
 
     Returns:
-      Value of users.get_current_user() if auto_current_user is set;
-      else AUTO_UPDATE_UNCHANGED.
+      Value of `users.get_current_user()` if `auto_current_user` is set;
+      else `AUTO_UPDATE_UNCHANGED`.
     """
     if self.auto_current_user:
       return users.get_current_user()
@@ -3422,7 +3442,7 @@ class ListProperty(Property):
   def __init__(
       self, item_type, verbose_name=None, default=None,
       write_empty_list=None, **kwds):
-    """Construct ListProperty.
+    """Construct `ListProperty`.
 
     Args:
       item_type: Type for the list items; must be one of the allowed property
@@ -3431,12 +3451,14 @@ class ListProperty(Property):
       write_empty_list: Optional whether to write empty list properties or no
         property
       default: Optional default value; if omitted, an empty list is used.
-      **kwds: Optional additional keyword arguments, passed to base class.
-
-    Note that the only permissible value for 'required' is True.
+      **kwds: Optional additional keyword arguments, passed to base class.  Note
+        that the only permissible value for `required` is `True`.
     """
     if item_type is str:
-      item_type = basestring
+      if six.PY2:
+        item_type = basestring
+      else:
+        item_type = str
     if not isinstance(item_type, type):
       raise TypeError('Item type should be a type object')
     if item_type not in _ALLOWED_PROPERTY_TYPES:
@@ -3464,8 +3486,8 @@ class ListProperty(Property):
       A valid value.
 
     Raises:
-      BadValueError if property is not a list whose items are instances of
-      the item_type given to the constructor.
+      `BadValueError` if property is not a list whose items are instances of
+      the `item_type` given to the constructor.
     """
     value = super(ListProperty, self).validate(value)
     if value is not None:
@@ -3488,17 +3510,23 @@ class ListProperty(Property):
       The validated list.
 
     Raises:
-      BadValueError if the list has items are not instances of the
-      item_type given to the constructor.
+      `BadValueError` if the list has items are not instances of the
+      `item_type` given to the constructor.
     """
-    if self.item_type in (int, long):
-      item_type = (int, long)
+    if self.item_type in six.integer_types:
+      item_type = six.integer_types
     else:
       item_type = self.item_type
 
+    if item_type is six.binary_type:
+      try:
+        value = [six.ensure_binary(v) for v in value]
+      except:
+        raise BadValueError(
+            'Item in the %s list can not be converted to byte.' % self.name)
     for item in value:
       if not isinstance(item, item_type):
-        if item_type == (int, long):
+        if item_type == six.integer_types:
           raise BadValueError('Items in the %s list must all be integers.' %
                               self.name)
         else:
@@ -3508,12 +3536,12 @@ class ListProperty(Property):
     return value
 
   def empty(self, value):
-    """Is list property empty.
+    """Is `list` property empty.
 
-    [] is not an empty value.
+    `[]` is not an empty value.
 
     Returns:
-      True if value is None, else false.
+      `True` if value is `None`, else `False`.
     """
     return value is None
 
@@ -3522,7 +3550,7 @@ class ListProperty(Property):
   def default_value(self):
     """Default value for list.
 
-    Because the property supplied to 'default' is a static value,
+    Because the property supplied to `default` is a static value,
     that value must be shallow copied to prevent all fields with
     default values from sharing the same instance.
 
@@ -3553,18 +3581,18 @@ class ListProperty(Property):
 
 
     if self.item_type == datetime.date:
-      value = map(_date_to_datetime, value)
+      value = list(map(_date_to_datetime, value))
     elif self.item_type == datetime.time:
-      value = map(_time_to_datetime, value)
+      value = list(map(_time_to_datetime, value))
 
     return value
 
   def make_value_from_datastore(self, value):
     """Native representation of this property.
 
-    If this list is a list of datetime.date or datetime.time, we convert
-    the list of datetime.datetime retrieved from the entity into
-    datetime.date or datetime.time.
+    If this list is a list of `datetime.date` or `datetime.time`, we convert
+    the list of `datetime.datetime` retrieved from the entity into
+    `datetime.date` or `datetime.time`.
 
     See base class method documentation for details.
     """
@@ -3572,11 +3600,11 @@ class ListProperty(Property):
     if self.item_type == datetime.date:
       for v in value:
         assert isinstance(v, datetime.datetime)
-      value = map(lambda x: x.date(), value)
+      value = [x.date() for x in value]
     elif self.item_type == datetime.time:
       for v in value:
         assert isinstance(v, datetime.datetime)
-      value = map(lambda x: x.time(), value)
+      value = [x.time() for x in value]
 
     return value
 
@@ -3588,23 +3616,28 @@ class ListProperty(Property):
 class StringListProperty(ListProperty):
   """A property that stores a list of strings.
 
-  A shorthand for the most common type of ListProperty.
+  A shorthand for the most common type of `ListProperty`.
   """
 
   def __init__(self, verbose_name=None, default=None, write_empty_list=None,
                **kwds):
-    """Construct StringListProperty.
+    """Construct `StringListProperty`.
 
     Args:
       verbose_name: Optional verbose name.
       default: Optional default value; if omitted, an empty list is used.
-      **kwds: Optional additional keyword arguments, passed to ListProperty().
+      **kwds: Optional additional keyword arguments, passed to `ListProperty()`.
     """
-    super(StringListProperty, self).__init__(basestring,
-                                             verbose_name=verbose_name,
-                                             default=default,
-                                             write_empty_list=write_empty_list,
-                                             **kwds)
+    if six.PY2:
+      b = basestring
+    else:
+      b = str
+    super(StringListProperty, self).__init__(
+        b,
+        verbose_name=verbose_name,
+        default=default,
+        write_empty_list=write_empty_list,
+        **kwds)
 
 
 class ReferenceProperty(Property):
@@ -3621,14 +3654,14 @@ class ReferenceProperty(Property):
                verbose_name=None,
                collection_name=None,
                **attrs):
-    """Construct ReferenceProperty.
+    """Construct `ReferenceProperty`.
 
     Args:
       reference_class: Which model class this property references.
       verbose_name: User friendly name of property.
       collection_name: If provided, alternate name of collection on
-        reference_class to store back references.  Use this to allow
-        a Model to have multiple fields which refer to the same class.
+        `reference_class` to store back references.  Use this to allow a `Model`
+        to have multiple fields which refer to the same class.
     """
     super(ReferenceProperty, self).__init__(verbose_name, **attrs)
 
@@ -3650,8 +3683,8 @@ class ReferenceProperty(Property):
   def __property_config__(self, model_class, property_name):
     """Loads all of the references that point to this model.
 
-    We need to do this to create the ReverseReferenceProperty properties for
-    this model and create the <reference>_set attributes on the referenced
+    We need to do this to create the `ReverseReferenceProperty` properties for
+    this model and create the `<reference>_set` attributes on the referenced
     model, e.g.:
 
        class Story(db.Model):
@@ -3661,16 +3694,16 @@ class ReferenceProperty(Property):
        story = Story.get(id)
        print [c for c in story.comment_set]
 
-    In this example, the comment_set property was created based on the reference
-    from Comment to Story (which is inherently one to many).
+    In this example, the `comment_set` property was created based on the
+    reference from `Comment` to `Story` (which is inherently one to many).
 
     Args:
-      model_class: Model class which will have its reference properties
+      model_class: `Model` class which will have its reference properties
         initialized.
       property_name: Name of property being configured.
 
     Raises:
-      DuplicatePropertyError if referenced class already has the provided
+      `DuplicatePropertyError` if referenced class already has the provided
         collection name as a property.
     """
     super(ReferenceProperty, self).__property_config__(model_class,
@@ -3707,7 +3740,7 @@ class ReferenceProperty(Property):
     they are not already loaded.
 
     Returns:
-      ReferenceProperty to Model object if property is set, else None.
+      `ReferenceProperty` to `Model` object if property is set, else `None`.
 
     Raises:
       ReferencePropertyResolveError: if the referenced model does not exist.
@@ -3765,7 +3798,7 @@ class ReferenceProperty(Property):
       A valid value.
 
     Raises:
-      BadValueError for the following reasons:
+      `BadValueError` for the following reasons:
         - Value is not saved.
         - Object not of correct model type for reference.
     """
@@ -3786,10 +3819,10 @@ class ReferenceProperty(Property):
     return value
 
   def __id_attr_name(self):
-    """Get attribute of referenced id.
+    """Get attribute of referenced `id`.
 
     Returns:
-      Attribute where to store id of referenced entity.
+      Attribute where to store `id` of referenced entity.
     """
     return self._attr_name()
 
@@ -3823,7 +3856,7 @@ def SelfReferenceProperty(verbose_name=None, collection_name=None, **attrs):
     collection_name: Name of collection on model.
 
   Raises:
-    ConfigurationError if reference_class provided as parameter.
+    `ConfigurationError` if `reference_class` provided as parameter.
   """
   if 'reference_class' in attrs:
     raise ConfigurationError(
@@ -3839,13 +3872,13 @@ SelfReference = SelfReferenceProperty
 
 
 class _ReverseReferenceProperty(Property):
-  """The inverse of the Reference property above.
+  """The inverse of the `Reference` property above.
 
   We construct reverse references automatically for the model to which
-  the Reference property is pointing to create the one-to-many property for
-  that model.  For example, if you put a Reference property in model A that
-  refers to model B, we automatically create a _ReverseReference property in
-  B called a_set that can fetch all of the model A instances that refer to
+  the `Reference` property is pointing to create the one-to-many property for
+  that model.  For example, if you put a `Reference` property in model A that
+  refers to model B, we automatically create a `_ReverseReference` property in
+  B called `a_set` that can fetch all of the model A instances that refer to
   that instance of model B.
   """
 
@@ -3855,7 +3888,7 @@ class _ReverseReferenceProperty(Property):
     Constructor does not take standard values of other property types.
 
     Args:
-      model: Model class that this property is a collection of.
+      model: `Model` class that this property is a collection of.
       property: Name of foreign property on referred model that points back
         to this properties entity.
     """
@@ -3896,10 +3929,10 @@ class ComputedProperty(Property):
 
   A computed property behaves the same as normal properties except that
   you may not set values on them.  Attempting to do so raises
-  db.DerivedPropertyError which db.Model knows to ignore during entity
-  loading time.  Whenever getattr is used for the property
+  `db.DerivedPropertyError` which `db.Model` knows to ignore during entity
+  loading time.  Whenever `getattr` is used for the property
   the value is recalculated.  This happens when the model calls
-  get_value_for_datastore on the property.
+  `get_value_for_datastore` on the property.
 
   Example:
 
@@ -3907,7 +3940,7 @@ class ComputedProperty(Property):
 
     class Person(Model):
 
-      name = StringProperty(required=True)
+      name = `StringProperty(required=True)`
 
       @db.ComputedProperty
       def lower_case_name(self):
@@ -3921,7 +3954,7 @@ class ComputedProperty(Property):
     """Constructor.
 
     Args:
-      value_function: Callable f(model_instance) -> value used to derive
+      value_function: Callable `f(model_instance) -> value` used to derive
         persistent property value for storage in datastore.
       indexed: Whether or not the attribute should be indexed.
     """
@@ -3932,8 +3965,8 @@ class ComputedProperty(Property):
     """Disallow setting this value.
 
     Raises:
-      DerivedPropertyError when developer attempts to set attribute manually.
-      Model knows to ignore this exception when getting from datastore.
+      `DerivedPropertyError` when developer attempts to set attribute manually.
+      `Model` knows to ignore this exception when getting from datastore.
     """
     raise DerivedPropertyError(
         'Computed property %s cannot be set.' % self.name)
@@ -3943,11 +3976,11 @@ class ComputedProperty(Property):
 
     Args:
       model_instance: Instance to derive property for in bound method case,
-        else None.
-      model_class: Model class associated with this property descriptor.
+        else `None`.
+      model_class: `Model` class associated with this property descriptor.
 
     Returns:
-      Result of calling self.__value_funcion as provided by property
+      Result of calling `self.__value_funcion` as provided by property
       constructor.
     """
     if model_instance is None:
@@ -3960,15 +3993,15 @@ def to_dict(model_instance, dictionary=None):
   """Convert model to dictionary.
 
   Args:
-    model_instance: Model instance for which to make dictionary.
-    dictionary: dict instance or compatible to receive model values.
+    model_instance: `Model` instance for which to make dictionary.
+    dictionary: `dict` instance or compatible to receive model values.
       The dictionary is not cleared of original values.  Similar to using
-      dictionary.update.  If dictionary is None, a new dictionary instance is
-      created and returned.
+      `dictionary.update`.  If `dictionary` is `None`, a new dictionary instance
+      is created and returned.
 
   Returns:
     New dictionary appropriate populated with model instances values
-    if entity is None, else entity.
+    if entity is `None`, else entity.
   """
   if dictionary is None:
     dictionary = {}

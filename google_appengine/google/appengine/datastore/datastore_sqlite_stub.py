@@ -15,7 +15,6 @@
 # limitations under the License.
 #
 
-
 """SQlite-based stub for the Python datastore API.
 
 Entities are stored in an sqlite database in a similar fashion to the production
@@ -27,66 +26,62 @@ when it begins and releases it when it commits or rolls back.
 
 
 
-
-
-
-
-
-
-
-
-
-
 import array
 import itertools
 import logging
 import threading
 import weakref
-
-from google.appengine.datastore import entity_pb
 from google.appengine.api import apiproxy_stub
 from google.appengine.api import datastore_types
 from google.appengine.datastore import datastore_pb
 from google.appengine.datastore import datastore_stub_util
 from google.appengine.datastore import sortable_pb_encoder
 from google.appengine.runtime import apiproxy_errors
+import six
+import six.moves
+from google.protobuf import descriptor
+from google.protobuf import message
+from google.appengine.datastore import entity_bytes_pb2 as entity_pb2
+
+
+
+
+
+
+
 
 try:
   import pysqlite2.dbapi2 as sqlite3
 except ImportError:
   import sqlite3
 
+if six.PY3:
 
-import __builtin__
-buffer = __builtin__.buffer
+  buffer = bytearray
 
 
-
-datastore_pb.Query.__hash__ = lambda self: hash(self.Encode())
-
+datastore_pb.Query.__hash__ = lambda self: hash(self.SerializeToString())
 
 
 _MAX_TIMEOUT = 5.0
 
 
 
-
 _OPERATOR_MAP = {
-    datastore_pb.Query_Filter.LESS_THAN: '<',
-    datastore_pb.Query_Filter.LESS_THAN_OR_EQUAL: '<=',
-    datastore_pb.Query_Filter.EQUAL: '=',
-    datastore_pb.Query_Filter.GREATER_THAN: '>',
-    datastore_pb.Query_Filter.GREATER_THAN_OR_EQUAL: '>=',
+    datastore_pb.Query.Filter.LESS_THAN: '<',
+    datastore_pb.Query.Filter.LESS_THAN_OR_EQUAL: '<=',
+    datastore_pb.Query.Filter.EQUAL: '=',
+    datastore_pb.Query.Filter.GREATER_THAN: '>',
+    datastore_pb.Query.Filter.GREATER_THAN_OR_EQUAL: '>=',
 
 
     '!=': '!=',
 }
 
 
-
 _ORDER_MAP = {
-    datastore_pb.Query_Order.ASCENDING: 'ASC',
-    datastore_pb.Query_Order.DESCENDING: 'DESC',
+    datastore_pb.Query.Order.ASCENDING: 'ASC',
+    datastore_pb.Query.Order.DESCENDING: 'DESC',
 }
 
 _CORE_SCHEMA = """
@@ -206,12 +201,20 @@ class SQLiteConnectionWrapper(sqlite3.Connection):
 
 
 def ReferencePropertyToReference(refprop):
-  ref = entity_pb.Reference()
-  ref.set_app(refprop.app())
-  if refprop.has_name_space():
-    ref.set_name_space(refprop.name_space())
-  for pathelem in refprop.pathelement_list():
-    ref.mutable_path().add_element().CopyFrom(pathelem)
+  """Copy fields of ReferenceProperty to a Reference."""
+  ref = entity_pb2.Reference()
+  ref.app = refprop.app
+  if refprop.HasField('name_space'):
+    ref.name_space = refprop.name_space
+  for pathelem in refprop.pathelement:
+    to_proto = ref.path.element.add()
+    for field_descriptor, value in pathelem.ListFields():
+      if field_descriptor.label == descriptor.FieldDescriptor.LABEL_REPEATED:
+        to_field = getattr(to_proto, field_descriptor.name)
+        for v in value:
+          to_field.add(v)
+      else:
+        setattr(to_proto, field_descriptor.name, value)
   return ref
 
 
@@ -234,7 +237,8 @@ def _DedupingEntityGenerator(cursor):
       continue
 
     seen.add(encoded_row_key)
-    storage_entity = entity_pb.EntityProto(row_entity)
+    storage_entity = entity_pb2.EntityProto()
+    storage_entity.MergeFromString(row_entity)
     record = datastore_stub_util._FromStorageEntity(storage_entity)
     record = datastore_stub_util.LoadRecord(record)
     yield record
@@ -253,23 +257,24 @@ def _ProjectionPartialEntityGenerator(cursor):
     Partial entities resulting from the projection.
   """
   for row in cursor:
-    storage_entity = entity_pb.EntityProto(row[1])
+    storage_entity = entity_pb2.EntityProto()
+    storage_entity.MergeFromString(row[1])
     record = datastore_stub_util._FromStorageEntity(storage_entity)
     original_entity = record.entity
 
-    entity = entity_pb.EntityProto()
-    entity.mutable_key().MergeFrom(original_entity.key())
-    entity.mutable_entity_group().MergeFrom(original_entity.entity_group())
+    entity = entity_pb2.EntityProto()
+    entity.key.MergeFrom(original_entity.key())
+    entity.entity_group.MergeFrom(original_entity.entity_group)
 
     for name, value_data in zip(row[2::2], row[3::2]):
-      prop_to_add = entity.add_property()
-      prop_to_add.set_name(ToUtf8(name))
+      prop_to_add = entity.property.add()
+      prop_to_add.name = ToUtf8(name)
 
 
-      value_decoder = sortable_pb_encoder.Decoder(
-          array.array('B', str(value_data)))
-      prop_to_add.mutable_value().Merge(value_decoder)
-      prop_to_add.set_multiple(False)
+      prop_to_add.value.MergeFrom(
+          sortable_pb_encoder.Decoder.DecodeMessage(
+              array.array('B', str(value_data))))
+      prop_to_add.multiple = False
 
     datastore_stub_util.PrepareSpecialPropertiesForLoad(entity)
     yield datastore_stub_util.EntityRecord(entity)
@@ -281,35 +286,34 @@ def MakeEntityForQuery(query, *path):
   Args:
     query: the query which will return the entity.
     path: pairs of type/name-or-id values specifying the entity's key
+
   Returns:
-    An entity_pb.EntityProto with app and namespace as in query and the key
+    An entity_pb2.EntityProto with app and namespace as in query and the key
     specified by path.
   """
-  pseudo_pb = entity_pb.EntityProto()
-  pseudo_pb.mutable_entity_group()
-  pseudo_pk = pseudo_pb.mutable_key()
-  pseudo_pk.set_app(query.app())
-  if query.has_name_space():
-    pseudo_pk.set_name_space(query.name_space())
+  pseudo_pb = entity_pb2.EntityProto()
+  pseudo_pb.entity_group.SetInParent()
+  pseudo_pk = pseudo_pb.key
+  pseudo_pk.app = query.app
+  if query.HasField('name_space'):
+    pseudo_pk.name_space = query.name_space
 
 
-  for i in xrange(0, len(path), 2):
-    pseudo_pe = pseudo_pk.mutable_path().add_element()
-    pseudo_pe.set_type(path[i])
-    if isinstance(path[i + 1], basestring):
-      pseudo_pe.set_name(path[i + 1])
+  for i in six.moves.range(0, len(path), 2):
+    pseudo_pe = pseudo_pk.path.element.add()
+    pseudo_pe.type = path[i]
+    if isinstance(path[i + 1], six.string_types) or isinstance(
+        path[i + 1], six.binary_type):
+      pseudo_pe.name = six.ensure_text(path[i + 1])
     else:
-      pseudo_pe.set_id(path[i + 1])
+      pseudo_pe.id = path[i + 1]
 
   return pseudo_pb
 
 
 def ToUtf8(s):
   """Encoded s in utf-8 if it is an unicode string."""
-  if isinstance(s, unicode):
-    return s.encode('utf-8')
-  else:
-    return s
+  return six.ensure_binary(s)
 
 
 class KindPseudoKind(object):
@@ -345,22 +349,23 @@ class KindPseudoKind(object):
         """Add filter for kind start/end."""
         if not is_end:
           if inclusive:
-            op = datastore_pb.Query_Filter.GREATER_THAN_OR_EQUAL
+            op = datastore_pb.Query.Filter.GREATER_THAN_OR_EQUAL
           else:
-            op = datastore_pb.Query_Filter.GREATER_THAN
+            op = datastore_pb.Query.Filter.GREATER_THAN
         else:
           if inclusive:
-            op = datastore_pb.Query_Filter.LESS_THAN_OR_EQUAL
+            op = datastore_pb.Query.Filter.LESS_THAN_OR_EQUAL
           else:
-            op = datastore_pb.Query_Filter.LESS_THAN
+            op = datastore_pb.Query.Filter.LESS_THAN
         filters.append(('kind', op, extreme))
+
       kind_range.MapExtremes(AddExtremeFilter)
 
       params = []
       sql_filters = self._stub._CreateFilterString(filters, params)
 
-      sql_stmt = ('SELECT kind FROM "%s!Entities" %s GROUP BY kind'
-                  % (prefix, sql_filters))
+      sql_stmt = ('SELECT kind FROM "%s!Entities" %s GROUP BY kind' %
+                  (prefix, sql_filters))
       c = conn.execute(sql_stmt, params)
 
       kinds = []
@@ -368,7 +373,8 @@ class KindPseudoKind(object):
         kinds.append(MakeEntityForQuery(query, self.name, ToUtf8(row[0])))
 
       records = map(datastore_stub_util.EntityRecord, kinds)
-      cursor = datastore_stub_util._ExecuteQuery(records, query, [], [], [])
+      cursor = datastore_stub_util._ExecuteQuery(
+          list(records), query, [], [], [])
     finally:
       self._stub._ReleaseConnection(conn)
 
@@ -397,9 +403,9 @@ class PropertyPseudoKind(object):
       A query cursor to iterate over the query results, or None if the query
       is invalid.
     """
-    property_range = datastore_stub_util.ParsePropertyQuery(query, filters,
-                                                            orders)
-    keys_only = query.keys_only()
+    property_range = datastore_stub_util.ParsePropertyQuery(
+        query, filters, orders)
+    keys_only = query.keys_only
     conn = self._stub._GetConnection()
     cursor = None
     try:
@@ -411,13 +417,15 @@ class PropertyPseudoKind(object):
 
 
 
+
       def AddExtremeFilter(extreme, inclusive, is_end):
         """Add filter for kind start/end."""
         if not is_end:
-          op = datastore_pb.Query_Filter.GREATER_THAN_OR_EQUAL
+          op = datastore_pb.Query.Filter.GREATER_THAN_OR_EQUAL
         else:
-          op = datastore_pb.Query_Filter.LESS_THAN_OR_EQUAL
+          op = datastore_pb.Query.Filter.LESS_THAN_OR_EQUAL
         filters.append(('kind', op, extreme[0]))
+
       property_range.MapExtremes(AddExtremeFilter)
 
 
@@ -433,13 +441,12 @@ class PropertyPseudoKind(object):
 
         sql_stmt = ('SELECT kind, name, value FROM "%s!EntitiesByProperty" %s '
                     'GROUP BY kind, name, substr(value, 1, 1) '
-                    'ORDER BY kind, name'
-                    % (prefix, sql_filters))
+                    'ORDER BY kind, name' % (prefix, sql_filters))
       else:
 
         sql_stmt = ('SELECT kind, name FROM "%s!EntitiesByProperty" %s '
-                    'GROUP BY kind, name ORDER BY kind, name'
-                    % (prefix, sql_filters))
+                    'GROUP BY kind, name ORDER BY kind, name' %
+                    (prefix, sql_filters))
       c = conn.execute(sql_stmt, params)
 
       properties = []
@@ -456,30 +463,31 @@ class PropertyPseudoKind(object):
           if property_pb:
             properties.append(property_pb)
           property_pb = MakeEntityForQuery(query, KindPseudoKind.name,
-                                           ToUtf8(kind),
-                                           self.name, ToUtf8(name))
+                                           ToUtf8(kind), self.name,
+                                           ToUtf8(name))
 
         if not keys_only:
 
           value_data = row[2]
-          value_decoder = sortable_pb_encoder.Decoder(
-              array.array('B', str(value_data)))
-          raw_value_pb = entity_pb.PropertyValue()
-          raw_value_pb.Merge(value_decoder)
+          if six.PY2:
+            value_data = str(value_data)
+          raw_value_pb = sortable_pb_encoder.Decoder.DecodeMessage(
+              entity_pb2.PropertyValue, array.array('B', value_data))
           tag = datastore_types.GetPropertyValueTag(raw_value_pb)
           tag_name = datastore_stub_util._PROPERTY_TYPE_NAMES[tag]
 
 
-          representation_pb = property_pb.add_property()
-          representation_pb.set_name('property_representation')
-          representation_pb.set_multiple(True)
-          representation_pb.mutable_value().set_stringvalue(tag_name)
+          representation_pb = property_pb.property.add()
+          representation_pb.name = 'property_representation'
+          representation_pb.multiple = True
+          representation_pb.value.stringValue = six.ensure_binary(tag_name)
 
       if property_pb:
         properties.append(property_pb)
 
       records = map(datastore_stub_util.EntityRecord, properties)
-      cursor = datastore_stub_util._ExecuteQuery(records, query, [], [], [])
+      cursor = datastore_stub_util._ExecuteQuery(
+          list(records), query, [], [], [])
     finally:
       self._stub._ReleaseConnection(conn)
 
@@ -508,9 +516,9 @@ class NamespacePseudoKind(object):
       A query cursor to iterate over the query results, or None if the query
       is invalid.
     """
-    namespace_range = datastore_stub_util.ParseNamespaceQuery(query, filters,
-                                                              orders)
-    app_str = query.app()
+    namespace_range = datastore_stub_util.ParseNamespaceQuery(
+        query, filters, orders)
+    app_str = query.app
 
     namespace_entities = []
 
@@ -526,7 +534,7 @@ class NamespacePseudoKind(object):
         namespace_entities.append(MakeEntityForQuery(query, self.name, ns_id))
 
     records = map(datastore_stub_util.EntityRecord, namespace_entities)
-    return datastore_stub_util._ExecuteQuery(records, query, [], [], [])
+    return datastore_stub_util._ExecuteQuery(list(records), query, [], [], [])
 
 
 class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
@@ -568,13 +576,13 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     Args:
       app_id: string
       datastore_file: string, path to sqlite database. Use None to create an
-          in-memory database.
+        in-memory database.
       require_indexes: bool, default False. If True, composite indexes must
-          exist in index.yaml for queries that need them.
+        exist in index.yaml for queries that need them.
       verbose: bool, default False. If True, logs all select statements.
       service_name: Service name expected for all calls.
       trusted: bool, default False. If True, this stub allows an app to access
-          the data of another app.
+        the data of another app.
       consistency_policy: The consistency policy to use or None to use the
         default. Consistency policies can be found in
         datastore_stub_util.*ConsistencyPolicy
@@ -599,9 +607,9 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     self.__id_map_scattered = {}
     self.__id_counter_tables = {
         datastore_stub_util.SEQUENTIAL: ('IdSeq', self.__id_map_sequential),
-        datastore_stub_util.SCATTERED: ('ScatteredIdCounters',
-                                         self.__id_map_scattered),
-        }
+        datastore_stub_util.SCATTERED:
+            ('ScatteredIdCounters', self.__id_map_scattered),
+    }
     self.__id_lock = threading.Lock()
 
     if self.__verbose:
@@ -617,16 +625,14 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
 
 
 
-    self.__connection.text_factory = lambda x: unicode(x, 'utf-8', 'ignore')
+    self.__connection.text_factory = (
+        lambda x: six.ensure_text(x, 'utf-8', 'ignore'))
 
 
     self.__connection_lock = threading.RLock()
 
 
     self.__namespaces = set()
-
-
-    self.__query_history = {}
 
     self._RegisterPseudoKind(KindPseudoKind())
     self._RegisterPseudoKind(PropertyPseudoKind())
@@ -636,9 +642,9 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     try:
       self.__Init()
     except sqlite3.DatabaseError as e:
-      raise apiproxy_errors.ApplicationError(datastore_pb.Error.INTERNAL_ERROR,
-                                             self.READ_ERROR_MSG %
-                                                 (self.__datastore_file, e))
+      raise apiproxy_errors.ApplicationError(
+          datastore_pb.Error.INTERNAL_ERROR,
+          self.READ_ERROR_MSG % (self.__datastore_file, e))
 
   def __Init(self):
 
@@ -675,7 +681,7 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
       if not index_proto:
         continue
       indexes = datastore_pb.CompositeIndices(index_proto)
-      for index in indexes.index_list():
+      for index in indexes.index:
         self._SideLoadIndex(index)
 
   def Clear(self):
@@ -715,6 +721,7 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
 
     Args:
       size: Number of parameters in returned list.
+
     Returns:
       A comma separated list of substitution parameters.
     """
@@ -733,9 +740,9 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     Returns:
       The kind of the sent Key or Entity
     """
-    if isinstance(key, entity_pb.EntityProto):
-      key = key.key()
-    return key.path().element_list()[-1].type()
+    if isinstance(key, entity_pb2.EntityProto):
+      key = key.key
+    return key.path.element[-1].type
 
   @staticmethod
   def __EncodeIndexPB(pb):
@@ -751,16 +758,14 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     Returns:
       A buffer holding the encoded protobuf.
     """
-    if isinstance(pb, entity_pb.PropertyValue) and pb.has_uservalue():
+    if isinstance(pb, entity_pb2.PropertyValue) and pb.HasField('uservalue'):
 
-      userval = entity_pb.PropertyValue()
-      userval.mutable_uservalue().set_email(pb.uservalue().email())
-      userval.mutable_uservalue().set_auth_domain(pb.uservalue().auth_domain())
-      userval.mutable_uservalue().set_gaiaid(0)
+      userval = entity_pb2.PropertyValue()
+      userval.uservalue.email = pb.uservalue.email
+      userval.uservalue.auth_domain = pb.uservalue.auth_domain
+      userval.uservalue.gaiaid = 0
       pb = userval
-    encoder = sortable_pb_encoder.Encoder()
-    pb.Output(encoder)
-    return buffer(encoder.buffer().tostring())
+    return buffer(sortable_pb_encoder.Encoder.EncodeMessage(pb))
 
   @staticmethod
   def __AddQueryParam(query_params, param):
@@ -773,16 +778,16 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     """Transforms a filter list into an SQL WHERE clause.
 
     Args:
-      filter_list: The list of (property, operator, value) filters
-        to transform. A value_type of -1 indicates no value type comparison
-        should be done.
+      filter_list: The list of (property, operator, value) filters to transform.
+        A value_type of -1 indicates no value type comparison should be done.
       params: out: A list of parameters to pass to the query.
+
     Returns:
       An SQL 'where' clause.
     """
     clauses = []
     for prop, operator, value in filter_list:
-      if operator == datastore_pb.Query_Filter.EXISTS:
+      if operator == datastore_pb.Query.Filter.EXISTS:
         continue
       sql_op = _OPERATOR_MAP[operator]
 
@@ -800,6 +805,7 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
 
     Args:
       order_list: A list of (field, order) tuples.
+
     Returns:
       An SQL ORDER BY clause.
     """
@@ -850,26 +856,27 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     """
     indices = datastore_pb.CompositeIndices()
     for index in self.GetIndexes(app, True, self._app_id):
-      indices.index_list().append(index)
+      indices.index.append(index)
 
 
 
 
     conn.execute('UPDATE Apps SET indexes = ? WHERE app_id = ?',
-                 (app, buffer(indices.Encode())))
+                 (app, buffer(indices.SerializeToString())))
 
   def _GetTablePrefix(self, data):
     """Returns the namespace prefix for a query.
 
     Args:
       data: An Entity, Key or Query PB, or an (app_id, ns) tuple.
+
     Returns:
       A valid table prefix
     """
-    if isinstance(data, entity_pb.EntityProto):
-      data = data.key()
+    if isinstance(data, entity_pb2.EntityProto):
+      data = data.key
     if not isinstance(data, tuple):
-      data = (data.app(), data.name_space())
+      data = (data.app, data.name_space)
     prefix = ('%s!%s' % data).replace('"', '""')
     if data not in self.__namespaces:
       self.__namespaces.add(data)
@@ -883,12 +890,13 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
       conn: An SQLite connection.
       paths: Paths to delete.
       table: The table to delete from.
+
     Returns:
       The number of rows deleted.
     """
-    c = conn.execute('DELETE FROM "%s" WHERE __path__ IN (%s)'
-                     % (table, self.__MakeParamList(len(paths))),
-                     paths)
+    c = conn.execute(
+        'DELETE FROM "%s" WHERE __path__ IN (%s)' %
+        (table, self.__MakeParamList(len(paths))), paths)
     return c.rowcount
 
   def __DeleteEntityRows(self, conn, keys, table):
@@ -898,13 +906,14 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
       conn: A database connection.
       keys: A list of keys to delete index entries for.
       table: The table to delete from.
+
     Returns:
       The number of rows deleted.
     """
     num_rows_deleted = 0
-    keys = sorted((x.app(), x.name_space(), x) for x in keys)
+    keys = sorted((x.app, x.name_space, x) for x in keys)
     for (app_id, ns), group in itertools.groupby(keys, lambda x: x[:2]):
-      path_strings = [self.__EncodeIndexPB(x[2].path()) for x in group]
+      path_strings = [self.__EncodeIndexPB(x[2].path) for x in group]
       prefix = self._GetTablePrefix((app_id, ns))
       num_rows_deleted += self.__DeleteRows(conn, path_strings,
                                             '%s!%s' % (prefix, table))
@@ -929,9 +938,8 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
 
     def RowGenerator(entities):
       for unused_prefix, e in entities:
-        yield (self.__EncodeIndexPB(e.key().path()),
-               self.__GetEntityKind(e),
-               buffer(e.Encode()))
+        yield (self.__EncodeIndexPB(e.key.path), self.__GetEntityKind(e),
+               buffer(e.SerializeToString()))
 
     entities = sorted((self._GetTablePrefix(x), x) for x in entities)
     for prefix, group in itertools.groupby(entities, lambda x: x[0]):
@@ -949,11 +957,10 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
 
     def RowGenerator(entities):
       for unused_prefix, e in entities:
-        for p in e.property_list():
-          yield (self.__GetEntityKind(e),
-                 p.name(),
-                 self.__EncodeIndexPB(p.value()),
-                 self.__EncodeIndexPB(e.key().path()))
+        for p in e.property:
+          yield (self.__GetEntityKind(e), p.name, self.__EncodeIndexPB(p.value),
+                 self.__EncodeIndexPB(e.key.path))
+
     entities = sorted((self._GetTablePrefix(x), x) for x in entities)
     for prefix, group in itertools.groupby(entities, lambda x: x[0]):
       conn.executemany(
@@ -980,7 +987,7 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     explanation = []
     assert pb.IsInitialized(explanation), explanation
 
-    pb.Encode()
+    pb.SerializeToString()
 
   def __GenerateFilterInfo(self, filters, query):
     """Transform a list of filters into a more usable form.
@@ -988,23 +995,24 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     Args:
       filters: A list of filter PBs.
       query: The query to generate filter info for.
+
     Returns:
       A dict mapping property names to lists of (op, value) tuples.
     """
     filter_info = {}
     for filt in filters:
-      assert filt.property_size() == 1
-      prop = filt.property(0)
-      value = prop.value()
-      if prop.name() == '__key__':
+      assert len(filt.property) == 1
+      prop = filt.property[0]
+      value = prop.value
+      if prop.name == '__key__':
 
 
-        value = ReferencePropertyToReference(value.referencevalue())
-        assert value.app() == query.app()
-        assert value.name_space() == query.name_space()
-        value = value.path()
-      filter_info.setdefault(prop.name(), []).append(
-          (filt.op(), self.__EncodeIndexPB(value)))
+        value = ReferencePropertyToReference(value.referencevalue)
+        assert value.app == query.app
+        assert value.name_space == query.name_space
+        value = value.path
+      filter_info.setdefault(prop.name, []).append(
+          (filt.op, self.__EncodeIndexPB(value)))
     return filter_info
 
   def __GenerateOrderInfo(self, orders):
@@ -1012,11 +1020,12 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
 
     Args:
       orders: A list of order PBs.
+
     Returns:
       A list of (property, direction) tuples.
     """
-    orders = [(order.property(), order.direction()) for order in orders]
-    if orders and orders[-1] == ('__key__', datastore_pb.Query_Order.ASCENDING):
+    orders = [(order.property, order.direction) for order in orders]
+    if orders and orders[-1] == ('__key__', datastore_pb.Query.Order.ASCENDING):
 
       orders.pop()
     return orders
@@ -1027,20 +1036,22 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     Args:
       prefix: A string prefix to filter for. Must be a PB encodable using
         __EncodeIndexPB.
+
     Returns:
       (min, max): Start and end string values to filter on.
     """
     ancestor_min = self.__EncodeIndexPB(prefix)
 
 
-    ancestor_max = buffer(str(ancestor_min) + '\xfb\xff\xff\xff\x89')
+    ancestor_max = buffer(ancestor_min +
+                          six.ensure_binary('\xfb\xff\xff\xff\x89'))
     return ancestor_min, ancestor_max
 
-  def  __KindQuery(self, query, filter_info, order_info):
+  def __KindQuery(self, query, filter_info, order_info):
     """Performs kind only, kind and ancestor, and ancestor only queries."""
 
-    if not (set(filter_info.keys()) |
-            set(x[0] for x in order_info)).issubset(['__key__']):
+    if not (set(filter_info.keys()) | set(x[0] for x in order_info)).issubset(
+        ['__key__']):
       return None
 
     if len(order_info) > 1:
@@ -1048,29 +1059,29 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
 
     filters = []
 
-    filters.extend(('__path__', op, value) for op, value
-                   in filter_info.get('__key__', []))
-    if query.has_kind():
+    filters.extend(
+        ('__path__', op, value) for op, value in filter_info.get('__key__', []))
+    if query.HasField('kind'):
 
-      filters.append(('kind', datastore_pb.Query_Filter.EQUAL, query.kind()))
+      filters.append(('kind', datastore_pb.Query.Filter.EQUAL, query.kind))
 
-    if query.has_ancestor():
-      amin, amax = self.__GetPrefixRange(query.ancestor().path())
-      filters.append(('__path__',
-                      datastore_pb.Query_Filter.GREATER_THAN_OR_EQUAL, amin))
-      filters.append(('__path__', datastore_pb.Query_Filter.LESS_THAN, amax))
+    if query.HasField('ancestor'):
+      amin, amax = self.__GetPrefixRange(query.ancestor.path)
+      filters.append(
+          ('__path__', datastore_pb.Query.Filter.GREATER_THAN_OR_EQUAL, amin))
+      filters.append(('__path__', datastore_pb.Query.Filter.LESS_THAN, amax))
 
     if order_info:
       orders = [('__path__', order_info[0][1])]
     else:
-      orders = [('__path__', datastore_pb.Query_Order.ASCENDING)]
+      orders = [('__path__', datastore_pb.Query.Order.ASCENDING)]
 
     params = []
-    query = ('SELECT Entities.__path__, Entities.entity '
-             'FROM "%s!Entities" AS Entities %s %s' % (
-                 self._GetTablePrefix(query),
-                 self._CreateFilterString(filters, params),
-                 self.__CreateOrderString(orders)))
+    query = (
+        'SELECT Entities.__path__, Entities.entity '
+        'FROM "%s!Entities" AS Entities %s %s' %
+        (self._GetTablePrefix(query), self._CreateFilterString(
+            filters, params), self.__CreateOrderString(orders)))
     return query, params
 
   def __SinglePropertyQuery(self, query, filter_info, order_info):
@@ -1085,8 +1096,8 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     filter_ops = filter_info.get(property_name, [])
 
 
-    if len([1 for o, _ in filter_ops
-            if o == datastore_pb.Query_Filter.EQUAL]) > 1:
+    if len([1 for o, _ in filter_ops if o == datastore_pb.Query.Filter.EQUAL
+           ]) > 1:
       return None
 
 
@@ -1094,39 +1105,36 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
       return None
 
 
-    if query.has_ancestor():
+    if query.HasField('ancestor'):
       return None
 
 
-    if not query.has_kind():
+    if not query.HasField('kind'):
       return None
 
     prefix = self._GetTablePrefix(query)
     filters = []
-    filters.append(('EntitiesByProperty.kind',
-                    datastore_pb.Query_Filter.EQUAL, query.kind()))
-    filters.append(('name', datastore_pb.Query_Filter.EQUAL, property_name))
+    filters.append(('EntitiesByProperty.kind', datastore_pb.Query.Filter.EQUAL,
+                    query.kind))
+    filters.append(('name', datastore_pb.Query.Filter.EQUAL, property_name))
     for op, value in filter_ops:
       if property_name == '__key__':
         filters.append(('EntitiesByProperty.__path__', op, value))
       else:
         filters.append(('value', op, value))
 
-    orders = [('EntitiesByProperty.kind', datastore_pb.Query_Order.ASCENDING),
-              ('name', datastore_pb.Query_Order.ASCENDING)]
+    orders = [('EntitiesByProperty.kind', datastore_pb.Query.Order.ASCENDING),
+              ('name', datastore_pb.Query.Order.ASCENDING)]
     if order_info:
       orders.append(('value', order_info[0][1]))
     else:
-      orders.append(('value', datastore_pb.Query_Order.ASCENDING))
-    orders.append(('EntitiesByProperty.__path__',
-                   datastore_pb.Query_Order.ASCENDING))
+      orders.append(('value', datastore_pb.Query.Order.ASCENDING))
+    orders.append(
+        ('EntitiesByProperty.__path__', datastore_pb.Query.Order.ASCENDING))
 
     params = []
-    format_args = (
-        prefix,
-        prefix,
-        self._CreateFilterString(filters, params),
-        self.__CreateOrderString(orders))
+    format_args = (prefix, prefix, self._CreateFilterString(filters, params),
+                   self.__CreateOrderString(orders))
     query = ('SELECT Entities.__path__, Entities.entity, '
              'EntitiesByProperty.name, EntitiesByProperty.value '
              'FROM "%s!EntitiesByProperty" AS EntitiesByProperty INNER JOIN '
@@ -1146,17 +1154,20 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
       query: The datastore_pb.Query PB.
       filter_info: A dict mapping properties filtered on to (op, value) tuples.
       order_info: A list of (property, direction) tuples.
+
     Returns:
       (query, params): An SQL query string and list of parameters for it.
     """
     filter_sets = []
     for name, filter_ops in filter_info.items():
 
-      filter_sets.extend((name, [x]) for x in filter_ops
-                         if x[0] == datastore_pb.Query_Filter.EQUAL)
+      filter_sets.extend((name, [x])
+                         for x in filter_ops
+                         if x[0] == datastore_pb.Query.Filter.EQUAL)
 
-      ineq_ops = [x for x in filter_ops
-                  if x[0] != datastore_pb.Query_Filter.EQUAL]
+      ineq_ops = [
+          x for x in filter_ops if x[0] != datastore_pb.Query.Filter.EQUAL
+      ]
       if ineq_ops:
         filter_sets.append((name, ineq_ops))
 
@@ -1179,24 +1190,23 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
       else:
         join_name = 'ebp_%d' % (len(joins),)
         join_name_map.setdefault(name, join_name)
-        joins.append(
-            'INNER JOIN "%s!EntitiesByProperty" AS %s '
-            'ON Entities.__path__ = %s.__path__'
-            % (prefix, join_name, join_name))
-        filters.append(('%s.kind' % join_name, datastore_pb.Query_Filter.EQUAL,
-                        query.kind()))
-        filters.append(('%s.name' % join_name, datastore_pb.Query_Filter.EQUAL,
-                        name))
+        joins.append('INNER JOIN "%s!EntitiesByProperty" AS %s '
+                     'ON Entities.__path__ = %s.__path__' %
+                     (prefix, join_name, join_name))
+        filters.append(('%s.kind' % join_name, datastore_pb.Query.Filter.EQUAL,
+                        query.kind))
+        filters.append(
+            ('%s.name' % join_name, datastore_pb.Query.Filter.EQUAL, name))
         for op, value in filter_ops:
           filters.append(('%s.value' % join_name, op, buffer(value)))
 
-        if query.has_ancestor():
-          amin, amax = self.__GetPrefixRange(query.ancestor().path())
+        if query.HasField('ancestor'):
+          amin, amax = self.__GetPrefixRange(query.ancestor.path)
+          filters.append(
+              ('%s.__path__' % join_name,
+               datastore_pb.Query.Filter.GREATER_THAN_OR_EQUAL, amin))
           filters.append(('%s.__path__' % join_name,
-                          datastore_pb.Query_Filter.GREATER_THAN_OR_EQUAL,
-                          amin))
-          filters.append(('%s.__path__' % join_name,
-                          datastore_pb.Query_Filter.LESS_THAN, amax))
+                          datastore_pb.Query.Filter.LESS_THAN, amax))
 
     orders = []
     for prop, order in order_info:
@@ -1206,21 +1216,18 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
         prop = '%s.value' % (join_name_map[prop],)
         orders.append((prop, order))
     if not order_info or order_info[-1][0] != '__key__':
-      orders.append(('Entities.__path__', datastore_pb.Query_Order.ASCENDING))
+      orders.append(('Entities.__path__', datastore_pb.Query.Order.ASCENDING))
 
     select_arg = 'Entities.__path__, Entities.entity '
 
-    if query.property_name_list():
+    if query.property_name:
       for value_i in join_name_map.values():
         select_arg += ', %s.name, %s.value' % (value_i, value_i)
 
     params = []
-    format_args = (
-        select_arg,
-        prefix,
-        ' '.join(joins),
-        self._CreateFilterString(filters, params),
-        self.__CreateOrderString(orders))
+    format_args = (select_arg, prefix, ' '.join(joins),
+                   self._CreateFilterString(filters, params),
+                   self.__CreateOrderString(orders))
 
     query = ('SELECT %s FROM "%s!Entities" AS Entities %s %s %s' % format_args)
 
@@ -1232,15 +1239,15 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     if order_info:
       return None
 
-    if query.has_ancestor():
+    if query.HasField('ancestor'):
       return None
 
-    if not query.has_kind():
+    if not query.HasField('kind'):
       return None
 
     for filter_ops in filter_info.values():
       for op, _ in filter_ops:
-        if op != datastore_pb.Query_Filter.EQUAL:
+        if op != datastore_pb.Query.Filter.EQUAL:
           return None
 
     return self.__StarSchemaQueryPlan(query, filter_info, order_info)
@@ -1252,6 +1259,7 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
       query: The datastore_pb.Query PB.
       filter_info: A dict mapping properties filtered on to (op, value) tuples.
       order_info: A list of (property, direction) tuples.
+
     Returns:
       (query, params): An SQL query string and list of parameters for it.
     """
@@ -1269,7 +1277,7 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
   def _Put(self, record, insert):
     conn = self._GetConnection()
     try:
-      self.__DeleteIndexEntries(conn, [record.entity.key()])
+      self.__DeleteIndexEntries(conn, [record.entity.key])
       record = datastore_stub_util.StoreRecord(record)
       entity_stored = datastore_stub_util._ToStorageEntity(record)
       self.__InsertEntities(conn, [entity_stored])
@@ -1285,10 +1293,10 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
       prefix = self._GetTablePrefix(key)
       c = conn.execute(
           'SELECT entity FROM "%s!Entities" WHERE __path__ = ?' % (prefix,),
-          (self.__EncodeIndexPB(key.path()),))
+          (self.__EncodeIndexPB(key.path),))
       row = c.fetchone()
       if row:
-        entity = entity_pb.EntityProto()
+        entity = entity_pb2.EntityProto()
         entity.ParseFromString(row[0])
         record = datastore_stub_util._FromStorageEntity(entity)
         return datastore_stub_util.LoadRecord(record)
@@ -1306,13 +1314,13 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
 
   def _GetEntitiesInEntityGroup(self, entity_group):
     query = datastore_pb.Query()
-    query.set_app(entity_group.app())
-    if entity_group.name_space():
-      query.set_name_space(entity_group.name_space())
-    query.mutable_ancestor().CopyFrom(entity_group)
+    query.app = entity_group.app
+    if entity_group.name_space:
+      query.name_space = entity_group.name_space
+    query.ancestor.CopyFrom(entity_group)
 
-    filter_info = self.__GenerateFilterInfo(query.filter_list(), query)
-    order_info = self.__GenerateOrderInfo(query.order_list())
+    filter_info = self.__GenerateFilterInfo(query.filter, query)
+    order_info = self.__GenerateOrderInfo(query.order)
     sql_stmt, params = self.__KindQuery(query, filter_info, order_info)
 
 
@@ -1325,8 +1333,9 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
       db_cursor = conn.execute(sql_stmt, params)
       entities = {}
       for row in db_cursor.fetchall():
-        entity = entity_pb.EntityProto(row[1])
-        key = datastore_types.ReferenceToKeyValue(entity.key())
+        entity = entity_pb2.EntityProto()
+        entity.MergeFromString(row[1])
+        key = datastore_types.ReferenceToKeyValue(entity.key)
         entities[key] = datastore_stub_util._FromStorageEntity(entity)
       return entities
     finally:
@@ -1345,18 +1354,18 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     Returns:
       A QueryCursor object.
     """
-    if query.has_kind() and query.kind() in self._pseudo_kinds:
+    if query.HasField('kind') and query.kind in self._pseudo_kinds:
 
       datastore_stub_util.NormalizeCursors(query,
-                                           datastore_pb.Query_Order.ASCENDING)
-      cursor = self._pseudo_kinds[query.kind()].Query(query, filters, orders)
+                                           datastore_pb.Query.Order.ASCENDING)
+      cursor = self._pseudo_kinds[query.kind].Query(query, filters, orders)
       datastore_stub_util.Check(cursor,
                                 'Could not create query for pseudo-kind')
     else:
       orders = datastore_stub_util._GuessOrders(filters, orders)
 
 
-      datastore_stub_util.NormalizeCursors(query, orders[0].direction())
+      datastore_stub_util.NormalizeCursors(query, orders[0].direction)
       filter_info = self.__GenerateFilterInfo(filters, query)
       order_info = self.__GenerateOrderInfo(orders)
 
@@ -1373,7 +1382,7 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
 
       conn = self._GetConnection()
       try:
-        if query.property_name_list():
+        if query.property_name:
           db_cursor = _ProjectionPartialEntityGenerator(
               conn.execute(sql_stmt, params))
         else:
@@ -1392,21 +1401,23 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     if not block_size:
 
 
-      block_size = (size / 1000 + 1) * 1000
-      c = conn.execute('SELECT next_id FROM %s WHERE prefix = ? LIMIT 1'
-                       % table, (prefix,))
+      block_size = (size // 1000 + 1) * 1000
+      c = conn.execute(
+          'SELECT next_id FROM %s WHERE prefix = ? LIMIT 1' % table, (prefix,))
       next_id = c.fetchone()[0]
-      c = conn.execute('UPDATE %s SET next_id = next_id + ? WHERE prefix = ?'
-                       % table, (block_size, prefix))
+      c = conn.execute(
+          'UPDATE %s SET next_id = next_id + ? WHERE prefix = ?' % table,
+          (block_size, prefix))
       assert c.rowcount == 1
 
     if size > block_size:
 
-      c = conn.execute('SELECT next_id FROM %s WHERE prefix = ? LIMIT 1'
-                       % table, (prefix,))
+      c = conn.execute(
+          'SELECT next_id FROM %s WHERE prefix = ? LIMIT 1' % table, (prefix,))
       start = c.fetchone()[0]
-      c = conn.execute('UPDATE %s SET next_id = next_id + ? WHERE prefix = ?'
-                       % table, (size, prefix))
+      c = conn.execute(
+          'UPDATE %s SET next_id = next_id + ? WHERE prefix = ?' % table,
+          (size, prefix))
       assert c.rowcount == 1
     else:
 
@@ -1420,8 +1431,8 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
   def __AdvanceIdCounter(self, conn, prefix, max_id, table):
     datastore_stub_util.Check(max_id >= 0,
                               'Max must be greater than or equal to 0.')
-    c = conn.execute('SELECT next_id FROM %s WHERE prefix = ? LIMIT 1'
-                     % table, (prefix,))
+    c = conn.execute('SELECT next_id FROM %s WHERE prefix = ? LIMIT 1' % table,
+                     (prefix,))
     start = c.fetchone()[0]
     if max_id >= start:
       c = conn.execute('UPDATE %s SET next_id = ? WHERE prefix = ?' % table,
@@ -1433,8 +1444,7 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
   def _AllocateSequentialIds(self, reference, size=1, max_id=None):
     conn = self._GetConnection()
     try:
-      datastore_stub_util.CheckAppId(self._trusted, self._app_id,
-                                     reference.app())
+      datastore_stub_util.CheckAppId(self._trusted, self._app_id, reference.app)
       datastore_stub_util.Check(not (size and max_id),
                                 'Both size and max cannot be set.')
 
@@ -1448,7 +1458,7 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
                                                  'IdSeq')
       else:
         start, end = self.__AdvanceIdCounter(conn, prefix, max_id, 'IdSeq')
-      return long(start), long(end)
+      return start, end
     finally:
       self._ReleaseConnection(conn)
 
@@ -1457,14 +1467,14 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
     try:
       full_keys = []
       for key in references:
-        datastore_stub_util.CheckAppId(self._trusted, self._app_id, key.app())
+        datastore_stub_util.CheckAppId(self._trusted, self._app_id, key.app)
         prefix = self._GetTablePrefix(key)
-        last_element = key.path().element_list()[-1]
+        last_element = key.path.element[-1]
 
-        if last_element.id() or last_element.has_name():
-          for el in key.path().element_list():
-            if el.id():
-              count, id_space = datastore_stub_util.IdToCounter(el.id())
+        if last_element.id or last_element.HasField('name'):
+          for el in key.path.element:
+            if el.id:
+              count, id_space = datastore_stub_util.IdToCounter(el.id)
               table, _ = self.__id_counter_tables[id_space]
               self.__AdvanceIdCounter(conn, prefix, count, table)
 
@@ -1472,7 +1482,7 @@ class DatastoreSqliteStub(datastore_stub_util.BaseDatastore,
           count, _ = self.__AllocateIdsFromBlock(conn, prefix, 1,
                                                  self.__id_map_scattered,
                                                  'ScatteredIdCounters')
-          last_element.set_id(datastore_stub_util.ToScatteredId(count))
+          last_element.id = datastore_stub_util.ToScatteredId(count)
           full_keys.append(key)
       return full_keys
     finally:

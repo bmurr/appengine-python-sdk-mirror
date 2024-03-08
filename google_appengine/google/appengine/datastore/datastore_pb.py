@@ -19,7 +19,6 @@
 
 """The Python datastore protocol buffer definition (old name)."""
 
-from __future__ import absolute_import
 
 
 
@@ -28,19 +27,19 @@ from __future__ import absolute_import
 
 
 
-from google.appengine.datastore.action_pb import Action
-from google.appengine.datastore.entity_pb import CompositeIndex
-from google.appengine.datastore.entity_pb import EntityProto
-from google.appengine.datastore.entity_pb import Index
-from google.appengine.datastore.entity_pb import Path
-from google.appengine.datastore.entity_pb import Property
-from google.appengine.datastore.entity_pb import PropertyValue
-from google.appengine.datastore.entity_pb import Reference
-from google.appengine.datastore.snapshot_pb import Snapshot
 
-from google.appengine.api.api_base_pb import Integer64Proto
-from google.appengine.api.api_base_pb import StringProto
-from google.appengine.api.api_base_pb import VoidProto
-from google.appengine.datastore import datastore_v3_pb
-from google.appengine.datastore.datastore_v3_pb import *
 
+from google.appengine.api.api_base_pb2 import Integer64Proto
+from google.appengine.api.api_base_pb2 import StringProto
+from google.appengine.api.api_base_pb2 import VoidProto
+from google.appengine.datastore import datastore_v3_bytes_pb2 as datastore_v3_pb2
+from google.appengine.datastore.datastore_v3_bytes_pb2 import *
+from google.appengine.datastore.action_pb2 import Action
+from google.appengine.datastore.entity_bytes_pb2 import CompositeIndex
+from google.appengine.datastore.entity_bytes_pb2 import EntityProto
+from google.appengine.datastore.entity_bytes_pb2 import Index
+from google.appengine.datastore.entity_bytes_pb2 import Path
+from google.appengine.datastore.entity_bytes_pb2 import Property
+from google.appengine.datastore.entity_bytes_pb2 import PropertyValue
+from google.appengine.datastore.entity_bytes_pb2 import Reference
+from google.appengine.datastore.snapshot_pb2 import Snapshot

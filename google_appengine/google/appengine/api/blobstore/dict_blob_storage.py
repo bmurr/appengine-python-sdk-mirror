@@ -31,7 +31,7 @@ This module contains an implementation of `blob_storage.BlobStorage`.
 
 
 
-import StringIO
+import six
 
 from google.appengine.api import blobstore
 from google.appengine.api.blobstore import blob_storage
@@ -46,7 +46,7 @@ class DictBlobStorage(blob_storage.BlobStorage):
 
   def StoreBlob(self, blob_key, blob_stream):
     """Stores a blob stream."""
-    content = StringIO.StringIO()
+    content = six.BytesIO()
     try:
       while True:
         block = blob_stream.read(1 << 20)
@@ -59,16 +59,15 @@ class DictBlobStorage(blob_storage.BlobStorage):
 
   def CreateBlob(self, blob_key, blob):
     """Stores a blob in a map."""
-    self._blobs[blobstore.BlobKey(unicode(blob_key))] = blob
+    self._blobs[blobstore.BlobKey(six.text_type(blob_key))] = blob
 
   def OpenBlob(self, blob_key):
     """Gets the blob contents as a stream."""
-    return StringIO.StringIO(
-        self._blobs[blobstore.BlobKey(unicode(blob_key))])
+    return six.BytesIO(self._blobs[blobstore.BlobKey(six.text_type(blob_key))])
 
   def DeleteBlob(self, blob_key):
     """Deletes blob content."""
     try:
-      del self._blobs[blobstore.BlobKey(unicode(blob_key))]
+      del self._blobs[blobstore.BlobKey(six.text_type(blob_key))]
     except KeyError:
       pass

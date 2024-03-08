@@ -21,32 +21,21 @@
 Library for parsing dispatch.yaml files and working with these in memory.
 """
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
-
-
-
-
-
-
-import os
 import re
-from google.appengine._internal import six_subset
+
+import six
+
+from google.appengine.api import appinfo
+from google.appengine.api import validation
+from google.appengine.api import yaml_builder
+from google.appengine.api import yaml_listener
+from google.appengine.api import yaml_object
 
 
-if os.environ.get('APPENGINE_RUNTIME') == 'python27':
-  from google.appengine.api import appinfo
-  from google.appengine.api import validation
-  from google.appengine.api import yaml_builder
-  from google.appengine.api import yaml_listener
-  from google.appengine.api import yaml_object
-else:
-  from google.appengine.api import appinfo
-  from google.appengine.api import validation
-  from google.appengine.api import yaml_builder
-  from google.appengine.api import yaml_listener
-  from google.appengine.api import yaml_object
+
+
+
+
 
 
 _URL_SPLITTER_RE = re.compile(r'^([^/]+)(/.*)$')
@@ -100,7 +89,7 @@ class DispatchEntryURLValidator(validation.Validator):
     """Validates an URL pattern."""
     if value is None:
       raise validation.MissingAttribute('url must be specified')
-    if not isinstance(value, six_subset.string_types):
+    if not isinstance(value, six.string_types):
       raise validation.ValidationError('url must be a string, not \'%r\'' %
                                        type(value))
 
@@ -213,6 +202,7 @@ def LoadSingleDispatch(dispatch_info, open_fn=None):
       dispatch sections or is missing a required value.
     yaml_errors.EventError: An error occured while parsing the yaml file.
   """
+  del open_fn
   builder = yaml_object.ObjectBuilder(DispatchInfoExternal)
   handler = yaml_builder.BuilderHandler(builder)
   listener = yaml_listener.EventListener(handler)

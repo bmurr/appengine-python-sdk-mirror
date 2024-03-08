@@ -22,29 +22,30 @@ This module contains an implementation of `blob_storage.BlobStorage` that
 writes blobs directly to a file system.
 """
 
-
-
-
-
-
-
-
-
-
-
 import errno
 import os
 
+import six
+import six.moves.builtins
+
 from google.appengine.api import blobstore
 from google.appengine.api.blobstore import blob_storage
+
+
+
+
+
+
+
+
+
 
 
 __all__ = ['FileBlobStorage']
 
 
 
-import __builtin__
-_local_open = __builtin__.open
+_local_open = six.moves.builtins.open
 
 
 class FileBlobStorage(blob_storage.BlobStorage):
@@ -64,7 +65,7 @@ class FileBlobStorage(blob_storage.BlobStorage):
   def _BlobKey(cls, blob_key):
     """Normalizes to an instance of `BlobKey`."""
     if not isinstance(blob_key, blobstore.BlobKey):
-      return blobstore.BlobKey(unicode(blob_key))
+      return blobstore.BlobKey(six.text_type(blob_key))
     return blob_key
 
   def _DirectoryForBlob(self, blob_key):
@@ -135,7 +136,7 @@ class FileBlobStorage(blob_storage.BlobStorage):
         block = blob_stream.read(1 << 20)
         if not block:
           break
-        output.write(block)
+        output.write(six.ensure_binary(block))
     finally:
       output.close()
 

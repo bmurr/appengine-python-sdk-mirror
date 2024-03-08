@@ -16,9 +16,9 @@
 #
 """Primitives for dealing with datastore indexes.
 
-Example index.yaml file:
-------------------------
+Example `index.yaml` file:
 
+```
 indexes:
 
 - kind: Cat
@@ -48,6 +48,11 @@ indexes:
   - name: name
   - name: location
     mode: geospatial
+```
+
+To learn more about the `index.yaml` file, see the configuration guide:
+https://cloud.google.com/appengine/docs/standard/python3/configuring-datastore-indexes-with-index-yaml
+
 """
 
 
@@ -57,15 +62,14 @@ indexes:
 
 
 
-from __future__ import absolute_import
-
-import google
-from google.appengine._internal.ruamel import yaml
-
 import copy
 import itertools
 
-from google.appengine.datastore import entity_pb
+import google
+
+from ruamel import yaml
+import six
+from six.moves import zip
 
 from google.appengine.api import appinfo
 from google.appengine.api import datastore_types
@@ -73,6 +77,7 @@ from google.appengine.api import validation
 from google.appengine.api import yaml_errors
 from google.appengine.api import yaml_object
 from google.appengine.datastore import datastore_pb
+from google.appengine.datastore import entity_bytes_pb2 as entity_pb2
 
 
 
@@ -85,10 +90,11 @@ class Property(validation.Validated):
   """Representation for a property of an index as it appears in YAML.
 
   Attributes (all in string form):
-    name: Name of attribute to sort by.
-    direction: Direction of sort.
-    mode: How the property is indexed. Either 'geospatial'
-        or None (unspecified).
+
+  - `name`: Name of attribute to sort by.
+  - `direction`: Direction of sort.
+  - `mode`: How the property is indexed. Either `geospatial` or `None`
+     (unspecified).
   """
 
   ATTRIBUTES = {
@@ -117,12 +123,12 @@ class Property(validation.Validated):
 def PropertyPresenter(dumper, prop):
   """A PyYaml presenter for Property.
 
-  It differs from the default by not outputting 'mode: null' and direction when
+  It differs from the default by not outputting `mode: null` and direction when
   mode is specified. This is done in order to ensure backwards compatibility.
 
   Args:
-    dumper: the Dumper object provided by PyYaml.
-    prop: the Property object to serialize.
+    dumper: The Dumper object provided by PyYaml.
+    prop: The Property object to serialize.
 
   Returns:
     A PyYaml object mapping.
@@ -189,26 +195,35 @@ class IndexDefinitions(validation.Validated):
       'indexes': validation.Optional(validation.Repeated(Index)),
   }
 
-
 index_yaml = yaml.YAML(typ='unsafe')
 index_yaml.representer.add_representer(Property, PropertyPresenter)
 
+if six.PY2:
+
+
+
+
+  def _Py2UnicodeRepresenter(self, s):
+    return self.represent_str(s.encode('utf-8'))
+  index_yaml.representer.add_representer(unicode, _Py2UnicodeRepresenter)
+
 
 def ParseIndexDefinitions(document, open_fn=None):
-  """Parse an individual index definitions document from string or stream.
+  """Parses an individual index definitions document from string or stream.
 
   Args:
-    document: Yaml document as a string or file-like stream.
+    document: YAML document as a string or file-like stream.
     open_fn: Function for opening files. Unused.
 
   Raises:
-    EmptyConfigurationFile when the configuration file is empty.
-    MultipleConfigurationFile when the configuration file contains more than
+    `EmptyConfigurationFile` when the configuration file is empty.
+    `MultipleConfigurationFile` when the configuration file contains more than
     one document.
 
   Returns:
-    Single parsed yaml file if one is defined, else None.
+    Single parsed YAML file if one is defined, else `None`.
   """
+  del open_fn
   try:
     return yaml_object.BuildSingleObject(IndexDefinitions, document)
   except yaml_errors.EmptyConfigurationFile:
@@ -216,27 +231,27 @@ def ParseIndexDefinitions(document, open_fn=None):
 
 
 def ParseMultipleIndexDefinitions(document):
-  """Parse multiple index definitions documents from a string or stream.
+  """Parses multiple index definitions documents from a string or stream.
 
   Args:
-    document: Yaml document as a string or file-like stream.
+    document: YAML document as a string or file-like stream.
 
   Returns:
-    A list of datastore_index.IndexDefinitions objects, one for each document.
+    A list of `datastore_index.IndexDefinitions` objects, one for each document.
   """
   return yaml_object.BuildObjects(IndexDefinitions, document)
 
 
 def IndexDefinitionsToKeys(indexes):
-  """Convert IndexDefinitions to set of keys.
+  """Convert `IndexDefinitions` to a set of keys.
 
   Args:
-    indexes: A datastore_index.IndexDefinitions instance, or None.
+    indexes: A `datastore_index.IndexDefinitions` instance, or `None`.
 
   Returns:
     A set of keys constructed from the argument, each key being a
-    tuple of the form (kind, ancestor, properties) where properties is
-    a tuple of PropertySpec objects.
+    tuple of the form `(kind, ancestor, properties)` where `properties` is
+    a tuple of `PropertySpec` objects.
   """
   keyset = set()
   if indexes is not None:
@@ -250,14 +265,14 @@ def IndexDefinitionsToKeys(indexes):
 
 
 def IndexToKey(index):
-  """Convert Index to key.
+  """Converts Index to key.
 
   Args:
-    index: A datastore_index.Index instance (not None!).
+    index: A `datastore_index.Index` instance (not None).
 
   Returns:
-    A tuple of the form (kind, ancestor, properties) where properties
-    is a sequence of PropertySpec objects derived from the Index.
+    A tuple of the form `(kind, ancestor, properties)` where properties
+    is a sequence of `PropertySpec` objects derived from the Index.
   """
 
 
@@ -304,7 +319,9 @@ class PropertySpec(object):
 
   def __tuple(self):
     """Produces a tuple for comparison purposes."""
-    return (self._name, self._direction, self._mode)
+    direction = self._direction or entity_pb2.Index.Property.Direction.DIRECTION_UNSPECIFIED
+    mode = self._mode or entity_pb2.Index.Property.Mode.MODE_UNSPECIFIED
+    return (self._name, direction, mode)
 
   def __lt__(self, other):
     if not isinstance(other, PropertySpec):
@@ -332,9 +349,11 @@ class PropertySpec(object):
   def __repr__(self):
     builder = ['PropertySpec(name=%s' % self._name]
     if self._direction is not None:
-      builder.append('direction=%s' % entity_pb.Index_Property.Direction_Name(self._direction))
+      builder.append('direction=%s' %
+                     entity_pb2.Index.Property.Direction.Name(self._direction))
     if self._mode is not None:
-      builder.append('mode=%s' % entity_pb.Index_Property.Mode_Name(self._mode))
+      builder.append('mode=%s' %
+                     entity_pb2.Index.Property.Mode.Name(self._mode))
     return '%s)' % (', '.join(builder),)
 
   def Satisfies(self, other):
@@ -357,7 +376,7 @@ class PropertySpec(object):
     return self._direction == other._direction
 
   def CopyToIndexPb(self, pb):
-    pb.set_name(self._name)
+    pb.name = self._name
 
 
 
@@ -368,28 +387,30 @@ class PropertySpec(object):
 
 
     if (self._mode is None):
-      pb.set_direction(self._direction or ASCENDING)
+      pb.direction = self._direction or ASCENDING
     else:
-      pb.set_mode(self._mode)
+      pb.mode = self._mode
 
 
 
-GEOSPATIAL = entity_pb.Index_Property.GEOSPATIAL
-ASCENDING = entity_pb.Index_Property.ASCENDING
-DESCENDING = entity_pb.Index_Property.DESCENDING
+GEOSPATIAL = entity_pb2.Index.Property.GEOSPATIAL
+ASCENDING = entity_pb2.Index.Property.ASCENDING
+DESCENDING = entity_pb2.Index.Property.DESCENDING
 
 
-assert entity_pb.Index_Property.ASCENDING == datastore_pb.Query_Order.ASCENDING
-assert (entity_pb.Index_Property.DESCENDING ==
-        datastore_pb.Query_Order.DESCENDING)
+assert entity_pb2.Index.Property.ASCENDING == datastore_pb.Query.Order.ASCENDING
+assert (
+    entity_pb2.Index.Property.DESCENDING == datastore_pb.Query.Order.DESCENDING)
 
 
-EQUALITY_OPERATORS = set([datastore_pb.Query_Filter.EQUAL])
-INEQUALITY_OPERATORS = set([datastore_pb.Query_Filter.LESS_THAN,
-                            datastore_pb.Query_Filter.LESS_THAN_OR_EQUAL,
-                            datastore_pb.Query_Filter.GREATER_THAN,
-                            datastore_pb.Query_Filter.GREATER_THAN_OR_EQUAL])
-EXISTS_OPERATORS = set([datastore_pb.Query_Filter.EXISTS])
+EQUALITY_OPERATORS = set([datastore_pb.Query.Filter.EQUAL])
+INEQUALITY_OPERATORS = set([
+    datastore_pb.Query.Filter.LESS_THAN,
+    datastore_pb.Query.Filter.LESS_THAN_OR_EQUAL,
+    datastore_pb.Query.Filter.GREATER_THAN,
+    datastore_pb.Query.Filter.GREATER_THAN_OR_EQUAL
+])
+EXISTS_OPERATORS = set([datastore_pb.Query.Filter.EXISTS])
 
 
 def Normalize(filters, orders, exists):
@@ -399,13 +420,13 @@ def Normalize(filters, orders, exists):
   in a query.
 
   Args:
-    filters: the filters set on the query
-    orders: the orders set on the query
-    exists: the names of properties that require an exists filter if
-      not already specified
+    filters: The filters set on the query.
+    orders: The orders set on the query.
+    exists: The names of properties that require an exists filter if
+      not already specified.
 
   Returns:
-    (filter, orders) the reduced set of filters and orders
+    `(filter, orders)` the reduced set of filters and orders.
   """
 
 
@@ -414,12 +435,12 @@ def Normalize(filters, orders, exists):
 
 
   for f in filters:
-    if f.op() == datastore_pb.Query_Filter.IN and f.property_size() == 1:
-      f.set_op(datastore_pb.Query_Filter.EQUAL)
-    if f.op() in EQUALITY_OPERATORS:
-      eq_properties.add(f.property(0).name())
-    elif f.op() in INEQUALITY_OPERATORS:
-      inequality_properties.add(f.property(0).name())
+    if f.op == datastore_pb.Query.Filter.IN and len(f.property) == 1:
+      f.op = datastore_pb.Query.Filter.EQUAL
+    if f.op in EQUALITY_OPERATORS:
+      eq_properties.add(f.property[0].name)
+    elif f.op in INEQUALITY_OPERATORS:
+      inequality_properties.add(f.property[0].name)
 
   eq_properties -= inequality_properties
 
@@ -427,8 +448,8 @@ def Normalize(filters, orders, exists):
   remove_set = eq_properties.copy()
   new_orders = []
   for o in orders:
-    if o.property() not in remove_set:
-      remove_set.add(o.property())
+    if o.property not in remove_set:
+      remove_set.add(o.property)
       new_orders.append(o)
   orders = new_orders
 
@@ -437,10 +458,10 @@ def Normalize(filters, orders, exists):
 
   new_filters = []
   for f in filters:
-    if f.op() not in EXISTS_OPERATORS:
+    if f.op not in EXISTS_OPERATORS:
       new_filters.append(f)
       continue
-    name = f.property(0).name()
+    name = f.property[0].name
     if name not in remove_set:
       remove_set.add(name)
       new_filters.append(f)
@@ -449,12 +470,12 @@ def Normalize(filters, orders, exists):
   for prop in exists:
     if prop not in remove_set:
       remove_set.add(prop)
-      new_filter = datastore_pb.Query_Filter()
-      new_filter.set_op(datastore_pb.Query_Filter.EXISTS)
-      new_prop = new_filter.add_property()
-      new_prop.set_name(prop)
-      new_prop.set_multiple(False)
-      new_prop.mutable_value()
+      new_filter = datastore_pb.Query.Filter()
+      new_filter.op = datastore_pb.Query.Filter.EXISTS
+      new_prop = new_filter.property.add()
+      new_prop.name = prop
+      new_prop.multiple = False
+      new_prop.ClearField('value')
       new_filters.append(new_filter)
 
   filters = new_filters
@@ -469,7 +490,7 @@ def Normalize(filters, orders, exists):
 
   new_orders = []
   for o in orders:
-    if o.property() == datastore_types.KEY_SPECIAL_PROPERTY:
+    if o.property == datastore_types.KEY_SPECIAL_PROPERTY:
       new_orders.append(o)
       break
     new_orders.append(o)
@@ -479,23 +500,23 @@ def Normalize(filters, orders, exists):
 
 
 def RemoveNativelySupportedComponents(filters, orders, exists):
-  """ Removes query components that are natively supported by the datastore.
+  """Removes query components that are natively supported by the datastore.
 
   The resulting filters and orders should not be used in an actual query.
 
   Args:
-    filters: the filters set on the query
-    orders: the orders set on the query
-    exists: the names of properties that require an exists filter if
-      not already specified
+    filters: The filters set on the query.
+    orders: The orders set on the query.
+    exists: The names of properties that require an exists filter if
+      not already specified.
 
   Returns:
-    (filters, orders) the reduced set of filters and orders
+    `(filters, orders)` the reduced set of filters and orders
   """
   (filters, orders) = Normalize(filters, orders, exists)
 
   for f in filters:
-    if f.op() in EXISTS_OPERATORS:
+    if f.op in EXISTS_OPERATORS:
 
 
 
@@ -503,8 +524,8 @@ def RemoveNativelySupportedComponents(filters, orders, exists):
 
 
   has_key_desc_order = False
-  if orders and orders[-1].property() == datastore_types.KEY_SPECIAL_PROPERTY:
-    if orders[-1].direction() == ASCENDING:
+  if orders and orders[-1].property == datastore_types.KEY_SPECIAL_PROPERTY:
+    if orders[-1].direction == ASCENDING:
       orders = orders[:-1]
     else:
       has_key_desc_order = True
@@ -516,109 +537,112 @@ def RemoveNativelySupportedComponents(filters, orders, exists):
 
   if not has_key_desc_order:
     for f in filters:
-      if (f.op() in INEQUALITY_OPERATORS and
-          f.property(0).name() != datastore_types.KEY_SPECIAL_PROPERTY):
+      if (f.op in INEQUALITY_OPERATORS and
+          f.property[0].name != datastore_types.KEY_SPECIAL_PROPERTY):
         break
     else:
       filters = [
           f for f in filters
-          if f.property(0).name() != datastore_types.KEY_SPECIAL_PROPERTY]
+          if f.property[0].name != datastore_types.KEY_SPECIAL_PROPERTY
+      ]
 
   return (filters, orders)
 
 
 def CompositeIndexForQuery(query):
-  """Return the composite index needed for a query.
+  """Returns the composite index needed for a query.
 
   A query is translated into a tuple, as follows:
 
-  - The first item is the kind string, or None if we're not filtering
+  - The first item is the kind string, or `None` if we're not filtering
     on kind (see below).
 
   - The second item is a bool giving whether the query specifies an
     ancestor.
 
-  - After that come (property, ASCENDING) pairs for those Filter
-    entries whose operator is EQUAL or IN.  Since the order of these
+  - After that come `(property, ASCENDING)` pairs for those Filter
+    entries whose operator is `EQUAL` or `IN`. Since the order of these
     doesn't matter, they are sorted by property name to normalize them
     in order to avoid duplicates.
 
-  - After that comes at most one (property, ASCENDING) pair for a
-    Filter entry whose operator is on of the four inequalities.  There
+  - After that comes at most one `(property, ASCENDING)` pair for a
+    Filter entry whose operator is on of the four inequalities. There
     can be at most one of these.
 
-  - After that come all the (property, direction) pairs for the Order
-    entries, in the order given in the query.  Exceptions:
-      (a) if there is a Filter entry with an inequality operator that matches
+  - After that come all the `(property, direction)` pairs for the Order
+    entries, in the order given in the query. Exceptions:
+
+    - (a) If there is a Filter entry with an inequality operator that matches
           the first Order entry, the first order pair is omitted (or,
           equivalently, in this case the inequality pair is omitted).
-      (b) if an Order entry corresponds to an equality filter, it is ignored
+    - (b) If an Order entry corresponds to an equality filter, it is ignored
           (since there will only ever be one value returned).
-      (c) if there is an equality filter on __key__ all orders are dropped
+    - (c) If there is an equality filter on `__key__` all orders are dropped
           (since there will be at most one result returned).
-      (d) if there is an order on __key__ all further orders are dropped (since
-          keys are unique).
-      (e) orders on __key__ ASCENDING are dropped (since this is supported
+    - (d) If there is an order on `__key__` all further orders are dropped
+          (since keys are unique).
+    - (e) Orders on `__key__` `ASCENDING` are dropped (since this is supported
           natively by the datastore).
 
-  - Finally, if there are Filter entries whose operator is EXISTS, and
+  - Finally, if there are Filter entries whose operator is `EXISTS`, and
     whose property names are not already listed, they are added, with
-    the direction set to ASCENDING.
+    the direction set to `ASCENDING`.
 
   This algorithm should consume all Filter and Order entries.
 
   Additional notes:
 
   - The low-level implementation allows queries that don't specify a
-    kind; but the Python API doesn't support this yet.
+    kind; but the Python `API` doesn't support this yet.
 
   - If there's an inequality filter and one or more sort orders, the
     first sort order *must* match the inequality filter.
 
   - The following indexes are always built in and should be suppressed:
-    - query on kind only;
-    - query on kind and one filter *or* one order;
-    - query on ancestor only, without kind (not exposed in Python yet);
-    - query on kind and equality filters only, no order (with or without
+
+    - Query on kind only;
+    - Query on kind and one filter *or* one order;
+    - Query on ancestor only, without kind (not exposed in Python yet);
+    - Query on kind and equality filters only, no order (with or without
       ancestor).
 
   - While the protocol buffer allows a Filter to contain multiple
-    properties, we don't use this.  It is only needed for the IN operator
+    properties, we don't use this.  It is only needed for the `IN` operator
     but this is (currently) handled on the client side, so in practice
     each Filter is expected to have exactly one property.
 
   Args:
-    query: A datastore_pb.Query instance.
+    query: A `datastore_pb.Query` instance.
 
   Returns:
-    A tuple of the form (required, kind, ancestor, properties).
-      required: boolean, whether the index is required;
-      kind: the kind or None;
-      ancestor: True if this is an ancestor query;
-      properties: A tuple consisting of:
-      - the prefix, represented by a set of property names
-      - the postfix, represented by a tuple consisting of any number of:
-        - Sets of property names or PropertySpec objects: these
+    A tuple of the form `(required, kind, ancestor, properties)`.
+      `required`: Boolean, whether the index is required;
+      `kind`: The kind or None;
+      `ancestor`: True if this is an ancestor query;
+      `properties`: A tuple consisting of:
+      - The prefix, represented by a set of property names.
+      - The postfix, represented by a tuple consisting of any number of:
+        - Sets of property names or `PropertySpec` objects: these
           properties can appear in any order.
-        - Sequences of PropertySpec objects: Indicates the properties
+        - Sequences of `PropertySpec` objects: Indicates the properties
           must appear in the given order, with the specified direction (if
-          specified in the PropertySpec).
+          specified in the `PropertySpec`).
   """
   required = True
 
 
-  kind = query.kind()
-  ancestor = query.has_ancestor()
-  filters = query.filter_list()
-  orders = query.order_list()
+  kind = query.kind
+  ancestor = query.HasField('ancestor')
+  filters = query.filter
+  orders = query.order
 
 
 
   for filter in filters:
-    assert filter.op() != datastore_pb.Query_Filter.IN, 'Filter.op()==IN'
-    nprops = len(filter.property_list())
+    assert filter.op != datastore_pb.Query.Filter.IN, 'Filter.op==IN'
+    nprops = len(filter.property)
     assert nprops == 1, 'Filter has %s properties, expected 1' % nprops
-    if filter.op() == datastore_pb.Query_Filter.CONTAINED_IN_REGION:
+    if filter.op == datastore_pb.Query.Filter.CONTAINED_IN_REGION:
       return CompositeIndexForGeoQuery(query)
 
   if not kind:
@@ -626,15 +650,15 @@ def CompositeIndexForQuery(query):
 
     required = False
 
-  exists = list(query.property_name_list())
-  exists.extend(query.group_by_property_name_list())
+  exists = list(query.property_name)
+  exists.extend(query.group_by_property_name)
 
   filters, orders = RemoveNativelySupportedComponents(filters, orders, exists)
 
 
-  eq_filters = [f for f in filters if f.op() in EQUALITY_OPERATORS]
-  ineq_filters = [f for f in filters if f.op() in INEQUALITY_OPERATORS]
-  exists_filters = [f for f in filters if f.op() in EXISTS_OPERATORS]
+  eq_filters = [f for f in filters if f.op in EQUALITY_OPERATORS]
+  ineq_filters = [f for f in filters if f.op in INEQUALITY_OPERATORS]
+  exists_filters = [f for f in filters if f.op in EXISTS_OPERATORS]
   assert (len(eq_filters) + len(ineq_filters) +
           len(exists_filters)) == len(filters), 'Not all filters used'
 
@@ -643,7 +667,7 @@ def CompositeIndexForQuery(query):
 
 
 
-    names = set(f.property(0).name() for f in eq_filters)
+    names = set(f.property[0].name for f in eq_filters)
     if not names.intersection(datastore_types._SPECIAL_PROPERTIES):
       required = False
 
@@ -652,38 +676,41 @@ def CompositeIndexForQuery(query):
   ineq_property = None
   if ineq_filters:
     for filter in ineq_filters:
-      if (filter.property(0).name() ==
+      if (filter.property[0].name ==
           datastore_types._UNAPPLIED_LOG_TIMESTAMP_SPECIAL_PROPERTY):
         continue
       if not ineq_property:
-        ineq_property = filter.property(0).name()
+        ineq_property = filter.property[0].name
       else:
-        assert filter.property(0).name() == ineq_property
+        assert filter.property[0].name == ineq_property
 
 
 
-  group_by_props = set(query.group_by_property_name_list())
+  group_by_props = set(query.group_by_property_name)
 
 
-  prefix = frozenset(f.property(0).name() for f in eq_filters)
+  prefix = frozenset(f.property[0].name for f in eq_filters)
 
   postfix_ordered = [
-      PropertySpec(name=order.property(), direction=order.direction())
-      for order in orders]
+      PropertySpec(name=order.property, direction=order.direction)
+      for order in orders
+  ]
 
 
-  postfix_group_by = frozenset(f.property(0).name() for f in exists_filters
-                               if f.property(0).name() in group_by_props)
+  postfix_group_by = frozenset(f.property[0].name
+                               for f in exists_filters
+                               if f.property[0].name in group_by_props)
 
-  postfix_unordered = frozenset(f.property(0).name() for f in exists_filters
-                                if f.property(0).name() not in group_by_props)
+  postfix_unordered = frozenset(f.property[0].name
+                                for f in exists_filters
+                                if f.property[0].name not in group_by_props)
 
 
   if ineq_property:
     if orders:
 
 
-      assert ineq_property == orders[0].property()
+      assert ineq_property == orders[0].property
     else:
       postfix_ordered.append(PropertySpec(name=ineq_property))
 
@@ -710,26 +737,25 @@ def CompositeIndexForGeoQuery(query):
   """Builds a descriptor for a composite index needed for a geo query.
 
   Args:
-    query: A datastore_pb.Query instance.
+    query: A `datastore_pb.Query` instance.
 
   Returns:
-    A tuple in the same form as produced by CompositeIndexForQuery.
+    A tuple in the same form as produced by `CompositeIndexForQuery`.
   """
   required = True
-  kind = query.kind()
+  kind = query.kind
 
-  assert not query.has_ancestor()
+  assert not query.HasField('ancestor')
   ancestor = False
-  filters = query.filter_list()
   preintersection_props = set()
   geo_props = set()
-  for filter in filters:
-    name = filter.property(0).name()
-    if filter.op() == datastore_pb.Query_Filter.EQUAL:
+  for filter_ in query.filter:
+    name = filter_.property[0].name
+    if filter_.op == datastore_pb.Query.Filter.EQUAL:
       preintersection_props.add(PropertySpec(name=name))
     else:
 
-      assert filter.op() == datastore_pb.Query_Filter.CONTAINED_IN_REGION
+      assert filter_.op == datastore_pb.Query.Filter.CONTAINED_IN_REGION
       geo_props.add(PropertySpec(name=name, mode=GEOSPATIAL))
 
   prefix = frozenset(preintersection_props)
@@ -738,17 +764,16 @@ def CompositeIndexForGeoQuery(query):
 
 
 def GetRecommendedIndexProperties(properties):
-  """Converts the properties returned by datastore_index.CompositeIndexForQuery
-  into a recommended list of index properties with the desired constraints.
+  """Converts the properties returned by `datastore_index.CompositeIndexForQuery` into a recommended list of index properties with the desired constraints.
 
-  Sets (of property names or PropertySpec objects) are sorted, so as to
+  Sets (of property names or `PropertySpec` objects) are sorted, so as to
   normalize them.
 
   Args:
-    properties: See datastore_index.CompositeIndexForQuery
+    properties: See `datastore_index.CompositeIndexForQuery`.
 
   Returns:
-    A tuple of PropertySpec objects.
+    A tuple of `PropertySpec` objects.
 
   """
 
@@ -787,13 +812,13 @@ def _MatchPostfix(postfix_props, index_props):
 
   Args:
     postfix_props: A tuple of sets and lists, as output by
-        CompositeIndexForQuery. They should define the requirements for the
+        `CompositeIndexForQuery`. They should define the requirements for the
         postfix of the index.
-    index_props: A list of PropertySpec objects that
+    index_props: A list of `PropertySpec` objects that
         define the index to try and match.
 
   Returns:
-    The list of PropertySpec objects that define the prefix properties
+    The list of `PropertySpec` objects that define the prefix properties
     in the given index.  None if the constraints could not be
     satisfied.
 
@@ -825,21 +850,22 @@ def _MatchPostfix(postfix_props, index_props):
 def MinimalCompositeIndexForQuery(query, index_defs):
   """Computes the minimal composite index for this query.
 
-  Unlike datastore_index.CompositeIndexForQuery, this function takes into
+  Unlike `datastore_index.CompositeIndexForQuery`, this function takes into
   account indexes that already exist in the system.
 
   Args:
-    query: the datastore_pb.Query to compute suggestions for
-    index_defs: a list of datastore_index.Index objects that already exist.
+    query: The `datastore_pb.Query` to compute suggestions for.
+    index_defs: A list of `datastore_index.Index` objects that already exist.
 
   Returns:
-    None if no index is needed, otherwise the minimal index in the form
-  (is_most_efficient, kind, ancestor, properties). Where is_most_efficient is a
-  boolean denoting if the suggested index is the most efficient (i.e. the one
-  returned by datastore_index.CompositeIndexForQuery). kind and ancestor
-  are the same variables returned by datastore_index.CompositeIndexForQuery.
-  properties is a tuple consisting of the prefix and postfix properties
-  returend by datastore_index.CompositeIndexForQuery.
+    `None` if no index is needed, otherwise the minimal index in the form
+    `(is_most_efficient, kind, ancestor, properties)`. Where `is_most_efficient`
+    is a boolean denoting if the suggested index is the most efficient (i.e.,
+    the one returned by `datastore_index.CompositeIndexForQuery`). kind and
+    ancestor are the same variables returned by
+    `datastore_index.CompositeIndexForQuery`. properties is a tuple consisting
+    of the prefix and postfix properties returend by
+    `datastore_index.CompositeIndexForQuery`.
   """
 
   required, kind, ancestor, (prefix, postfix) = CompositeIndexForQuery(query)
@@ -904,8 +930,8 @@ def MinimalCompositeIndexForQuery(query, index_defs):
   minimal_postfix, remaining = remaining_dict.popitem()
   minimal_props, minimal_ancestor = remaining
   minimal_cost = calc_cost(minimal_props, minimal_ancestor)
-  for index_postfix, (props_remaining, ancestor_remaining) in (
-      remaining_dict.items()):
+  for index_postfix, (props_remaining,
+                      ancestor_remaining) in (list(remaining_dict.items())):
     cost = calc_cost(props_remaining, ancestor_remaining)
     if cost < minimal_cost:
       minimal_cost = cost
@@ -923,16 +949,19 @@ def MinimalCompositeIndexForQuery(query, index_defs):
 
 
 def IndexYamlForQuery(kind, ancestor, props):
-  """Return the composite index definition YAML needed for a query.
+  """Returns the composite index definition `YAML` needed for a query.
 
   Given a query, the arguments for this method can be computed with:
+
+    ```
     _, kind, ancestor, props = datastore_index.CompositeIndexForQuery(query)
     props = datastore_index.GetRecommendedIndexProperties(props)
+    ```
 
   Args:
-    kind: the kind or None
-    ancestor: True if this is an ancestor query, False otherwise
-    props: PropertySpec objects
+    kind: The kind or `None`.
+    ancestor: `True` if this is an ancestor query, `False` otherwise.
+    props: `PropertySpec` objects.
 
   Returns:
     A string with the YAML for the composite index needed by the query.
@@ -954,16 +983,19 @@ def IndexYamlForQuery(kind, ancestor, props):
 
 
 def IndexXmlForQuery(kind, ancestor, props):
-  """Return the composite index definition XML needed for a query.
+  """Returns the composite index definition XML needed for a query.
 
   Given a query, the arguments for this method can be computed with:
+
+    ```
     _, kind, ancestor, props = datastore_index.CompositeIndexForQuery(query)
     props = datastore_index.GetRecommendedIndexProperties(props)
+    ```
 
   Args:
-    kind: the kind or None
-    ancestor: True if this is an ancestor query, False otherwise
-    props: PropertySpec objects
+    kind: The kind or `None`
+    ancestor: `True` if this is an ancestor query, `False` otherwise.
+    props: `PropertySpec` objects.
 
   Returns:
     A string with the XML for the composite index needed by the query.
@@ -994,34 +1026,34 @@ def IndexXmlForQuery(kind, ancestor, props):
 
 
 def IndexDefinitionToProto(app_id, index_definition):
-  """Transform individual Index definition to protocol buffer.
+  """Transforms individual Index definition to protocol buffer.
 
   Args:
-    app_id: Application id for new protocol buffer CompositeIndex.
-    index_definition: datastore_index.Index object to transform.
+    app_id: Application id for new protocol buffer `CompositeIndex`.
+    index_definition: `datastore_index.Index` object to transform.
 
   Returns:
-    New entity_pb.CompositeIndex with default values set and index
+    New `entity_pb2.CompositeIndex` with default values set and index
     information filled in.
   """
-  proto = entity_pb.CompositeIndex()
+  proto = entity_pb2.CompositeIndex()
 
-  proto.set_app_id(app_id)
-  proto.set_id(0)
-  proto.set_state(entity_pb.CompositeIndex.WRITE_ONLY)
+  proto.app_id = app_id
+  proto.id = 0
+  proto.state = entity_pb2.CompositeIndex.WRITE_ONLY
 
-  definition_proto = proto.mutable_definition()
-  definition_proto.set_entity_type(index_definition.kind)
-  definition_proto.set_ancestor(index_definition.ancestor)
+  definition_proto = proto.definition
+  definition_proto.entity_type = index_definition.kind
+  definition_proto.ancestor = index_definition.ancestor
 
   if index_definition.properties is not None:
     is_geo = any(x.mode == 'geospatial' for x in index_definition.properties)
     for prop in index_definition.properties:
-      prop_proto = definition_proto.add_property()
-      prop_proto.set_name(prop.name)
+      prop_proto = definition_proto.property.add()
+      prop_proto.name = prop.name
 
       if prop.mode == 'geospatial':
-        prop_proto.set_mode(entity_pb.Index_Property.GEOSPATIAL)
+        prop_proto.mode = entity_pb2.Index.Property.GEOSPATIAL
       elif is_geo:
 
 
@@ -1029,22 +1061,22 @@ def IndexDefinitionToProto(app_id, index_definition):
 
         pass
       elif prop.IsAscending():
-        prop_proto.set_direction(entity_pb.Index_Property.ASCENDING)
+        prop_proto.direction = entity_pb2.Index.Property.ASCENDING
       else:
-        prop_proto.set_direction(entity_pb.Index_Property.DESCENDING)
+        prop_proto.direction = entity_pb2.Index.Property.DESCENDING
 
   return proto
 
 
 def IndexDefinitionsToProtos(app_id, index_definitions):
-  """Transform multiple index definitions to composite index records
+  """Transforms multiple index definitions to composite index records.
 
   Args:
-    app_id: Application id for new protocol buffer CompositeIndex.
+    app_id: Application id for new protocol buffer `CompositeIndex`.
     index_definition: A list of datastore_index.Index objects to transform.
 
   Returns:
-    A list of tranformed entity_pb.Compositeindex entities with default values
+    A list of transformed entity_pb2.CompositeIndex entities with default values
     set and index information filled in.
   """
   return [IndexDefinitionToProto(app_id, index)
@@ -1052,38 +1084,38 @@ def IndexDefinitionsToProtos(app_id, index_definitions):
 
 
 def ProtoToIndexDefinition(proto):
-  """Transform individual index protocol buffer to index definition.
+  """Transforms individual index protocol buffer to index definition.
 
   Args:
-    proto: An instance of entity_pb.CompositeIndex to transform.
+    proto: An instance of `entity_pb2.CompositeIndex` to transform.
 
   Returns:
-    A new instance of datastore_index.Index.
+    A new instance of `datastore_index.Index`.
   """
   properties = []
-  proto_index = proto.definition()
-  for prop_proto in proto_index.property_list():
-    prop_definition = Property(name=prop_proto.name())
+  proto_index = proto.definition
+  for prop_proto in proto_index.property:
+    prop_definition = Property(name=prop_proto.name)
 
-    if prop_proto.mode() == entity_pb.Index_Property.GEOSPATIAL:
+    if prop_proto.mode == entity_pb2.Index.Property.GEOSPATIAL:
       prop_definition.mode = 'geospatial'
-    elif prop_proto.direction() == entity_pb.Index_Property.DESCENDING:
+    elif prop_proto.direction == entity_pb2.Index.Property.DESCENDING:
       prop_definition.direction = 'desc'
-    elif prop_proto.direction() == entity_pb.Index_Property.ASCENDING:
+    elif prop_proto.direction == entity_pb2.Index.Property.ASCENDING:
       prop_definition.direction = 'asc'
 
     properties.append(prop_definition)
 
-  index = Index(kind=proto_index.entity_type(), properties=properties)
-  if proto_index.ancestor():
+  index = Index(kind=proto_index.entity_type, properties=properties)
+  if proto_index.ancestor:
     index.ancestor = True
   return index
 
 
 def ProtosToIndexDefinitions(protos):
-  """Transform multiple index protocol buffers to index definitions.
+  """Returns index definitions, which were transformed from multiple index protocol buffers.
 
   Args:
-    A list of entity_pb.Index records.
+    A list of `entity_pb2.Index` records.
   """
   return [ProtoToIndexDefinition(definition) for definition in protos]

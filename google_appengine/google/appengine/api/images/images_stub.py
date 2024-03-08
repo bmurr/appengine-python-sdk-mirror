@@ -24,65 +24,25 @@
 
 
 import datetime
+import json
 import logging
 import re
-import StringIO
 import time
 
-
-
-try:
-  import json as simplejson
-except ImportError:
-  import simplejson
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-try:
-  import PIL
-  from PIL import _imaging
-  from PIL import Image
-except ImportError:
-  import _imaging
-  # Try importing the 'Image' module directly. If that fails, try
-  # importing it from the 'PIL' package (this is necessary to also
-  # cover "pillow" package installations).
-  try:
-    import Image
-  except ImportError:
-    from PIL import Image
-
+import google
 
 from google.appengine.api import apiproxy_stub
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import datastore
 from google.appengine.api import datastore_errors
-from google.appengine.api import datastore_types
 from google.appengine.api import images
 from google.appengine.api.blobstore import blobstore_stub
 from google.appengine.api.images import images_blob_stub
-from google.appengine.api.images import images_service_pb
+from google.appengine.api.images import images_service_pb2
 from google.appengine.runtime import apiproxy_errors
 
-
+from PIL import Image
+import six
 
 BLOB_SERVING_URL_KIND = images_blob_stub.BLOB_SERVING_URL_KIND
 BMP = 'BMP'
@@ -160,7 +120,7 @@ def _BackendPremultiplication(color):
   multiplied = [(x * (alpha + 1)) >> 8 for x in rgb]
   if alpha:
     alpha_inverse = 0xffffff / alpha
-    unmultiplied = [(x * alpha_inverse) >> 16 for x in multiplied]
+    unmultiplied = [int(x * alpha_inverse) >> 16 for x in multiplied]
   else:
     unmultiplied = [0] * 3
 
@@ -199,51 +159,54 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
     Raises:
       ApplicationError: Bad data was provided, likely data about the dimensions.
     """
-    if (not request.canvas().width() or not request.canvas().height() or
-        not request.image_size() or not request.options_size()):
+    if (not request.canvas.width or not request.canvas.height or
+        not request.image or not request.options):
       raise apiproxy_errors.ApplicationError(
-          images_service_pb.ImagesServiceError.BAD_TRANSFORM_DATA)
-    if (request.canvas().width() > 4000 or
-        request.canvas().height() > 4000 or
-        request.options_size() > images.MAX_COMPOSITES_PER_REQUEST):
+          images_service_pb2.ImagesServiceError.BAD_TRANSFORM_DATA)
+    if (request.canvas.width > 4000 or request.canvas.height > 4000 or
+        len(request.options) > images.MAX_COMPOSITES_PER_REQUEST):
       raise apiproxy_errors.ApplicationError(
-          images_service_pb.ImagesServiceError.BAD_TRANSFORM_DATA)
+          images_service_pb2.ImagesServiceError.BAD_TRANSFORM_DATA)
 
-    width = request.canvas().width()
-    height = request.canvas().height()
-    color = _ArgbToRgbaTuple(request.canvas().color())
+    width = request.canvas.width
+    height = request.canvas.height
+    color = _ArgbToRgbaTuple(request.canvas.color)
 
 
     color = _BackendPremultiplication(color)
     canvas = Image.new(RGBA, (width, height), color)
     sources = []
-    for image in request.image_list():
+    for image in request.image:
       sources.append(self._OpenImageData(image))
 
-    for options in request.options_list():
-      if (options.anchor() < images.TOP_LEFT or
-          options.anchor() > images.BOTTOM_RIGHT):
+    for options in request.options:
+      if (options.anchor < images.TOP_LEFT or
+          options.anchor > images.BOTTOM_RIGHT):
         raise apiproxy_errors.ApplicationError(
-            images_service_pb.ImagesServiceError.BAD_TRANSFORM_DATA)
-      if options.source_index() >= len(sources) or options.source_index() < 0:
+            images_service_pb2.ImagesServiceError.BAD_TRANSFORM_DATA)
+      if options.source_index >= len(sources) or options.source_index < 0:
         raise apiproxy_errors.ApplicationError(
-            images_service_pb.ImagesServiceError.BAD_TRANSFORM_DATA)
-      if options.opacity() < 0 or options.opacity() > 1:
+            images_service_pb2.ImagesServiceError.BAD_TRANSFORM_DATA)
+      if options.opacity < 0 or options.opacity > 1:
         raise apiproxy_errors.ApplicationError(
-            images_service_pb.ImagesServiceError.BAD_TRANSFORM_DATA)
-      source = sources[options.source_index()]
-      x_anchor = (options.anchor() % 3) * 0.5
-      y_anchor = (options.anchor() / 3) * 0.5
-      x_offset = int(options.x_offset() + x_anchor * (width - source.size[0]))
-      y_offset = int(options.y_offset() + y_anchor * (height - source.size[1]))
+            images_service_pb2.ImagesServiceError.BAD_TRANSFORM_DATA)
+      source = sources[options.source_index]
+      x_anchor = (options.anchor % 3) * 0.5
+      y_anchor = (options.anchor // 3) * 0.5
+      x_offset = int(options.x_offset + x_anchor * (width - source.size[0]))
+      y_offset = int(options.y_offset + y_anchor * (height - source.size[1]))
       if source.mode == RGBA:
         canvas.paste(source, (x_offset, y_offset), source)
       else:
-        alpha = options.opacity() * 255
+        alpha = options.opacity * 255
+
+
+        if six.PY3:
+          alpha = int(round(alpha))
         mask = Image.new('L', source.size, alpha)
         canvas.paste(source, (x_offset, y_offset), mask)
-    response_value = self._EncodeImage(canvas, request.canvas().output())
-    response.mutable_image().set_content(response_value)
+    response_value = self._EncodeImage(canvas, request.canvas.output)
+    response.image.content = response_value
 
   def _Dynamic_Histogram(self, request, response):
     """Trivial implementation of an API.
@@ -258,12 +221,12 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
     Raises:
       ApplicationError: Image was of an unsupported format.
     """
-    image = self._OpenImageData(request.image())
+    image = self._OpenImageData(request.image)
 
     img_format = image.format
     if img_format not in FORMAT_LIST:
       raise apiproxy_errors.ApplicationError(
-          images_service_pb.ImagesServiceError.NOT_IMAGE)
+          images_service_pb2.ImagesServiceError.NOT_IMAGE)
     image = image.convert(RGBA)
     red = [0] * 256
     green = [0] * 256
@@ -276,13 +239,13 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
       red[int((pixel[0] * pixel[3]) / 255)] += 1
       green[int((pixel[1] * pixel[3]) / 255)] += 1
       blue[int((pixel[2] * pixel[3]) / 255)] += 1
-    histogram = response.mutable_histogram()
+    histogram = response.histogram
     for value in red:
-      histogram.add_red(value)
+      histogram.red.append(value)
     for value in green:
-      histogram.add_green(value)
+      histogram.green.append(value)
     for value in blue:
-      histogram.add_blue(value)
+      histogram.blue.append(value)
 
   def _Dynamic_Transform(self, request, response):
     """Trivial implementation of ImagesService::Transform.
@@ -294,33 +257,33 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
       request: ImagesTransformRequest, contains image request info.
       response: ImagesTransformResponse, contains transformed image.
     """
-    original_image = self._OpenImageData(request.image())
+    original_image = self._OpenImageData(request.image)
 
-    input_settings = request.input()
+    input_settings = request.input
     correct_orientation = (
-        input_settings.has_correct_exif_orientation() and
-        input_settings.correct_exif_orientation() ==
-        images_service_pb.InputSettings.CORRECT_ORIENTATION)
+        input_settings.HasField('correct_exif_orientation') and
+        input_settings.correct_exif_orientation ==
+        images_service_pb2.InputSettings.CORRECT_ORIENTATION)
 
 
 
-    source_metadata = self._ExtractMetadata(
-        original_image, input_settings.parse_metadata())
-    if input_settings.parse_metadata():
+    source_metadata = self._ExtractMetadata(original_image,
+                                            input_settings.parse_metadata)
+    if input_settings.parse_metadata:
       logging.info(
           'Once the application is deployed, a more powerful metadata '
           'extraction will be performed which might return many more fields.')
 
-    new_image = self._ProcessTransforms(
-        original_image, request.transform_list(), correct_orientation)
+    new_image = self._ProcessTransforms(original_image, request.transform,
+                                        correct_orientation)
 
     substitution_rgb = None
-    if input_settings.has_transparent_substitution_rgb():
-      substitution_rgb = input_settings.transparent_substitution_rgb()
-    response_value = self._EncodeImage(
-        new_image, request.output(), substitution_rgb)
-    response.mutable_image().set_content(response_value)
-    response.set_source_metadata(source_metadata)
+    if input_settings.HasField('transparent_substitution_rgb'):
+      substitution_rgb = input_settings.transparent_substitution_rgb
+    response_value = self._EncodeImage(new_image, request.output,
+                                       substitution_rgb)
+    response.image.content = response_value
+    response.source_metadata = source_metadata
 
   def _Dynamic_GetUrlBase(self, request, response):
     self._blob_stub.GetUrlBase(request, response)
@@ -340,13 +303,13 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
     Returns:
       str - Encoded image information in given encoding format.  Default is PNG.
     """
-    image_string = StringIO.StringIO()
+    image_string = six.BytesIO()
     image_encoding = PNG
 
-    if output_encoding.mime_type() == images_service_pb.OutputSettings.WEBP:
+    if output_encoding.mime_type == images_service_pb2.OutputSettings.WEBP:
       image_encoding = WEBP
 
-    if output_encoding.mime_type() == images_service_pb.OutputSettings.JPEG:
+    if output_encoding.mime_type == images_service_pb2.OutputSettings.JPEG:
       image_encoding = JPEG
 
 
@@ -385,20 +348,20 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
       NOTE: 'content' must always be set because it is a required field,
       however, it must be the empty string when a blob-key is provided.
     """
-    if image_data.content() and image_data.has_blob_key():
+    if image_data.content and image_data.HasField('blob_key'):
       raise apiproxy_errors.ApplicationError(
-          images_service_pb.ImagesServiceError.INVALID_BLOB_KEY)
+          images_service_pb2.ImagesServiceError.INVALID_BLOB_KEY)
 
-    if image_data.has_blob_key():
-      image = self._OpenBlob(image_data.blob_key())
+    if image_data.HasField('blob_key'):
+      image = self._OpenBlob(image_data.blob_key)
     else:
-      image = self._OpenImage(image_data.content())
+      image = self._OpenImage(image_data.content)
 
 
     img_format = image.format
     if img_format not in FORMAT_LIST:
       raise apiproxy_errors.ApplicationError(
-          images_service_pb.ImagesServiceError.NOT_IMAGE)
+          images_service_pb2.ImagesServiceError.NOT_IMAGE)
     return image
 
   def _OpenImage(self, image):
@@ -415,15 +378,15 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
     """
     if not image:
       raise apiproxy_errors.ApplicationError(
-          images_service_pb.ImagesServiceError.NOT_IMAGE)
+          images_service_pb2.ImagesServiceError.NOT_IMAGE)
 
-    image = StringIO.StringIO(image)
+    image = six.BytesIO(image)
     try:
       return Image.open(image)
     except IOError:
 
       raise apiproxy_errors.ApplicationError(
-          images_service_pb.ImagesServiceError.BAD_IMAGE_DATA)
+          images_service_pb2.ImagesServiceError.BAD_IMAGE_DATA)
 
   def _OpenBlob(self, blob_key):
     """Create an Image from the blob data read from blob_key."""
@@ -436,7 +399,7 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
 
       logging.exception('Blob with key %r does not exist', blob_key)
       raise apiproxy_errors.ApplicationError(
-          images_service_pb.ImagesServiceError.UNSPECIFIED_ERROR)
+          images_service_pb2.ImagesServiceError.UNSPECIFIED_ERROR)
 
     blobstore_storage = apiproxy_stub_map.apiproxy.GetStub('blobstore')
 
@@ -447,7 +410,7 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
       logging.exception('Could not get file for blob_key %r', blob_key)
 
       raise apiproxy_errors.ApplicationError(
-          images_service_pb.ImagesServiceError.BAD_IMAGE_DATA)
+          images_service_pb2.ImagesServiceError.BAD_IMAGE_DATA)
 
     try:
       return Image.open(blob_file)
@@ -456,7 +419,7 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
                         blob_file, blob_key)
 
       raise apiproxy_errors.ApplicationError(
-          images_service_pb.ImagesServiceError.BAD_IMAGE_DATA)
+          images_service_pb2.ImagesServiceError.BAD_IMAGE_DATA)
 
   def _ValidateCropArg(self, arg):
     """Check an argument for the Crop transform.
@@ -469,11 +432,11 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
     """
     if not isinstance(arg, float):
       raise apiproxy_errors.ApplicationError(
-          images_service_pb.ImagesServiceError.BAD_TRANSFORM_DATA)
+          images_service_pb2.ImagesServiceError.BAD_TRANSFORM_DATA)
 
     if 0 > arg or arg > 1.0:
       raise apiproxy_errors.ApplicationError(
-          images_service_pb.ImagesServiceError.BAD_TRANSFORM_DATA)
+          images_service_pb2.ImagesServiceError.BAD_TRANSFORM_DATA)
 
   def _CalculateNewDimensions(self,
                               current_width,
@@ -513,7 +476,7 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
 
       if not req_width or not req_height:
         raise apiproxy_errors.ApplicationError(
-            images_service_pb.ImagesServiceError.BAD_TRANSFORM_DATA)
+            images_service_pb2.ImagesServiceError.BAD_TRANSFORM_DATA)
       if not allow_stretch:
         if width_ratio > height_ratio:
           height = int(width_ratio * current_height)
@@ -536,7 +499,7 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
 
     Args:
       image: PIL.Image.Image object to resize.
-      transform: images_service_pb.Transform to use when resizing.
+      transform: images_service_pb2.Transform to use when resizing.
 
     Returns:
       PIL.Image.Image with transforms performed on it.
@@ -547,30 +510,30 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
     width = 0
     height = 0
 
-    if transform.has_width():
-      width = transform.width()
+    if transform.HasField('width'):
+      width = transform.width
       if width < 0 or 4000 < width:
         raise apiproxy_errors.ApplicationError(
-            images_service_pb.ImagesServiceError.BAD_TRANSFORM_DATA)
+            images_service_pb2.ImagesServiceError.BAD_TRANSFORM_DATA)
 
-    if transform.has_height():
-      height = transform.height()
+    if transform.HasField('height'):
+      height = transform.height
       if height < 0 or 4000 < height:
         raise apiproxy_errors.ApplicationError(
-            images_service_pb.ImagesServiceError.BAD_TRANSFORM_DATA)
+            images_service_pb2.ImagesServiceError.BAD_TRANSFORM_DATA)
 
-    crop_to_fit = transform.crop_to_fit()
-    allow_stretch = transform.allow_stretch()
+    crop_to_fit = transform.crop_to_fit
+    allow_stretch = transform.allow_stretch
 
     current_width, current_height = image.size
     new_width, new_height = self._CalculateNewDimensions(
         current_width, current_height, width, height, crop_to_fit,
         allow_stretch)
-    new_image = image.resize((new_width, new_height), Image.ANTIALIAS)
+    new_image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
     if crop_to_fit and (new_width > width or new_height > height):
 
-      left = int((new_width - width) * transform.crop_offset_x())
-      top = int((new_height - height) * transform.crop_offset_y())
+      left = int((new_width - width) * transform.crop_offset_x)
+      top = int((new_height - height) * transform.crop_offset_y)
       right = left + width
       bottom = top + height
       new_image = new_image.crop((left, top, right, bottom))
@@ -582,7 +545,7 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
 
     Args:
       image: PIL.Image.Image object to rotate.
-      transform: images_service_pb.Transform to use when rotating.
+      transform: images_service_pb2.Transform to use when rotating.
 
     Returns:
       PIL.Image.Image with transforms performed on it.
@@ -590,10 +553,10 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
     Raises:
       ApplicationError: Given data for the rotate was bad.
     """
-    degrees = transform.rotate()
+    degrees = transform.rotate
     if degrees < 0 or degrees % 90 != 0:
       raise apiproxy_errors.ApplicationError(
-          images_service_pb.ImagesServiceError.BAD_TRANSFORM_DATA)
+          images_service_pb2.ImagesServiceError.BAD_TRANSFORM_DATA)
     degrees %= 360
 
 
@@ -605,7 +568,7 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
 
     Args:
       image: PIL.Image.Image object to crop.
-      transform: images_service_pb.Transform to use when cropping.
+      transform: images_service_pb2.Transform to use when cropping.
 
     Returns:
       PIL.Image.Image with transforms performed on it.
@@ -618,20 +581,20 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
     right_x = 1.0
     bottom_y = 1.0
 
-    if transform.has_crop_left_x():
-      left_x = transform.crop_left_x()
+    if transform.HasField('crop_left_x'):
+      left_x = transform.crop_left_x
       self._ValidateCropArg(left_x)
 
-    if transform.has_crop_top_y():
-      top_y = transform.crop_top_y()
+    if transform.HasField('crop_top_y'):
+      top_y = transform.crop_top_y
       self._ValidateCropArg(top_y)
 
-    if transform.has_crop_right_x():
-      right_x = transform.crop_right_x()
+    if transform.HasField('crop_right_x'):
+      right_x = transform.crop_right_x
       self._ValidateCropArg(right_x)
 
-    if transform.has_crop_bottom_y():
-      bottom_y = transform.crop_bottom_y()
+    if transform.HasField('crop_bottom_y'):
+      bottom_y = transform.crop_bottom_y
       self._ValidateCropArg(bottom_y)
 
 
@@ -695,7 +658,7 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
       """Convert time in EXIF to unix time.
 
       Args:
-        exif_time: str - Time from the EXIF block formated by EXIF standard.
+        exif_time: str - Time from the EXIF block formatted by EXIF standard.
             Seconds are optional.  (Example: '2011:02:20 10:23:12')
 
       Returns:
@@ -705,7 +668,8 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
       if not match:
         return None
       try:
-        date = datetime.datetime(*map(int, filter(None, match.groups())))
+        pieces = [int(g) for g in match.groups() if g]
+        date = datetime.datetime(*pieces)
       except ValueError:
         logging.info('Invalid date in EXIF: %s', exif_time)
         return None
@@ -724,10 +688,10 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
         metadata_dict[_EXIF_DATETIMEORIGINAL_TAG] = date_ms
       else:
         del metadata_dict[_EXIF_DATETIMEORIGINAL_TAG]
-    metadata = dict(
-        [(_EXIF_TAGS[k], v) for k, v in metadata_dict.iteritems()
-         if k in _EXIF_TAGS])
-    return simplejson.dumps(metadata)
+    metadata = dict([(_EXIF_TAGS[k], v)
+                     for k, v in six.iteritems(metadata_dict)
+                     if k in _EXIF_TAGS])
+    return json.dumps(metadata)
 
   def _CorrectOrientation(self, image, orientation):
     """Use PIL to correct the image orientation based on its EXIF.
@@ -747,18 +711,18 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
 
 
     if orientation == 2:
-      image = image.transpose(Image.FLIP_LEFT_RIGHT)
+      image = image.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
     elif orientation == 3:
       image = image.rotate(180)
     elif orientation == 4:
-      image = image.transpose(Image.FLIP_TOP_BOTTOM)
+      image = image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
     elif orientation == 5:
-      image = image.transpose(Image.FLIP_TOP_BOTTOM)
+      image = image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
       image = image.rotate(270)
     elif orientation == 6:
       image = image.rotate(270)
     elif orientation == 7:
-      image = image.transpose(Image.FLIP_LEFT_RIGHT)
+      image = image.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
       image = image.rotate(270)
     elif orientation == 8:
       image = image.rotate(90)
@@ -782,7 +746,7 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
     new_image = image
     if len(transforms) > images.MAX_TRANSFORMS_PER_REQUEST:
       raise apiproxy_errors.ApplicationError(
-          images_service_pb.ImagesServiceError.BAD_TRANSFORM_DATA)
+          images_service_pb2.ImagesServiceError.BAD_TRANSFORM_DATA)
 
     orientation = 1
     if correct_orientation:
@@ -806,46 +770,45 @@ class ImagesServiceStub(apiproxy_stub.APIProxyStub):
 
 
 
-      if (correct_orientation and
-          not (transform.has_crop_left_x() or
-               transform.has_crop_top_y() or
-               transform.has_crop_right_x() or
-               transform.has_crop_bottom_y()) and
-          not transform.has_horizontal_flip() and
-          not transform.has_vertical_flip()):
+      if (correct_orientation and not (transform.HasField('crop_left_x') or
+                                       transform.HasField('crop_top_y') or
+                                       transform.HasField('crop_right_x') or
+                                       transform.HasField('crop_bottom_y')) and
+          not transform.HasField('horizontal_flip') and
+          not transform.HasField('vertical_flip')):
         new_image = self._CorrectOrientation(new_image, orientation)
         correct_orientation = False
 
-      if transform.has_width() or transform.has_height():
+      if transform.HasField('width') or transform.HasField('height'):
 
         new_image = self._Resize(new_image, transform)
 
-      elif transform.has_rotate():
+      elif transform.HasField('rotate'):
 
         new_image = self._Rotate(new_image, transform)
 
-      elif transform.has_horizontal_flip():
+      elif transform.HasField('horizontal_flip'):
 
-        new_image = new_image.transpose(Image.FLIP_LEFT_RIGHT)
+        new_image = new_image.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
 
-      elif transform.has_vertical_flip():
+      elif transform.HasField('vertical_flip'):
 
-        new_image = new_image.transpose(Image.FLIP_TOP_BOTTOM)
+        new_image = new_image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
 
-      elif (transform.has_crop_left_x() or
-            transform.has_crop_top_y() or
-            transform.has_crop_right_x() or
-            transform.has_crop_bottom_y()):
+      elif (transform.HasField('crop_left_x') or
+            transform.HasField('crop_top_y') or
+            transform.HasField('crop_right_x') or
+            transform.HasField('crop_bottom_y')):
 
         new_image = self._Crop(new_image, transform)
 
-      elif transform.has_autolevels():
+      elif transform.HasField('autolevels'):
 
 
         logging.info('I\'m Feeling Lucky autolevels will be visible once this '
                      'application is deployed.')
       else:
-        logging.warn('Found no transformations found to perform.')
+        logging.warning('Found no transformations found to perform.')
 
       if correct_orientation:
 

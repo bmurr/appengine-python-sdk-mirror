@@ -17,8 +17,6 @@
 
 
 
-
-
 """The Python datastore admin API for managing indices and schemas.
 """
 
@@ -29,33 +27,12 @@
 
 
 
-import os
-from types import MethodType
-
-
-if os.environ.get('APPENGINE_RUNTIME') == 'python27':
-  from google.appengine.api import api_base_pb
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_types
-  from google.appengine.datastore import datastore_pb
-  from google.appengine.runtime import apiproxy_errors
-else:
-  from google.appengine.api import api_base_pb
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_types
-  from google.appengine.datastore import datastore_pb
-  from google.appengine.runtime import apiproxy_errors
-
-
-
-def _StringProtoAppIdGet(self):
-  return self.value()
-
-
-def _StringProtoAppIdSet(self, app_id):
-  return self.set_value(app_id)
+from google.appengine.api import api_base_pb2
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import datastore
+from google.appengine.api import datastore_types
+from google.appengine.datastore import datastore_pb
+from google.appengine.runtime import apiproxy_errors
 
 
 def GetIndices(_app=None):
@@ -68,21 +45,11 @@ def GetIndices(_app=None):
 
   resolved_app_id = datastore_types.ResolveAppId(_app)
 
-
-  if hasattr(datastore_pb, 'GetIndicesRequest'):
-    req = datastore_pb.GetIndicesRequest()
-    req.set_app_id(resolved_app_id)
-  else:
-
-
-    req = api_base_pb.StringProto()
-    req.app_id = MethodType(_StringProtoAppIdGet, req)
-    req.set_app_id = MethodType(_StringProtoAppIdSet, req)
-    req.set_app_id(resolved_app_id)
-
+  req = datastore_pb.GetIndicesRequest()
+  req.app_id = resolved_app_id
   resp = datastore_pb.CompositeIndices()
   resp = _Call('GetIndices', req, resp)
-  return resp.index_list()
+  return resp.index
 
 
 def CreateIndex(index):
@@ -94,9 +61,9 @@ def CreateIndex(index):
   Returns:
     int, the id allocated to the index
   """
-  resp = api_base_pb.Integer64Proto()
+  resp = api_base_pb2.Integer64Proto()
   resp = _Call('CreateIndex', index, resp)
-  return resp.value()
+  return resp.value
 
 
 def UpdateIndex(index):
@@ -105,7 +72,7 @@ def UpdateIndex(index):
   Args:
     index: entity_pb.CompositeIndex
   """
-  _Call('UpdateIndex', index, api_base_pb.VoidProto())
+  _Call('UpdateIndex', index, api_base_pb2.VoidProto())
 
 
 def DeleteIndex(index):
@@ -114,7 +81,7 @@ def DeleteIndex(index):
   Args:
     index: entity_pb.CompositeIndex
   """
-  _Call('DeleteIndex', index, api_base_pb.VoidProto())
+  _Call('DeleteIndex', index, api_base_pb2.VoidProto())
 
 
 def _Call(call, req, resp):
@@ -127,7 +94,7 @@ def _Call(call, req, resp):
     resp: the response PB
   """
   if hasattr(req, 'app_id'):
-    req.set_app_id(datastore_types.ResolveAppId(req.app_id()))
+    req.app_id = datastore_types.ResolveAppId(req.app_id)
 
   try:
     result = apiproxy_stub_map.MakeSyncCall('datastore_v3', call, req, resp)

@@ -18,7 +18,7 @@
 
 from google.appengine.api import apiproxy_stub
 from google.appengine.api import request_info
-from google.appengine.api.modules import modules_service_pb
+from google.appengine.api.modules import modules_service_pb2
 from google.appengine.runtime import apiproxy_errors
 
 
@@ -34,16 +34,16 @@ class ModulesServiceStub(apiproxy_stub.APIProxyStub):
 
   def _GetModuleFromRequest(self, request, request_id):
     dispatcher = self.request_data.get_dispatcher()
-    if request.has_module():
-      module = request.module()
+    if request.HasField('module'):
+      module = request.module
     else:
       module = self.request_data.get_module(request_id)
     return module, dispatcher
 
   def _GetModuleAndVersionFromRequest(self, request, request_id):
     module, dispatcher = self._GetModuleFromRequest(request, request_id)
-    if request.has_version():
-      version = request.version()
+    if request.HasField('version'):
+      version = request.version
     else:
       version = self.request_data.get_version(request_id)
       if version not in dispatcher.get_versions(module):
@@ -53,50 +53,50 @@ class ModulesServiceStub(apiproxy_stub.APIProxyStub):
   def _Dynamic_GetModules(self, request, response, request_id):
     dispatcher = self.request_data.get_dispatcher()
     for module in dispatcher.get_module_names():
-      response.add_module(module)
+      response.module.append(module)
 
   def _Dynamic_GetVersions(self, request, response, request_id):
     module, dispatcher = self._GetModuleFromRequest(request, request_id)
     try:
       for version in dispatcher.get_versions(module):
-        response.add_version(version)
+        response.version.append(version)
     except request_info.ModuleDoesNotExistError:
       raise apiproxy_errors.ApplicationError(
-          modules_service_pb.ModulesServiceError.INVALID_MODULE)
+          modules_service_pb2.ModulesServiceError.INVALID_MODULE)
 
   def _Dynamic_GetDefaultVersion(self, request, response, request_id):
     module, dispatcher = self._GetModuleFromRequest(request, request_id)
     try:
-      response.set_version(dispatcher.get_default_version(module))
+      response.version = dispatcher.get_default_version(module)
     except request_info.ModuleDoesNotExistError:
       raise apiproxy_errors.ApplicationError(
-          modules_service_pb.ModulesServiceError.INVALID_MODULE)
+          modules_service_pb2.ModulesServiceError.INVALID_MODULE)
 
   def _Dynamic_GetNumInstances(self, request, response, request_id):
     try:
       module, version, dispatcher = self._GetModuleAndVersionFromRequest(
           request, request_id)
-      response.set_instances(dispatcher.get_num_instances(module, version))
+      response.instances = dispatcher.get_num_instances(module, version)
     except (request_info.ModuleDoesNotExistError,
             request_info.VersionDoesNotExistError,
             request_info.NotSupportedWithAutoScalingError):
       raise apiproxy_errors.ApplicationError(
-          modules_service_pb.ModulesServiceError.INVALID_VERSION)
+          modules_service_pb2.ModulesServiceError.INVALID_VERSION)
 
   def _Dynamic_SetNumInstances(self, request, response, request_id):
     try:
       module, version, dispatcher = self._GetModuleAndVersionFromRequest(
           request, request_id)
-      dispatcher.set_num_instances(module, version, request.instances())
+      dispatcher.set_num_instances(module, version, request.instances)
     except (request_info.ModuleDoesNotExistError,
             request_info.VersionDoesNotExistError,
             request_info.NotSupportedWithAutoScalingError):
       raise apiproxy_errors.ApplicationError(
-          modules_service_pb.ModulesServiceError.INVALID_VERSION)
+          modules_service_pb2.ModulesServiceError.INVALID_VERSION)
 
   def _Dynamic_StartModule(self, request, response, request_id):
-    module = request.module()
-    version = request.version()
+    module = request.module
+    version = request.version
     dispatcher = self.request_data.get_dispatcher()
     try:
       dispatcher.start_version(module, version)
@@ -104,10 +104,10 @@ class ModulesServiceStub(apiproxy_stub.APIProxyStub):
             request_info.VersionDoesNotExistError,
             request_info.NotSupportedWithAutoScalingError):
       raise apiproxy_errors.ApplicationError(
-          modules_service_pb.ModulesServiceError.INVALID_VERSION)
+          modules_service_pb2.ModulesServiceError.INVALID_VERSION)
     except request_info.VersionAlreadyStartedError:
       raise apiproxy_errors.ApplicationError(
-          modules_service_pb.ModulesServiceError.UNEXPECTED_STATE)
+          modules_service_pb2.ModulesServiceError.UNEXPECTED_STATE)
 
   def _Dynamic_StopModule(self, request, response, request_id):
     try:
@@ -118,24 +118,24 @@ class ModulesServiceStub(apiproxy_stub.APIProxyStub):
             request_info.VersionDoesNotExistError,
             request_info.NotSupportedWithAutoScalingError):
       raise apiproxy_errors.ApplicationError(
-          modules_service_pb.ModulesServiceError.INVALID_VERSION)
+          modules_service_pb2.ModulesServiceError.INVALID_VERSION)
     except request_info.VersionAlreadyStoppedError:
       raise apiproxy_errors.ApplicationError(
-          modules_service_pb.ModulesServiceError.UNEXPECTED_STATE)
+          modules_service_pb2.ModulesServiceError.UNEXPECTED_STATE)
 
   def _Dynamic_GetHostname(self, request, response, request_id):
-    if request.has_instance():
-      instance = request.instance()
+    if request.HasField('instance'):
+      instance = request.instance
     else:
       instance = None
     try:
       module, version, dispatcher = self._GetModuleAndVersionFromRequest(
           request, request_id)
-      response.set_hostname(dispatcher.get_hostname(module, version, instance))
+      response.hostname = dispatcher.get_hostname(module, version, instance)
     except (request_info.ModuleDoesNotExistError,
             request_info.VersionDoesNotExistError):
       raise apiproxy_errors.ApplicationError(
-          modules_service_pb.ModulesServiceError.INVALID_MODULE)
+          modules_service_pb2.ModulesServiceError.INVALID_MODULE)
     except request_info.InvalidInstanceIdError:
       raise apiproxy_errors.ApplicationError(
-          modules_service_pb.ModulesServiceError.INVALID_INSTANCES)
+          modules_service_pb2.ModulesServiceError.INVALID_INSTANCES)

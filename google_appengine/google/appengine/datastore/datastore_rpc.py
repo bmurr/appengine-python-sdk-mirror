@@ -14,22 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-
 """Asynchronous datastore API.
 
 This is designed to be the lowest-level API to be used by all Python
 datastore client libraries.
 """
-
-
-
-
-
-
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 
 
 __all__ = ['AbstractAdapter',
@@ -54,20 +43,20 @@ import functools
 import logging
 import os
 
-
-from google.appengine.datastore import entity_pb
-from google.appengine._internal import six_subset
-
-
-from google.appengine.api import api_base_pb
+from google.appengine.api import api_base_pb2
 from google.appengine.api import apiproxy_rpc
+from google.appengine.api import apiproxy_stub
 from google.appengine.api import apiproxy_stub_map
-
 from google.appengine.api import datastore_errors
 from google.appengine.api import datastore_types
+from google.appengine.api import full_app_id
 from google.appengine.datastore import datastore_pb
 from google.appengine.datastore import datastore_pbs
 from google.appengine.runtime import apiproxy_errors
+import six
+
+from google.appengine.datastore import entity_bytes_pb2 as entity_pb2
+
 
 _CLOUD_DATASTORE_ENABLED = datastore_pbs._CLOUD_DATASTORE_ENABLED
 if _CLOUD_DATASTORE_ENABLED:
@@ -153,22 +142,22 @@ class AbstractAdapter(object):
     return self._query_converter
 
   def pb_to_key(self, pb):
-    """Turn an entity_pb.Reference into a user-level key."""
+    """Turn an entity_pb2.Reference into a user-level key."""
     raise NotImplementedError
 
   def pb_v1_to_key(self, pb):
     """Turn an googledatastore.Key into a user-level key."""
-    v3_ref = entity_pb.Reference()
+    v3_ref = entity_pb2.Reference()
     self._entity_converter.v1_to_v3_reference(pb, v3_ref)
     return self.pb_to_key(v3_ref)
 
   def pb_to_entity(self, pb):
-    """Turn an entity_pb.EntityProto into a user-level entity."""
+    """Turn an entity_pb2.EntityProto into a user-level entity."""
     raise NotImplementedError
 
   def pb_v1_to_entity(self, pb, is_projection):
     """Turn an googledatastore.Entity into a user-level entity."""
-    v3_entity = entity_pb.EntityProto()
+    v3_entity = entity_pb2.EntityProto()
     self._entity_converter.v1_to_v3_entity(pb, v3_entity, is_projection)
     return self.pb_to_entity(v3_entity)
 
@@ -180,19 +169,18 @@ class AbstractAdapter(object):
       return self.pb_v1_to_entity(pb, bool(query_options.projection))
 
   def pb_to_index(self, pb):
-    """Turn an entity_pb.CompositeIndex into a user-level Index
-    representation."""
+    """Turn an entity_pb2.CompositeIndex into a user-level Index representation."""
     raise NotImplementedError
 
   def pb_to_query_result(self, pb, query_options):
-    """Turn an entity_pb.EntityProto into a user-level query result."""
+    """Turn an entity_pb2.EntityProto into a user-level query result."""
     if query_options.keys_only:
-      return self.pb_to_key(pb.key())
+      return self.pb_to_key(pb.key)
     else:
       return self.pb_to_entity(pb)
 
   def key_to_pb(self, key):
-    """Turn a user-level key into an entity_pb.Reference."""
+    """Turn a user-level key into an entity_pb2.Reference."""
     raise NotImplementedError
 
   def key_to_pb_v1(self, key):
@@ -203,7 +191,7 @@ class AbstractAdapter(object):
     return v1_key
 
   def entity_to_pb(self, entity):
-    """Turn a user-level entity into an entity_pb.EntityProto."""
+    """Turn a user-level entity into an entity_pb2.EntityProto."""
     raise NotImplementedError
 
   def entity_to_pb_v1(self, entity):
@@ -214,12 +202,12 @@ class AbstractAdapter(object):
     return v1_entity
 
   def new_key_pb(self):
-    """Create a new, empty entity_pb.Reference."""
-    return entity_pb.Reference()
+    """Create a new, empty entity_pb2.Reference."""
+    return entity_pb2.Reference()
 
   def new_entity_pb(self):
-    """Create a new, empty entity_pb.EntityProto."""
-    return entity_pb.EntityProto()
+    """Create a new, empty entity_pb2.EntityProto."""
+    return entity_pb2.EntityProto()
 
 
 class IdentityAdapter(AbstractAdapter):
@@ -338,8 +326,7 @@ class _ConfigurationMetaClass(type):
 
 
 
-class BaseConfiguration(six_subset.with_metaclass(_ConfigurationMetaClass,
-                                                  object)):
+class BaseConfiguration(six.with_metaclass(_ConfigurationMetaClass, object)):
   """A base class for a configuration object.
 
   Subclasses should provide validation functions for every configuration option
@@ -656,7 +643,7 @@ class Configuration(BaseConfiguration):
     Raises:
       BadArgumentError if value is not a number or is less than zero.
     """
-    if not isinstance(value, six_subset.integer_types + (float,)):
+    if not isinstance(value, six.integer_types + (float,)):
       raise datastore_errors.BadArgumentError(
         'deadline argument should be int/long/float (%r)' % (value,))
     if value <= 0:
@@ -721,7 +708,7 @@ class Configuration(BaseConfiguration):
     rpc.  The optimal value for this property will be application-specific, so
     experimentation is encouraged.
     """
-    if not (isinstance(value, six_subset.integer_types) and value > 0):
+    if not (isinstance(value, six.integer_types) and value > 0):
       raise datastore_errors.BadArgumentError(
           'max_entity_groups_per_rpc should be a positive integer')
     return value
@@ -729,7 +716,7 @@ class Configuration(BaseConfiguration):
   @ConfigOption
   def max_allocate_ids_keys(value):
     """The maximum number of keys in a v1 AllocateIds rpc."""
-    if not (isinstance(value, six_subset.integer_types) and value > 0):
+    if not (isinstance(value, six.integer_types) and value > 0):
       raise datastore_errors.BadArgumentError(
           'max_allocate_ids_keys should be a positive integer')
     return value
@@ -737,7 +724,7 @@ class Configuration(BaseConfiguration):
   @ConfigOption
   def max_rpc_bytes(value):
     """The maximum serialized size of a Get/Put/Delete without batching."""
-    if not (isinstance(value, six_subset.integer_types) and value > 0):
+    if not (isinstance(value, six.integer_types) and value > 0):
       raise datastore_errors.BadArgumentError(
         'max_rpc_bytes should be a positive integer')
     return value
@@ -745,7 +732,7 @@ class Configuration(BaseConfiguration):
   @ConfigOption
   def max_get_keys(value):
     """The maximum number of keys in a Get without batching."""
-    if not (isinstance(value, six_subset.integer_types) and value > 0):
+    if not (isinstance(value, six.integer_types) and value > 0):
       raise datastore_errors.BadArgumentError(
         'max_get_keys should be a positive integer')
     return value
@@ -753,7 +740,7 @@ class Configuration(BaseConfiguration):
   @ConfigOption
   def max_put_entities(value):
     """The maximum number of entities in a Put without batching."""
-    if not (isinstance(value, six_subset.integer_types) and value > 0):
+    if not (isinstance(value, six.integer_types) and value > 0):
       raise datastore_errors.BadArgumentError(
         'max_put_entities should be a positive integer')
     return value
@@ -761,7 +748,7 @@ class Configuration(BaseConfiguration):
   @ConfigOption
   def max_delete_keys(value):
     """The maximum number of keys in a Delete without batching."""
-    if not (isinstance(value, six_subset.integer_types) and value > 0):
+    if not (isinstance(value, six.integer_types) and value > 0):
       raise datastore_errors.BadArgumentError(
         'max_delete_keys should be a positive integer')
     return value
@@ -784,8 +771,11 @@ class _NoopRPC(apiproxy_rpc.RPC):
     self._state = apiproxy_rpc.RPC.FINISHING
 
 
-class _NoopRPCStub(object):
+class _NoopRPCStub(apiproxy_stub.APIProxyStub):
   """An RPC stub which always creates a NoopRPC."""
+
+  def __init__(self):
+    pass
 
   def CreateRPC(self):
     return _NoopRPC()
@@ -1046,7 +1036,6 @@ class BaseConnection(object):
   """
 
   UNKNOWN_DATASTORE = 0
-  MASTER_SLAVE_DATASTORE = 1
   HIGH_REPLICATION_DATASTORE = 2
 
   __SUPPORTED_VERSIONS = frozenset((_DATASTORE_V3,
@@ -1268,17 +1257,17 @@ class BaseConnection(object):
     if read_policy is None:
       read_policy = self.__config.read_policy
 
-    if hasattr(request, 'set_failover_ms') and hasattr(request, 'strong'):
+    if hasattr(request, 'failover_ms') and hasattr(request, 'strong'):
 
       if read_policy == Configuration.APPLY_ALL_JOBS_CONSISTENCY:
-        request.set_strong(True)
+        request.strong = True
         return True
       elif read_policy == Configuration.EVENTUAL_CONSISTENCY:
-        request.set_strong(False)
+        request.strong = False
 
 
 
-        request.set_failover_ms(-1)
+        request.failover_ms = -1
         return False
       else:
         return None
@@ -1342,8 +1331,7 @@ class BaseConnection(object):
       rpc = config
     else:
       rpc = self._create_rpc(config, service_name)
-    rpc.make_call(six_subset.ensure_binary(method), request, response,
-                  get_result_hook, user_data)
+    rpc.make_call(method, request, response, get_result_hook, user_data)
     self._add_pending(rpc)
     return rpc
 
@@ -1403,7 +1391,7 @@ class BaseConnection(object):
     Supports both v3 and v1 protobufs.
 
     Args:
-      value: an entity_pb.{Reference, EntityProto} or
+      value: an entity_pb2.{Reference, EntityProto} or
           googledatastore.{Key, Entity}.
 
     Returns:
@@ -1413,18 +1401,18 @@ class BaseConnection(object):
     """
     if _CLOUD_DATASTORE_ENABLED and isinstance(value, googledatastore.Entity):
       value = value.key
-    if isinstance(value, entity_pb.EntityProto):
-      value = value.key()
+    if isinstance(value, entity_pb2.EntityProto):
+      value = value.key
     if _CLOUD_DATASTORE_ENABLED and isinstance(value, googledatastore.Key):
       elem = value.path[0]
       elem_id = elem.id
       elem_name = elem.name
       kind = elem.kind
     else:
-      elem = value.path().element(0)
-      kind = elem.type()
-      elem_id = elem.id()
-      elem_name = elem.name()
+      elem = value.path.element[0]
+      kind = elem.type
+      elem_id = elem.id
+      elem_name = elem.name
 
 
     return (kind, elem_id or elem_name or ('new', id(elem)))
@@ -1552,7 +1540,7 @@ class BaseConnection(object):
     if isinstance(req, (datastore_pb.PutRequest,
                         datastore_pb.TouchRequest,
                         datastore_pb.DeleteRequest)):
-      req.set_force(True)
+      req.force = True
 
   def get(self, keys):
     """Synchronous Get operation.
@@ -1589,7 +1577,7 @@ class BaseConnection(object):
         resp = googledatastore.LookupResponse()
       else:
         method = 'Get'
-        req.key_list().extend(pbs)
+        req.key.extend(pbs)
         resp = datastore_pb.GetResponse()
 
 
@@ -1609,7 +1597,7 @@ class BaseConnection(object):
       key_to_pb = self.__adapter.key_to_pb_v1
     else:
       base_req = datastore_pb.GetRequest()
-      base_req.set_allow_deferred(True)
+      base_req.allow_deferred = True
       key_to_pb = self.__adapter.key_to_pb
     is_read_current = self._set_request_read_policy(base_req, config)
     txn = self._set_request_transaction(base_req)
@@ -1657,13 +1645,13 @@ class BaseConnection(object):
 
     config, keys_from_request, extra_hook = rpc.user_data
 
-    if self._api_version == _DATASTORE_V3 and rpc.response.in_order():
+    if self._api_version == _DATASTORE_V3 and rpc.response.in_order:
 
 
       entities = []
-      for entity_result in rpc.response.entity_list():
-        if entity_result.has_entity():
-          entity = self.__adapter.pb_to_entity(entity_result.entity())
+      for entity_result in rpc.response.entity:
+        if entity_result.HasField('entity'):
+          entity = self.__adapter.pb_to_entity(entity_result.entity)
         else:
           entity = None
         entities.append(entity)
@@ -1695,10 +1683,11 @@ class BaseConnection(object):
                                                    result_dict)
       else:
         method = 'Get'
-        while current_get_response.deferred_list():
-          deferred_req.clear_key()
-          deferred_req.key_list().extend(current_get_response.deferred_list())
-          deferred_resp = datastore_pb.GetResponse()
+        deferred_resp = datastore_pb.GetResponse()
+        while current_get_response.deferred:
+          deferred_req.ClearField('key')
+          deferred_req.key.extend(current_get_response.deferred)
+          deferred_resp.Clear()
           deferred_rpc = self._make_rpc_call(config, method,
                                              deferred_req, deferred_resp,
                                              service_name=self._api_version)
@@ -1740,16 +1729,16 @@ class BaseConnection(object):
         entity = self.__adapter.pb_v1_to_entity(result.entity, False)
         result_dict[datastore_types.ReferenceToKeyValue(v1_key)] = entity
     else:
-      for entity_result in get_response.entity_list():
+      for entity_result in get_response.entity:
 
-        if entity_result.has_entity():
-
-
+        if entity_result.HasField('entity'):
 
 
-          reference_pb = entity_result.entity().key()
+
+
+          reference_pb = entity_result.entity.key
           hashable_key = datastore_types.ReferenceToKeyValue(reference_pb)
-          entity = self.__adapter.pb_to_entity(entity_result.entity())
+          entity = self.__adapter.pb_to_entity(entity_result.entity)
           result_dict[hashable_key] = entity
 
   def get_indexes(self):
@@ -1772,7 +1761,7 @@ class BaseConnection(object):
       A MultiRpc object.
     """
     req = datastore_pb.GetIndicesRequest()
-    req.set_app_id(datastore_types.ResolveAppId(_app))
+    req.app_id = datastore_types.ResolveAppId(_app)
     resp = datastore_pb.CompositeIndices()
     return self._make_rpc_call(config, 'GetIndices', req, resp,
                                get_result_hook=self.__get_indexes_hook,
@@ -1782,8 +1771,9 @@ class BaseConnection(object):
   def __get_indexes_hook(self, rpc):
     """Internal method used as get_result_hook for Get operation."""
     self.check_rpc_success(rpc)
-    indexes = [self.__adapter.pb_to_index(index)
-               for index in rpc.response.index_list()]
+    indexes = [
+        self.__adapter.pb_to_index(index) for index in rpc.response.index
+    ]
     if rpc.user_data:
       indexes = rpc.user_data(indexes)
     return indexes
@@ -1829,7 +1819,7 @@ class BaseConnection(object):
         method = 'Commit'
         resp = googledatastore.CommitResponse()
       else:
-        req.entity_list().extend(pbs)
+        req.entity.extend(pbs)
         method = 'Put'
         resp = datastore_pb.PutResponse()
       user_data = pbs, user_data
@@ -1857,9 +1847,8 @@ class BaseConnection(object):
 
     max_count = (Configuration.max_put_entities(config, self.__config) or
                  self.MAX_PUT_ENTITIES)
-    if ((self._api_version == _CLOUD_DATASTORE_V1 and
-         not base_req.transaction) or
-        not base_req.has_transaction()):
+    if ((self._api_version == _CLOUD_DATASTORE_V1 and not base_req.transaction)
+        or not base_req.HasField('transaction')):
       max_egs_per_rpc = self.__get_max_entity_groups_per_rpc(config)
     else:
       max_egs_per_rpc = None
@@ -1896,7 +1885,7 @@ class BaseConnection(object):
           i += 1
       keys = [self.__adapter.pb_v1_to_key(key) for key in keys]
     else:
-      keys = [self.__adapter.pb_to_key(key) for key in rpc.response.key_list()]
+      keys = [self.__adapter.pb_to_key(key) for key in rpc.response.key]
 
 
 
@@ -1937,7 +1926,7 @@ class BaseConnection(object):
         method = 'Commit'
         resp = googledatastore.CommitResponse()
       else:
-        req.key_list().extend(pbs)
+        req.key.extend(pbs)
         method = 'Delete'
         resp = datastore_pb.DeleteResponse()
       return self._make_rpc_call(config, method, req, resp,
@@ -1964,9 +1953,8 @@ class BaseConnection(object):
 
     max_count = (Configuration.max_delete_keys(config, self.__config) or
                  self.MAX_DELETE_KEYS)
-    if ((self._api_version == _CLOUD_DATASTORE_V1 and
-         not base_req.transaction) or
-        not base_req.has_transaction()):
+    if ((self._api_version == _CLOUD_DATASTORE_V1 and not base_req.transaction)
+        or not base_req.HasField('transaction')):
       max_egs_per_rpc = self.__get_max_entity_groups_per_rpc(config)
     else:
       max_egs_per_rpc = None
@@ -2032,7 +2020,7 @@ class BaseConnection(object):
     Returns:
       A MultiRpc object.
     """
-    if not isinstance(app, six_subset.string_types) or not app:
+    if not isinstance(app, (six.text_type, six.binary_type)) or not app:
       raise datastore_errors.BadArgumentError(
           'begin_transaction requires an application id argument (%r)' % (app,))
 
@@ -2062,19 +2050,19 @@ class BaseConnection(object):
           req.transaction_options.read_write.SetInParent()
     else:
       req = datastore_pb.BeginTransactionRequest()
-      req.set_app(app)
+      req.app = app
       if (TransactionOptions.xg(config, self.__config)):
-        req.set_allow_multiple_eg(True)
+        req.allow_multiple_eg = True
 
       if mode == TransactionMode.UNKNOWN:
         pass
       elif mode == TransactionMode.READ_ONLY:
-        req.set_mode(datastore_pb.BeginTransactionRequest.READ_ONLY)
+        req.mode = datastore_pb.BeginTransactionRequest.READ_ONLY
       elif mode == TransactionMode.READ_WRITE:
-        req.set_mode(datastore_pb.BeginTransactionRequest.READ_WRITE)
+        req.mode = datastore_pb.BeginTransactionRequest.READ_WRITE
 
       if previous_transaction is not None:
-        req.mutable_previous_transaction().CopyFrom(previous_transaction)
+        req.previous_transaction.CopyFrom(previous_transaction)
       resp = datastore_pb.Transaction()
 
     return self._make_rpc_call(config, 'BeginTransaction', req, resp,
@@ -2172,7 +2160,7 @@ class Connection(BaseConnection):
       if max is not None:
         raise datastore_errors.BadArgumentError(
           'Cannot allocate ids using both size and max')
-      if not isinstance(size, six_subset.integer_types):
+      if not isinstance(size, six.integer_types):
         raise datastore_errors.BadArgumentError('Invalid size (%r)' % (size,))
       if size > _MAX_ID_BATCH_SIZE:
         raise datastore_errors.BadArgumentError(
@@ -2182,18 +2170,18 @@ class Connection(BaseConnection):
         raise datastore_errors.BadArgumentError(
           'Cannot allocate less than 1 id; received %s' % size)
     if max is not None:
-      if not isinstance(max, six_subset.integer_types):
+      if not isinstance(max, six.integer_types):
         raise datastore_errors.BadArgumentError('Invalid max (%r)' % (max,))
       if max < 0:
         raise datastore_errors.BadArgumentError(
           'Cannot allocate a range with a max less than 0 id; received %s' %
           size)
     req = datastore_pb.AllocateIdsRequest()
-    req.mutable_model_key().CopyFrom(self.__adapter.key_to_pb(key))
+    req.model_key.CopyFrom(self.__adapter.key_to_pb(key))
     if size is not None:
-      req.set_size(size)
+      req.size = size
     if max is not None:
-      req.set_max(max)
+      req.max = max
     resp = datastore_pb.AllocateIdsResponse()
     rpc = self._make_rpc_call(config, 'AllocateIds', req, resp,
                               get_result_hook=self.__allocate_ids_hook,
@@ -2204,7 +2192,7 @@ class Connection(BaseConnection):
   def __allocate_ids_hook(self, rpc):
     """Internal method used as get_result_hook for AllocateIds."""
     self.check_rpc_success(rpc)
-    pair = rpc.response.start(), rpc.response.end()
+    pair = rpc.response.start, rpc.response.end
     if rpc.user_data is not None:
       pair = rpc.user_data(pair)
     return pair
@@ -2237,7 +2225,7 @@ class Connection(BaseConnection):
       None, or the result of user-supplied extra_hook.
     """
     def to_id_key(key):
-      if key.path().element_size() == 1:
+      if len(key.path.element) == 1:
         return 'root_idkey'
       else:
         return self._extract_entity_group(key)
@@ -2251,7 +2239,7 @@ class Connection(BaseConnection):
     pbsgen = self._generate_pb_lists(keys_by_idkey, 0, max_count, None, config)
     for pbs, _ in pbsgen:
       req = datastore_pb.AllocateIdsRequest()
-      req.reserve_list().extend(pbs)
+      req.reserve.extend(pbs)
       resp = datastore_pb.AllocateIdsResponse()
       rpcs.append(self._make_rpc_call(config, 'AllocateIds', req, resp,
                                       get_result_hook=self.__reserve_keys_hook,
@@ -2402,7 +2390,7 @@ class TransactionalConnection(BaseConnection):
           None, app, previous_transaction, mode)
     else:
       if self._api_version == _CLOUD_DATASTORE_V1:
-        txn_class = six_subset.binary_type
+        txn_class = six.binary_type
       else:
         txn_class = datastore_pb.Transaction
       if not isinstance(transaction, txn_class):
@@ -2464,7 +2452,7 @@ class TransactionalConnection(BaseConnection):
                          type(request))
       request.read_options.transaction = transaction
     else:
-      request.mutable_transaction().CopyFrom(transaction)
+      request.transaction.CopyFrom(transaction)
     return transaction
 
 
@@ -2719,7 +2707,7 @@ class TransactionalConnection(BaseConnection):
       resp = googledatastore.RollbackResponse()
     else:
       req = transaction
-      resp = api_base_pb.VoidProto()
+      resp = api_base_pb2.VoidProto()
 
     return self._make_rpc_call(config, 'Rollback', req, resp,
                                get_result_hook=self.__rollback_hook,
@@ -2754,7 +2742,7 @@ def _CreateDefaultConnection(connection_fn, **kwargs):
     ValueError: If DATASTORE_PROJECT_ID is set but DATASTORE_APP_ID or
        DATASTORE_USE_PROJECT_ID_AS_APP_ID is not. If DATASTORE_APP_ID doesn't
        resolve to DATASTORE_PROJECT_ID. If DATASTORE_APP_ID doesn't match
-       an existing APPLICATION_ID.
+       an existing application ID.
 
   Returns:
     the connection object returned from connection_fn.
@@ -2823,7 +2811,7 @@ def _CreateCloudDatastoreConnection(connection_fn,
 
   Raises:
     ValueError: if the app_id provided doesn't match the current environment's
-        APPLICATION_ID.
+        application ID.
 
   Returns:
     An ndb.Context that can connect to a Remote Cloud Datastore. You can use
@@ -2837,14 +2825,14 @@ def _CreateCloudDatastoreConnection(connection_fn,
     raise datastore_errors.BadArgumentError(
         datastore_pbs.MISSING_CLOUD_DATASTORE_MESSAGE)
 
-  current_app_id = os.environ.get('APPLICATION_ID', None)
+  current_app_id = full_app_id.get()
   if current_app_id and current_app_id != app_id:
 
 
     raise ValueError('Cannot create a Cloud Datastore context that connects '
                      'to an application (%s) that differs from the application '
                      'already connected to (%s).' % (app_id, current_app_id))
-  os.environ['APPLICATION_ID'] = app_id
+  full_app_id.put(app_id)
 
   id_resolver = datastore_pbs.IdResolver((app_id,) + tuple(external_app_ids))
   project_id = id_resolver.resolve_project_id(app_id)
@@ -2879,8 +2867,11 @@ def _CreateCloudDatastoreConnection(connection_fn,
   return conn
 
 
-class _ThrowingStub(object):
+class _ThrowingStub(apiproxy_stub.APIProxyStub):
   """A Stub implementation which always throws a NotImplementedError."""
+
+  def __init__(self):
+    pass
 
 
   def MakeSyncCall(self, service, call, request, response):

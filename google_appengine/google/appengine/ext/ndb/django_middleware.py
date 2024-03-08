@@ -1,5 +1,6 @@
+#!/usr/bin/env python
 #
-# Copyright 2008 The ndb Authors. All Rights Reserved.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +13,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 """Django middleware for NDB."""
 
-__author__ = 'James A. Morrison'
 
-from . import eventloop, tasklets
+
+from google.appengine.ext.ndb import eventloop, tasklets
 
 
 class NdbDjangoMiddleware(object):
@@ -41,19 +56,19 @@ class NdbDjangoMiddleware(object):
 
   def process_request(self, unused_request):
     """Called by Django before deciding which view to execute."""
-    # Compare to the first half of toplevel() in context.py.
+
     tasklets._state.clear_all_pending()
-    # Create and install a new context.
+
     ctx = tasklets.make_default_context()
     tasklets.set_context(ctx)
 
   @staticmethod
   def _finish():
-    # Compare to the finally clause in toplevel() in context.py.
+
     ctx = tasklets.get_context()
     tasklets.set_context(None)
     ctx.flush().check_success()
-    eventloop.run()  # Ensure writes are flushed, etc.
+    eventloop.run()
 
   def process_response(self, request, response):
     """Called by Django just before returning a response."""

@@ -591,7 +591,7 @@ class NameSpacePackager(object):
         if ep not in [True, 1]:
             if '=' in ep:
                 # full specification of the entry point like
-                # entry_points=['yaml = google.appengine._internal.ruamel.yaml.cmd:main'],
+                # entry_points=['yaml = ruamel.yaml.cmd:main'],
                 return {'console_scripts': [ep]}
             # assume that it is just the script name
             script_name = ep

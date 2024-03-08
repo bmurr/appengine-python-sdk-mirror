@@ -82,8 +82,7 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
     - Call SetPython27RuntimePath with the path to the executable.
 
   When running the python3 runtime as an executable the behavior is
-  specified in the applications configuration (app.yaml file. See
-  _is_modern).
+  specified in the applications configuration (app.yaml file.).
   """
   START_URL_MAP = appinfo.URLMap(
       url='/_ah/start',
@@ -95,15 +94,6 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
       login='admin')
   SUPPORTS_INTERACTIVE_REQUESTS = True
   FILE_CHANGE_INSTANCE_RESTART_POLICY = instance.AFTER_FIRST_REQUEST
-
-  _python27_runtime_path = os.path.abspath(
-      os.path.join(os.path.dirname(sys.argv[0]), '_python_runtime.py'))
-  _python27_runtime_is_executable = False
-
-  @classmethod
-  def SetPython27RuntimeIsExecutable(cls, value):
-    """Sets if the Python27Runtime is executable."""
-    PythonRuntimeInstanceFactory._python27_runtime_is_executable = value
 
   _runtime_python_path = {}
   _virtualenv_python_path = None
@@ -122,25 +112,6 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
     """Set the per runtime path to the Python interpreter."""
     PythonRuntimeInstanceFactory._runtime_python_path = runtime_python_path
 
-  @classmethod
-  def SetPython27RuntimePath(cls, path):
-    """Set path to the python 27 runtime."""
-    PythonRuntimeInstanceFactory._python27_runtime_path = path
-
-  def GetPython27RuntimeArgs(self):
-    """Get subprocess args for a python27 instance."""
-    if PythonRuntimeInstanceFactory._python27_runtime_is_executable:
-      return [PythonRuntimeInstanceFactory._python27_runtime_path]
-    else:
-      return [
-          self._GetPythonInterpreterPath(),
-          PythonRuntimeInstanceFactory._python27_runtime_path
-      ]
-
-  def _is_modern(self):
-    return six.ensure_str(
-        self._module_configuration.runtime).startswith('python3')
-
   def _GetPythonInterpreterPath(self):
     """Returns the python interpreter path for the current runtime."""
     runtime = self._module_configuration.runtime
@@ -149,10 +120,10 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
       return runtime_python_path
     elif runtime_python_path and runtime in runtime_python_path:
       return runtime_python_path[runtime]
-    elif self._is_modern():
-      return 'python3'
-    else:
+    elif hasattr(sys, 'executable') and sys.executable:
       return sys.executable
+    else:
+      return 'python' if hasattr(sys, 'getwindowsversion') else 'python3'
 
   def _CheckPythonExecutable(self):
     python_interpreter_path = self._GetPythonInterpreterPath()
@@ -169,33 +140,6 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
           'Could not a python executable at "%s". Please verify that your '
           'python installation, PATH and --runtime_python_path are correct.'
           % python_interpreter_path)
-
-  def _IsPythonExecutableBefore36(self):
-    try:
-      python_version_str = str(
-          subprocess.check_output(
-              [self._GetPythonInterpreterPath(), '--version']
-          )
-      )
-    except OSError:  # If python3 is not found, an OSError would be raised.
-      logging.warning(
-          'Failed getting python3 version assuming pre 3.6 version.')
-      return True
-
-    # TODO: Use 'from packaging import version' under python3.
-    # See https://stackoverflow.com/questions/11887762
-    strip_prefix = 'Python '
-    if python_version_str.startswith(strip_prefix):
-      python_version_str = python_version_str[len(strip_prefix):]
-    python_version_str = python_version_str.strip()
-
-    # Note, 'from distutils import version as version_util' causes
-    # import errors in tests.
-    before_prefixes = ['2.', '3.0.', '3.1.', '3.2.', '3.3.' '3.4.', '3.5.']
-    for before_prefix in before_prefixes:
-      if python_version_str.startswith(before_prefix):
-        return True
-    return False
 
   def __init__(self, request_data, runtime_config_getter, module_configuration):
     """Initializer for PythonRuntimeInstanceFactory.
@@ -216,9 +160,8 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
     self._runtime_config_getter = runtime_config_getter
     self._module_configuration = module_configuration
     self._venv_dir = ''
-    if self._is_modern():
-      self._CheckPythonExecutable()
-      self._SetupVirtualenvFromConfiguration()
+    self._CheckPythonExecutable()
+    self._SetupVirtualenvFromConfiguration()
 
   def __del__(self):
     self._CleanUpVenv(self._venv_dir)
@@ -302,20 +245,20 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
     Returns:
       A bool indicating whether dependency libraries changed.
     """
-    dep_libs_changed = None
-    if self._is_modern():
-      dep_libs_changed = next(
-          (x for x in file_changes
-           if six.ensure_str(x).endswith(_DEFAULT_REQUIREMENT_FILE_NAME)), None)
-      if dep_libs_changed:
-        self._SetupVirtualenvFromConfiguration()
+    dep_libs_changed = next(
+        (
+            x
+            for x in file_changes
+            if six.ensure_str(x).endswith(_DEFAULT_REQUIREMENT_FILE_NAME)
+        ),
+        None,
+    )
+    if dep_libs_changed:
+      self._SetupVirtualenvFromConfiguration()
     return dep_libs_changed is not None
 
   def _GetRuntimeArgs(self):
-    if self._is_modern():
-      return (self._entrypoint or _MODERN_DEFAULT_ENTRYPOINT).split()
-    else:
-      return self.GetPython27RuntimeArgs()
+    return (self._entrypoint or _MODERN_DEFAULT_ENTRYPOINT).split()
 
   @classmethod
   def _WaitForProcWithLastLineStreamed(cls, proc, proc_stdout):
@@ -333,6 +276,9 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
     sys.stdout.write('\n')
     return proc.poll()
 
+  def _is_windows(self):
+    return hasattr(sys, 'getwindowsversion')
+
   def _RunPipInstall(self, venv_dir, requirements_file_name):
     """Run pip install inside a virtualenv, with decent stdout."""
     # Run pip install based on user supplied requirements.txt.
@@ -342,27 +288,30 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
         'to %s', pip_out.name)
 
     with open(pip_out.name, 'r') as pip_out_r:
-      pip_path = os.path.join(venv_dir, 'bin', 'pip')
+      venv_bin = os.path.join(venv_dir, 'bin')
+      if self._is_windows():
+        # On Windows, the virtual env directory is Scripts.
+        venv_bin = os.path.join(venv_dir, 'Scripts')
+      pip_path = os.path.join(venv_bin, 'pip')
+
       pip_env = os.environ.copy()
-      pip_env.update(
-          {
-              'VIRTUAL_ENV': venv_dir,
-              'PATH': ':'.join(
-                  [os.path.join(venv_dir, 'bin'), os.environ['PATH']])
-          }
-      )
+      pip_env.update({
+          'VIRTUAL_ENV': venv_dir,
+          'PATH': os.pathsep.join([venv_bin, os.environ['PATH']]),
+      })
 
       if self._module_configuration.build_env_variables:
         pip_env.update(self._module_configuration.build_env_variables)
 
-      pip_requirement = 'pip'
-      if self._IsPythonExecutableBefore36():
-        # Because pip 21.0.0 drops support for python 3.5
-        # as per https://pip.pypa.io/en/stable/news/
-        pip_requirement = 'pip<21'
-
-      for pip_cmd in [[pip_path, 'install', '--upgrade', pip_requirement],
-                      [pip_path, 'install', '-r', requirements_file_name]]:
+      pip_upgrade = (
+          ['python', '-m', 'pip', 'install', '--upgrade', 'pip']
+          if self._is_windows()
+          else [pip_path, 'install', '--upgrade', 'pip']
+      )
+      for pip_cmd in [
+          pip_upgrade,
+          [pip_path, 'install', '-r', requirements_file_name],
+      ]:
         cmd_str = ' '.join(pip_cmd)
         logging.info('Running %s', cmd_str)
         pip_proc = subprocess.Popen(pip_cmd, stdout=pip_out, env=pip_env)
@@ -393,31 +342,34 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
 
     # These env vars are used in subprocess to have the same effect as running
     # `source ${venv_dir}/bin/activate`
-    return {
-        'VIRTUAL_ENV': venv_dir,
-        'PATH': ':'.join(
-            [os.path.join(venv_dir, 'bin'), os.environ['PATH']])
-    }
+    if self._is_windows():
+      return {
+          'VIRTUAL_ENV': venv_dir,
+          'PATH': ';'.join(
+              [os.path.join(venv_dir, 'Scripts'), os.environ['PATH']]
+          ),
+      }
+    else:
+      return {
+          'VIRTUAL_ENV': venv_dir,
+          'PATH': ':'.join([os.path.join(venv_dir, 'bin'), os.environ['PATH']]),
+      }
 
   def _GetRuntimeEnvironmentVariables(self, instance_id=None):
     my_runtime_config = self._runtime_config_getter()
-    if self._is_modern():
-      res = {'PYTHONHASHSEED': 'random'}
-      res.update(self.get_modern_env_vars(instance_id))
-      res.update(self.venv_env_vars)
-      res['API_HOST'] = my_runtime_config.api_host
-      res['API_PORT'] = str(my_runtime_config.api_port)
-      res['GAE_APPLICATION'] = my_runtime_config.app_id
-    else:
-      # TODO: Do not pass os.environ to local python27 runtime.
-      res = dict(os.environ, PYTHONHASHSEED='random')
+    res = {'PYTHONHASHSEED': 'random'}
+    res.update(self.get_modern_env_vars(instance_id))
+    res.update(self.venv_env_vars)
+    res['API_HOST'] = my_runtime_config.api_host
+    res['API_PORT'] = str(my_runtime_config.api_port)
+    res['GAE_APPLICATION'] = six.ensure_str(my_runtime_config.app_id)
+
     for kv in my_runtime_config.environ:
       res[kv.key] = kv.value
     return res
 
   def _get_process_flavor(self):
-    return (http_runtime.START_PROCESS_WITH_ENTRYPOINT
-            if self._is_modern() else http_runtime.START_PROCESS_REVERSE)
+    return http_runtime.START_PROCESS_WITH_ENTRYPOINT
 
   def new_instance(self, instance_id, expect_ready_request=False):
     """Create and return a new Instance.
@@ -437,15 +389,14 @@ class PythonRuntimeInstanceFactory(instance.InstanceFactory,
       runtime_config.instance_id = str(instance_id)
       return runtime_config
 
-    request_id_hdr_name = (
-        _MODERN_REQUEST_ID_HEADER_NAME if self._is_modern() else None)
     proxy = http_runtime.HttpRuntimeProxy(
         self._GetRuntimeArgs(),
         instance_config_getter,
         self._module_configuration,
         env=self._GetRuntimeEnvironmentVariables(instance_id),
         start_process_flavor=self._get_process_flavor(),
-        request_id_header_name=request_id_hdr_name)
+        request_id_header_name=_MODERN_REQUEST_ID_HEADER_NAME,
+    )
     return instance.Instance(self.request_data,
                              instance_id,
                              proxy,

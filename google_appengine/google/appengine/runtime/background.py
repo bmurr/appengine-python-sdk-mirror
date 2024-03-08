@@ -26,12 +26,11 @@ request context and do not need to end before the creator request completes.
 
 import logging
 import sys
-import thread
 import threading
 import traceback
 
-from google.appengine.api.logservice import logservice
 from google.appengine.runtime import request_environment
+import six.moves._thread
 
 BACKGROUND_REQUEST_ID = 'HTTP_X_APPENGINE_BACKGROUNDREQUEST'
 
@@ -81,7 +80,7 @@ class _BackgroundRequest(object):
         kwargs: A dict of keyword args to be passed to target.
     """
     with self._ready_condition:
-      self._thread_id = thread.get_ident()
+      self._thread_id = six.moves._thread.get_ident()
       self._thread_id_ready = True
       self._ready_condition.notify()
       while not self._callable_ready:
@@ -150,6 +149,28 @@ def EnqueueBackgroundThread(request_id, target, args, kwargs):
       request_id, target, args, kwargs)
 
 
+def _HandleNoInit(environ):
+  """Handles a background request, skipping request initialization."""
+
+  try:
+    request_id = environ[BACKGROUND_REQUEST_ID]
+    _pending_background_threads.RunBackgroundThread(request_id)
+
+  except:
+    exception = sys.exc_info()
+
+
+    tb = exception[2].tb_next
+    if tb:
+      tb = tb.tb_next
+    message = ''.join(traceback.format_exception(exception[0], exception[1],
+                                                 tb))
+    logging.error(message)
+    return dict(error=1, response_code=500, message=message)
+
+  return dict(error=0, response_code=200, message='OK')
+
+
 def Handle(environ):
   """Handles a background request.
 
@@ -170,27 +191,21 @@ def Handle(environ):
           str.  Severity levels are 0..4 for Debug, Info, Warning, Error,
           Critical.
   """
-  error = logservice.LogsBuffer()
-  request_environment.current_request.Init(error, environ)
-  response = {'error': 0, 'response_code': 200}
+  request_environment.current_request.Init(sys.stderr, environ)
   try:
-    request_id = environ[BACKGROUND_REQUEST_ID]
-    _pending_background_threads.RunBackgroundThread(request_id)
-    return response
-
-  except:
-    exception = sys.exc_info()
-
-
-    tb = exception[2].tb_next
-    if tb:
-      tb = tb.tb_next
-    message = ''.join(traceback.format_exception(exception[0], exception[1],
-                                                 tb))
-    logging.error(message)
-    response['response_code'] = 500
-    response['error'] = 1
-    return response
+    response = _HandleNoInit(environ)
   finally:
     request_environment.current_request.Clear()
-    response['logs'] = error.parse_logs()
+  return response
+
+
+def App(environ, start_response):
+  """Present Handle() as a WSGI app for Titanoboa."""
+
+
+
+
+  response = _HandleNoInit(environ)
+  start_response(str(response['response_code']) + ' ' + response['message'],
+                 [('Content-Type', 'text/plain')])
+  yield str(response).encode()

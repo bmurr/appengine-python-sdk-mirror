@@ -16,8 +16,6 @@
 #
 """Convenience wrapper for starting an appengine tool."""
 
-
-
 import os
 import sys
 
@@ -33,9 +31,14 @@ try:
 finally:
   sys.path = sys_path
 
-PY2 = sys.version_info[0] == 2
+if sys.version_info[:2] < (3, 8):
+  print(
+      'Running %s requires python3.8 or later. Please upgrade '
+      'python and gcloud.'
+      % os.path.abspath(__file__)
+  )
+  sys.exit(1)
 
-wrapper_util.reject_old_python_versions((2, 7))
 
 _DIR_PATH = wrapper_util.get_dir_path(__file__, os.path.join('lib', 'ipaddr'))
 _PATHS = wrapper_util.Paths(_DIR_PATH)
@@ -47,14 +50,10 @@ _PATHS = wrapper_util.Paths(_DIR_PATH)
 EXTRA_PATHS = _PATHS.v2_extra_paths
 
 
-def fix_google_path(script_name=None):
+def fix_google_path():
   """Add SDK to 'google' module when preloaded (by setuptools .pth files)."""
   if 'google' in sys.modules:
-    if script_name == '_python_runtime.py':
-      google_path = os.path.join(
-          os.path.dirname(__file__), 'python27', 'sdk', 'google')
-    else:
-      google_path = os.path.join(os.path.dirname(__file__), 'google')
+    google_path = os.path.join(os.path.dirname(__file__), 'google')
 
     google_module = sys.modules['google']
     google_module.__path__.append(google_path)
@@ -79,10 +78,7 @@ def fix_sys_path(extra_extra_paths=()):
 
 
 def _execfile(fn, scope):
-  if PY2:
-    execfile(fn, scope)
-  else:
-    exec(open(fn).read(), scope)
+  exec(open(fn).read(), scope)
 
 
 def _run_file(file_path, globals_):
@@ -98,16 +94,10 @@ def _run_file(file_path, globals_):
   sys.path = (_PATHS.script_paths(script_name) +
               _PATHS.scrub_path(script_name, sys.path))
 
-  fix_google_path(script_name)
+  fix_google_path()
 
   _execfile(_PATHS.script_file(script_name), globals_)
 
 
 if __name__ == '__main__':
-
-  if wrapper_util.enable_python3():
-    assert sys.version_info[0] == 3
-  else:
-    assert sys.version_info[0] == 2
-
   _run_file(__file__, globals())

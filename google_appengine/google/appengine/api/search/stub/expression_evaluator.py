@@ -47,7 +47,7 @@ provides an approximation to the API for local testing with dev_appserver.
 import logging
 import math
 
-from google.appengine.datastore import document_pb
+import six
 
 from google.appengine.api.search import expression_parser
 from google.appengine.api.search import ExpressionParser
@@ -56,6 +56,7 @@ from google.appengine.api.search import query_parser
 from google.appengine.api.search import search_util
 from google.appengine.api.search.stub import simple_tokenizer
 from google.appengine.api.search.stub import tokens
+from google.appengine.datastore import document_pb2
 
 
 
@@ -113,8 +114,8 @@ class ExpressionEvaluator(object):
     """Returns the value of a field as the correct type.
 
     Args:
-      field: The field whose value is extracted.  If the given field is None, this
-        function also returns None. This is to make it easier to chain with
+      field: The field whose value is extracted.  If the given field is None,
+        this function also returns None. This is to make it easier to chain with
         GetFieldInDocument().
 
     Returns:
@@ -126,62 +127,63 @@ class ExpressionEvaluator(object):
     """
     if not field:
       return None
-    value_type = field.value().type()
+    value_type = field.value.type
 
     if value_type in search_util.TEXT_DOCUMENT_FIELD_TYPES:
-      return field.value().string_value()
-    if value_type == document_pb.FieldValue.DATE:
-      value = field.value().string_value()
+      return field.value.string_value
+    if value_type == document_pb2.FieldValue.DATE:
+      value = field.value.string_value
       return search_util.DeserializeDate(value)
-    if value_type == document_pb.FieldValue.NUMBER:
-      value = field.value().string_value()
+    if value_type == document_pb2.FieldValue.NUMBER:
+      value = field.value.string_value
       return float(value)
-    if value_type == document_pb.FieldValue.GEO:
-      value = field.value().geo()
-      return geo_util.LatLng(value.lat(), value.lng())
+    if value_type == document_pb2.FieldValue.GEO:
+      value = field.value.geo
+      return geo_util.LatLng(value.lat, value.lng)
     raise TypeError('No conversion defined for type %s' % value_type)
 
   def _Min(self, return_type, *nodes):
     if return_type == search_util.EXPRESSION_RETURN_TYPE_TEXT:
       raise _ExpressionError('Min cannot be converted to a text type')
-    return min(self._Eval(
-        node, document_pb.FieldValue.NUMBER) for node in nodes)
+    return min(
+        self._Eval(node, document_pb2.FieldValue.NUMBER) for node in nodes)
 
   def _Max(self, return_type, *nodes):
     if return_type == search_util.EXPRESSION_RETURN_TYPE_TEXT:
       raise _ExpressionError('Max cannot be converted to a text type')
-    return max(self._Eval(
-        node, document_pb.FieldValue.NUMBER) for node in nodes)
+    return max(
+        self._Eval(node, document_pb2.FieldValue.NUMBER) for node in nodes)
 
   def _Abs(self, return_type, node):
     if return_type == search_util.EXPRESSION_RETURN_TYPE_TEXT:
       raise _ExpressionError('Abs cannot be converted to a text type')
-    return abs(self._Eval(node, document_pb.FieldValue.NUMBER))
+    return abs(self._Eval(node, document_pb2.FieldValue.NUMBER))
 
   def _Log(self, return_type, node):
     if return_type == search_util.EXPRESSION_RETURN_TYPE_TEXT:
       raise _ExpressionError('Log cannot be converted to a text type')
-    return math.log(self._Eval(node, document_pb.FieldValue.NUMBER))
+    return math.log(self._Eval(node, document_pb2.FieldValue.NUMBER))
 
   def _Pow(self, return_type, *nodes):
     if return_type == search_util.EXPRESSION_RETURN_TYPE_TEXT:
       raise _ExpressionError('Pow cannot be converted to a text type')
     lhs, rhs = nodes
-    return pow(self._Eval(lhs, document_pb.FieldValue.NUMBER),
-               self._Eval(rhs, document_pb.FieldValue.NUMBER))
+    return pow(
+        self._Eval(lhs, document_pb2.FieldValue.NUMBER),
+        self._Eval(rhs, document_pb2.FieldValue.NUMBER))
 
   def _Distance(self, return_type, *nodes):
     if return_type == search_util.EXPRESSION_RETURN_TYPE_TEXT:
       raise _ExpressionError('Distance cannot be converted to a text type')
     lhs, rhs = nodes
-    return (self._Eval(lhs, document_pb.FieldValue.GEO) -
-            self._Eval(rhs, document_pb.FieldValue.GEO))
+    return (self._Eval(lhs, document_pb2.FieldValue.GEO) -
+            self._Eval(rhs, document_pb2.FieldValue.GEO))
 
   def _Geopoint(self, return_type, *nodes):
     if return_type == search_util.EXPRESSION_RETURN_TYPE_TEXT:
       raise _ExpressionError('Geopoint cannot be converted to a text type')
-    latitude, longitude = (self._Eval(
-        node, document_pb.FieldValue.NUMBER) for node in nodes)
+    latitude, longitude = (
+        self._Eval(node, document_pb2.FieldValue.NUMBER) for node in nodes)
     return geo_util.LatLng(latitude, longitude)
 
   def _Count(self, return_type, node):
@@ -272,7 +274,7 @@ class ExpressionEvaluator(object):
 
 
     schema = self._inverted_index.GetSchema()
-    if schema.IsType(field, document_pb.FieldValue.NUMBER):
+    if schema.IsType(field, document_pb2.FieldValue.NUMBER):
       raise ExpressionEvaluationError(
           'Failed to parse field expression \'snippet(' +
           query_parser.GetQueryNodeText(query) + ', ' + field +
@@ -284,7 +286,7 @@ class ExpressionEvaluator(object):
       search_token = tokens.Token(chars=u'%s:%s' % (field, term.chars))
       postings = self._inverted_index.GetPostingsForToken(search_token)
       for posting in postings:
-        if posting.doc_id != self._doc_pb.id() or not posting.positions:
+        if posting.doc_id != self._doc_pb.id or not posting.positions:
           continue
         field_val = self._GetFieldValue(
             search_util.GetFieldInDocument(self._doc_pb, field))
@@ -349,8 +351,9 @@ class ExpressionEvaluator(object):
     if len(node.children) != 2:
       raise ValueError('%s operator must always have two arguments' % op_name)
     n1, n2 = node.children
-    return op(self._Eval(n1, document_pb.FieldValue.NUMBER),
-              self._Eval(n2, document_pb.FieldValue.NUMBER))
+    return op(
+        self._Eval(n1, document_pb2.FieldValue.NUMBER),
+        self._Eval(n2, document_pb2.FieldValue.NUMBER))
 
   def _EvalNumericUnaryOp(self, op, op_name, node, return_type):
     """Evaluate a unary operator on the document.
@@ -375,7 +378,7 @@ class ExpressionEvaluator(object):
       raise _ExpressionError('Expression cannot be converted to a text type')
     if len(node.children) != 1:
       raise ValueError('%s operator must always have one arguments' % op_name)
-    return op(self._Eval(node.children[0], document_pb.FieldValue.NUMBER))
+    return op(self._Eval(node.children[0], document_pb2.FieldValue.NUMBER))
 
   def _Eval(self, node, return_type=None, allow_rank=True):
     """Evaluate an expression node on the document.
@@ -437,7 +440,7 @@ class ExpressionEvaluator(object):
         return self._doc.score
       elif name == '_rank':
         if allow_rank:
-          return self._doc.document.order_id()
+          return self._doc.document.order_id
         else:
           raise QueryExpressionEvaluationError(
               'SortSpec order must be descending in \'_rank\'')
@@ -491,14 +494,14 @@ class ExpressionEvaluator(object):
     if (expression_tree.getType() == ExpressionParser.NAME and
         name in schema):
       contains_text_result = False
-      for field_type in schema[name].type_list():
+      for field_type in schema[name].type:
         if field_type in search_util.TEXT_DOCUMENT_FIELD_TYPES:
           contains_text_result = True
 
 
-      if (schema.IsType(name, document_pb.FieldValue.DATE) and
+      if (schema.IsType(name, document_pb2.FieldValue.DATE) and
           not contains_text_result):
-        if isinstance(default_value, basestring):
+        if isinstance(default_value, six.string_types):
           try:
             default_value = search_util.DeserializeDate(default_value)
           except ValueError:
@@ -527,11 +530,11 @@ class ExpressionEvaluator(object):
       expression: The Expression protobuffer object.
     """
 
-    name = expression.name()
-    result = self.ValueOf(expression.expression())
-    if isinstance(result, unicode):
-      result = result.encode('utf-8')
-    if result != None:
+    name = expression.name
+    result = self.ValueOf(expression.expression)
+    if isinstance(result, six.text_type):
+      result = six.ensure_text(result, 'utf-8')
+    if result is not None:
       self._doc.expressions[name] = result
 
 

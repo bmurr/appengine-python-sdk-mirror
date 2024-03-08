@@ -14,15 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-
-
 """Provides access functions for the app identity service.
 
-To learn more about the App Identity API, review the `Overview`_ document.
-
-.. _Overview:
-   https://cloud.google.com/appengine/docs/python/appidentity/
+To learn more about the App Identity API, review the Overview document:
+https://cloud.google.com/appengine/docs/python/appidentity/
 """
 
 
@@ -33,13 +28,16 @@ To learn more about the App Identity API, review the `Overview`_ document.
 
 
 
-import os
+
 import time
 
 from google.appengine.api import apiproxy_stub_map
-from google.appengine.api import memcache
-from google.appengine.api.app_identity import app_identity_service_pb
+from google.appengine.api import full_app_id
+from google.appengine.api.app_identity import _metadata_server
+from google.appengine.api.app_identity import app_identity_service_pb2
 from google.appengine.runtime import apiproxy_errors
+from google.appengine.runtime import context
+import six
 
 __all__ = ['BackendDeadlineExceeded',
            'BlobSizeTooLarge',
@@ -59,8 +57,6 @@ __all__ = ['BackendDeadlineExceeded',
            'get_application_id',
            'get_default_version_hostname',
            'get_access_token',
-           'get_access_token_uncached',
-           'make_get_access_token_call',
            'get_default_gcs_bucket_name',
            'make_get_default_gcs_bucket_name_call',
           ]
@@ -71,11 +67,6 @@ _SIGN_FOR_APP_METHOD_NAME = 'SignForApp'
 _GET_CERTS_METHOD_NAME = 'GetPublicCertificatesForApp'
 _GET_SERVICE_ACCOUNT_NAME_METHOD_NAME = 'GetServiceAccountName'
 _GET_DEFAULT_GCS_BUCKET_NAME_METHOD_NAME = 'GetDefaultGcsBucketName'
-_GET_ACCESS_TOKEN_METHOD_NAME = 'GetAccessToken'
-_PARTITION_SEPARATOR = '~'
-_DOMAIN_SEPARATOR = ':'
-_MEMCACHE_KEY_PREFIX = '_ah_app_identity_'
-_MEMCACHE_NAMESPACE = '_ah_'
 
 
 
@@ -88,11 +79,6 @@ _MAX_RANDOM_EXPIRY_DELTA = 60
 
 
 
-_access_token_cache = {}
-
-
-
-
 
 _random_cache_expiry_delta = (
     hash(time.time()) % (_MAX_RANDOM_EXPIRY_DELTA * 1000) / 1000.0)
@@ -100,6 +86,7 @@ _random_cache_expiry_delta = (
 
 class Error(Exception):
   """Base error type."""
+
 
 
 class BackendDeadlineExceeded(Error):
@@ -136,19 +123,19 @@ def _to_app_identity_error(error):
     error: The App Identity API-specific error message.
   """
   error_map = {
-      app_identity_service_pb.AppIdentityServiceError.NOT_A_VALID_APP:
+      app_identity_service_pb2.AppIdentityServiceError.NOT_A_VALID_APP:
       InternalError,
-      app_identity_service_pb.AppIdentityServiceError.DEADLINE_EXCEEDED:
+      app_identity_service_pb2.AppIdentityServiceError.DEADLINE_EXCEEDED:
       BackendDeadlineExceeded,
-      app_identity_service_pb.AppIdentityServiceError.BLOB_TOO_LARGE:
+      app_identity_service_pb2.AppIdentityServiceError.BLOB_TOO_LARGE:
       BlobSizeTooLarge,
-      app_identity_service_pb.AppIdentityServiceError.UNKNOWN_ERROR:
+      app_identity_service_pb2.AppIdentityServiceError.UNKNOWN_ERROR:
       InternalError,
-      app_identity_service_pb.AppIdentityServiceError.UNKNOWN_SCOPE:
+      app_identity_service_pb2.AppIdentityServiceError.UNKNOWN_SCOPE:
       InvalidScope,
-      app_identity_service_pb.AppIdentityServiceError.NOT_ALLOWED:
+      app_identity_service_pb2.AppIdentityServiceError.NOT_ALLOWED:
       NotAllowed,
-      app_identity_service_pb.AppIdentityServiceError.NOT_IMPLEMENTED:
+      app_identity_service_pb2.AppIdentityServiceError.NOT_IMPLEMENTED:
       OperationNotImplemented,
       }
   if error.application_error in error_map:
@@ -163,10 +150,10 @@ class PublicCertificate(object):
 
   Attributes:
     key_name: Name of the certificate.
-    x509_certificate_pem: `X.509 certificates`_ in PEM format.
+    x509_certificate_pem: X.509
+        certificates (https://www.ietf.org/rfc/rfc2459.txt) in PEM format.
 
-  .. _X.509 certificates:
-     https://www.ietf.org/rfc/rfc2459.txt
+
   """
 
   def __init__(self, key_name, x509_certificate_pem):
@@ -193,21 +180,20 @@ def make_sign_blob_call(rpc, bytes_to_sign):
   """Executes the RPC call to sign a blob.
 
   Args:
-    rpc: A UserRPC instance.
+    rpc: A `UserRPC` instance.
     bytes_to_sign: Blob that must be signed.
 
   Returns:
     A tuple that contains the signing key name and the signature.
 
   Raises:
-    TypeError: If `bytes_to_sign` is not a string.
+    TypeError: If `bytes_to_sign` is not a string or bytes type.
   """
-  if not isinstance(bytes_to_sign, str):
-    raise TypeError('bytes_to_sign must be str: %s'
-                    % bytes_to_sign)
-  request = app_identity_service_pb.SignForAppRequest()
-  request.set_bytes_to_sign(bytes_to_sign)
-  response = app_identity_service_pb.SignForAppResponse()
+  if not isinstance(bytes_to_sign, (six.text_type, bytes)):
+    raise TypeError('bytes_to_sign must be str or bytes: %s' % bytes_to_sign)
+  request = app_identity_service_pb2.SignForAppRequest()
+  request.bytes_to_sign = six.ensure_binary(bytes_to_sign)
+  response = app_identity_service_pb2.SignForAppResponse()
 
   def signing_for_app_result(rpc):
     """Checks success, handles exceptions, and returns the converted RPC result.
@@ -216,7 +202,7 @@ def make_sign_blob_call(rpc, bytes_to_sign):
     post-call hooks on the first invocation.
 
     Args:
-      rpc: A UserRPC object.
+      rpc: A `UserRPC` object.
 
     Returns:
       A tuple that contains signing key name and signature.
@@ -225,10 +211,10 @@ def make_sign_blob_call(rpc, bytes_to_sign):
     assert rpc.method == _SIGN_FOR_APP_METHOD_NAME, repr(rpc.method)
     try:
       rpc.check_success()
-    except apiproxy_errors.ApplicationError, err:
+    except apiproxy_errors.ApplicationError as err:
       raise _to_app_identity_error(err)
 
-    return (response.key_name(), response.signature_bytes())
+    return (response.key_name, response.signature_bytes)
 
 
   rpc.make_call(_SIGN_FOR_APP_METHOD_NAME, request,
@@ -239,13 +225,13 @@ def make_get_public_certificates_call(rpc):
   """Executes the RPC call to get a list of public certificates.
 
   Args:
-    rpc: A UserRPC instance.
+    rpc: A `UserRPC` instance.
 
   Returns:
     A list of `PublicCertificate` objects.
   """
-  request = app_identity_service_pb.GetPublicCertificateForAppRequest()
-  response = app_identity_service_pb.GetPublicCertificateForAppResponse()
+  request = app_identity_service_pb2.GetPublicCertificateForAppRequest()
+  response = app_identity_service_pb2.GetPublicCertificateForAppResponse()
 
   def get_certs_result(rpc):
     """Checks success, handles exceptions, and returns the converted RPC result.
@@ -254,7 +240,7 @@ def make_get_public_certificates_call(rpc):
     post-call hooks on the first invocation.
 
     Args:
-      rpc: A UserRPC object.
+      rpc: A `UserRPC` object.
 
     Returns:
       A list of `PublicCertificate` objects.
@@ -263,12 +249,12 @@ def make_get_public_certificates_call(rpc):
     assert rpc.method == _GET_CERTS_METHOD_NAME, repr(rpc.method)
     try:
       rpc.check_success()
-    except apiproxy_errors.ApplicationError, err:
+    except apiproxy_errors.ApplicationError as err:
       raise _to_app_identity_error(err)
     result = []
-    for cert in response.public_certificate_list_list():
+    for cert in response.public_certificate_list:
       result.append(PublicCertificate(
-          cert.key_name(), cert.x509_certificate_pem()))
+          cert.key_name, cert.x509_certificate_pem))
     return result
 
 
@@ -279,13 +265,13 @@ def make_get_service_account_name_call(rpc):
   """Gets the service account name of the app.
 
   Args:
-    rpc: A UserRPC object.
+    rpc: A `UserRPC` object.
 
   Returns:
     Service account name of the app.
   """
-  request = app_identity_service_pb.GetServiceAccountNameRequest()
-  response = app_identity_service_pb.GetServiceAccountNameResponse()
+  request = app_identity_service_pb2.GetServiceAccountNameRequest()
+  response = app_identity_service_pb2.GetServiceAccountNameResponse()
 
   def get_service_account_name_result(rpc):
     """Checks success, handles exceptions, and returns the converted RPC result.
@@ -294,7 +280,7 @@ def make_get_service_account_name_call(rpc):
     post-call hooks on the first invocation.
 
     Args:
-      rpc: A UserRPC object.
+      rpc: A `UserRPC` object.
 
     Returns:
       A string of the service account name of the app.
@@ -303,10 +289,10 @@ def make_get_service_account_name_call(rpc):
     assert rpc.method == _GET_SERVICE_ACCOUNT_NAME_METHOD_NAME, repr(rpc.method)
     try:
       rpc.check_success()
-    except apiproxy_errors.ApplicationError, err:
+    except apiproxy_errors.ApplicationError as err:
       raise _to_app_identity_error(err)
 
-    return response.service_account_name()
+    return response.service_account_name
 
 
   rpc.make_call(_GET_SERVICE_ACCOUNT_NAME_METHOD_NAME, request,
@@ -317,16 +303,16 @@ def make_get_default_gcs_bucket_name_call(rpc):
   """Gets the default Google Cloud Storage bucket name for the app.
 
   Args:
-    rpc: A UserRPC object.
+    rpc: A `UserRPC` object.
 
   Returns:
     The default Google Cloud Storage bucket name for the app.
   """
-  request = app_identity_service_pb.GetDefaultGcsBucketNameRequest()
-  response = app_identity_service_pb.GetDefaultGcsBucketNameResponse()
+  request = app_identity_service_pb2.GetDefaultGcsBucketNameRequest()
+  response = app_identity_service_pb2.GetDefaultGcsBucketNameResponse()
 
   if rpc.deadline is not None:
-    request.set_deadline(rpc.deadline)
+    request.deadline = rpc.deadline
 
   def get_default_gcs_bucket_name_result(rpc):
     """Checks success, handles exceptions, and returns the converted RPC result.
@@ -335,7 +321,7 @@ def make_get_default_gcs_bucket_name_call(rpc):
     post-call hooks on the first invocation.
 
     Args:
-      rpc: A UserRPC object.
+      rpc: A `UserRPC` object.
 
     Returns:
       A string of the name of the app's default Google Cloud Storage bucket.
@@ -345,10 +331,10 @@ def make_get_default_gcs_bucket_name_call(rpc):
         repr(rpc.method))
     try:
       rpc.check_success()
-    except apiproxy_errors.ApplicationError, err:
+    except apiproxy_errors.ApplicationError as err:
       raise _to_app_identity_error(err)
 
-    return response.default_gcs_bucket_name() or None
+    return response.default_gcs_bucket_name or None
 
 
   rpc.make_call(_GET_DEFAULT_GCS_BUCKET_NAME_METHOD_NAME, request,
@@ -420,40 +406,16 @@ def get_default_gcs_bucket_name(deadline=None):
   return rpc.get_result()
 
 
-def _ParseFullAppId(app_id):
-  """Parses a full app ID into `partition`, `domain_name`, and `display_app_id`.
-
-  Args:
-    app_id: The full partitioned app ID.
-
-  Returns:
-    A tuple `(partition, domain_name, display_app_id)`.  The partition and
-    domain name might be empty.
-  """
-  partition = ''
-  psep = app_id.find(_PARTITION_SEPARATOR)
-  if psep > 0:
-    partition = app_id[:psep]
-    app_id = app_id[psep+1:]
-  domain_name = ''
-  dsep = app_id.find(_DOMAIN_SEPARATOR)
-  if dsep > 0:
-    domain_name = app_id[:dsep]
-    app_id = app_id[dsep+1:]
-  return partition, domain_name, app_id
-
-
 def get_application_id():
   """Gets the application ID of an app.
+
+  Not to be confused with `google.appengine.api.full_app_id.get()`, which gets
+  the "raw" app ID.
 
   Returns:
     The application ID of the app.
   """
-  full_app_id = os.getenv('APPLICATION_ID')
-  _, domain_name, display_app_id = _ParseFullAppId(full_app_id)
-  if domain_name:
-    return '%s%s%s' % (domain_name, _DOMAIN_SEPARATOR, display_app_id)
-  return display_app_id
+  return full_app_id.project_id()
 
 
 def get_default_version_hostname():
@@ -470,90 +432,7 @@ def get_default_version_hostname():
 
 
 
-  return os.getenv('DEFAULT_VERSION_HOSTNAME')
-
-
-
-
-def make_get_access_token_call(rpc, scopes, service_account_id=None):
-  """Generates the OAuth 2.0 access token to act on behalf of the application.
-
-  This method is asynchronous and uncached. Most developers should use
-  `get_access_token` instead.
-
-  Args:
-    rpc: An RPC object.
-    scopes: The requested API scope string, or a list of strings.
-
-  Raises:
-    InvalidScope: If the scopes are unspecified or invalid.
-  """
-  request = app_identity_service_pb.GetAccessTokenRequest()
-  if not scopes:
-    raise InvalidScope('No scopes specified.')
-  if isinstance(scopes, basestring):
-    request.add_scope(scopes)
-  else:
-    for scope in scopes:
-      request.add_scope(scope)
-  if service_account_id:
-    if isinstance(service_account_id, (int, long)):
-      request.set_service_account_id(service_account_id)
-    elif isinstance(service_account_id, basestring):
-      request.set_service_account_name(service_account_id)
-    else:
-      raise TypeError()
-
-  response = app_identity_service_pb.GetAccessTokenResponse()
-
-  def get_access_token_result(rpc):
-    """Checks success, handles exceptions, and returns the converted RPC result.
-
-    This method waits for the RPC if it has not yet finished, and calls the
-    post-call hooks on the first invocation.
-
-    Args:
-      rpc: A UserRPC object.
-
-    Returns:
-      A `Pair`, `Access` token string and the expiration time in seconds since
-      the epoch.
-    """
-    assert rpc.service == _APP_IDENTITY_SERVICE_NAME, repr(rpc.service)
-    assert rpc.method == _GET_ACCESS_TOKEN_METHOD_NAME, repr(rpc.method)
-    try:
-      rpc.check_success()
-    except apiproxy_errors.ApplicationError, err:
-      raise _to_app_identity_error(err)
-
-    return response.access_token(), response.expiration_time()
-
-
-  rpc.make_call(_GET_ACCESS_TOKEN_METHOD_NAME, request,
-                response, get_access_token_result)
-
-
-
-
-def get_access_token_uncached(scopes, deadline=None, service_account_id=None):
-  """Generates the OAuth 2.0 access token to act on behalf of the application.
-
-  This method is asynchronous and uncached. Most developers should use
-  `get_access_token` instead.
-
-  Args:
-    scopes: The requested API scope string, or a list of strings.
-    deadline: Optional deadline in seconds for the operation; the default value
-      is a system-specific deadline, typically 5 seconds.
-
-  Returns:
-    A `Pair`, `Access` token string and the expiration time in seconds since
-    the epoch.
-  """
-  rpc = create_rpc(deadline)
-  make_get_access_token_call(rpc, scopes, service_account_id=service_account_id)
-  rpc.wait()
-  return rpc.get_result()
+  return context.get('DEFAULT_VERSION_HOSTNAME', None)
 
 
 
@@ -561,15 +440,9 @@ def get_access_token_uncached(scopes, deadline=None, service_account_id=None):
 def get_access_token(scopes, service_account_id=None):
   """The OAuth 2.0 access token to act on behalf of the application.
 
-  This token will be cached.
-
-  A token will be generated and cached for the service account for the
-  App Engine application.
-
   Each application has an associated Google account. This function returns an
   OAuth 2.0 access token that corresponds to the running app. Access tokens are
-  safe to cache and reuse until their expiry time as returned. This method
-  caches access tokens using both an in-process cache and memcache.
+  safe to cache and reuse until their expiry time as returned.
 
   Args:
     scopes: The requested API scope string, or a list of strings.
@@ -577,46 +450,18 @@ def get_access_token(scopes, service_account_id=None):
   Returns:
     A `Pair`, `Access` token string and the expiration time in seconds since
     the epoch.
+
+  Raises:
+    InvalidScope: If the scopes are unspecified or invalid.
   """
+  if not scopes:
+    raise InvalidScope('No scopes specified.')
+  if isinstance(scopes, six.string_types):
+    scopes = [scopes]
+  return _metadata_server.get_service_account_token(
+      scopes=scopes, service_account=service_account_id)
 
 
-
-  cache_key = _MEMCACHE_KEY_PREFIX + str(scopes)
-  if service_account_id:
-    cache_key += ',%s' % service_account_id
-
-
-  cached = _access_token_cache.get(cache_key)
-  if cached is not None:
-    access_token, expires_at = cached
-    safe_expiry = (expires_at - _TOKEN_EXPIRY_SAFETY_MARGIN -
-                   _random_cache_expiry_delta)
-    if time.time() < safe_expiry:
-      return access_token, expires_at
-
-
-  memcache_value = memcache.get(cache_key, namespace=_MEMCACHE_NAMESPACE)
-  if memcache_value:
-    access_token, expires_at = memcache_value
-  else:
-    access_token, expires_at = get_access_token_uncached(
-        scopes, service_account_id=service_account_id)
-
-
-
-
-    memcache_expiry = expires_at - _TOKEN_EXPIRY_SAFETY_MARGIN
-    memcache_expiry -= _MAX_RANDOM_EXPIRY_DELTA
-    memcache_expiry -= 10
-    memcache.add(cache_key, (access_token, expires_at),
-                 memcache_expiry,
-                 namespace=_MEMCACHE_NAMESPACE)
-
-
-  if len(_access_token_cache) >= _MAX_TOKEN_CACHE_SIZE:
-
-
-    _access_token_cache.clear()
-  _access_token_cache[cache_key] = (access_token, expires_at)
-
-  return access_token, expires_at
+_ParseFullAppId = full_app_id.parse
+_PARTITION_SEPARATOR = '~'
+_DOMAIN_SEPARATOR = ':'

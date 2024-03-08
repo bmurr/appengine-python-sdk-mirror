@@ -21,30 +21,19 @@
 
 """Key range representation and splitting."""
 
+import json
 
-
-import os
-
-
-try:
-  import json as simplejson
-except ImportError:
-  try:
-    import simplejson
-  except ImportError:
-    simplejson = None
+import six
+from six.moves import range
 
 from google.appengine.api import datastore
 from google.appengine.api import namespace_manager
-from google.appengine.datastore import datastore_pb
 from google.appengine.ext import db
+from google.appengine.ext import ndb
+from google.appengine.api import cmp_compat
 
-try:
-  from google.appengine.ext import ndb
-except ImportError:
-  ndb = None
-# It is acceptable to set key_range.ndb to the ndb module,
-# imported through some other way (e.g. from the app dir).
+
+
 
 
 class Error(Exception):
@@ -55,14 +44,11 @@ class KeyRangeError(Error):
   """Error while trying to generate a KeyRange."""
 
 
-class SimplejsonUnavailableError(Error):
-  """Error using json functionality with unavailable json and simplejson."""
-
-
 def _IsNdbQuery(query):
   return ndb is not None and isinstance(query, ndb.Query)
 
 
+@cmp_compat.total_ordering_from_cmp
 class KeyRange(object):
   """Represents a range of keys in the datastore.
 
@@ -529,7 +515,7 @@ class KeyRange(object):
     if not other.key_end:
       other_list[4] = False
 
-    return cmp(self_list, other_list)
+    return cmp_compat.cmp(self_list, other_list)
 
   @staticmethod
   def bisect_string_range(start, end):
@@ -568,12 +554,12 @@ class KeyRange(object):
 
 
     expected_max = 127
-    for i in xrange(min(len(start), len(end))):
+    for i in range(min(len(start), len(end))):
       if start[i] == end[i]:
         midpoint.append(start[i])
       else:
         ord_sum = ord(start[i]) + ord(end[i])
-        midpoint.append(unichr(ord_sum / 2))
+        midpoint.append(six.unichr(ord_sum // 2))
         if ord_sum % 2:
           if len(start) > i + 1:
             ord_start = ord(start[i+1])
@@ -582,11 +568,11 @@ class KeyRange(object):
           if ord_start < expected_max:
 
 
-            ord_split = (expected_max + ord_start) / 2
+            ord_split = (expected_max + ord_start) // 2
           else:
 
-            ord_split = (0xFFFF + ord_start) / 2
-          midpoint.append(unichr(ord_split))
+            ord_split = (0xFFFF + ord_start) // 2
+          midpoint.append(six.unichr(ord_split))
         break
     return "".join(midpoint)
 
@@ -632,15 +618,15 @@ class KeyRange(object):
     assert len1 % 2 == 0
     assert len2 % 2 == 0
     out_path = []
-    min_path_len = min(len1, len2) / 2
-    for i in xrange(min_path_len):
+    min_path_len = min(len1, len2) // 2
+    for i in range(min_path_len):
       kind1 = path1[2*i]
       kind2 = path2[2*i]
 
       if kind1 != kind2:
         split_kind = KeyRange.bisect_string_range(kind1, kind2)
         out_path.append(split_kind)
-        out_path.append(unichr(0))
+        out_path.append(six.unichr(0))
         break
 
 
@@ -682,24 +668,24 @@ class KeyRange(object):
     Returns:
       An id_or_name such that id_or_name1 <= id_or_name <= id_or_name2.
     """
-    if (isinstance(id_or_name1, (int, long)) and
-        isinstance(id_or_name2, (int, long))):
+    if (isinstance(id_or_name1, six.integer_types) and
+        isinstance(id_or_name2, six.integer_types)):
       if not maintain_batches or id_or_name2 - id_or_name1 > batch_size:
-        return (id_or_name1 + id_or_name2) / 2
+        return (id_or_name1 + id_or_name2) // 2
       else:
         return id_or_name1
-    elif (isinstance(id_or_name1, basestring) and
-          isinstance(id_or_name2, basestring)):
+    elif (isinstance(id_or_name1, six.string_types) and
+          isinstance(id_or_name2, six.string_types)):
       return KeyRange.bisect_string_range(id_or_name1, id_or_name2)
     else:
-      if (not isinstance(id_or_name1, (int, long)) or
-          not isinstance(id_or_name2, basestring)):
+      if (not isinstance(id_or_name1, six.integer_types) or
+          not isinstance(id_or_name2, six.string_types)):
         raise KeyRangeError("Wrong key order: %r, %r" %
                             (id_or_name1, id_or_name2))
 
-      zero_ch = unichr(0)
+      zero_ch = six.unichr(0)
       if id_or_name2 == zero_ch:
-        return (id_or_name1 + 2**63 - 1) / 2
+        return (id_or_name1 + 2**63 - 1) // 2
       return zero_ch
 
   @staticmethod
@@ -754,7 +740,7 @@ class KeyRange(object):
       if index % 2 == 0:
 
         continue
-      elif isinstance(piece, basestring):
+      elif isinstance(piece, six.string_types):
 
         full_path[index] = u"\xffff"
       else:
@@ -765,8 +751,8 @@ class KeyRange(object):
                                **{"_app": app, "namespace": namespace})
     split_key = key_end
 
-    for i in xrange(probe_count):
-      for j in xrange(split_rate):
+    for _ in range(probe_count):
+      for _ in range(split_rate):
         split_key = KeyRange.split_keys(key_start, split_key, 1)
       results = datastore.Query(
           kind,
@@ -824,7 +810,7 @@ class KeyRange(object):
         include_end=False))
 
 
-    for i in xrange(0, len(random_keys) - 1):
+    for i in range(0, len(random_keys) - 1):
       key_ranges.append(cls(
           key_start=random_keys[i],
           key_end=random_keys[i + 1],
@@ -848,9 +834,6 @@ class KeyRange(object):
     Returns:
       string with KeyRange json representation.
     """
-    if simplejson is None:
-      raise SimplejsonUnavailableError(
-          "JSON functionality requires json or simplejson to be available")
 
     def key_to_str(key):
       if key:
@@ -869,7 +852,7 @@ class KeyRange(object):
     if self._app:
       obj_dict["_app"] = self._app
 
-    return simplejson.dumps(obj_dict, sort_keys=True)
+    return json.dumps(obj_dict, sort_keys=True)
 
 
   @staticmethod
@@ -882,9 +865,6 @@ class KeyRange(object):
     Returns:
       deserialized KeyRange instance.
     """
-    if simplejson is None:
-      raise SimplejsonUnavailableError(
-          "JSON functionality requires json or simplejson to be available")
 
     def key_from_str(key_str):
       if key_str:
@@ -892,11 +872,11 @@ class KeyRange(object):
       else:
         return None
 
-    json = simplejson.loads(json_str)
-    return KeyRange(key_from_str(json["key_start"]),
-                    key_from_str(json["key_end"]),
-                    json["direction"],
-                    json["include_start"],
-                    json["include_end"],
-                    json.get("namespace"),
-                    _app=json.get("_app"))
+    obj = json.loads(json_str)
+    return KeyRange(key_from_str(obj["key_start"]),
+                    key_from_str(obj["key_end"]),
+                    obj["direction"],
+                    obj["include_start"],
+                    obj["include_end"],
+                    obj.get("namespace"),
+                    _app=obj.get("_app"))

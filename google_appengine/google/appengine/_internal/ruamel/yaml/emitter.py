@@ -11,16 +11,17 @@ from __future__ import print_function
 # mapping ::= MAPPING-START (node node)* MAPPING-END
 
 import sys
-from google.appengine._internal.ruamel.yaml.error import YAMLError, YAMLStreamError
-from google.appengine._internal.ruamel.yaml.events import *  # NOQA
+from ruamel.yaml.error import YAMLError, YAMLStreamError
+from ruamel.yaml.events import *  # NOQA
 
 # fmt: off
-from google.appengine._internal.ruamel.yaml.compat import utf8, text_type, PY2, nprint, dbg, DBG_EVENT, check_anchorname_char
+from ruamel.yaml.compat import utf8, text_type, PY2, nprint, dbg, DBG_EVENT, \
+    check_anchorname_char
 # fmt: on
 
 if False:  # MYPY
     from typing import Any, Dict, List, Union, Text, Tuple, Optional  # NOQA
-    from google.appengine._internal.ruamel.yaml.compat import StreamType  # NOQA
+    from ruamel.yaml.compat import StreamType  # NOQA
 
 __all__ = ['Emitter', 'EmitterError']
 
@@ -287,7 +288,7 @@ class Emitter(object):
         if self.indent is None:  # top level
             if flow:
                 # self.indent = self.best_sequence_indent if self.indents.last_seq() else \
- #              self.best_map_indent
+                #              self.best_map_indent
                 # self.indent = self.best_sequence_indent
                 self.indent = self.requested_indent
             else:
@@ -858,7 +859,7 @@ class Emitter(object):
             self.style = self.choose_scalar_style()
         split = not self.simple_key_context
         # if self.analysis.multiline and split    \
- #         and (not self.style or self.style in '\'\"'):
+        #         and (not self.style or self.style in '\'\"'):
         #     self.write_indent()
         # nprint('xx', self.sequence_context, self.flow_level)
         if self.sequence_context and not self.flow_level:

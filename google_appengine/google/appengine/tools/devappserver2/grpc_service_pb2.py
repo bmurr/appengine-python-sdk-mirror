@@ -36,7 +36,7 @@ DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n1apphosting/tools/
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'google.appengine.tools.devappserver2.grpc_service_pb2', _globals)
-if _descriptor._USE_C_DESCRIPTORS == False:
+if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'\370\002\001'
   _globals['_REQUEST']._serialized_start=85
@@ -74,7 +74,7 @@ try:
                     '/apphosting.tools.devappserver2.CallHandler/HandleCall',
                     request_serializer=Request.SerializeToString,
                     response_deserializer=Response.FromString,
-                    )
+                    _registered_method=True)
 
 
     class CallHandlerServicer(object):
@@ -116,11 +116,21 @@ try:
                 wait_for_ready=None,
                 timeout=None,
                 metadata=None):
-            return grpc.experimental.unary_unary(request, target, '/apphosting.tools.devappserver2.CallHandler/HandleCall',
+            return grpc.experimental.unary_unary(
+                request,
+                target,
+                '/apphosting.tools.devappserver2.CallHandler/HandleCall',
                 Request.SerializeToString,
                 Response.FromString,
-                options, channel_credentials,
-                insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                options,
+                channel_credentials,
+                insecure,
+                call_credentials,
+                compression,
+                wait_for_ready,
+                timeout,
+                metadata,
+                _registered_method=True)
 
 
     class BetaCallHandlerServicer(object):

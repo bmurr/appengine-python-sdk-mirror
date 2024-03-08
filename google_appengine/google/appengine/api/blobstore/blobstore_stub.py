@@ -34,10 +34,11 @@ Class:
 
 import base64
 import os
-import StringIO
 import tempfile
 import time
-import urlparse
+
+import six
+import six.moves.urllib.parse
 
 from google.appengine.api import apiproxy_stub
 from google.appengine.api import blobstore
@@ -45,8 +46,8 @@ from google.appengine.api import datastore
 from google.appengine.api import datastore_errors
 from google.appengine.api import datastore_types
 from google.appengine.api import users
-from google.appengine.api.blobstore import blobstore_service_pb
-from google.appengine.api.blobstore import blobstore_stub_service_pb
+from google.appengine.api.blobstore import blobstore_service_pb2
+from google.appengine.api.blobstore import blobstore_stub_service_pb2
 from google.appengine.api.blobstore import dict_blob_storage
 from google.appengine.api.blobstore import file_blob_storage
 from google.appengine.runtime import apiproxy_errors
@@ -181,6 +182,7 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
     return datastore_types.Key.from_path(kind,
                                          blobkey,
                                          namespace='')
+
   @property
   def storage(self):
     """Access BlobStorage used by service stub.
@@ -189,23 +191,6 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
       BlobStorage instance used by blobstore service stub.
     """
     return self.__storage
-
-  def _GetEnviron(self, name):
-    """Helper method ensures environment configured as expected.
-
-    Args:
-      name: Name of environment variable to get.
-
-    Returns:
-      Environment variable associated with name.
-
-    Raises:
-      ConfigurationError if required environment variable is not found.
-    """
-    try:
-      return os.environ[name]
-    except KeyError:
-      raise ConfigurationError('%s is not set in environment.' % name)
 
   def _CreateSession(self,
                      success_path,
@@ -250,26 +235,24 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
     max_bytes_total = None
     bucket_name = None
 
-    if request.has_max_upload_size_per_blob_bytes():
-      max_bytes_per_blob = request.max_upload_size_per_blob_bytes()
+    if request.HasField('max_upload_size_per_blob_bytes'):
+      max_bytes_per_blob = request.max_upload_size_per_blob_bytes
 
-    if request.has_max_upload_size_bytes():
-      max_bytes_total = request.max_upload_size_bytes()
+    if request.HasField('max_upload_size_bytes'):
+      max_bytes_total = request.max_upload_size_bytes
 
-    if request.has_gs_bucket_name():
-      bucket_name = request.gs_bucket_name()
+    if request.HasField('gs_bucket_name'):
+      bucket_name = request.gs_bucket_name
 
-    session = self._CreateSession(request.success_path(),
-                                  users.get_current_user(),
-                                  max_bytes_per_blob,
-                                  max_bytes_total,
-                                  bucket_name)
+    session = self._CreateSession(request.success_path,
+                                  users.get_current_user(), max_bytes_per_blob,
+                                  max_bytes_total, bucket_name)
 
-    protocol, host, _, _, _, _ = urlparse.urlparse(
+    protocol, host, _, _, _, _ = six.moves.urllib.parse.urlparse(
         self.request_data.get_request_url(request_id))
 
-    response.set_url('%s://%s/%s%s' % (protocol, host, self.__uploader_path,
-                                       session))
+    response.url = ('%s://%s/%s%s' %
+                    (protocol, host, self.__uploader_path, session))
 
   @classmethod
   def DeleteBlob(cls, blobkey, storage):
@@ -280,6 +263,7 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
       storage: blobstore storage stub.
     """
     datastore.Delete(cls.ToDatastoreBlobKey(blobkey))
+
     blobinfo = datastore_types.Key.from_path(blobstore.BLOB_INFO_KIND,
                                              blobkey,
                                              namespace='')
@@ -296,7 +280,7 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
       request: A fully initialized DeleteBlobRequest instance.
       response: Not used but should be a VoidProto.
     """
-    for blobkey in request.blob_key_list():
+    for blobkey in request.blob_key:
       self.DeleteBlob(blobkey, self.__storage)
 
   def _Dynamic_StoreBlob(self, request, response, unused_request_id):
@@ -306,13 +290,13 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
     tests only. It was introduced primarily to support Java local development.
 
     Args:
-      request: An instance of blobstore_stub_service_pb.StoreBlobRequest.
-      response: An unused instance of api_base_pb.VoidProto.
+      request: An instance of blobstore_stub_service_pb2.StoreBlobRequest.
+      response: An unused instance of api_base_pb2.VoidProto.
     """
     del response
     del unused_request_id
 
-    self.CreateBlob(request.blob_key(), request.content())
+    self.CreateBlob(request.blob_key, request.content)
 
   def _Dynamic_SetBlobStorageType(self, request, unused_response,
                                   unused_request_id):
@@ -323,13 +307,13 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
 
     Args:
       request: An instance of
-        blobstore_stub_service_pb.SetBlobStorageTypeRequest.
+        blobstore_stub_service_pb2.SetBlobStorageTypeRequest.
     """
-    if request.storage_type() == (blobstore_stub_service_pb
-                                  .SetBlobStorageTypeRequest.MEMORY):
+    if request.storage_type == (
+        blobstore_stub_service_pb2.SetBlobStorageTypeRequest.MEMORY):
       self.__storage = dict_blob_storage.DictBlobStorage()
-    elif request.storage_type() == (blobstore_stub_service_pb
-                                    .SetBlobStorageTypeRequest.FILE):
+    elif request.storage_type == (
+        blobstore_stub_service_pb2.SetBlobStorageTypeRequest.FILE):
       self.__storage = file_blob_storage.FileBlobStorage(
           self._storage_dir, self._app_id)
 
@@ -353,36 +337,36 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
         BLOB_NOT_FOUND: If invalid blob-key is provided or is not found.
     """
 
-    start_index = request.start_index()
+    start_index = request.start_index
     if start_index < 0:
       raise apiproxy_errors.ApplicationError(
-          blobstore_service_pb.BlobstoreServiceError.DATA_INDEX_OUT_OF_RANGE)
+          blobstore_service_pb2.BlobstoreServiceError.DATA_INDEX_OUT_OF_RANGE)
 
 
-    end_index = request.end_index()
+    end_index = request.end_index
     if end_index < start_index:
       raise apiproxy_errors.ApplicationError(
-          blobstore_service_pb.BlobstoreServiceError.DATA_INDEX_OUT_OF_RANGE)
+          blobstore_service_pb2.BlobstoreServiceError.DATA_INDEX_OUT_OF_RANGE)
 
 
     fetch_size = end_index - start_index + 1
     if fetch_size > blobstore.MAX_BLOB_FETCH_SIZE:
       raise apiproxy_errors.ApplicationError(
-          blobstore_service_pb.BlobstoreServiceError.BLOB_FETCH_SIZE_TOO_LARGE)
+          blobstore_service_pb2.BlobstoreServiceError.BLOB_FETCH_SIZE_TOO_LARGE)
 
 
-    blobkey = request.blob_key()
+    blobkey = request.blob_key
     info_key = self.ToDatastoreBlobKey(blobkey)
     try:
       datastore.Get(info_key)
     except datastore_errors.EntityNotFoundError:
       raise apiproxy_errors.ApplicationError(
-          blobstore_service_pb.BlobstoreServiceError.BLOB_NOT_FOUND)
+          blobstore_service_pb2.BlobstoreServiceError.BLOB_NOT_FOUND)
 
 
     blob_file = self.__storage.OpenBlob(blobkey)
     blob_file.seek(start_index)
-    response.set_data(blob_file.read(fetch_size))
+    response.data = six.ensure_binary(blob_file.read(fetch_size))
 
   def _Dynamic_DecodeBlobKey(self, request, response, unused_request_id):
     """Decode a given blob key: data is simply base64-decoded.
@@ -391,7 +375,7 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
       request: A fully-initialized DecodeBlobKeyRequest instance
       response: A DecodeBlobKeyResponse instance.
     """
-    for blob_key in request.blob_key_list():
+    for blob_key in request.blob_key:
       response.add_decoded(blob_key.decode('base64'))
 
   @classmethod
@@ -416,7 +400,8 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
     Returns:
       blobkey string of encoded filename.
     """
-    return cls.GS_BLOBKEY_PREFIX + base64.urlsafe_b64encode(filename)
+    suffix = base64.urlsafe_b64encode(six.ensure_binary(filename))
+    return cls.GS_BLOBKEY_PREFIX + suffix.decode('utf-8')
 
   def _Dynamic_CreateEncodedGoogleStorageKey(self, request, response,
                                              unused_request_id):
@@ -431,9 +416,8 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
         instance.
       response: A CreateEncodedGoogleStorageKeyResponse instance.
     """
-    filename = request.filename()[len(blobstore.GS_PREFIX):]
-    response.set_blob_key(
-        self.CreateEncodedGoogleStorageKey(filename))
+    filename = request.filename[len(blobstore.GS_PREFIX):]
+    response.blob_key = self.CreateEncodedGoogleStorageKey(filename)
 
   def CreateBlob(self, blob_key, content):
     """Create new blob and put in storage and Datastore.
@@ -451,5 +435,5 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
                               name=blob_key, namespace='')
     entity['size'] = len(content)
     datastore.Put(entity)
-    self.storage.StoreBlob(blob_key, StringIO.StringIO(content))
+    self.storage.StoreBlob(blob_key, six.BytesIO(content))
     return entity

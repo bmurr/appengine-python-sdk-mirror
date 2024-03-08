@@ -17,8 +17,6 @@
 
 
 
-
-
 """Runtime Utilities API.
 
 .. deprecated:: 1.8.1
@@ -30,47 +28,45 @@ Utilities for interacting with the Python Runtime."""
 
 
 
-from __future__ import with_statement
-
 
 
 import threading
 
 from google.appengine.api import apiproxy_stub_map
-from google.appengine.api.system import system_service_pb
+from google.appengine.api.system import system_service_pb2
 
 
 def cpu_usage():
   """Returns a SystemStat describing cpu usage, expressed in mcycles.
 
-  The returned object has the following accessors:
+  The returned object has the following fields:
 
-    - total(): total mcycles consumed by this instance
-    - rate1m(): average mcycles consumed per second over the last minute
-    - rate10m(): average mcycles consumed per second over the last ten minutes
+    - total: total mcycles consumed by this instance
+    - rate1m: average mcycles consumed per second over the last minute
+    - rate10m: average mcycles consumed per second over the last ten minutes
 
   Functions for converting from mcycles to cpu-seconds are located in the quotas
   API.
   """
-  return _GetSystemStats().cpu()
+  return _GetSystemStats().cpu
 
 
 def memory_usage():
   """Returns a SystemStat describing memory usage, expressed in MB.
 
-  The returned object has the following accessors:
+  The returned object has the following fields:
 
-    - current(): memory currently used by this instance
-    - average1m(): average memory use, over the last minute
-    - average10m(): average memory use, over the last ten minutes
+    - current: memory currently used by this instance
+    - average1m: average memory use, over the last minute
+    - average10m: average memory use, over the last ten minutes
   """
-  return _GetSystemStats().memory()
+  return _GetSystemStats().memory
 
 
 def _GetSystemStats():
   """Returns stats about the current instance."""
-  request = system_service_pb.GetSystemStatsRequest()
-  response = system_service_pb.GetSystemStatsResponse()
+  request = system_service_pb2.GetSystemStatsRequest()
+  response = system_service_pb2.GetSystemStatsResponse()
   apiproxy_stub_map.MakeSyncCall('system', 'GetSystemStats', request, response)
   return response
 

@@ -16,8 +16,6 @@
 #
 
 
-
-
 """Validators for v1 datastore protocol buffers.
 
 This module is internal and should not be used by client applications.
@@ -40,6 +38,8 @@ This module is internal and should not be used by client applications.
 
 
 import re
+
+import six
 
 from google.appengine.api import datastore_types
 from google.appengine.datastore import datastore_pbs
@@ -548,7 +548,7 @@ class _EntityValidator(object):
     else:
       _assert_condition(constraint.absent_key_allowed,
                         'Entity is missing key.')
-    for name, value in entity.properties.iteritems():
+    for name, value in six.iteritems(entity.properties):
       self.validate_property_name(constraint, name)
       self.validate_value(constraint, value)
 
@@ -718,7 +718,7 @@ class _EntityValidator(object):
     _assert_condition(not entity.HasField('key'),
                       'The %s entity has a key.' % entity_name)
     property_map = {}
-    for property_name, value in entity.properties.iteritems():
+    for property_name, value in six.iteritems(entity.properties):
       _assert_condition(property_name in allowed_property_map,
                         'The %s entity property "%s" is not allowed.'
                         % (entity_name, property_name))

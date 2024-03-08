@@ -19,4 +19,4 @@
 """Background Threads API."""
 
 
-from background_thread import *
+from google.appengine.api.background_thread.background_thread import *

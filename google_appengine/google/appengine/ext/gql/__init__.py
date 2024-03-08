@@ -29,10 +29,6 @@ data stored.
 
 
 
-
-
-
-
 import calendar
 import datetime
 import itertools
@@ -41,17 +37,15 @@ import os
 import re
 import time
 
+import six
+from six.moves import range
+from six.moves import zip
 
-if os.environ.get('APPENGINE_RUNTIME') == 'python27':
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_errors
-  from google.appengine.api import datastore_types
-  from google.appengine.api import users
-else:
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_errors
-  from google.appengine.api import datastore_types
-  from google.appengine.api import users
+from google.appengine.api import datastore
+from google.appengine.api import datastore_errors
+from google.appengine.api import datastore_types
+from google.appengine.api import users
+
 
 
 
@@ -125,7 +119,7 @@ class GQL(object):
   <condition> := <property> IN (<value>, ...)
   <condition> := ANCESTOR IS <entity or key>
 
-  Currently the parser is LL(1) because of the simplicity of the grammer
+  Currently the parser is LL(1) because of the simplicity of the grammar
   (as it is largely predictive with one token lookahead).
 
   The class is implemented using some basic regular expression tokenization
@@ -272,7 +266,7 @@ class GQL(object):
 
     self.__symbols = self.TOKENIZE_REGEX.findall(query_string)
     initial_error = None
-    for backwards_compatibility_mode in xrange(len(self.RESERVED_KEYWORDS)):
+    for backwards_compatibility_mode in range(len(self.RESERVED_KEYWORDS)):
       self.__InitializeParseState()
       self.__active_reserved_words = self.__GenerateReservedWords(
           backwards_compatibility_mode)
@@ -327,7 +321,7 @@ class GQL(object):
       object if the GQL query will require multiple backend queries to statisfy.
     """
     num_args = len(args)
-    input_args = frozenset(xrange(num_args))
+    input_args = frozenset(range(num_args))
     used_args = set()
 
     queries = []
@@ -337,7 +331,7 @@ class GQL(object):
     else:
       query_count = 1
 
-    for _ in xrange(query_count):
+    for _ in range(query_count):
       queries.append(datastore.Query(self._kind,
                                      _app=self.__app,
                                      keys_only=self._keys_only,
@@ -351,7 +345,7 @@ class GQL(object):
                 'Binding with %i positional args %s and %i keywords %s',
                 len(args), args, len(keyword_args), keyword_args)
 
-    for (identifier, condition), value_list in self.__filters.iteritems():
+    for (identifier, condition), value_list in six.iteritems(self.__filters):
       for operator, params in value_list:
         value = self.__Operate(args, keyword_args, used_args, operator, params)
         if not self.__IsMultiQuery(condition):
@@ -410,7 +404,7 @@ class GQL(object):
     enumerated_queries = []
 
 
-    for (identifier, condition), value_list in self.__filters.iteritems():
+    for (identifier, condition), value_list in six.iteritems(self.__filters):
       for operator, params in value_list:
         value = self.__Operate(args, keyword_args, used_args, operator, params)
         self.__AddMultiQuery(identifier, condition, value, enumerated_queries)
@@ -453,7 +447,7 @@ class GQL(object):
       return datastore_types.Key.from_path(_app=self.__app,
                                            namespace=self.__namespace,
                                            *values)
-    elif len(values) == 1 and isinstance(values[0], basestring):
+    elif len(values) == 1 and isinstance(values[0], six.string_types):
       return datastore_types.Key(values[0])
     else:
       self.__CastError('KEY', values,
@@ -481,7 +475,7 @@ class GQL(object):
     Args:
       value: input string (should pass as an instance of str or unicode).
     """
-    if isinstance(value, unicode):
+    if isinstance(value, six.text_type):
       return value.encode('utf8')
     else:
       return value
@@ -503,13 +497,13 @@ class GQL(object):
 
 
       value = self.__EncodeIfNeeded(values[0])
-      if isinstance(value, str):
+      if isinstance(value, six.binary_type):
         try:
-          time_tuple = time.strptime(value, '%Y-%m-%d')[0:6]
+          time_tuple = time.strptime(value.decode(), '%Y-%m-%d')[0:6]
         except ValueError as err:
           self.__CastError('DATE', values, err)
       else:
-        self.__CastError('DATE', values, 'Single input value not a string')
+        self.__CastError('DATE', values, 'Single input value not a byte')
     elif len(values) == 3:
 
       time_tuple = (values[0], values[1], values[2], 0, 0, 0)
@@ -543,9 +537,9 @@ class GQL(object):
 
 
       value = self.__EncodeIfNeeded(values[0])
-      if isinstance(value, str):
+      if isinstance(value, six.binary_type):
         try:
-          time_tuple = time.strptime(value, '%H:%M:%S')
+          time_tuple = time.strptime(value.decode(), '%H:%M:%S')
         except ValueError as err:
           self.__CastError('TIME', values, err)
         time_tuple = (1970, 1, 1) + time_tuple[3:]
@@ -556,7 +550,7 @@ class GQL(object):
         time_tuple = (1970, 1, 1, value)
       else:
         self.__CastError('TIME', values,
-                         'Single input value not a string or integer hour')
+                         'Single input value not a byte or integer hour')
     elif len(values) <= 4:
 
       time_tuple = (1970, 1, 1) + tuple(values)
@@ -586,13 +580,13 @@ class GQL(object):
 
     if len(values) == 1:
       value = self.__EncodeIfNeeded(values[0])
-      if isinstance(value, str):
+      if isinstance(value, six.binary_type):
         try:
-          time_tuple = time.strptime(str(value), '%Y-%m-%d %H:%M:%S')[0:6]
+          time_tuple = time.strptime(value.decode(), '%Y-%m-%d %H:%M:%S')[0:6]
         except ValueError as err:
           self.__CastError('DATETIME', values, err)
       else:
-        self.__CastError('DATETIME', values, 'Single input value not a string')
+        self.__CastError('DATETIME', values, 'Single input value not a byte')
     else:
       time_tuple = values
 
@@ -682,7 +676,7 @@ class GQL(object):
         raise datastore_errors.BadArgumentError(
             'Missing argument for bind, requires argument #%i, '
             'but only has %i args.' % (param, num_args))
-    elif isinstance(param, basestring):
+    elif isinstance(param, six.string_types):
       if param in keyword_args:
         return keyword_args[param]
       else:
@@ -726,16 +720,15 @@ class GQL(object):
         Number of iterations needed to fill the structure
       """
       if not enumerated_queries:
-        for _ in xrange(n):
+        for _ in range(n):
           queries.append({})
         return 1
       else:
         old_size = len(queries)
-        tmp_queries = []
-        for _ in xrange(n - 1):
-          [tmp_queries.append(filter_map.copy()) for filter_map in queries]
-        queries.extend(tmp_queries)
-        queries.sort()
+        queries.extend([None] * old_size * (n - 1))
+        for origin_index in reversed(range(old_size)):
+          for copy_index in range(origin_index * n, (origin_index + 1) * n):
+            queries[copy_index] = queries[origin_index].copy()
         return old_size
 
     if condition == '!=':
@@ -744,7 +737,7 @@ class GQL(object):
           'Cannot satisfy query -- too many IN/!= values.')
 
       num_iterations = CloneQueries(enumerated_queries, 2)
-      for i in xrange(num_iterations):
+      for i in range(num_iterations):
         enumerated_queries[2 * i]['%s <' % identifier] = value
         enumerated_queries[2 * i + 1]['%s >' % identifier] = value
     elif condition.lower() == 'in':
@@ -759,14 +752,14 @@ class GQL(object):
       if in_list_size == 0:
 
         num_iterations = CloneQueries(enumerated_queries, 1)
-        for clone_num in xrange(num_iterations):
+        for clone_num in range(num_iterations):
 
           enumerated_queries[clone_num][_EMPTY_LIST_PROPERTY_NAME] = True
         return
 
       num_iterations = CloneQueries(enumerated_queries, in_list_size)
-      for clone_num in xrange(num_iterations):
-        for value_num in xrange(len(value)):
+      for clone_num in range(num_iterations):
+        for value_num in range(len(value)):
           list_val = value[value_num]
           query_num = in_list_size * clone_num + value_num
           filt = '%s =' % identifier
@@ -819,8 +812,8 @@ class GQL(object):
       it = bind_results.Run()
 
       try:
-        for _ in xrange(offset):
-          it.next()
+        for _ in range(offset):
+          next(it)
       except StopIteration:
         pass
 

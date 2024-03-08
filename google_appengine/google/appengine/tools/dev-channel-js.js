@@ -142,6 +142,41 @@ $jscomp.arrayFromIterator = function(iterator) {
 $jscomp.arrayFromIterable = function(iterable) {
   return iterable instanceof Array ? iterable : $jscomp.arrayFromIterator($jscomp.makeIterator(iterable));
 };
+$jscomp.objectCreate = $jscomp.ASSUME_ES5 || "function" == typeof Object.create ? Object.create : function(prototype) {
+  var ctor = function() {
+  };
+  ctor.prototype = prototype;
+  return new ctor();
+};
+$jscomp.getConstructImplementation = function() {
+  function reflectConstructWorks() {
+    function Base() {
+    }
+    function Derived() {
+    }
+    new Base();
+    Reflect.construct(Base, [], Derived);
+    return new Base() instanceof Base;
+  }
+  function construct(target, argList, opt_newTarget) {
+    void 0 === opt_newTarget && (opt_newTarget = target);
+    var proto = opt_newTarget.prototype || Object.prototype, obj = $jscomp.objectCreate(proto), apply = Function.prototype.apply, out = apply.call(target, obj, argList);
+    return out || obj;
+  }
+  if ($jscomp.TRUST_ES6_POLYFILLS && "undefined" != typeof Reflect && Reflect.construct) {
+    if (reflectConstructWorks()) {
+      return Reflect.construct;
+    }
+    var brokenConstruct = Reflect.construct, patchedConstruct = function(target, argList, opt_newTarget) {
+      var out = brokenConstruct(target, argList);
+      opt_newTarget && Reflect.setPrototypeOf(out, opt_newTarget.prototype);
+      return out;
+    };
+    return patchedConstruct;
+  }
+  return construct;
+};
+$jscomp.construct = {valueOf:$jscomp.getConstructImplementation}.valueOf();
 $jscomp.underscoreProtoCanBeSet = function() {
   var x = {a:!0}, y = {};
   try {
@@ -157,6 +192,26 @@ $jscomp.setPrototypeOf = $jscomp.TRUST_ES6_POLYFILLS && "function" == typeof Obj
   }
   return target;
 } : null;
+$jscomp.inherits = function(childCtor, parentCtor) {
+  childCtor.prototype = $jscomp.objectCreate(parentCtor.prototype);
+  childCtor.prototype.constructor = childCtor;
+  if ($jscomp.setPrototypeOf) {
+    var setPrototypeOf = $jscomp.setPrototypeOf;
+    setPrototypeOf(childCtor, parentCtor);
+  } else {
+    for (var p in parentCtor) {
+      if ("prototype" != p) {
+        if (Object.defineProperties) {
+          var descriptor = Object.getOwnPropertyDescriptor(parentCtor, p);
+          descriptor && Object.defineProperty(childCtor, p, descriptor);
+        } else {
+          childCtor[p] = parentCtor[p];
+        }
+      }
+    }
+  }
+  childCtor.superClass_ = parentCtor.prototype;
+};
 $jscomp.generator = {};
 $jscomp.generator.ensureIteratorResultIsObject_ = function(result) {
   if (!(result instanceof Object)) {
@@ -345,6 +400,28 @@ $jscomp.getRestArguments = function() {
   }
   return restArgs;
 };
+$jscomp.polyfill("Reflect", function(orig) {
+  return orig ? orig : {};
+}, "es6", "es3");
+$jscomp.polyfill("Reflect.construct", function() {
+  return $jscomp.construct;
+}, "es6", "es3");
+$jscomp.polyfill("Reflect.setPrototypeOf", function(orig) {
+  if (orig) {
+    return orig;
+  }
+  if ($jscomp.setPrototypeOf) {
+    var setPrototypeOf = $jscomp.setPrototypeOf, polyfill = function(target, proto) {
+      try {
+        return setPrototypeOf(target, proto), !0;
+      } catch (e) {
+        return !1;
+      }
+    };
+    return polyfill;
+  }
+  return null;
+}, "es6", "es5");
 $jscomp.polyfill("Promise", function(NativePromise) {
   function AsyncExecutor() {
     this.batch_ = null;
@@ -574,6 +651,26 @@ $jscomp.polyfill("Promise", function(NativePromise) {
   };
   return PolyfillPromise;
 }, "es6", "es3");
+$jscomp.polyfill("Object.setPrototypeOf", function(orig) {
+  return orig || $jscomp.setPrototypeOf;
+}, "es6", "es5");
+$jscomp.owns = function(obj, prop) {
+  return Object.prototype.hasOwnProperty.call(obj, prop);
+};
+$jscomp.assign = $jscomp.TRUST_ES6_POLYFILLS && "function" == typeof Object.assign ? Object.assign : function(target, var_args) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i];
+    if (source) {
+      for (var key in source) {
+        $jscomp.owns(source, key) && (target[key] = source[key]);
+      }
+    }
+  }
+  return target;
+};
+$jscomp.polyfill("Object.assign", function(orig) {
+  return orig || $jscomp.assign;
+}, "es6", "es3");
 $jscomp.checkEs6ConformanceViaProxy = function() {
   try {
     var proxied = {}, proxy = Object.create(new $jscomp.global.Proxy(proxied, {get:function(target, key, receiver) {
@@ -586,9 +683,6 @@ $jscomp.checkEs6ConformanceViaProxy = function() {
 };
 $jscomp.USE_PROXY_FOR_ES6_CONFORMANCE_CHECKS = !1;
 $jscomp.ES6_CONFORMANCE = $jscomp.USE_PROXY_FOR_ES6_CONFORMANCE_CHECKS && $jscomp.checkEs6ConformanceViaProxy();
-$jscomp.owns = function(obj, prop) {
-  return Object.prototype.hasOwnProperty.call(obj, prop);
-};
 $jscomp.polyfill("WeakMap", function(NativeWeakMap) {
   function isConformant() {
     if (!NativeWeakMap || !Object.seal) {
@@ -804,20 +898,6 @@ $jscomp.polyfill("Map", function(NativeMap) {
   }, mapIndex = 0;
   return PolyfillMap;
 }, "es6", "es3");
-$jscomp.assign = $jscomp.TRUST_ES6_POLYFILLS && "function" == typeof Object.assign ? Object.assign : function(target, var_args) {
-  for (var i = 1; i < arguments.length; i++) {
-    var source = arguments[i];
-    if (source) {
-      for (var key in source) {
-        $jscomp.owns(source, key) && (target[key] = source[key]);
-      }
-    }
-  }
-  return target;
-};
-$jscomp.polyfill("Object.assign", function(orig) {
-  return orig || $jscomp.assign;
-}, "es6", "es3");
 $jscomp.findInternal = function(array, callback, thisArg) {
   array instanceof String && (array = String(array));
   for (var len = array.length, i = 0; i < len; i++) {
@@ -860,6 +940,116 @@ $jscomp.polyfill("String.prototype.endsWith", function(orig) {
       }
     }
     return 0 >= j;
+  };
+  return polyfill;
+}, "es6", "es3");
+$jscomp.iteratorFromArray = function(array, transform) {
+  array instanceof String && (array += "");
+  var i = 0, done = !1, iter = {next:function() {
+    if (!done && i < array.length) {
+      var index = i++;
+      return {value:transform(index, array[index]), done:!1};
+    }
+    done = !0;
+    return {done:!0, value:void 0};
+  }};
+  iter[Symbol.iterator] = function() {
+    return iter;
+  };
+  return iter;
+};
+$jscomp.polyfill("Array.prototype.keys", function(orig) {
+  if (orig) {
+    return orig;
+  }
+  var polyfill = function() {
+    return $jscomp.iteratorFromArray(this, function(i) {
+      return i;
+    });
+  };
+  return polyfill;
+}, "es6", "es3");
+$jscomp.polyfill("Set", function(NativeSet) {
+  function isConformant() {
+    if ($jscomp.ASSUME_NO_NATIVE_SET || !NativeSet || "function" != typeof NativeSet || !NativeSet.prototype.entries || "function" != typeof Object.seal) {
+      return !1;
+    }
+    try {
+      var value = Object.seal({x:4}), set = new NativeSet($jscomp.makeIterator([value]));
+      if (!set.has(value) || 1 != set.size || set.add(value) != set || 1 != set.size || set.add({x:4}) != set || 2 != set.size) {
+        return !1;
+      }
+      var iter = set.entries(), item = iter.next();
+      if (item.done || item.value[0] != value || item.value[1] != value) {
+        return !1;
+      }
+      item = iter.next();
+      return item.done || item.value[0] == value || 4 != item.value[0].x || item.value[1] != item.value[0] ? !1 : iter.next().done;
+    } catch (err) {
+      return !1;
+    }
+  }
+  if ($jscomp.USE_PROXY_FOR_ES6_CONFORMANCE_CHECKS) {
+    if (NativeSet && $jscomp.ES6_CONFORMANCE) {
+      return NativeSet;
+    }
+  } else {
+    if (isConformant()) {
+      return NativeSet;
+    }
+  }
+  var PolyfillSet = function(opt_iterable) {
+    this.map_ = new Map();
+    if (opt_iterable) {
+      for (var iter = $jscomp.makeIterator(opt_iterable), entry; !(entry = iter.next()).done;) {
+        var item = entry.value;
+        this.add(item);
+      }
+    }
+    this.size = this.map_.size;
+  };
+  PolyfillSet.prototype.add = function(value) {
+    value = 0 === value ? 0 : value;
+    this.map_.set(value, value);
+    this.size = this.map_.size;
+    return this;
+  };
+  PolyfillSet.prototype.delete = function(value) {
+    var result = this.map_.delete(value);
+    this.size = this.map_.size;
+    return result;
+  };
+  PolyfillSet.prototype.clear = function() {
+    this.map_.clear();
+    this.size = 0;
+  };
+  PolyfillSet.prototype.has = function(value) {
+    return this.map_.has(value);
+  };
+  PolyfillSet.prototype.entries = function() {
+    return this.map_.entries();
+  };
+  PolyfillSet.prototype.values = function() {
+    return this.map_.values();
+  };
+  PolyfillSet.prototype.keys = PolyfillSet.prototype.values;
+  PolyfillSet.prototype[Symbol.iterator] = PolyfillSet.prototype.values;
+  PolyfillSet.prototype.forEach = function(callback, opt_thisArg) {
+    var set = this;
+    this.map_.forEach(function(value) {
+      return callback.call(opt_thisArg, value, value, set);
+    });
+  };
+  return PolyfillSet;
+}, "es6", "es3");
+$jscomp.polyfill("Array.prototype.entries", function(orig) {
+  if (orig) {
+    return orig;
+  }
+  var polyfill = function() {
+    return $jscomp.iteratorFromArray(this, function(i, v) {
+      return [i, v];
+    });
   };
   return polyfill;
 }, "es6", "es3");
@@ -913,21 +1103,6 @@ $jscomp.polyfill("String.prototype.trimLeft", function(orig) {
   }
   return orig || polyfill;
 }, "es_2019", "es3");
-$jscomp.iteratorFromArray = function(array, transform) {
-  array instanceof String && (array += "");
-  var i = 0, done = !1, iter = {next:function() {
-    if (!done && i < array.length) {
-      var index = i++;
-      return {value:transform(index, array[index]), done:!1};
-    }
-    done = !0;
-    return {done:!0, value:void 0};
-  }};
-  iter[Symbol.iterator] = function() {
-    return iter;
-  };
-  return iter;
-};
 $jscomp.polyfill("Array.prototype.values", function(orig) {
   if (orig) {
     return orig;
@@ -939,28 +1114,6 @@ $jscomp.polyfill("Array.prototype.values", function(orig) {
   };
   return polyfill;
 }, "es8", "es3");
-$jscomp.polyfill("Array.prototype.keys", function(orig) {
-  if (orig) {
-    return orig;
-  }
-  var polyfill = function() {
-    return $jscomp.iteratorFromArray(this, function(i) {
-      return i;
-    });
-  };
-  return polyfill;
-}, "es6", "es3");
-$jscomp.polyfill("Array.prototype.entries", function(orig) {
-  if (orig) {
-    return orig;
-  }
-  var polyfill = function() {
-    return $jscomp.iteratorFromArray(this, function(i, v) {
-      return [i, v];
-    });
-  };
-  return polyfill;
-}, "es6", "es3");
 $jscomp.polyfill("Array.from", function(orig) {
   if (orig) {
     return orig;
@@ -984,7 +1137,7 @@ $jscomp.polyfill("Array.from", function(orig) {
   };
   return polyfill;
 }, "es6", "es3");
-var CLOSURE_TOGGLE_ORDINALS = {GoogFlags__async_throw_on_unicode_to_byte__enable:!1, GoogFlags__jspb_disable_serializing_empty_repeated_and_map_fields__disable:!1, GoogFlags__override_disable_toggles:!1, GoogFlags__testonly_debug_flag__enable:!1, GoogFlags__testonly_disabled_flag__enable:!1, GoogFlags__testonly_stable_flag__disable:!1, GoogFlags__testonly_staging_flag__disable:!1, GoogFlags__use_toggles:!1, GoogFlags__use_user_agent_client_hints__enable:!1};
+var CLOSURE_TOGGLE_ORDINALS = {GoogFlags__async_throw_on_unicode_to_byte__enable:!1, GoogFlags__jspb_stop_using_repeated_field_sets_from_gencode__enable:!1, GoogFlags__override_disable_toggles:!1, GoogFlags__testonly_debug_flag__enable:!1, GoogFlags__testonly_disabled_flag__enable:!1, GoogFlags__testonly_stable_flag__disable:!1, GoogFlags__testonly_staging_flag__disable:!1, GoogFlags__use_toggles:!1, GoogFlags__use_user_agent_client_hints__enable:!1};
 /*
 
  Copyright The Closure Library Authors.
@@ -1413,7 +1566,11 @@ goog.createTrustedTypesPolicy = function(name) {
   }
   return policy;
 };
-goog.debug = {};
+function module$contents$google3$javascript$typescript$contrib$check_checkExhaustiveAllowing(value, msg) {
+  msg = void 0 === msg ? "unexpected value " + value + "!" : msg;
+  throw Error(msg);
+}
+;goog.debug = {};
 function module$contents$goog$debug$Error_DebugError(msg, cause) {
   if (Error.captureStackTrace) {
     Error.captureStackTrace(this, module$contents$goog$debug$Error_DebugError);
@@ -2288,6 +2445,288 @@ goog.asserts.dom.assertIsHtmlFrameElement = module$contents$goog$asserts$dom_ass
 goog.asserts.dom.assertIsHtmlIFrameElement = module$contents$goog$asserts$dom_assertIsHtmlIFrameElement;
 goog.asserts.dom.assertIsHtmlObjectElement = module$contents$goog$asserts$dom_assertIsHtmlObjectElement;
 goog.asserts.dom.assertIsHtmlScriptElement = module$contents$goog$asserts$dom_assertIsHtmlScriptElement;
+goog.debug.errorcontext = {};
+goog.debug.errorcontext.addErrorContext = function(err, contextKey, contextValue) {
+  err[goog.debug.errorcontext.CONTEXT_KEY_] || (err[goog.debug.errorcontext.CONTEXT_KEY_] = {});
+  err[goog.debug.errorcontext.CONTEXT_KEY_][contextKey] = contextValue;
+};
+goog.debug.errorcontext.getErrorContext = function(err) {
+  return err[goog.debug.errorcontext.CONTEXT_KEY_] || {};
+};
+goog.debug.errorcontext.CONTEXT_KEY_ = "__closure__error__context__984382";
+goog.debug.LOGGING_ENABLED = goog.DEBUG;
+goog.debug.FORCE_SLOPPY_STACKS = !1;
+goog.debug.CHECK_FOR_THROWN_EVENT = !1;
+goog.debug.catchErrors = function(logFunc, opt_cancel, opt_target) {
+  var target = opt_target || goog.global, oldErrorHandler = target.onerror, retVal = !!opt_cancel;
+  target.onerror = function(message, url, line, opt_col, opt_error) {
+    oldErrorHandler && oldErrorHandler(message, url, line, opt_col, opt_error);
+    logFunc({message:message, fileName:url, line:line, lineNumber:line, col:opt_col, error:opt_error});
+    return retVal;
+  };
+};
+goog.debug.expose = function(obj, opt_showFn) {
+  if ("undefined" == typeof obj) {
+    return "undefined";
+  }
+  if (null == obj) {
+    return "NULL";
+  }
+  var str = [], x;
+  for (x in obj) {
+    if (opt_showFn || "function" !== typeof obj[x]) {
+      var s = x + " = ";
+      try {
+        s += obj[x];
+      } catch (e) {
+        s += "*** " + e + " ***";
+      }
+      str.push(s);
+    }
+  }
+  return str.join("\n");
+};
+goog.debug.deepExpose = function(obj, opt_showFn) {
+  var str = [], uidsToCleanup = [], ancestorUids = {}, helper = function(obj, space) {
+    var nestspace = space + "  ";
+    try {
+      if (void 0 === obj) {
+        str.push("undefined");
+      } else if (null === obj) {
+        str.push("NULL");
+      } else if ("string" === typeof obj) {
+        str.push('"' + obj.replace(/\n/g, "\n" + space) + '"');
+      } else if ("function" === typeof obj) {
+        str.push(String(obj).replace(/\n/g, "\n" + space));
+      } else if (goog.isObject(obj)) {
+        goog.hasUid(obj) || uidsToCleanup.push(obj);
+        var uid = goog.getUid(obj);
+        if (ancestorUids[uid]) {
+          str.push("*** reference loop detected (id=" + uid + ") ***");
+        } else {
+          ancestorUids[uid] = !0;
+          str.push("{");
+          for (var x in obj) {
+            if (opt_showFn || "function" !== typeof obj[x]) {
+              str.push("\n"), str.push(nestspace), str.push(x + " = "), helper(obj[x], nestspace);
+            }
+          }
+          str.push("\n" + space + "}");
+          delete ancestorUids[uid];
+        }
+      } else {
+        str.push(obj);
+      }
+    } catch (e) {
+      str.push("*** " + e + " ***");
+    }
+  };
+  helper(obj, "");
+  for (var i = 0; i < uidsToCleanup.length; i++) {
+    goog.removeUid(uidsToCleanup[i]);
+  }
+  return str.join("");
+};
+goog.debug.exposeArray = function(arr) {
+  for (var str = [], i = 0; i < arr.length; i++) {
+    Array.isArray(arr[i]) ? str.push(goog.debug.exposeArray(arr[i])) : str.push(arr[i]);
+  }
+  return "[ " + str.join(", ") + " ]";
+};
+goog.debug.normalizeErrorObject = function(err) {
+  var href = goog.getObjectByName("window.location.href");
+  null == err && (err = 'Unknown Error of type "null/undefined"');
+  if ("string" === typeof err) {
+    return {message:err, name:"Unknown error", lineNumber:"Not available", fileName:href, stack:"Not available"};
+  }
+  var threwError = !1;
+  try {
+    var lineNumber = err.lineNumber || err.line || "Not available";
+  } catch (e) {
+    lineNumber = "Not available", threwError = !0;
+  }
+  try {
+    var fileName = err.fileName || err.filename || err.sourceURL || goog.global.$googDebugFname || href;
+  } catch (e) {
+    fileName = "Not available", threwError = !0;
+  }
+  var stack = goog.debug.serializeErrorStack_(err);
+  if (!(!threwError && err.lineNumber && err.fileName && err.stack && err.message && err.name)) {
+    var message = err.message;
+    if (null == message) {
+      if (err.constructor && err.constructor instanceof Function) {
+        var ctorName = err.constructor.name ? err.constructor.name : goog.debug.getFunctionName(err.constructor);
+        message = 'Unknown Error of type "' + ctorName + '"';
+        if (goog.debug.CHECK_FOR_THROWN_EVENT && "Event" == ctorName) {
+          try {
+            message = message + ' with Event.type "' + (err.type || "") + '"';
+          } catch (e) {
+          }
+        }
+      } else {
+        message = "Unknown Error of unknown type";
+      }
+      "function" === typeof err.toString && Object.prototype.toString !== err.toString && (message += ": " + err.toString());
+    }
+    return {message:message, name:err.name || "UnknownError", lineNumber:lineNumber, fileName:fileName, stack:stack || "Not available"};
+  }
+  return {message:err.message, name:err.name, lineNumber:err.lineNumber, fileName:err.fileName, stack:stack};
+};
+goog.debug.serializeErrorStack_ = function(e, seen) {
+  seen || (seen = {});
+  seen[goog.debug.serializeErrorAsKey_(e)] = !0;
+  var stack = e.stack || "", cause = e.cause;
+  cause && !seen[goog.debug.serializeErrorAsKey_(cause)] && (stack += "\nCaused by: ", cause.stack && 0 == cause.stack.indexOf(cause.toString()) || (stack += "string" === typeof cause ? cause : cause.message + "\n"), stack += goog.debug.serializeErrorStack_(cause, seen));
+  return stack;
+};
+goog.debug.serializeErrorAsKey_ = function(e) {
+  var keyPrefix = "";
+  "function" === typeof e.toString && (keyPrefix = "" + e);
+  return keyPrefix + e.stack;
+};
+goog.debug.enhanceError = function(err, opt_message) {
+  if (err instanceof Error) {
+    var error = err;
+  } else {
+    error = Error(err), Error.captureStackTrace && Error.captureStackTrace(error, goog.debug.enhanceError);
+  }
+  error.stack || (error.stack = goog.debug.getStacktrace(goog.debug.enhanceError));
+  if (opt_message) {
+    for (var x = 0; error["message" + x];) {
+      ++x;
+    }
+    error["message" + x] = String(opt_message);
+  }
+  return error;
+};
+goog.debug.enhanceErrorWithContext = function(err, opt_context) {
+  var error = goog.debug.enhanceError(err);
+  if (opt_context) {
+    for (var key in opt_context) {
+      goog.debug.errorcontext.addErrorContext(error, key, opt_context[key]);
+    }
+  }
+  return error;
+};
+goog.debug.getStacktraceSimple = function(opt_depth) {
+  if (!goog.debug.FORCE_SLOPPY_STACKS) {
+    var stack = goog.debug.getNativeStackTrace_(goog.debug.getStacktraceSimple);
+    if (stack) {
+      return stack;
+    }
+  }
+  for (var sb = [], fn = arguments.callee.caller, depth = 0; fn && (!opt_depth || depth < opt_depth);) {
+    sb.push(goog.debug.getFunctionName(fn));
+    sb.push("()\n");
+    try {
+      fn = fn.caller;
+    } catch (e) {
+      sb.push("[exception trying to get caller]\n");
+      break;
+    }
+    depth++;
+    if (depth >= goog.debug.MAX_STACK_DEPTH) {
+      sb.push("[...long stack...]");
+      break;
+    }
+  }
+  opt_depth && depth >= opt_depth ? sb.push("[...reached max depth limit...]") : sb.push("[end]");
+  return sb.join("");
+};
+goog.debug.MAX_STACK_DEPTH = 50;
+goog.debug.getNativeStackTrace_ = function(fn) {
+  var tempErr = Error();
+  if (Error.captureStackTrace) {
+    return Error.captureStackTrace(tempErr, fn), String(tempErr.stack);
+  }
+  try {
+    throw tempErr;
+  } catch (e) {
+    tempErr = e;
+  }
+  var stack = tempErr.stack;
+  return stack ? String(stack) : null;
+};
+goog.debug.getStacktrace = function(fn) {
+  if (!goog.debug.FORCE_SLOPPY_STACKS) {
+    var contextFn = fn || goog.debug.getStacktrace;
+    var stack = goog.debug.getNativeStackTrace_(contextFn);
+  }
+  stack || (stack = goog.debug.getStacktraceHelper_(fn || arguments.callee.caller, []));
+  return stack;
+};
+goog.debug.getStacktraceHelper_ = function(fn, visited) {
+  var sb = [];
+  if (module$contents$goog$array_contains(visited, fn)) {
+    sb.push("[...circular reference...]");
+  } else if (fn && visited.length < goog.debug.MAX_STACK_DEPTH) {
+    sb.push(goog.debug.getFunctionName(fn) + "(");
+    for (var args = fn.arguments, i = 0; args && i < args.length; i++) {
+      0 < i && sb.push(", ");
+      var arg = args[i];
+      switch(typeof arg) {
+        case "object":
+          var argDesc = arg ? "object" : "null";
+          break;
+        case "string":
+          argDesc = arg;
+          break;
+        case "number":
+          argDesc = String(arg);
+          break;
+        case "boolean":
+          argDesc = arg ? "true" : "false";
+          break;
+        case "function":
+          argDesc = (argDesc = goog.debug.getFunctionName(arg)) ? argDesc : "[fn]";
+          break;
+        default:
+          argDesc = typeof arg;
+      }
+      40 < argDesc.length && (argDesc = argDesc.slice(0, 40) + "...");
+      sb.push(argDesc);
+    }
+    visited.push(fn);
+    sb.push(")\n");
+    try {
+      sb.push(goog.debug.getStacktraceHelper_(fn.caller, visited));
+    } catch (e) {
+      sb.push("[exception trying to get caller]\n");
+    }
+  } else {
+    fn ? sb.push("[...long stack...]") : sb.push("[end]");
+  }
+  return sb.join("");
+};
+goog.debug.getFunctionName = function(fn) {
+  if (goog.debug.fnNameCache_[fn]) {
+    return goog.debug.fnNameCache_[fn];
+  }
+  var functionSource = String(fn);
+  if (!goog.debug.fnNameCache_[functionSource]) {
+    var matches = /function\s+([^\(]+)/m.exec(functionSource);
+    if (matches) {
+      var method = matches[1];
+      goog.debug.fnNameCache_[functionSource] = method;
+    } else {
+      goog.debug.fnNameCache_[functionSource] = "[Anonymous]";
+    }
+  }
+  return goog.debug.fnNameCache_[functionSource];
+};
+goog.debug.makeWhitespaceVisible = function(string) {
+  return string.replace(/ /g, "[_]").replace(/\f/g, "[f]").replace(/\n/g, "[n]\n").replace(/\r/g, "[r]").replace(/\t/g, "[t]");
+};
+goog.debug.runtimeType = function(value) {
+  return value instanceof Function ? value.displayName || value.name || "unknown type name" : value instanceof Object ? value.constructor.displayName || value.constructor.name || Object.prototype.toString.call(value) : null === value ? "null" : typeof value;
+};
+goog.debug.fnNameCache_ = {};
+goog.debug.freezeInternal_ = goog.DEBUG && Object.freeze || function(arg) {
+  return arg;
+};
+goog.debug.freeze = function(arg) {
+  return goog.debug.freezeInternal_(arg);
+};
 goog.dom.asserts = {};
 goog.dom.asserts.assertIsLocation = function(o) {
   if (goog.asserts.ENABLE_ASSERTS) {
@@ -2323,14 +2762,13 @@ goog.labs.userAgent = {};
 goog.labs.userAgent.chromiumRebrands = {};
 var module$contents$goog$labs$userAgent$chromiumRebrands_ChromiumRebrand = {GOOGLE_CHROME:"Google Chrome", BRAVE:"Brave", OPERA:"Opera", EDGE:"Microsoft Edge"};
 goog.labs.userAgent.chromiumRebrands.ChromiumRebrand = module$contents$goog$labs$userAgent$chromiumRebrands_ChromiumRebrand;
-var module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles = {TOGGLE_GoogFlags__use_toggles:!1, TOGGLE_GoogFlags__override_disable_toggles:!1, TOGGLE_GoogFlags__use_user_agent_client_hints__enable:!1, TOGGLE_GoogFlags__async_throw_on_unicode_to_byte__enable:!1, TOGGLE_GoogFlags__jspb_disable_serializing_empty_repeated_and_map_fields__disable:!1, TOGGLE_GoogFlags__testonly_disabled_flag__enable:!1, TOGGLE_GoogFlags__testonly_debug_flag__enable:!1, TOGGLE_GoogFlags__testonly_staging_flag__disable:!1, 
+var module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles = {TOGGLE_GoogFlags__use_toggles:!1, TOGGLE_GoogFlags__override_disable_toggles:!1, TOGGLE_GoogFlags__use_user_agent_client_hints__enable:!1, TOGGLE_GoogFlags__async_throw_on_unicode_to_byte__enable:!1, TOGGLE_GoogFlags__jspb_stop_using_repeated_field_sets_from_gencode__enable:!1, TOGGLE_GoogFlags__testonly_disabled_flag__enable:!1, TOGGLE_GoogFlags__testonly_debug_flag__enable:!1, TOGGLE_GoogFlags__testonly_staging_flag__disable:!1, 
 TOGGLE_GoogFlags__testonly_stable_flag__disable:!1};
 goog.flags = {};
 var module$contents$goog$flags_STAGING = goog.readFlagInternalDoNotUseOrElse(1, goog.FLAGS_STAGING_DEFAULT);
 goog.flags.USE_USER_AGENT_CLIENT_HINTS = module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__use_toggles ? module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__use_user_agent_client_hints__enable : goog.readFlagInternalDoNotUseOrElse(610401301, !1);
 goog.flags.ASYNC_THROW_ON_UNICODE_TO_BYTE = module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__use_toggles ? module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__async_throw_on_unicode_to_byte__enable : goog.readFlagInternalDoNotUseOrElse(899588437, !1);
-goog.flags.JSPB_DISABLE_SERIALIZING_EMPTY_REPEATED_AND_MAP_FIELDS = module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__use_toggles ? module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__override_disable_toggles || !module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__jspb_disable_serializing_empty_repeated_and_map_fields__disable : goog.readFlagInternalDoNotUseOrElse(572417392, 
-!0);
+goog.flags.JSPB_STOP_USING_REPEATED_FIELD_SETS_FROM_GENCODE = module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__use_toggles ? goog.DEBUG || module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__jspb_stop_using_repeated_field_sets_from_gencode__enable : goog.readFlagInternalDoNotUseOrElse(188588736, goog.DEBUG);
 goog.flags.TESTONLY_DISABLED_FLAG = module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__use_toggles ? module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__testonly_disabled_flag__enable : goog.readFlagInternalDoNotUseOrElse(2147483644, !1);
 goog.flags.TESTONLY_DEBUG_FLAG = module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__use_toggles ? goog.DEBUG || module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__testonly_debug_flag__enable : goog.readFlagInternalDoNotUseOrElse(2147483645, goog.DEBUG);
 goog.flags.TESTONLY_STAGING_FLAG = module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__use_toggles ? goog.FLAGS_STAGING_DEFAULT && (module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__override_disable_toggles || !module$exports$google3$third_party$javascript$closure$flags$flags$2etoggles.TOGGLE_GoogFlags__testonly_staging_flag__disable) : goog.readFlagInternalDoNotUseOrElse(2147483646, module$contents$goog$flags_STAGING);
@@ -3151,20 +3589,20 @@ goog.userAgent.isDocumentModeOrHigher = function(documentMode) {
   return Number(goog.userAgent.DOCUMENT_MODE) >= documentMode;
 };
 goog.userAgent.isDocumentMode = goog.userAgent.isDocumentModeOrHigher;
-var JSCompiler_inline_result$jscomp$47;
-var doc$jscomp$inline_53 = goog.global.document;
-if (doc$jscomp$inline_53 && goog.userAgent.IE) {
-  var documentMode$jscomp$inline_54 = goog.userAgent.getDocumentMode_();
-  if (documentMode$jscomp$inline_54) {
-    JSCompiler_inline_result$jscomp$47 = documentMode$jscomp$inline_54;
+var JSCompiler_inline_result$jscomp$115;
+var doc$jscomp$inline_121 = goog.global.document;
+if (doc$jscomp$inline_121 && goog.userAgent.IE) {
+  var documentMode$jscomp$inline_122 = goog.userAgent.getDocumentMode_();
+  if (documentMode$jscomp$inline_122) {
+    JSCompiler_inline_result$jscomp$115 = documentMode$jscomp$inline_122;
   } else {
-    var ieVersion$jscomp$inline_55 = parseInt(goog.userAgent.VERSION, 10);
-    JSCompiler_inline_result$jscomp$47 = ieVersion$jscomp$inline_55 || void 0;
+    var ieVersion$jscomp$inline_123 = parseInt(goog.userAgent.VERSION, 10);
+    JSCompiler_inline_result$jscomp$115 = ieVersion$jscomp$inline_123 || void 0;
   }
 } else {
-  JSCompiler_inline_result$jscomp$47 = void 0;
+  JSCompiler_inline_result$jscomp$115 = void 0;
 }
-goog.userAgent.DOCUMENT_MODE = JSCompiler_inline_result$jscomp$47;
+goog.userAgent.DOCUMENT_MODE = JSCompiler_inline_result$jscomp$115;
 goog.dom.BrowserFeature = {};
 goog.dom.BrowserFeature.ASSUME_NO_OFFSCREEN_CANVAS = !1;
 goog.dom.BrowserFeature.ASSUME_OFFSCREEN_CANVAS = !1;
@@ -3809,10 +4247,6 @@ goog.html.SafeUrl.fromBlob = function(blob) {
   var url = goog.html.SafeUrl.isSafeMimeType(blob.type) ? goog.fs.url.createObjectUrl(blob) : goog.html.SafeUrl.INNOCUOUS_STRING;
   return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(url);
 };
-goog.html.SafeUrl.revokeObjectUrl = function(safeUrl) {
-  var url = safeUrl.toString();
-  url !== goog.html.SafeUrl.INNOCUOUS_STRING && goog.fs.url.revokeObjectUrl(url);
-};
 goog.html.DATA_URL_PATTERN_ = /^data:(.*);base64,[a-z0-9+\/]+=*$/i;
 goog.html.SafeUrl.tryFromDataUrl = function(dataUrl) {
   dataUrl = String(dataUrl);
@@ -3821,27 +4255,6 @@ goog.html.SafeUrl.tryFromDataUrl = function(dataUrl) {
 };
 goog.html.SafeUrl.fromDataUrl = function(dataUrl) {
   return goog.html.SafeUrl.tryFromDataUrl(dataUrl) || goog.html.SafeUrl.INNOCUOUS_URL;
-};
-goog.html.SIP_URL_PATTERN_ = RegExp("^sip[s]?:[+a-z0-9_.!$%&'*\\/=^`{|}~-]+@([a-z0-9-]+\\.)+[a-z0-9]{2,63}$", "i");
-goog.html.SafeUrl.fromSipUrl = function(sipUrl) {
-  goog.html.SIP_URL_PATTERN_.test(decodeURIComponent(sipUrl)) || (sipUrl = goog.html.SafeUrl.INNOCUOUS_STRING);
-  return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(sipUrl);
-};
-goog.html.SafeUrl.sanitizeChromeExtensionUrl = function(url, extensionId) {
-  return goog.html.SafeUrl.sanitizeExtensionUrl_(/^chrome-extension:\/\/([^\/]+)\//, url, extensionId);
-};
-goog.html.SafeUrl.sanitizeExtensionUrl_ = function(scheme, url, extensionId) {
-  var matches = scheme.exec(url);
-  if (matches) {
-    var extractedExtensionId = matches[1];
-    var acceptedExtensionIds = extensionId instanceof goog.string.Const ? [goog.string.Const.unwrap(extensionId)] : extensionId.map(function(x) {
-      return goog.string.Const.unwrap(x);
-    });
-    -1 == acceptedExtensionIds.indexOf(extractedExtensionId) && (url = goog.html.SafeUrl.INNOCUOUS_STRING);
-  } else {
-    url = goog.html.SafeUrl.INNOCUOUS_STRING;
-  }
-  return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(url);
 };
 goog.html.SafeUrl.fromTrustedResourceUrl = function(trustedResourceUrl) {
   return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(goog.html.TrustedResourceUrl.unwrap(trustedResourceUrl));
@@ -4192,16 +4605,230 @@ goog.dom.TagName.SCRIPT, goog.dom.TagName.STYLE, goog.dom.TagName.SVG, goog.dom.
 module$contents$goog$html$SafeHtml_SafeHtml.EMPTY = new module$contents$goog$html$SafeHtml_SafeHtml(goog.global.trustedTypes && goog.global.trustedTypes.emptyHTML || "", module$contents$goog$html$SafeHtml_CONSTRUCTOR_TOKEN_PRIVATE);
 module$contents$goog$html$SafeHtml_SafeHtml.BR = module$contents$goog$html$SafeHtml_SafeHtml.createSafeHtmlSecurityPrivateDoNotAccessOrElse("<br>");
 goog.html.SafeHtml = module$contents$goog$html$SafeHtml_SafeHtml;
-var module$exports$goog$html$internals = {};
+/*
+
+ SPDX-License-Identifier: Apache-2.0
+*/
+function module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(valueOf) {
+  return {valueOf:valueOf}.valueOf();
+}
+;var module$exports$goog$html$internals = {};
 module$exports$goog$html$internals.createSafeHtml = module$contents$goog$html$SafeHtml_SafeHtml.createSafeHtmlSecurityPrivateDoNotAccessOrElse;
 module$exports$goog$html$internals.createSafeStyle = module$contents$goog$html$SafeStyle_SafeStyle.createSafeStyleSecurityPrivateDoNotAccessOrElse;
 module$exports$goog$html$internals.createSafeStyleSheet = module$contents$goog$html$SafeStyleSheet_SafeStyleSheet.createSafeStyleSheetSecurityPrivateDoNotAccessOrElse;
 module$exports$goog$html$internals.createSafeUrl = goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse;
 module$exports$goog$html$internals.createTrustedResourceUrl = goog.html.TrustedResourceUrl.createTrustedResourceUrlSecurityPrivateDoNotAccessOrElse;
-/*
-
- SPDX-License-Identifier: Apache-2.0
-*/
+function module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(value) {
+  return goog.html.TrustedResourceUrl.unwrapTrustedScriptURL(value);
+}
+;var $jscomp$templatelit$m425881384$5 = $jscomp.createTemplateTagFirstArg([""]), $jscomp$templatelit$m425881384$6 = $jscomp.createTemplateTagFirstArgWithRaw(["\x00"], ["\\0"]), $jscomp$templatelit$m425881384$7 = $jscomp.createTemplateTagFirstArgWithRaw(["\n"], ["\\n"]), $jscomp$templatelit$m425881384$8 = $jscomp.createTemplateTagFirstArgWithRaw(["\x00"], ["\\u0000"]), $jscomp$templatelit$m425881384$9 = $jscomp.createTemplateTagFirstArg([""]), $jscomp$templatelit$m425881384$10 = $jscomp.createTemplateTagFirstArgWithRaw(["\x00"], 
+["\\0"]), $jscomp$templatelit$m425881384$11 = $jscomp.createTemplateTagFirstArgWithRaw(["\n"], ["\\n"]), $jscomp$templatelit$m425881384$12 = $jscomp.createTemplateTagFirstArgWithRaw(["\x00"], ["\\u0000"]);
+function module$contents$google3$third_party$javascript$safevalues$internals$string_literal_assertIsTemplateObject(templateObj, numExprs) {
+  if (!Array.isArray(templateObj) || !Array.isArray(templateObj.raw) || templateObj.length !== templateObj.raw.length || !module$contents$google3$third_party$javascript$safevalues$internals$string_literal_isTranspiled && templateObj === templateObj.raw || !(module$contents$google3$third_party$javascript$safevalues$internals$string_literal_isTranspiled && !module$contents$google3$third_party$javascript$safevalues$internals$string_literal_frozenTSA || module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen(templateObj)) || 
+  numExprs + 1 !== templateObj.length) {
+    throw new TypeError("\n    ############################## ERROR ##############################\n\n    It looks like you are trying to call a template tag function (fn`...`)\n    using the normal function syntax (fn(...)), which is not supported.\n\n    The functions in the safevalues library are not designed to be called\n    like normal functions, and doing so invalidates the security guarantees\n    that safevalues provides.\n\n    If you are stuck and not sure how to proceed, please reach out to us\n    instead through:\n     - go/ise-hardening-yaqs (preferred) // LINE-INTERNAL\n     - g/ise-hardening // LINE-INTERNAL\n     - https://github.com/google/safevalues/issues\n\n    ############################## ERROR ##############################");
+  }
+}
+function module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen(templateObj) {
+  return Object.isFrozen(templateObj) && Object.isFrozen(templateObj.raw);
+}
+function module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkTranspiled(fn) {
+  return -1 === fn.toString().indexOf("`");
+}
+var module$contents$google3$third_party$javascript$safevalues$internals$string_literal_isTranspiled = module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkTranspiled(function(tag) {
+  return tag($jscomp$templatelit$m425881384$5);
+}) || module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkTranspiled(function(tag) {
+  return tag($jscomp$templatelit$m425881384$6);
+}) || module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkTranspiled(function(tag) {
+  return tag($jscomp$templatelit$m425881384$7);
+}) || module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkTranspiled(function(tag) {
+  return tag($jscomp$templatelit$m425881384$8);
+}), module$contents$google3$third_party$javascript$safevalues$internals$string_literal_frozenTSA = module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen($jscomp$templatelit$m425881384$9) && module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen($jscomp$templatelit$m425881384$10) && module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen($jscomp$templatelit$m425881384$11) && module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen($jscomp$templatelit$m425881384$12);
+var module$exports$google3$third_party$javascript$safevalues$internals$url_impl = {};
+module$exports$google3$third_party$javascript$safevalues$internals$url_impl.SafeUrl = goog.html.SafeUrl;
+function module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(url) {
+  return (0,goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse)(url);
+}
+module$exports$google3$third_party$javascript$safevalues$internals$url_impl.createUrlInternal = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal;
+module$exports$google3$third_party$javascript$safevalues$internals$url_impl.ABOUT_BLANK = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal("about:blank");
+module$exports$google3$third_party$javascript$safevalues$internals$url_impl.INNOCUOUS_URL = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal("about:invalid#zClosurez");
+function module$contents$google3$third_party$javascript$safevalues$internals$url_impl_isUrl(value) {
+  return value instanceof goog.html.SafeUrl;
+}
+module$exports$google3$third_party$javascript$safevalues$internals$url_impl.isUrl = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_isUrl;
+function module$contents$google3$third_party$javascript$safevalues$internals$url_impl_unwrapUrl(value) {
+  return goog.html.SafeUrl.unwrap(value);
+}
+module$exports$google3$third_party$javascript$safevalues$internals$url_impl.unwrapUrl = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_unwrapUrl;
+var module$exports$google3$third_party$javascript$safevalues$builders$url_builders = {};
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_Scheme() {
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.Scheme = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_Scheme;
+var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl = function(isValid) {
+  this.isValid = isValid;
+};
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme(scheme) {
+  return new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
+    return url.substr(0, scheme.length + 1).toLowerCase() === scheme + ":";
+  });
+}
+var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_RELATIVE_SCHEME = new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
+  return /^[^:]*([/?#]|$)/.test(url);
+}), module$contents$google3$third_party$javascript$safevalues$builders$url_builders_CALLTO_SCHEME = new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
+  return /^callto:\+?\d*$/i.test(url);
+}), module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SSH_SCHEME = new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
+  return 0 === url.indexOf("ssh://");
+}), module$contents$google3$third_party$javascript$safevalues$builders$url_builders_EXTENSION_SCHEME = new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
+  return 0 === url.indexOf("chrome-extension://") || 0 === url.indexOf("moz-extension://") || 0 === url.indexOf("ms-browser-extension://");
+}), module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SIP_SCHEME = new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
+  return 0 === url.indexOf("sip:") || 0 === url.indexOf("sips:");
+});
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme = {TEL:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("tel"), CALLTO:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_CALLTO_SCHEME, SSH:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SSH_SCHEME, RTSP:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("rtsp"), 
+DATA:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("data"), HTTP:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("http"), HTTPS:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("https"), EXTENSION:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_EXTENSION_SCHEME, FTP:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("ftp"), 
+RELATIVE:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_RELATIVE_SCHEME, MAILTO:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("mailto"), INTENT:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("intent"), MARKET:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("market"), ITMS:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("itms"), 
+ITMS_APPSS:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("itms-appss"), ITMS_SERVICES:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("itms-services"), FACEBOOK_MESSENGER:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("fb-messenger"), WHATSAPP:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("whatsapp"), SIP:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SIP_SCHEME, 
+SMS:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("sms"), VND_YOUTUBE:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("vnd.youtube")};
+var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_DEFAULT_SCHEMES = [module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.DATA, module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.HTTP, module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.HTTPS, module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.MAILTO, 
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.FTP, module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.RELATIVE];
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_trySanitizeUrl(url, allowedSchemes) {
+  allowedSchemes = void 0 === allowedSchemes ? module$contents$google3$third_party$javascript$safevalues$builders$url_builders_DEFAULT_SCHEMES : allowedSchemes;
+  if (module$contents$google3$third_party$javascript$safevalues$internals$url_impl_isUrl(url)) {
+    return url;
+  }
+  for (var i = 0; i < allowedSchemes.length; ++i) {
+    var scheme = allowedSchemes[i];
+    if (scheme instanceof module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl && scheme.isValid(url)) {
+      return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(url);
+    }
+  }
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.trySanitizeUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_trySanitizeUrl;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeUrl(url, allowedSchemes) {
+  allowedSchemes = void 0 === allowedSchemes ? module$contents$google3$third_party$javascript$safevalues$builders$url_builders_DEFAULT_SCHEMES : allowedSchemes;
+  var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_trySanitizeUrl(url, allowedSchemes);
+  void 0 === sanitizedUrl && module$contents$google3$third_party$javascript$safevalues$builders$url_builders_triggerCallbacks(url.toString());
+  return sanitizedUrl || module$exports$google3$third_party$javascript$safevalues$internals$url_impl.INNOCUOUS_URL;
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.sanitizeUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeUrl;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_objectUrlFromSafeSource(source) {
+  if ("undefined" !== typeof MediaSource && source instanceof MediaSource) {
+    return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(URL.createObjectURL(source));
+  }
+  var blob = source, match = blob.type.match(/^([^;]+)(?:;\w+=(?:\w+|"[\w;,= ]+"))*$/i), $jscomp$inline_72;
+  var JSCompiler_inline_result = 2 === (null == ($jscomp$inline_72 = match) ? void 0 : $jscomp$inline_72.length) && (/^image\/(?:bmp|gif|jpeg|jpg|png|tiff|webp|x-icon|heic|heif|avif|x-ms-bmp)$/i.test(match[1]) || /^video\/(?:mpeg|mp4|ogg|webm|x-matroska|quicktime|x-ms-wmv)$/i.test(match[1]) || /^audio\/(?:3gpp2|3gpp|aac|amr|L16|midi|mp3|mp4|mpeg|oga|ogg|opus|x-m4a|x-matroska|x-wav|wav|webm)$/i.test(match[1]) || /^font\/\w+/i.test(match[1]));
+  if (!JSCompiler_inline_result) {
+    var message = "";
+    goog.DEBUG && (message = "unsafe blob MIME type: " + blob.type);
+    throw Error(message);
+  }
+  return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(URL.createObjectURL(blob));
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.objectUrlFromSafeSource = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_objectUrlFromSafeSource;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_fromMediaSource(media) {
+  if ("undefined" !== typeof MediaSource && media instanceof MediaSource) {
+    return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(URL.createObjectURL(media));
+  }
+  var message = "";
+  goog.DEBUG && (message = "fromMediaSource only accepts MediaSource instances, but was called with " + media + ".");
+  throw Error(message);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.fromMediaSource = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_fromMediaSource;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_fromTrustedResourceUrl(url) {
+  return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(url).toString());
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.fromTrustedResourceUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_fromTrustedResourceUrl;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_safeUrl(templateObj) {
+  var rest = $jscomp.getRestArguments.apply(1, arguments);
+  goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$internals$string_literal_assertIsTemplateObject(templateObj, rest.length);
+  var prefix = templateObj[0];
+  if (goog.DEBUG) {
+    var prefix$jscomp$0 = prefix, isWholeUrl = 0 === rest.length, markerIdx = prefix$jscomp$0.search(/[:/?#]/);
+    if (0 > markerIdx) {
+      var JSCompiler_inline_result = isWholeUrl;
+    } else {
+      if (":" !== prefix$jscomp$0.charAt(markerIdx)) {
+        JSCompiler_inline_result = !0;
+      } else {
+        var scheme = prefix$jscomp$0.substring(0, markerIdx).toLowerCase();
+        JSCompiler_inline_result = /^[a-z][a-z\d+.-]*$/.test(scheme) && "javascript" !== scheme;
+      }
+    }
+    if (!JSCompiler_inline_result) {
+      throw Error("Trying to interpolate with unsupported prefix: " + prefix);
+    }
+  }
+  for (var urlParts = [prefix], i = 0; i < rest.length; i++) {
+    urlParts.push(String(rest[i])), urlParts.push(templateObj[i + 1]);
+  }
+  return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(urlParts.join(""));
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.safeUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_safeUrl;
+var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_ASSUME_IMPLEMENTS_URL_API = 2020 <= goog.FEATURESET_YEAR, module$contents$google3$third_party$javascript$safevalues$builders$url_builders_supportsURLAPI = module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
+  return module$contents$google3$third_party$javascript$safevalues$builders$url_builders_ASSUME_IMPLEMENTS_URL_API ? !0 : "function" === typeof URL;
+});
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_extractScheme(url) {
+  if (!module$contents$google3$third_party$javascript$safevalues$builders$url_builders_supportsURLAPI) {
+    a: {
+      var aTag = document.createElement("a");
+      try {
+        aTag.href = url;
+      } catch (e) {
+        var JSCompiler_inline_result = void 0;
+        break a;
+      }
+      var protocol = aTag.protocol;
+      JSCompiler_inline_result = ":" === protocol || "" === protocol ? "https:" : protocol;
+    }
+    return JSCompiler_inline_result;
+  }
+  try {
+    var parsedUrl = new URL(url);
+  } catch (e) {
+    return "https:";
+  }
+  return parsedUrl.protocol;
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.extractScheme = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_extractScheme;
+var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_ALLOWED_SCHEMES = ["data:", "http:", "https:", "mailto:", "ftp:"];
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.IS_NOT_JAVASCRIPT_URL_PATTERN = /^\s*(?!javascript:)(?:[a-z0-9+.-]+:|[^:\/?#]*(?:[\/?#]|$))/i;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeJavaScriptUrl(url) {
+  if (module$exports$google3$third_party$javascript$safevalues$builders$url_builders.IS_NOT_JAVASCRIPT_URL_PATTERN.test(url)) {
+    return url;
+  }
+  module$contents$google3$third_party$javascript$safevalues$builders$url_builders_triggerCallbacks(url);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.sanitizeJavaScriptUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeJavaScriptUrl;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(url) {
+  return url instanceof goog.html.SafeUrl ? module$contents$google3$third_party$javascript$safevalues$internals$url_impl_unwrapUrl(url) : module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeJavaScriptUrl(url);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.unwrapUrlOrSanitize = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_restrictivelySanitizeUrl(url) {
+  var parsedScheme = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_extractScheme(url);
+  return void 0 !== parsedScheme && -1 !== module$contents$google3$third_party$javascript$safevalues$builders$url_builders_ALLOWED_SCHEMES.indexOf(parsedScheme.toLowerCase()) ? url : "about:invalid#zClosurez";
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.restrictivelySanitizeUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_restrictivelySanitizeUrl;
+var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks = [], module$contents$google3$third_party$javascript$safevalues$builders$url_builders_triggerCallbacks = function() {
+};
+goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$builders$url_builders_addJavaScriptUrlSanitizationCallback(function(url) {
+  console.warn("A URL with content '" + url + "' was sanitized away.");
+});
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_addJavaScriptUrlSanitizationCallback(callback) {
+  -1 === module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks.indexOf(callback) && module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks.push(callback);
+  module$contents$google3$third_party$javascript$safevalues$builders$url_builders_triggerCallbacks = function(url) {
+    module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks.forEach(function(callback) {
+      callback(url);
+    });
+  };
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.addJavaScriptUrlSanitizationCallback = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_addJavaScriptUrlSanitizationCallback;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_removeJavaScriptUrlSanitizationCallback(callback) {
+  var callbackIndex = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks.indexOf(callback);
+  -1 !== callbackIndex && module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks.splice(callbackIndex, 1);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.removeJavaScriptUrlSanitizationCallback = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_removeJavaScriptUrlSanitizationCallback;
+var safevalues = {for_friends:{}};
+safevalues.for_friends.IS_NOT_JAVASCRIPT_URL_PATTERN = module$exports$google3$third_party$javascript$safevalues$builders$url_builders.IS_NOT_JAVASCRIPT_URL_PATTERN;
+safevalues.for_friends.unwrapUrlOrSanitize = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize;
 var module$exports$google3$third_party$javascript$safevalues$internals$secrets = {secretToken:{}};
 function module$contents$google3$third_party$javascript$safevalues$internals$secrets_ensureTokenIsValid(token) {
   if (goog.DEBUG && token !== module$exports$google3$third_party$javascript$safevalues$internals$secrets.secretToken) {
@@ -4209,6 +4836,64 @@ function module$contents$google3$third_party$javascript$safevalues$internals$sec
   }
 }
 module$exports$google3$third_party$javascript$safevalues$internals$secrets.ensureTokenIsValid = module$contents$google3$third_party$javascript$safevalues$internals$secrets_ensureTokenIsValid;
+var module$exports$google3$third_party$javascript$safevalues$internals$html_impl = {};
+module$exports$google3$third_party$javascript$safevalues$internals$html_impl.SafeHtml = module$contents$goog$html$SafeHtml_SafeHtml;
+function module$contents$google3$third_party$javascript$safevalues$internals$html_impl_createHtmlInternal(html) {
+  return (0,module$exports$goog$html$internals.createSafeHtml)(html);
+}
+module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal = module$contents$google3$third_party$javascript$safevalues$internals$html_impl_createHtmlInternal;
+module$exports$google3$third_party$javascript$safevalues$internals$html_impl.EMPTY_HTML = module$contents$goog$html$SafeHtml_SafeHtml.EMPTY;
+function module$contents$google3$third_party$javascript$safevalues$internals$html_impl_isHtml(value) {
+  return value instanceof module$contents$goog$html$SafeHtml_SafeHtml;
+}
+module$exports$google3$third_party$javascript$safevalues$internals$html_impl.isHtml = module$contents$google3$third_party$javascript$safevalues$internals$html_impl_isHtml;
+function module$contents$google3$third_party$javascript$safevalues$internals$html_impl_unwrapHtml(value) {
+  return module$contents$goog$html$SafeHtml_SafeHtml.unwrapTrustedHTML(value);
+}
+module$exports$google3$third_party$javascript$safevalues$internals$html_impl.unwrapHtml = module$contents$google3$third_party$javascript$safevalues$internals$html_impl_unwrapHtml;
+function module$contents$google3$third_party$javascript$safevalues$internals$style_sheet_impl_unwrapStyleSheet(value) {
+  return module$contents$goog$html$SafeStyleSheet_SafeStyleSheet.unwrap(value);
+}
+;var module$exports$google3$third_party$javascript$safevalues$builders$style_sheet_builders = {};
+function module$contents$google3$third_party$javascript$safevalues$builders$style_sheet_builders_safeStyleRule(templateObj) {
+  var rest = $jscomp.getRestArguments.apply(1, arguments);
+  goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$internals$string_literal_assertIsTemplateObject(templateObj, rest.length);
+  for (var stringifiedRule = templateObj[0], i = 0; i < templateObj.length - 1; i++) {
+    stringifiedRule += String(rest[i]), stringifiedRule += templateObj[i + 1];
+  }
+  var doc = document.implementation.createHTMLDocument(""), styleEl = doc.createElement("style");
+  doc.head.appendChild(styleEl);
+  var styleSheet = styleEl.sheet;
+  styleSheet.insertRule(stringifiedRule, 0);
+  if (1 !== styleSheet.cssRules.length) {
+    if (goog.DEBUG) {
+      throw Error("safeStyleRule can be used to construct only 1 CSSStyleRule at a time. Use the concatStyle function to create sheet with several rules. Tried to parse: " + stringifiedRule + ("which has " + styleSheet.cssRules.length + " rules: " + styleSheet.cssRules[0].cssText + " #$% " + styleSheet.cssRules[1].cssText + "."));
+    }
+  } else {
+    var styleSheetRule = styleSheet.cssRules[0];
+    if (styleSheetRule instanceof CSSStyleRule) {
+      var styleSheetValue = styleSheetRule.cssText;
+      return (0,module$exports$goog$html$internals.createSafeStyleSheet)(styleSheetValue.replace(/</g, "\\3C "));
+    }
+    if (goog.DEBUG) {
+      throw Error("safeStyleRule can be used to construct a CSSStyleRule. @-rules should be constructed with the safeStyleSheet builder. Tried to parse: " + stringifiedRule);
+    }
+  }
+}
+module$exports$google3$third_party$javascript$safevalues$builders$style_sheet_builders.safeStyleRule = module$contents$google3$third_party$javascript$safevalues$builders$style_sheet_builders_safeStyleRule;
+function module$contents$google3$third_party$javascript$safevalues$builders$style_sheet_builders_safeStyleSheet(templateObj) {
+  goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$internals$string_literal_assertIsTemplateObject(templateObj, 0);
+  var styleSheet = templateObj[0];
+  if (goog.DEBUG && /</.test(styleSheet)) {
+    throw Error("'<' character is forbidden in styleSheet string: " + styleSheet);
+  }
+  return (0,module$exports$goog$html$internals.createSafeStyleSheet)(styleSheet);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$style_sheet_builders.safeStyleSheet = module$contents$google3$third_party$javascript$safevalues$builders$style_sheet_builders_safeStyleSheet;
+function module$contents$google3$third_party$javascript$safevalues$builders$style_sheet_builders_concatStyleSheets(sheets) {
+  return (0,module$exports$goog$html$internals.createSafeStyleSheet)(sheets.map(module$contents$google3$third_party$javascript$safevalues$internals$style_sheet_impl_unwrapStyleSheet).join(""));
+}
+module$exports$google3$third_party$javascript$safevalues$builders$style_sheet_builders.concatStyleSheets = module$contents$google3$third_party$javascript$safevalues$builders$style_sheet_builders_concatStyleSheets;
 var module$exports$google3$third_party$javascript$safevalues$internals$script_impl = {}, module$contents$google3$third_party$javascript$safevalues$internals$script_impl_trustedTypes = goog.global.trustedTypes;
 module$exports$google3$third_party$javascript$safevalues$internals$script_impl.SafeScript = function(token) {
   goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$internals$secrets_ensureTokenIsValid(token);
@@ -4227,7 +4912,9 @@ function module$contents$google3$third_party$javascript$safevalues$internals$scr
   return module$contents$google3$third_party$javascript$safevalues$internals$script_impl_constructScript(policy ? policy.createScript(noinlineScript) : noinlineScript);
 }
 module$exports$google3$third_party$javascript$safevalues$internals$script_impl.createScriptInternal = module$contents$google3$third_party$javascript$safevalues$internals$script_impl_createScriptInternal;
-module$exports$google3$third_party$javascript$safevalues$internals$script_impl.EMPTY_SCRIPT = module$contents$google3$third_party$javascript$safevalues$internals$script_impl_constructScript(module$contents$google3$third_party$javascript$safevalues$internals$script_impl_trustedTypes ? module$contents$google3$third_party$javascript$safevalues$internals$script_impl_trustedTypes.emptyScript : "");
+module$exports$google3$third_party$javascript$safevalues$internals$script_impl.EMPTY_SCRIPT = module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
+  return module$contents$google3$third_party$javascript$safevalues$internals$script_impl_constructScript(module$contents$google3$third_party$javascript$safevalues$internals$script_impl_trustedTypes ? module$contents$google3$third_party$javascript$safevalues$internals$script_impl_trustedTypes.emptyScript : "");
+});
 function module$contents$google3$third_party$javascript$safevalues$internals$script_impl_isScript(value) {
   return value instanceof module$exports$google3$third_party$javascript$safevalues$internals$script_impl.SafeScript;
 }
@@ -4241,6 +4928,454 @@ function module$contents$google3$third_party$javascript$safevalues$internals$scr
   throw Error(message);
 }
 module$exports$google3$third_party$javascript$safevalues$internals$script_impl.unwrapScript = module$contents$google3$third_party$javascript$safevalues$internals$script_impl_unwrapScript;
+var module$exports$google3$third_party$javascript$safevalues$builders$html_builders = {};
+function module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscape(value, options) {
+  options = void 0 === options ? {} : options;
+  if ((0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.isHtml)(value)) {
+    return value;
+  }
+  var htmlEscapedString = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscapeToString(String(value));
+  options.preserveSpaces && (htmlEscapedString = htmlEscapedString.replace(/(^|[\r\n\t ]) /g, "$1&#160;"));
+  options.preserveNewlines && (htmlEscapedString = htmlEscapedString.replace(/(\r\n|\n|\r)/g, "<br>"));
+  options.preserveTabs && (htmlEscapedString = htmlEscapedString.replace(/(\t+)/g, '<span style="white-space:pre">$1</span>'));
+  return (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(htmlEscapedString);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_builders.htmlEscape = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscape;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_builders_scriptToHtml(script, options) {
+  options = void 0 === options ? {} : options;
+  var unwrappedScript = module$contents$google3$third_party$javascript$safevalues$internals$script_impl_unwrapScript(script).toString(), stringTag = "<script";
+  options.id && (stringTag += ' id="' + module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscapeToString(options.id) + '"');
+  options.nonce && (stringTag += ' nonce="' + module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscapeToString(options.nonce) + '"');
+  options.type && (stringTag += ' type="' + module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscapeToString(options.type) + '"');
+  options.defer && (stringTag += " defer");
+  stringTag += ">" + unwrappedScript + "\x3c/script>";
+  return (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(stringTag);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_builders.scriptToHtml = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_scriptToHtml;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_builders_scriptUrlToHtml(src, options) {
+  options = void 0 === options ? {} : options;
+  var unwrappedSrc = module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(src).toString(), stringTag = '<script src="' + module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscapeToString(unwrappedSrc) + '"';
+  options.async && (stringTag += " async");
+  options.customElement && (stringTag += ' custom-element="' + module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscapeToString(options.customElement) + '"');
+  options.defer && (stringTag += " defer");
+  options.id && (stringTag += ' id="' + module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscapeToString(options.id) + '"');
+  options.nonce && (stringTag += ' nonce="' + module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscapeToString(options.nonce) + '"');
+  options.type && (stringTag += ' type="' + module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscapeToString(options.type) + '"');
+  options.crossorigin && (stringTag += ' crossorigin="' + module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscapeToString(options.crossorigin) + '"');
+  stringTag += ">\x3c/script>";
+  return (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(stringTag);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_builders.scriptUrlToHtml = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_scriptUrlToHtml;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscapeToString(text) {
+  var escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+  return escaped;
+}
+function module$contents$google3$third_party$javascript$safevalues$builders$html_builders_concatHtmls(htmls) {
+  return module$contents$google3$third_party$javascript$safevalues$builders$html_builders_joinHtmls("", htmls);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_builders.concatHtmls = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_concatHtmls;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_builders_joinHtmls(separator, htmls) {
+  var separatorHtml = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscape(separator);
+  return (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(htmls.map(function(value) {
+    return (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.unwrapHtml)(module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscape(value));
+  }).join((0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.unwrapHtml)(separatorHtml).toString()));
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_builders.joinHtmls = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_joinHtmls;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_builders_doctypeHtml() {
+  return (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)("<!DOCTYPE html>");
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_builders.doctypeHtml = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_doctypeHtml;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_builders_nodeToHtmlInternal(node, temporaryRoot) {
+  temporaryRoot.appendChild(node);
+  var serializedNewTree = (new XMLSerializer()).serializeToString(temporaryRoot);
+  serializedNewTree = serializedNewTree.slice(serializedNewTree.indexOf(">") + 1, serializedNewTree.lastIndexOf("</"));
+  return (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(serializedNewTree);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_builders.nodeToHtmlInternal = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_nodeToHtmlInternal;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_builders_nodeToHtml(node) {
+  var tempRoot = document.createElement("span");
+  return module$contents$google3$third_party$javascript$safevalues$builders$html_builders_nodeToHtmlInternal(node, tempRoot);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_builders.nodeToHtml = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_nodeToHtml;
+var module$contents$google3$third_party$javascript$safevalues$builders$html_builders_VALID_TAG_OR_ATTRIBUTE_NAMES = /^[a-z][a-z\d-]*$/i, module$contents$google3$third_party$javascript$safevalues$builders$html_builders_DISALLOWED_TAG_NAMES = "APPLET BASE EMBED IFRAME LINK MATH META OBJECT SCRIPT STYLE SVG TEMPLATE".split(" ");
+module$exports$google3$third_party$javascript$safevalues$builders$html_builders.VOID_TAG_NAMES = "AREA BR COL COMMAND HR IMG INPUT KEYGEN PARAM SOURCE TRACK WBR".split(" ");
+var module$contents$google3$third_party$javascript$safevalues$builders$html_builders_URL_ATTRIBUTES = ["action", "formaction", "href"];
+function module$contents$google3$third_party$javascript$safevalues$builders$html_builders_verifyTagName(tagName) {
+  if (!module$contents$google3$third_party$javascript$safevalues$builders$html_builders_VALID_TAG_OR_ATTRIBUTE_NAMES.test(tagName)) {
+    throw Error(goog.DEBUG ? "Invalid tag name <" + tagName + ">." : "");
+  }
+  if (-1 !== module$contents$google3$third_party$javascript$safevalues$builders$html_builders_DISALLOWED_TAG_NAMES.indexOf(tagName.toUpperCase())) {
+    throw Error(goog.DEBUG ? "Tag name <" + tagName + "> is not allowed for createHtml." : "");
+  }
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_builders.verifyTagName = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_verifyTagName;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_builders_isVoidTag(tagName) {
+  return -1 !== module$exports$google3$third_party$javascript$safevalues$builders$html_builders.VOID_TAG_NAMES.indexOf(tagName.toUpperCase());
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_builders.isVoidTag = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_isVoidTag;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_builders_createHtml(tagName, attributes, content) {
+  module$contents$google3$third_party$javascript$safevalues$builders$html_builders_verifyTagName(tagName);
+  var result = "<" + tagName;
+  attributes && (result += module$contents$google3$third_party$javascript$safevalues$builders$html_builders_stringifyAttributes(tagName, attributes));
+  Array.isArray(content) || (content = void 0 === content ? [] : [content]);
+  if (module$contents$google3$third_party$javascript$safevalues$builders$html_builders_isVoidTag(tagName)) {
+    if (goog.DEBUG && 0 < content.length) {
+      throw Error("Void tag <" + tagName + "> does not allow content.");
+    }
+    result += ">";
+  } else {
+    var html = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_concatHtmls(content.map(function(value) {
+      return (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.isHtml)(value) ? value : module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscape(String(value));
+    }));
+    result += ">" + html.toString() + "</" + tagName + ">";
+  }
+  return (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(result);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_builders.createHtml = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_createHtml;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_builders_styleSheetToHtml(styleSheet, attributes) {
+  var combinedAttributes = {};
+  if (attributes) {
+    for (var customAttrNames = Object.keys(attributes), i = 0; i < customAttrNames.length; i++) {
+      var name = customAttrNames[i];
+      if ("type" === name.toLowerCase()) {
+        throw Error(goog.DEBUG ? "Cannot override the 'type' attribute with value " + attributes[name] + "." : "");
+      }
+      combinedAttributes[name] = attributes[name];
+    }
+  }
+  combinedAttributes.type = "text/css";
+  var stringifiedAttributes = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_stringifyAttributes("style", combinedAttributes);
+  Array.isArray(styleSheet) && (styleSheet = (0,module$exports$google3$third_party$javascript$safevalues$builders$style_sheet_builders.concatStyleSheets)(styleSheet));
+  var styleContent = module$contents$google3$third_party$javascript$safevalues$internals$style_sheet_impl_unwrapStyleSheet(styleSheet);
+  return (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)("<style " + stringifiedAttributes + ">" + styleContent + "</style>");
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_builders.styleSheetToHtml = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_styleSheetToHtml;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_builders_stringifyAttributes(tagName, attributes) {
+  for (var result = "", attrNames = Object.keys(attributes), i = 0; i < attrNames.length; i++) {
+    var name = attrNames[i], value = attributes[name];
+    if (!module$contents$google3$third_party$javascript$safevalues$builders$html_builders_VALID_TAG_OR_ATTRIBUTE_NAMES.test(name)) {
+      throw Error(goog.DEBUG ? 'Invalid attribute name "' + name + '".' : "");
+    }
+    if (void 0 !== value && null !== value) {
+      var JSCompiler_temp_const = result, name$jscomp$0 = name, value$jscomp$0 = value;
+      if (/^on/i.test(name$jscomp$0)) {
+        throw Error(goog.DEBUG ? 'Attribute "' + name$jscomp$0 + " is forbidden. Inline event handlers can lead to XSS. Please use the 'addEventListener' API instead." : "");
+      }
+      -1 !== module$contents$google3$third_party$javascript$safevalues$builders$html_builders_URL_ATTRIBUTES.indexOf(name$jscomp$0.toLowerCase()) && (value$jscomp$0 = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_isUrl(value$jscomp$0) ? value$jscomp$0.toString() : module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeJavaScriptUrl(String(value$jscomp$0)) || "about:invalid#zClosurez");
+      if (goog.DEBUG && !(module$contents$google3$third_party$javascript$safevalues$internals$url_impl_isUrl(value$jscomp$0) || (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.isHtml)(value$jscomp$0) || value$jscomp$0 instanceof module$contents$goog$html$SafeStyle_SafeStyle) && "string" !== typeof value$jscomp$0 && "number" !== typeof value$jscomp$0) {
+        throw Error("String or number value expected, got " + typeof value$jscomp$0 + " with value '" + value$jscomp$0 + "' given.");
+      }
+      var JSCompiler_inline_result = name$jscomp$0 + '="' + module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscape(String(value$jscomp$0)) + '"';
+      result = JSCompiler_temp_const + (" " + JSCompiler_inline_result);
+    }
+  }
+  return result;
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_builders.stringifyAttributes = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_stringifyAttributes;
+var module$exports$google3$third_party$javascript$safevalues$builders$html_formatter = {HtmlFormatter:function() {
+  this.replacements = new Map();
+}};
+module$exports$google3$third_party$javascript$safevalues$builders$html_formatter.HtmlFormatter.prototype.format = function(format) {
+  var $jscomp$this$1018007701$5 = this, openedTags = [], marker = (0,module$exports$google3$third_party$javascript$safevalues$builders$html_builders.htmlEscape)("_safevalues_format_marker_:").toString(), html = (0,module$exports$google3$third_party$javascript$safevalues$builders$html_builders.htmlEscape)(format).toString().replace(new RegExp("\\{" + marker + "[\\w&#;]+\\}", "g"), function(match) {
+    return $jscomp$this$1018007701$5.replaceFormattingString(openedTags, match);
+  });
+  if (0 !== openedTags.length) {
+    if (goog.DEBUG) {
+      throw Error("Expected no unclosed tags, got <" + openedTags.join(">, <") + ">.");
+    }
+    throw Error();
+  }
+  return (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(html);
+};
+module$exports$google3$third_party$javascript$safevalues$builders$html_formatter.HtmlFormatter.prototype.replaceFormattingString = function(openedTags, match) {
+  var replacement = this.replacements.get(match);
+  if (!replacement) {
+    return match;
+  }
+  var result = "";
+  switch(replacement.type) {
+    case "html":
+      result = replacement.html;
+      break;
+    case "startTag":
+      result = "<" + replacement.tagName + replacement.attributes + ">";
+      goog.DEBUG && ((0,module$exports$google3$third_party$javascript$safevalues$builders$html_builders.isVoidTag)(replacement.tagName.toLowerCase()) || openedTags.push(replacement.tagName.toLowerCase()));
+      break;
+    case "endTag":
+      result = "</" + replacement.tagName + ">";
+      if (goog.DEBUG) {
+        var lastTag = openedTags.pop();
+        if (lastTag !== replacement.tagName.toLowerCase()) {
+          throw Error("Expected </" + lastTag + ">, got </" + replacement.tagName + ">.");
+        }
+      }
+      break;
+    default:
+      if (goog.DEBUG) {
+        var value = replacement, msg = "type had an unknown value";
+        msg = void 0 === msg ? "unexpected value " + value + "!" : msg;
+        throw Error(msg);
+      }
+  }
+  return result;
+};
+module$exports$google3$third_party$javascript$safevalues$builders$html_formatter.HtmlFormatter.prototype.text = function(text) {
+  return this.storeReplacement({type:"html", html:(0,module$exports$google3$third_party$javascript$safevalues$builders$html_builders.htmlEscape)(text).toString()});
+};
+module$exports$google3$third_party$javascript$safevalues$builders$html_formatter.HtmlFormatter.prototype.storeReplacement = function(replacement) {
+  var marker = "{_safevalues_format_marker_:" + this.replacements.size + "_" + Math.random().toString(36).slice(2) + "}";
+  this.replacements.set((0,module$exports$google3$third_party$javascript$safevalues$builders$html_builders.htmlEscape)(marker).toString(), replacement);
+  return marker;
+};
+var module$exports$google3$third_party$javascript$safevalues$dom$globals$range = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$range_createContextualFragment(range, html) {
+  return range.createContextualFragment((0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.unwrapHtml)(html));
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$range.createContextualFragment = module$contents$google3$third_party$javascript$safevalues$dom$globals$range_createContextualFragment;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$inert_fragment_createInertFragment(dirtyHtml, inertDocument) {
+  if (goog.DEBUG && inertDocument.defaultView) {
+    throw Error("createInertFragment called with non-inert document");
+  }
+  var range = inertDocument.createRange();
+  range.selectNode(inertDocument.body);
+  var temporarySafeHtml = (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(dirtyHtml);
+  return (0,module$exports$google3$third_party$javascript$safevalues$dom$globals$range.createContextualFragment)(range, temporarySafeHtml);
+}
+;function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$no_clobber_getNodeName(node) {
+  var nodeName = node.nodeName;
+  return "string" === typeof nodeName ? nodeName : "FORM";
+}
+function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$no_clobber_isElement(node) {
+  var nodeType = node.nodeType;
+  return 1 === nodeType || "number" !== typeof nodeType;
+}
+;var module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table = {SanitizerTable:function(allowedElements, elementPolicies, allowedGlobalAttributes, globalAttributePolicies, globallyAllowedAttributePrefixes) {
+  this.allowedElements = allowedElements;
+  this.elementPolicies = elementPolicies;
+  this.allowedGlobalAttributes = allowedGlobalAttributes;
+  this.globalAttributePolicies = globalAttributePolicies;
+  this.globallyAllowedAttributePrefixes = globallyAllowedAttributePrefixes;
+}};
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.SanitizerTable.prototype.isAllowedElement = function(elementName) {
+  return "FORM" !== elementName && (this.allowedElements.has(elementName) || this.elementPolicies.has(elementName));
+};
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.SanitizerTable.prototype.getAttributePolicy = function(attributeName, elementName) {
+  var elementPolicy = this.elementPolicies.get(elementName), $jscomp$optchain$tmp2000943940$0;
+  if (null == ($jscomp$optchain$tmp2000943940$0 = elementPolicy) ? 0 : $jscomp$optchain$tmp2000943940$0.has(attributeName)) {
+    return elementPolicy.get(attributeName);
+  }
+  if (this.allowedGlobalAttributes.has(attributeName)) {
+    return {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP};
+  }
+  var globalPolicy = this.globalAttributePolicies.get(attributeName);
+  return globalPolicy ? globalPolicy : this.globallyAllowedAttributePrefixes && [].concat($jscomp.arrayFromIterable(this.globallyAllowedAttributePrefixes)).some(function(prefix) {
+    return 0 === attributeName.indexOf(prefix);
+  }) ? {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP} : {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.DROP};
+};
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction = {DROP:0, KEEP:1, KEEP_AND_SANITIZE_URL:2, KEEP_AND_NORMALIZE:3, KEEP_AND_SANITIZE_STYLE:4};
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction[module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.DROP] = "DROP";
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction[module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP] = "KEEP";
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction[module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_URL] = "KEEP_AND_SANITIZE_URL";
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction[module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_NORMALIZE] = "KEEP_AND_NORMALIZE";
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction[module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_STYLE] = "KEEP_AND_SANITIZE_STYLE";
+function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table_AttributePolicy() {
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicy = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table_AttributePolicy;
+var module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table_FORBIDDEN_CUSTOM_ELEMENT_NAMES = new Set("ANNOTATION-XML COLOR-PROFILE FONT-FACE FONT-FACE-SRC FONT-FACE-URI FONT-FACE-FORMAT FONT-FACE-NAME MISSING-GLYPH".split(" "));
+function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table_isCustomElement(tag) {
+  return !module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table_FORBIDDEN_CUSTOM_ELEMENT_NAMES.has(tag.toUpperCase()) && /^[a-z][-_.a-z0-9]*-[-_.a-z0-9]*$/i.test(tag);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.isCustomElement = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table_isCustomElement;
+var module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table = {}, module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_ELEMENTS = "ARTICLE SECTION NAV ASIDE H1 H2 H3 H4 H5 H6 HEADER FOOTER ADDRESS P HR PRE BLOCKQUOTE OL UL LH LI DL DT DD FIGURE FIGCAPTION MAIN DIV EM STRONG SMALL S CITE Q DFN ABBR RUBY RB RT RTC RP DATA TIME CODE VAR SAMP KBD SUB SUP I B U MARK BDI BDO SPAN BR WBR INS DEL PICTURE PARAM TRACK MAP TABLE CAPTION COLGROUP COL TBODY THEAD TFOOT TR TD TH SELECT DATALIST OPTGROUP OPTION OUTPUT PROGRESS METER FIELDSET LEGEND DETAILS SUMMARY MENU DIALOG SLOT CANVAS FONT CENTER ACRONYM BASEFONT BIG DIR HGROUP STRIKE TT".split(" "), 
+module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ELEMENT_POLICIES = [["A", new Map([["href", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_URL}]])], ["AREA", new Map([["href", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_URL}]])], 
+["LINK", new Map([["href", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_URL, conditions:new Map([["rel", new Set("alternate author bookmark canonical cite help icon license next prefetch dns-prefetch prerender preconnect preload prev search subresource".split(" "))]])}]])], ["SOURCE", new Map([["src", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP}]])], 
+["IMG", new Map([["src", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP}]])], ["VIDEO", new Map([["src", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP}]])], ["AUDIO", new Map([["src", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP}]])]], 
+module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_GLOBAL_ATTRIBUTES = "title aria-atomic aria-autocomplete aria-busy aria-checked aria-current aria-disabled aria-dropeffect aria-expanded aria-haspopup aria-hidden aria-invalid aria-label aria-level aria-live aria-multiline aria-multiselectable aria-orientation aria-posinset aria-pressed aria-readonly aria-relevant aria-required aria-selected aria-setsize aria-sort aria-valuemax aria-valuemin aria-valuenow aria-valuetext alt align autocapitalize autocomplete autocorrect autofocus autoplay bgcolor border cellpadding cellspacing checked color cols colspan controls datetime disabled download draggable enctype face formenctype frameborder height hreflang hidden ismap label lang loop max maxlength media minlength min multiple muted nonce open placeholder preload rel required reversed role rows rowspan selected shape size sizes slot span spellcheck start step summary translate type valign value width wrap itemscope itemtype itemid itemprop itemref".split(" "), 
+module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_GLOBAL_ATTRIBUTE_POLICIES = [["dir", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_NORMALIZE, conditions:module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
+  return new Map([["dir", new Set(["auto", "ltr", "rtl"])]]);
+})}], ["async", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_NORMALIZE, conditions:module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
+  return new Map([["async", new Set(["async"])]]);
+})}], ["cite", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_URL}], ["loading", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_NORMALIZE, conditions:module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
+  return new Map([["loading", new Set(["eager", "lazy"])]]);
+})}], ["poster", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_URL}], ["target", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_NORMALIZE, conditions:module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
+  return new Map([["target", new Set(["_self", "_blank"])]]);
+})}]];
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table.defaultSanitizerTable = new module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.SanitizerTable(new Set(module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_ELEMENTS), new Map(module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ELEMENT_POLICIES), 
+new Set(module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_GLOBAL_ATTRIBUTES), new Map(module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_GLOBAL_ATTRIBUTE_POLICIES));
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table.lenientSanitizerTable = new module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.SanitizerTable(new Set(module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_ELEMENTS.concat(["BUTTON", "INPUT"])), new Map(module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ELEMENT_POLICIES), 
+new Set(module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
+  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_GLOBAL_ATTRIBUTES.concat(["class", "id", "name"]);
+})), new Map(module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
+  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_GLOBAL_ATTRIBUTE_POLICIES.concat([["style", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP}]]);
+})));
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table.superLenientSanitizerTable = new module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.SanitizerTable(new Set(module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
+  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_ELEMENTS.concat("STYLE TITLE INPUT TEXTAREA BUTTON LABEL".split(" "));
+})), new Map(module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ELEMENT_POLICIES), new Set(module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
+  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_GLOBAL_ATTRIBUTES.concat(["class", "id", "tabindex", "contenteditable", "name"]);
+})), new Map(module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
+  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_GLOBAL_ATTRIBUTE_POLICIES.concat([["style", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP}]]);
+})), new Set(["data-", "aria-"]));
+var module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer = {};
+function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_HtmlSanitizer() {
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizer = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_HtmlSanitizer;
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl = function(sanitizerTable, token) {
+  this.sanitizerTable = sanitizerTable;
+  this.changes = [];
+  module$contents$google3$third_party$javascript$safevalues$internals$secrets_ensureTokenIsValid(token);
+};
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.sanitizeAssertUnchanged = function(html) {
+  goog.DEBUG && (this.changes = []);
+  var sanitizedHtml = this.sanitize(html);
+  if (goog.DEBUG && 0 !== this.changes.length) {
+    throw Error('Unexpected change to HTML value as a result of sanitization. Input: "' + (html + '", sanitized output: "' + sanitizedHtml + '"\nList of changes:') + this.changes.join("\n"));
+  }
+  return sanitizedHtml;
+};
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.sanitize = function(html) {
+  var inertDocument = document.implementation.createHTMLDocument("");
+  return (0,module$exports$google3$third_party$javascript$safevalues$builders$html_builders.nodeToHtmlInternal)(this.sanitizeToFragmentInternal(html, inertDocument), inertDocument.body);
+};
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.sanitizeToFragment = function(html) {
+  var inertDocument = document.implementation.createHTMLDocument("");
+  return this.sanitizeToFragmentInternal(html, inertDocument);
+};
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.sanitizeToFragmentInternal = function(html, inertDocument) {
+  for (var $jscomp$this$m1085474118$10 = this, dirtyFragment = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$inert_fragment_createInertFragment(html, inertDocument), treeWalker = document.createTreeWalker(dirtyFragment, 5, function(n) {
+    return $jscomp$this$m1085474118$10.nodeFilter(n);
+  }, !1), currentNode = treeWalker.nextNode(), sanitizedFragment = inertDocument.createDocumentFragment(), sanitizedParent = sanitizedFragment; null !== currentNode;) {
+    var sanitizedNode = void 0;
+    if (3 === currentNode.nodeType) {
+      sanitizedNode = this.sanitizeTextNode(currentNode);
+    } else if (module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$no_clobber_isElement(currentNode)) {
+      sanitizedNode = this.sanitizeElementNode(currentNode, inertDocument);
+    } else {
+      var message = "";
+      goog.DEBUG && (message = "Node is not of type text or element");
+      throw Error(message);
+    }
+    sanitizedParent.appendChild(sanitizedNode);
+    if (currentNode = treeWalker.firstChild()) {
+      sanitizedParent = sanitizedNode;
+    } else {
+      for (; !(currentNode = treeWalker.nextSibling()) && (currentNode = treeWalker.parentNode());) {
+        sanitizedParent = sanitizedParent.parentNode;
+      }
+    }
+  }
+  return sanitizedFragment;
+};
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.sanitizeTextNode = function(textNode) {
+  return document.createTextNode(textNode.data);
+};
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.sanitizeElementNode = function(elementNode, inertDocument) {
+  for (var elementName = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$no_clobber_getNodeName(elementNode), newNode = inertDocument.createElement(elementName), dirtyAttributes = elementNode.attributes, $jscomp$iter$4 = $jscomp.makeIterator(dirtyAttributes), $jscomp$key$m1085474118$25$ = $jscomp$iter$4.next(); !$jscomp$key$m1085474118$25$.done; $jscomp$key$m1085474118$25$ = $jscomp$iter$4.next()) {
+    var $jscomp$destructuring$var12 = $jscomp$key$m1085474118$25$.value, $jscomp$destructuring$var13 = $jscomp$destructuring$var12, name = $jscomp$destructuring$var13.name, value = $jscomp$destructuring$var13.value, policy = this.sanitizerTable.getAttributePolicy(name, elementName);
+    if (this.satisfiesAllConditions(policy.conditions, dirtyAttributes)) {
+      switch(policy.policyAction) {
+        case module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP:
+          module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_setAttribute(newNode, name, value);
+          break;
+        case module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_URL:
+          var sanitizedAttrUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_restrictivelySanitizeUrl(value);
+          sanitizedAttrUrl !== value && this.recordChange("Url in attribute " + name + ' was modified during sanitization. Original url:"' + value + '" was sanitized to: "' + sanitizedAttrUrl + '"');
+          module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_setAttribute(newNode, name, sanitizedAttrUrl);
+          break;
+        case module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_NORMALIZE:
+          module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_setAttribute(newNode, name, value.toLowerCase());
+          break;
+        case module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_STYLE:
+          module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_setAttribute(newNode, name, value);
+          break;
+        case module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.DROP:
+          this.recordChange("Attribute: " + name + " was dropped");
+          break;
+        default:
+          if (goog.DEBUG) {
+            var value$jscomp$0 = policy.policyAction, msg = "Unhandled AttributePolicyAction case";
+            msg = void 0 === msg ? "unexpected value " + value$jscomp$0 + "!" : msg;
+            throw Error(msg);
+          }
+      }
+    } else {
+      this.recordChange("Not all conditions satisfied for attribute: " + name + ".");
+    }
+  }
+  return newNode;
+};
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.nodeFilter = function(node) {
+  if (3 === node.nodeType) {
+    return 1;
+  }
+  if (!module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$no_clobber_isElement(node)) {
+    return 2;
+  }
+  var nodeName = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$no_clobber_getNodeName(node);
+  if (null === nodeName) {
+    return this.recordChange("Node name was null for node: " + node), 2;
+  }
+  if (this.sanitizerTable.isAllowedElement(nodeName)) {
+    return 1;
+  }
+  this.recordChange("Element: " + nodeName + " was dropped");
+  return 2;
+};
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.recordChange = function(errorMessage) {
+  goog.DEBUG && this.changes.push(errorMessage);
+};
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.satisfiesAllConditions = function(conditions, attrs) {
+  if (!conditions) {
+    return !0;
+  }
+  for (var $jscomp$iter$5 = $jscomp.makeIterator(conditions), $jscomp$key$m1085474118$26$ = $jscomp$iter$5.next(); !$jscomp$key$m1085474118$26$.done; $jscomp$key$m1085474118$26$ = $jscomp$iter$5.next()) {
+    var $jscomp$destructuring$var14 = $jscomp$key$m1085474118$26$.value, $jscomp$destructuring$var15 = $jscomp.makeIterator($jscomp$destructuring$var14), attrName__tsickle_destructured_1 = $jscomp$destructuring$var15.next().value, expectedValues__tsickle_destructured_2 = $jscomp$destructuring$var15.next().value, attrName = attrName__tsickle_destructured_1, expectedValues = expectedValues__tsickle_destructured_2, $jscomp$optchain$tmpm1085474118$0 = void 0, value = null == ($jscomp$optchain$tmpm1085474118$0 = 
+    attrs.getNamedItem(attrName)) ? void 0 : $jscomp$optchain$tmpm1085474118$0.value;
+    if (value && !expectedValues.has(value)) {
+      return !1;
+    }
+  }
+  return !0;
+};
+function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_setAttribute(el, name, value) {
+  el.setAttribute(name, value);
+}
+var module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_defaultHtmlSanitizer = module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
+  return new module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl(module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table.defaultSanitizerTable, module$exports$google3$third_party$javascript$safevalues$internals$secrets.secretToken);
+});
+function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_sanitizeHtml(html) {
+  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_defaultHtmlSanitizer.sanitize(html);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.sanitizeHtml = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_sanitizeHtml;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_sanitizeHtmlAssertUnchanged(html) {
+  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_defaultHtmlSanitizer.sanitizeAssertUnchanged(html);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.sanitizeHtmlAssertUnchanged = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_sanitizeHtmlAssertUnchanged;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_sanitizeHtmlToFragment(html) {
+  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_defaultHtmlSanitizer.sanitizeToFragment(html);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.sanitizeHtmlToFragment = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_sanitizeHtmlToFragment;
+var module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_lenientHtmlSanitizer = module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
+  return new module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl(module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table.lenientSanitizerTable, module$exports$google3$third_party$javascript$safevalues$internals$secrets.secretToken);
+});
+function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_lenientlySanitizeHtml(html) {
+  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_lenientHtmlSanitizer.sanitize(html);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.lenientlySanitizeHtml = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_lenientlySanitizeHtml;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_lenientlySanitizeHtmlAssertUnchanged(html) {
+  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_lenientHtmlSanitizer.sanitizeAssertUnchanged(html);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.lenientlySanitizeHtmlAssertUnchanged = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_lenientlySanitizeHtmlAssertUnchanged;
+var module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_superLenientHtmlSanitizer = module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
+  return new module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl(module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table.superLenientSanitizerTable, module$exports$google3$third_party$javascript$safevalues$internals$secrets.secretToken);
+});
+function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_superLenientlySanitizeHtml(html) {
+  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_superLenientHtmlSanitizer.sanitize(html);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.superLenientlySanitizeHtml = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_superLenientlySanitizeHtml;
+function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_superLenientlySanitizeHtmlAssertUnchanged(html) {
+  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_superLenientHtmlSanitizer.sanitizeAssertUnchanged(html);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.superLenientlySanitizeHtmlAssertUnchanged = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_superLenientlySanitizeHtmlAssertUnchanged;
 function module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_assertValidJustification(justification) {
   if ("string" !== typeof justification || "" === justification.trim()) {
     var errMsg = "Calls to uncheckedconversion functions must go through security review.";
@@ -4251,7 +5386,7 @@ function module$contents$google3$third_party$javascript$safevalues$restricted$re
 }
 function module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_htmlSafeByReview(html, options) {
   goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_assertValidJustification(options.justification);
-  return (0,module$exports$goog$html$internals.createSafeHtml)(html);
+  return (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(html);
 }
 function module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_scriptSafeByReview(script, options) {
   goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_assertValidJustification(options.justification);
@@ -4267,13 +5402,13 @@ function module$contents$google3$third_party$javascript$safevalues$restricted$re
 }
 function module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_urlSafeByReview(url, options) {
   goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_assertValidJustification(options.justification);
-  return (0,goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse)(url);
+  return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(url);
 }
 function module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_styleSafeByReview(style, options) {
   goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_assertValidJustification(options.justification);
   return (0,module$exports$goog$html$internals.createSafeStyle)(style);
 }
-;var safevalues = {restricted:{}};
+;safevalues.restricted = {};
 safevalues.restricted.reviewed = {};
 safevalues.restricted.reviewed.htmlSafeByReview = module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_htmlSafeByReview;
 safevalues.restricted.reviewed.scriptSafeByReview = module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_scriptSafeByReview;
@@ -4325,34 +5460,28 @@ goog.dom.safe.setOuterHtml = function(elem, html) {
   elem.outerHTML = module$contents$goog$html$SafeHtml_SafeHtml.unwrapTrustedHTML(html);
 };
 goog.dom.safe.setFormElementAction = function(form, url) {
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
-  module$contents$goog$asserts$dom_assertIsHtmlFormElement(form).action = goog.html.SafeUrl.unwrap(safeUrl);
+  module$contents$goog$asserts$dom_assertIsHtmlFormElement(form).action = goog.dom.safe.sanitizeJavaScriptUrlAssertUnchanged_(url);
 };
 goog.dom.safe.setButtonFormAction = function(button, url) {
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
-  module$contents$goog$asserts$dom_assertIsHtmlButtonElement(button).formAction = goog.html.SafeUrl.unwrap(safeUrl);
+  module$contents$goog$asserts$dom_assertIsHtmlButtonElement(button).formAction = goog.dom.safe.sanitizeJavaScriptUrlAssertUnchanged_(url);
 };
 goog.dom.safe.setInputFormAction = function(input, url) {
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
-  module$contents$goog$asserts$dom_assertIsHtmlInputElement(input).formAction = goog.html.SafeUrl.unwrap(safeUrl);
+  module$contents$goog$asserts$dom_assertIsHtmlInputElement(input).formAction = goog.dom.safe.sanitizeJavaScriptUrlAssertUnchanged_(url);
 };
 goog.dom.safe.documentWrite = function(doc, html) {
   doc.write(module$contents$goog$html$SafeHtml_SafeHtml.unwrapTrustedHTML(html));
 };
 goog.dom.safe.setAnchorHref = function(anchor, url) {
   module$contents$goog$asserts$dom_assertIsHtmlAnchorElement(anchor);
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
-  anchor.href = goog.html.SafeUrl.unwrap(safeUrl);
+  anchor.href = goog.dom.safe.sanitizeJavaScriptUrlAssertUnchanged_(url);
 };
 goog.dom.safe.setAudioSrc = function(audioElement, url) {
   module$contents$goog$asserts$dom_assertIsHtmlAudioElement(audioElement);
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
-  audioElement.src = goog.html.SafeUrl.unwrap(safeUrl);
+  audioElement.src = goog.dom.safe.sanitizeJavaScriptUrlAssertUnchanged_(url);
 };
 goog.dom.safe.setVideoSrc = function(videoElement, url) {
   module$contents$goog$asserts$dom_assertIsHtmlVideoElement(videoElement);
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
-  videoElement.src = goog.html.SafeUrl.unwrap(safeUrl);
+  videoElement.src = goog.dom.safe.sanitizeJavaScriptUrlAssertUnchanged_(url);
 };
 goog.dom.safe.setIframeSrc = function(iframe, url) {
   module$contents$goog$asserts$dom_assertIsHtmlIFrameElement(iframe);
@@ -4371,7 +5500,7 @@ goog.dom.safe.setLinkHrefAndRel = function(link, url, rel) {
     var win = link.ownerDocument && link.ownerDocument.defaultView, nonce = goog.dom.safe.getStyleNonce(win);
     nonce && link.setAttribute("nonce", nonce);
   } else {
-    link.href = url instanceof goog.html.TrustedResourceUrl ? goog.html.TrustedResourceUrl.unwrap(url) : url instanceof goog.html.SafeUrl ? goog.html.SafeUrl.unwrap(url) : goog.html.SafeUrl.unwrap(goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url));
+    link.href = url instanceof goog.html.TrustedResourceUrl ? goog.html.TrustedResourceUrl.unwrap(url) : goog.dom.safe.sanitizeJavaScriptUrlAssertUnchanged_(url);
   }
 };
 goog.dom.safe.setScriptSrc = function(script, url) {
@@ -4385,22 +5514,18 @@ goog.dom.safe.setNonceForScriptElement_ = function(script) {
 };
 goog.dom.safe.setLocationHref = function(loc, url) {
   goog.dom.asserts.assertIsLocation(loc);
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
-  loc.href = goog.html.SafeUrl.unwrap(safeUrl);
+  loc.href = goog.dom.safe.sanitizeJavaScriptUrlAssertUnchanged_(url);
 };
 goog.dom.safe.assignLocation = function(loc, url) {
   goog.dom.asserts.assertIsLocation(loc);
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
-  loc.assign(goog.html.SafeUrl.unwrap(safeUrl));
+  loc.assign(goog.dom.safe.sanitizeJavaScriptUrlAssertUnchanged_(url));
 };
 goog.dom.safe.replaceLocation = function(loc, url) {
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
-  loc.replace(goog.html.SafeUrl.unwrap(safeUrl));
+  loc.replace(goog.dom.safe.sanitizeJavaScriptUrlAssertUnchanged_(url));
 };
 goog.dom.safe.openInWindow = function(url, opt_openerWin, opt_name, opt_specs) {
-  var safeUrl = url instanceof goog.html.SafeUrl ? url : goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged(url);
-  var win = opt_openerWin || goog.global, name = opt_name instanceof goog.string.Const ? goog.string.Const.unwrap(opt_name) : opt_name || "";
-  return void 0 !== opt_specs ? win.open(goog.html.SafeUrl.unwrap(safeUrl), name, opt_specs) : win.open(goog.html.SafeUrl.unwrap(safeUrl), name);
+  var sanitizedUrl = goog.dom.safe.sanitizeJavaScriptUrlAssertUnchanged_(url), win = opt_openerWin || goog.global, name = opt_name instanceof goog.string.Const ? goog.string.Const.unwrap(opt_name) : opt_name || "";
+  return void 0 !== opt_specs ? win.open(sanitizedUrl, name, opt_specs) : win.open(sanitizedUrl, name);
 };
 goog.dom.safe.parseFromStringHtml = function(parser, html) {
   return goog.dom.safe.parseFromString(parser, html, "text/html");
@@ -4412,10 +5537,11 @@ goog.dom.safe.createImageFromBlob = function(blob) {
   if (!/^image\/.*/g.test(blob.type)) {
     throw Error("goog.dom.safe.createImageFromBlob only accepts MIME type image/.*.");
   }
-  var objectUrl = goog.global.URL.createObjectURL(blob), image = new goog.global.Image();
-  image.onload = function() {
+  var objectUrl = goog.global.URL.createObjectURL(blob), image = new goog.global.Image(), revokeFn = function() {
     goog.global.URL.revokeObjectURL(objectUrl);
   };
+  image.onload = revokeFn;
+  image.onerror = revokeFn;
   image.src = objectUrl;
   return image;
 };
@@ -4439,6 +5565,10 @@ goog.dom.safe.getNonce_ = function(selector, win) {
     }
   }
   return "";
+};
+goog.dom.safe.sanitizeJavaScriptUrlAssertUnchanged_ = function(url) {
+  var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(url);
+  return goog.asserts.assert(void 0 !== sanitizedUrl, "%s is a javascript: URL", url) ? sanitizedUrl : module$exports$google3$third_party$javascript$safevalues$internals$url_impl.INNOCUOUS_URL.toString();
 };
 goog.math = {};
 goog.math.randomInt = function(a) {
@@ -4661,6 +5791,717 @@ goog.math.Size.prototype.scale = function(sx, opt_sy) {
   this.height *= sy;
   return this;
 };
+var module$exports$google3$third_party$javascript$safevalues$dom$elements$anchor = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$anchor_setHref(anchor, url) {
+  var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(url);
+  void 0 !== sanitizedUrl && (anchor.href = sanitizedUrl);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$anchor.setHref = module$contents$google3$third_party$javascript$safevalues$dom$elements$anchor_setHref;
+var module$exports$google3$third_party$javascript$safevalues$dom$elements$area = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$area_setHref(area, url) {
+  var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(url);
+  void 0 !== sanitizedUrl && (area.href = sanitizedUrl);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$area.setHref = module$contents$google3$third_party$javascript$safevalues$dom$elements$area_setHref;
+var module$exports$google3$third_party$javascript$safevalues$dom$elements$base = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$base_setHref(baseEl, url) {
+  baseEl.href = module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(url);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$base.setHref = module$contents$google3$third_party$javascript$safevalues$dom$elements$base_setHref;
+var module$exports$google3$third_party$javascript$safevalues$dom$elements$button = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$button_setFormaction(button, url) {
+  var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(url);
+  void 0 !== sanitizedUrl && (button.formAction = sanitizedUrl);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$button.setFormaction = module$contents$google3$third_party$javascript$safevalues$dom$elements$button_setFormaction;
+var module$exports$google3$third_party$javascript$safevalues$dom$elements$element = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$element_setInnerHtml(elOrRoot, v) {
+  1 === elOrRoot.nodeType && module$contents$google3$third_party$javascript$safevalues$dom$elements$element_throwIfScriptOrStyle(elOrRoot);
+  elOrRoot.innerHTML = (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.unwrapHtml)(v);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$element.setInnerHtml = module$contents$google3$third_party$javascript$safevalues$dom$elements$element_setInnerHtml;
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$element_setOuterHtml(e, v) {
+  var parent = e.parentElement;
+  null !== parent && module$contents$google3$third_party$javascript$safevalues$dom$elements$element_throwIfScriptOrStyle(parent);
+  e.outerHTML = (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.unwrapHtml)(v);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$element.setOuterHtml = module$contents$google3$third_party$javascript$safevalues$dom$elements$element_setOuterHtml;
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$element_setCssText(e, v) {
+  e.style.cssText = module$contents$goog$html$SafeStyle_SafeStyle.unwrap(v);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$element.setCssText = module$contents$google3$third_party$javascript$safevalues$dom$elements$element_setCssText;
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$element_insertAdjacentHtml(element, position, v) {
+  var tagContext = "beforebegin" === position || "afterend" === position ? element.parentElement : element;
+  null !== tagContext && module$contents$google3$third_party$javascript$safevalues$dom$elements$element_throwIfScriptOrStyle(tagContext);
+  element.insertAdjacentHTML(position, (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.unwrapHtml)(v));
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$element.insertAdjacentHtml = module$contents$google3$third_party$javascript$safevalues$dom$elements$element_insertAdjacentHtml;
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$element_buildPrefixedAttributeSetter(prefix) {
+  var otherPrefixes = $jscomp.getRestArguments.apply(1, arguments), prefixes = [prefix].concat($jscomp.arrayFromIterable(otherPrefixes));
+  return function(e, attr, value) {
+    module$contents$google3$third_party$javascript$safevalues$dom$elements$element_setPrefixedAttribute(prefixes, e, attr, value);
+  };
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$element.buildPrefixedAttributeSetter = module$contents$google3$third_party$javascript$safevalues$dom$elements$element_buildPrefixedAttributeSetter;
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$element_setPrefixedAttribute(attrPrefixes, e, attr, value) {
+  if (0 === attrPrefixes.length) {
+    var message = "";
+    goog.DEBUG && (message = "No prefixes are provided");
+    throw Error(message);
+  }
+  var prefixes = attrPrefixes.map(function() {
+    var message = "";
+    goog.DEBUG && (message = "Unexpected type when unwrapping SafeAttributePrefix");
+    throw Error(message);
+  }), attrLower = attr.toLowerCase();
+  if (prefixes.every(function(p) {
+    return 0 !== attrLower.indexOf(p);
+  })) {
+    throw Error('Attribute "' + attr + '" does not match any of the allowed prefixes.');
+  }
+  e.setAttribute(attr, value);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$element.setPrefixedAttribute = module$contents$google3$third_party$javascript$safevalues$dom$elements$element_setPrefixedAttribute;
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$element_throwIfScriptOrStyle(element) {
+  var message = "", tagName = element.tagName;
+  if ("SCRIPT" === tagName || "STYLE" === tagName) {
+    throw goog.DEBUG && (message = "SCRIPT" === tagName ? "Use safeScriptEl.setTextContent with a SafeScript." : "Use safeStyleEl.setTextContent with a SafeStyleSheet."), Error(message);
+  }
+}
+;var module$exports$google3$third_party$javascript$safevalues$dom$elements$embed = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$embed_setSrc(embedEl, url) {
+  embedEl.src = module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(url);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$embed.setSrc = module$contents$google3$third_party$javascript$safevalues$dom$elements$embed_setSrc;
+var module$exports$google3$third_party$javascript$safevalues$dom$elements$form = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$form_setAction(form, url) {
+  var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(url);
+  void 0 !== sanitizedUrl && (form.action = sanitizedUrl);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$form.setAction = module$contents$google3$third_party$javascript$safevalues$dom$elements$form_setAction;
+var module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSrc(iframe, v) {
+  iframe.src = module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(v).toString();
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.setSrc = module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSrc;
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSrcdoc(iframe, v) {
+  iframe.srcdoc = (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.unwrapHtml)(v);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.setSrcdoc = module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSrcdoc;
+module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent = {FORMATTED_HTML_CONTENT:0, HTML_FORMATTED_CONTENT:1, EMBEDDED_INTERNAL_CONTENT:2, EMBEDDED_TRUSTED_EXTERNAL_CONTENT:3};
+module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent[module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.FORMATTED_HTML_CONTENT] = "FORMATTED_HTML_CONTENT";
+module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent[module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.HTML_FORMATTED_CONTENT] = "HTML_FORMATTED_CONTENT";
+module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent[module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.EMBEDDED_INTERNAL_CONTENT] = "EMBEDDED_INTERNAL_CONTENT";
+module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent[module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.EMBEDDED_TRUSTED_EXTERNAL_CONTENT] = "EMBEDDED_TRUSTED_EXTERNAL_CONTENT";
+var module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective = {ALLOW_SAME_ORIGIN:"allow-same-origin", ALLOW_SCRIPTS:"allow-scripts", ALLOW_FORMS:"allow-forms", ALLOW_POPUPS:"allow-popups", ALLOW_POPUPS_TO_ESCAPE_SANDBOX:"allow-popups-to-escape-sandbox", ALLOW_STORAGE_ACCESS_BY_USER_ACTIVATION:"allow-storage-access-by-user-activation"};
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSandboxDirectives(ifr, directives, legacyResetBehaviour) {
+  if (legacyResetBehaviour = void 0 === legacyResetBehaviour ? !1 : legacyResetBehaviour) {
+    for (; 0 < ifr.sandbox.length;) {
+      ifr.sandbox.remove(ifr.sandbox.item(0));
+    }
+  } else {
+    ifr.setAttribute("sandbox", "");
+  }
+  for (var i = 0; i < directives.length; i++) {
+    ifr.sandbox.supports && !ifr.sandbox.supports(directives[i]) || ifr.sandbox.add(directives[i]);
+  }
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.TypeCannotBeUsedWithIntentError = function(type, intent) {
+  var $jscomp$tmp$error = Error.call(this, type + " cannot be used with intent " + module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent[intent]);
+  this.message = $jscomp$tmp$error.message;
+  "stack" in $jscomp$tmp$error && (this.stack = $jscomp$tmp$error.stack);
+  this.type = type;
+  this.name = "TypeCannotBeUsedWithIntentError";
+};
+$jscomp.inherits(module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.TypeCannotBeUsedWithIntentError, Error);
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSrcWithIntent(element, intent, src) {
+  element.removeAttribute("srcdoc");
+  switch(intent) {
+    case module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.FORMATTED_HTML_CONTENT:
+      if (src instanceof goog.html.TrustedResourceUrl) {
+        throw new module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.TypeCannotBeUsedWithIntentError("TrustedResourceUrl", module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.FORMATTED_HTML_CONTENT);
+      }
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSandboxDirectives(element, []);
+      var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(src);
+      void 0 !== sanitizedUrl && (element.src = sanitizedUrl);
+      break;
+    case module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.HTML_FORMATTED_CONTENT:
+      if (src instanceof goog.html.TrustedResourceUrl) {
+        throw new module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.TypeCannotBeUsedWithIntentError("TrustedResourceUrl", module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.HTML_FORMATTED_CONTENT);
+      }
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSandboxDirectives(element, [], !0);
+      var sanitizedUrl$jscomp$0 = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(src);
+      void 0 !== sanitizedUrl$jscomp$0 && (element.src = sanitizedUrl$jscomp$0);
+      break;
+    case module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.EMBEDDED_INTERNAL_CONTENT:
+      if (!(src instanceof goog.html.TrustedResourceUrl)) {
+        throw new module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.TypeCannotBeUsedWithIntentError(typeof src, module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.EMBEDDED_INTERNAL_CONTENT);
+      }
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSandboxDirectives(element, [module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_SAME_ORIGIN, module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_SCRIPTS, module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_FORMS, module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_POPUPS, 
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_POPUPS_TO_ESCAPE_SANDBOX, module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_STORAGE_ACCESS_BY_USER_ACTIVATION]);
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSrc(element, src);
+      break;
+    case module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.EMBEDDED_TRUSTED_EXTERNAL_CONTENT:
+      if (src instanceof goog.html.TrustedResourceUrl) {
+        throw new module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.TypeCannotBeUsedWithIntentError("TrustedResourceUrl", module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.EMBEDDED_TRUSTED_EXTERNAL_CONTENT);
+      }
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSandboxDirectives(element, [module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_SAME_ORIGIN, module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_SCRIPTS, module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_FORMS, module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_POPUPS, 
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_POPUPS_TO_ESCAPE_SANDBOX, module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_STORAGE_ACCESS_BY_USER_ACTIVATION]);
+      var sanitizedUrl$jscomp$1 = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(src);
+      void 0 !== sanitizedUrl$jscomp$1 && (element.src = sanitizedUrl$jscomp$1);
+      break;
+    default:
+      module$contents$google3$javascript$typescript$contrib$check_checkExhaustiveAllowing(intent, void 0);
+  }
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.setSrcWithIntent = module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSrcWithIntent;
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSrcdocWithIntent(element, intent, srcdoc) {
+  element.removeAttribute("src");
+  switch(intent) {
+    case module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.FORMATTED_HTML_CONTENT:
+      if (srcdoc instanceof module$exports$google3$third_party$javascript$safevalues$internals$html_impl.SafeHtml) {
+        throw new module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.TypeCannotBeUsedWithIntentError("SafeHtml", module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.FORMATTED_HTML_CONTENT);
+      }
+      element.csp = "default-src 'none'";
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSandboxDirectives(element, []);
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSrcdoc(element, (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(srcdoc));
+      break;
+    case module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.HTML_FORMATTED_CONTENT:
+      if (srcdoc instanceof module$exports$google3$third_party$javascript$safevalues$internals$html_impl.SafeHtml) {
+        throw new module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.TypeCannotBeUsedWithIntentError("SafeHtml", module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.HTML_FORMATTED_CONTENT);
+      }
+      element.csp = "default-src 'none'";
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSandboxDirectives(element, [], !0);
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSrcdoc(element, (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(srcdoc));
+      break;
+    case module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.EMBEDDED_INTERNAL_CONTENT:
+      if (!(srcdoc instanceof module$exports$google3$third_party$javascript$safevalues$internals$html_impl.SafeHtml)) {
+        throw new module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.TypeCannotBeUsedWithIntentError("string", module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.EMBEDDED_INTERNAL_CONTENT);
+      }
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSandboxDirectives(element, [module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_SAME_ORIGIN, module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_SCRIPTS, module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_FORMS, module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_POPUPS, 
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_POPUPS_TO_ESCAPE_SANDBOX, module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_STORAGE_ACCESS_BY_USER_ACTIVATION]);
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSrcdoc(element, srcdoc);
+      break;
+    case module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.EMBEDDED_TRUSTED_EXTERNAL_CONTENT:
+      if (srcdoc instanceof module$exports$google3$third_party$javascript$safevalues$internals$html_impl.SafeHtml) {
+        throw new module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.TypeCannotBeUsedWithIntentError("SafeHtml", module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent.EMBEDDED_INTERNAL_CONTENT);
+      }
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSandboxDirectives(element, [module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_SCRIPTS, module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_FORMS, module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_POPUPS, module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_POPUPS_TO_ESCAPE_SANDBOX, 
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_SandboxDirective.ALLOW_STORAGE_ACCESS_BY_USER_ACTIVATION]);
+      module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSrcdoc(element, (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(srcdoc));
+      break;
+    default:
+      module$contents$google3$javascript$typescript$contrib$check_checkExhaustiveAllowing(intent, void 0);
+  }
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.setSrcdocWithIntent = module$contents$google3$third_party$javascript$safevalues$dom$elements$iframe_setSrcdocWithIntent;
+var module$exports$google3$third_party$javascript$safevalues$dom$elements$input = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$input_setFormaction(input, url) {
+  var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(url);
+  void 0 !== sanitizedUrl && (input.formAction = sanitizedUrl);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$input.setFormaction = module$contents$google3$third_party$javascript$safevalues$dom$elements$input_setFormaction;
+var module$exports$google3$third_party$javascript$safevalues$dom$elements$link = {}, module$contents$google3$third_party$javascript$safevalues$dom$elements$link_SAFE_URL_REL_VALUES = "alternate author bookmark canonical cite help icon license modulepreload next prefetch dns-prefetch prerender preconnect preload prev search subresource".split(" ");
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$link_setHrefAndRel(link, url, rel) {
+  if (url instanceof goog.html.TrustedResourceUrl) {
+    link.href = module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(url).toString();
+  } else {
+    if (-1 === module$contents$google3$third_party$javascript$safevalues$dom$elements$link_SAFE_URL_REL_VALUES.indexOf(rel)) {
+      throw Error('TrustedResourceUrl href attribute required with rel="' + rel + '"');
+    }
+    var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(url);
+    if (void 0 === sanitizedUrl) {
+      return;
+    }
+    link.href = sanitizedUrl;
+  }
+  link.rel = rel;
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$link.setHrefAndRel = module$contents$google3$third_party$javascript$safevalues$dom$elements$link_setHrefAndRel;
+var module$exports$google3$third_party$javascript$safevalues$dom$elements$object = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$object_setData(obj, v) {
+  obj.data = module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(v);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$object.setData = module$contents$google3$third_party$javascript$safevalues$dom$elements$object_setData;
+var module$exports$google3$third_party$javascript$safevalues$dom$globals$window = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$window_open(win, url, target, features) {
+  var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(url);
+  return void 0 !== sanitizedUrl ? win.open(sanitizedUrl, target, features) : null;
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$window.open = module$contents$google3$third_party$javascript$safevalues$dom$globals$window_open;
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$window_getScriptNonce(win) {
+  return module$contents$google3$third_party$javascript$safevalues$dom$globals$window_getNonceFor("script", win);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$window.getScriptNonce = module$contents$google3$third_party$javascript$safevalues$dom$globals$window_getScriptNonce;
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$window_getStyleNonce(win) {
+  return module$contents$google3$third_party$javascript$safevalues$dom$globals$window_getNonceFor("style", win);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$window.getStyleNonce = module$contents$google3$third_party$javascript$safevalues$dom$globals$window_getStyleNonce;
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$window_getNonceFor(elementName, win) {
+  var doc = win.document, $jscomp$optchain$tmpm1987982378$0, $jscomp$optchain$tmpm1987982378$1, el = null == ($jscomp$optchain$tmpm1987982378$1 = ($jscomp$optchain$tmpm1987982378$0 = doc).querySelector) ? void 0 : $jscomp$optchain$tmpm1987982378$1.call($jscomp$optchain$tmpm1987982378$0, elementName + "[nonce]");
+  return el ? el.nonce || el.getAttribute("nonce") || "" : "";
+}
+;var module$exports$google3$third_party$javascript$safevalues$dom$elements$script = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$script_setNonceForScriptElement(script) {
+  var win = script.ownerDocument && script.ownerDocument.defaultView, nonce = (0,module$exports$google3$third_party$javascript$safevalues$dom$globals$window.getScriptNonce)(win || window);
+  nonce && script.setAttribute("nonce", nonce);
+}
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$script_setTextContent(script, v, options) {
+  script.textContent = module$contents$google3$third_party$javascript$safevalues$internals$script_impl_unwrapScript(v);
+  var $jscomp$optchain$tmpm314130740$0;
+  (null == ($jscomp$optchain$tmpm314130740$0 = options) ? 0 : $jscomp$optchain$tmpm314130740$0.omitNonce) || module$contents$google3$third_party$javascript$safevalues$dom$elements$script_setNonceForScriptElement(script);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$script.setTextContent = module$contents$google3$third_party$javascript$safevalues$dom$elements$script_setTextContent;
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$script_setSrc(script, v, options) {
+  script.src = module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(v);
+  var $jscomp$optchain$tmpm314130740$1;
+  (null == ($jscomp$optchain$tmpm314130740$1 = options) ? 0 : $jscomp$optchain$tmpm314130740$1.omitNonce) || module$contents$google3$third_party$javascript$safevalues$dom$elements$script_setNonceForScriptElement(script);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$script.setSrc = module$contents$google3$third_party$javascript$safevalues$dom$elements$script_setSrc;
+var module$exports$google3$third_party$javascript$safevalues$dom$elements$style = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$style_setTextContent(elem, safeStyleSheet) {
+  elem.textContent = module$contents$google3$third_party$javascript$safevalues$internals$style_sheet_impl_unwrapStyleSheet(safeStyleSheet);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$style.setTextContent = module$contents$google3$third_party$javascript$safevalues$dom$elements$style_setTextContent;
+var module$exports$google3$third_party$javascript$safevalues$dom$elements$svg = {}, module$contents$google3$third_party$javascript$safevalues$dom$elements$svg_UNSAFE_SVG_ATTRIBUTES = ["href", "xlink:href"];
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$svg_setAttribute(svg, attr, value) {
+  var attrLower = attr.toLowerCase();
+  if (-1 !== module$contents$google3$third_party$javascript$safevalues$dom$elements$svg_UNSAFE_SVG_ATTRIBUTES.indexOf(attrLower) || 0 === attrLower.indexOf("on")) {
+    var msg = "";
+    goog.DEBUG && (msg = "Setting the '" + attrLower + "' attribute on SVG can cause XSS.");
+    throw Error(msg);
+  }
+  svg.setAttribute(attr, value);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$svg.setAttribute = module$contents$google3$third_party$javascript$safevalues$dom$elements$svg_setAttribute;
+goog.log = {};
+goog.log.ENABLED = goog.debug.LOGGING_ENABLED;
+goog.log.ROOT_LOGGER_NAME = "";
+var third_party$javascript$closure$log$log$classdecl$var0 = function(name, value) {
+  this.name = name;
+  this.value = value;
+};
+third_party$javascript$closure$log$log$classdecl$var0.prototype.toString = function() {
+  return this.name;
+};
+goog.log.Level = third_party$javascript$closure$log$log$classdecl$var0;
+goog.log.Level.OFF = new goog.log.Level("OFF", Infinity);
+goog.log.Level.SHOUT = new goog.log.Level("SHOUT", 1200);
+goog.log.Level.SEVERE = new goog.log.Level("SEVERE", 1E3);
+goog.log.Level.WARNING = new goog.log.Level("WARNING", 900);
+goog.log.Level.INFO = new goog.log.Level("INFO", 800);
+goog.log.Level.CONFIG = new goog.log.Level("CONFIG", 700);
+goog.log.Level.FINE = new goog.log.Level("FINE", 500);
+goog.log.Level.FINER = new goog.log.Level("FINER", 400);
+goog.log.Level.FINEST = new goog.log.Level("FINEST", 300);
+goog.log.Level.ALL = new goog.log.Level("ALL", 0);
+goog.log.Level.PREDEFINED_LEVELS = [goog.log.Level.OFF, goog.log.Level.SHOUT, goog.log.Level.SEVERE, goog.log.Level.WARNING, goog.log.Level.INFO, goog.log.Level.CONFIG, goog.log.Level.FINE, goog.log.Level.FINER, goog.log.Level.FINEST, goog.log.Level.ALL];
+goog.log.Level.predefinedLevelsCache_ = null;
+goog.log.Level.createPredefinedLevelsCache_ = function() {
+  goog.log.Level.predefinedLevelsCache_ = {};
+  for (var i = 0, level; level = goog.log.Level.PREDEFINED_LEVELS[i]; i++) {
+    goog.log.Level.predefinedLevelsCache_[level.value] = level, goog.log.Level.predefinedLevelsCache_[level.name] = level;
+  }
+};
+goog.log.Level.getPredefinedLevel = function(name) {
+  goog.log.Level.predefinedLevelsCache_ || goog.log.Level.createPredefinedLevelsCache_();
+  return goog.log.Level.predefinedLevelsCache_[name] || null;
+};
+goog.log.Level.getPredefinedLevelByValue = function(value) {
+  goog.log.Level.predefinedLevelsCache_ || goog.log.Level.createPredefinedLevelsCache_();
+  if (value in goog.log.Level.predefinedLevelsCache_) {
+    return goog.log.Level.predefinedLevelsCache_[value];
+  }
+  for (var i = 0; i < goog.log.Level.PREDEFINED_LEVELS.length; ++i) {
+    var level = goog.log.Level.PREDEFINED_LEVELS[i];
+    if (level.value <= value) {
+      return level;
+    }
+  }
+  return null;
+};
+var third_party$javascript$closure$log$log$classdecl$var1 = function() {
+};
+third_party$javascript$closure$log$log$classdecl$var1.prototype.getName = function() {
+};
+goog.log.Logger = third_party$javascript$closure$log$log$classdecl$var1;
+goog.log.Logger.Level = goog.log.Level;
+var third_party$javascript$closure$log$log$classdecl$var2 = function(capacity) {
+  this.capacity_ = "number" === typeof capacity ? capacity : goog.log.LogBuffer.CAPACITY;
+  this.clear();
+};
+third_party$javascript$closure$log$log$classdecl$var2.prototype.addRecord = function(level, msg, loggerName) {
+  if (!this.isBufferingEnabled()) {
+    return new goog.log.LogRecord(level, msg, loggerName);
+  }
+  var curIndex = (this.curIndex_ + 1) % this.capacity_;
+  this.curIndex_ = curIndex;
+  if (this.isFull_) {
+    var ret = this.buffer_[curIndex];
+    ret.reset(level, msg, loggerName);
+    return ret;
+  }
+  this.isFull_ = curIndex == this.capacity_ - 1;
+  return this.buffer_[curIndex] = new goog.log.LogRecord(level, msg, loggerName);
+};
+third_party$javascript$closure$log$log$classdecl$var2.prototype.isBufferingEnabled = function() {
+  return 0 < this.capacity_;
+};
+third_party$javascript$closure$log$log$classdecl$var2.prototype.clear = function() {
+  this.buffer_ = Array(this.capacity_);
+  this.curIndex_ = -1;
+  this.isFull_ = !1;
+};
+goog.log.LogBuffer = third_party$javascript$closure$log$log$classdecl$var2;
+goog.log.LogBuffer.CAPACITY = 0;
+goog.log.LogBuffer.getInstance = function() {
+  goog.log.LogBuffer.instance_ || (goog.log.LogBuffer.instance_ = new goog.log.LogBuffer(goog.log.LogBuffer.CAPACITY));
+  return goog.log.LogBuffer.instance_;
+};
+goog.log.LogBuffer.isBufferingEnabled = function() {
+  return goog.log.LogBuffer.getInstance().isBufferingEnabled();
+};
+var third_party$javascript$closure$log$log$classdecl$var3 = function(level, msg, loggerName, time, sequenceNumber) {
+  this.reset(level || goog.log.Level.OFF, msg, loggerName, time, sequenceNumber);
+};
+third_party$javascript$closure$log$log$classdecl$var3.prototype.reset = function(level) {
+  this.level_ = level;
+};
+third_party$javascript$closure$log$log$classdecl$var3.prototype.getLevel = function() {
+  return this.level_;
+};
+third_party$javascript$closure$log$log$classdecl$var3.prototype.setLevel = function(level) {
+  this.level_ = level;
+};
+goog.log.LogRecord = third_party$javascript$closure$log$log$classdecl$var3;
+goog.log.LogRecord.nextSequenceNumber_ = 0;
+var third_party$javascript$closure$log$log$classdecl$var4 = function(name, parent) {
+  parent = void 0 === parent ? null : parent;
+  this.level = null;
+  this.handlers = [];
+  this.parent = parent || null;
+  this.children = [];
+  this.logger = {getName:function() {
+    return name;
+  }};
+};
+third_party$javascript$closure$log$log$classdecl$var4.prototype.getEffectiveLevel = function() {
+  if (this.level) {
+    return this.level;
+  }
+  if (this.parent) {
+    return this.parent.getEffectiveLevel();
+  }
+  goog.asserts.fail("Root logger has no level set.");
+  return goog.log.Level.OFF;
+};
+third_party$javascript$closure$log$log$classdecl$var4.prototype.publish = function(logRecord) {
+  for (var target = this; target;) {
+    target.handlers.forEach(function(handler) {
+      handler(logRecord);
+    }), target = target.parent;
+  }
+};
+goog.log.LogRegistryEntry_ = third_party$javascript$closure$log$log$classdecl$var4;
+var third_party$javascript$closure$log$log$classdecl$var5 = function() {
+  this.entries = {};
+  var rootLogRegistryEntry = new goog.log.LogRegistryEntry_(goog.log.ROOT_LOGGER_NAME);
+  rootLogRegistryEntry.level = goog.log.Level.CONFIG;
+  this.entries[goog.log.ROOT_LOGGER_NAME] = rootLogRegistryEntry;
+};
+third_party$javascript$closure$log$log$classdecl$var5.prototype.getLogRegistryEntry = function(name, level) {
+  var entry = this.entries[name];
+  if (entry) {
+    return void 0 !== level && (entry.level = level), entry;
+  }
+  var lastDotIndex = name.lastIndexOf("."), parentName = name.slice(0, Math.max(lastDotIndex, 0)), parentLogRegistryEntry = this.getLogRegistryEntry(parentName), logRegistryEntry = new goog.log.LogRegistryEntry_(name, parentLogRegistryEntry);
+  this.entries[name] = logRegistryEntry;
+  parentLogRegistryEntry.children.push(logRegistryEntry);
+  void 0 !== level && (logRegistryEntry.level = level);
+  return logRegistryEntry;
+};
+third_party$javascript$closure$log$log$classdecl$var5.prototype.getAllLoggers = function() {
+  var $jscomp$this$17096019$34 = this;
+  return Object.keys(this.entries).map(function(loggerName) {
+    return $jscomp$this$17096019$34.entries[loggerName].logger;
+  });
+};
+goog.log.LogRegistry_ = third_party$javascript$closure$log$log$classdecl$var5;
+goog.log.LogRegistry_.getInstance = function() {
+  goog.log.LogRegistry_.instance_ || (goog.log.LogRegistry_.instance_ = new goog.log.LogRegistry_());
+  return goog.log.LogRegistry_.instance_;
+};
+goog.log.getLogger = function(name, level) {
+  if (goog.log.ENABLED) {
+    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(name, level);
+    return loggerEntry.logger;
+  }
+  return null;
+};
+goog.log.getRootLogger = function() {
+  if (goog.log.ENABLED) {
+    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(goog.log.ROOT_LOGGER_NAME);
+    return loggerEntry.logger;
+  }
+  return null;
+};
+goog.log.addHandler = function(logger, handler) {
+  if (goog.log.ENABLED && logger) {
+    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(logger.getName());
+    loggerEntry.handlers.push(handler);
+  }
+};
+goog.log.removeHandler = function(logger, handler) {
+  if (goog.log.ENABLED && logger) {
+    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(logger.getName()), indexOfHandler = loggerEntry.handlers.indexOf(handler);
+    if (-1 !== indexOfHandler) {
+      return loggerEntry.handlers.splice(indexOfHandler, 1), !0;
+    }
+  }
+  return !1;
+};
+goog.log.setLevel = function(logger, level) {
+  if (goog.log.ENABLED && logger) {
+    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(logger.getName());
+    loggerEntry.level = level;
+  }
+};
+goog.log.getLevel = function(logger) {
+  if (goog.log.ENABLED && logger) {
+    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(logger.getName());
+    return loggerEntry.level;
+  }
+  return null;
+};
+goog.log.getEffectiveLevel = function(logger) {
+  if (goog.log.ENABLED && logger) {
+    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(logger.getName());
+    return loggerEntry.getEffectiveLevel();
+  }
+  return goog.log.Level.OFF;
+};
+goog.log.isLoggable = function(logger, level) {
+  return goog.log.ENABLED && logger && level ? level.value >= goog.log.getEffectiveLevel(logger).value : !1;
+};
+goog.log.getAllLoggers = function() {
+  return goog.log.ENABLED ? goog.log.LogRegistry_.getInstance().getAllLoggers() : [];
+};
+goog.log.getLogRecord = function(logger, level, msg) {
+  var logRecord = goog.log.LogBuffer.getInstance().addRecord(level || goog.log.Level.OFF, msg, logger.getName());
+  return logRecord;
+};
+goog.log.publishLogRecord = function(logger, logRecord) {
+  if (goog.log.ENABLED && logger && goog.log.isLoggable(logger, logRecord.getLevel())) {
+    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(logger.getName());
+    loggerEntry.publish(logRecord);
+  }
+};
+goog.log.log = function(logger, level, msg) {
+  if (goog.log.ENABLED && logger && goog.log.isLoggable(logger, level)) {
+    level = level || goog.log.Level.OFF;
+    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(logger.getName());
+    "function" === typeof msg && (msg = msg());
+    var logRecord = goog.log.LogBuffer.getInstance().addRecord(level, msg, logger.getName());
+    loggerEntry.publish(logRecord);
+  }
+};
+goog.log.error = function(logger, msg, exception) {
+  goog.log.ENABLED && logger && goog.log.log(logger, goog.log.Level.SEVERE, msg, exception);
+};
+goog.log.warning = function(logger, msg, exception) {
+  goog.log.ENABLED && logger && goog.log.log(logger, goog.log.Level.WARNING, msg, exception);
+};
+goog.log.info = function(logger, msg, exception) {
+  goog.log.ENABLED && logger && goog.log.log(logger, goog.log.Level.INFO, msg, exception);
+};
+goog.log.fine = function(logger, msg, exception) {
+  goog.log.ENABLED && logger && goog.log.log(logger, goog.log.Level.FINE, msg, exception);
+};
+var module$exports$google3$third_party$javascript$safevalues$dom$elements$svg_use = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$svg_use_setHref(useEl, url) {
+  var scheme = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_extractScheme(url);
+  if ("javascript:" === scheme || "data:" === scheme) {
+    if (goog.DEBUG) {
+      var msg = "A URL with content '" + url + "' was sanitized away.";
+      (0,goog.log.warning)((0,goog.log.getLogger)("safevalues"), msg);
+    }
+  } else {
+    useEl.setAttribute("href", url);
+  }
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$svg_use.setHref = module$contents$google3$third_party$javascript$safevalues$dom$elements$svg_use_setHref;
+var module$exports$google3$third_party$javascript$safevalues$dom$globals$document = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$document_write(doc, text) {
+  doc.write((0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.unwrapHtml)(text));
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$document.write = module$contents$google3$third_party$javascript$safevalues$dom$globals$document_write;
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$document_execCommand(doc, command, value) {
+  var commandString = String(command), valueArgument = value;
+  "inserthtml" === commandString.toLowerCase() && (valueArgument = (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.unwrapHtml)(value));
+  return doc.execCommand(commandString, !1, valueArgument);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$document.execCommand = module$contents$google3$third_party$javascript$safevalues$dom$globals$document_execCommand;
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$document_execCommandInsertHtml(doc, html) {
+  return doc.execCommand("insertHTML", !1, (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.unwrapHtml)(html));
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$document.execCommandInsertHtml = module$contents$google3$third_party$javascript$safevalues$dom$globals$document_execCommandInsertHtml;
+var module$exports$google3$third_party$javascript$safevalues$dom$globals$dom_parser = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$dom_parser_parseHtml(parser, html) {
+  return module$contents$google3$third_party$javascript$safevalues$dom$globals$dom_parser_parseFromString(parser, html, "text/html");
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$dom_parser.parseHtml = module$contents$google3$third_party$javascript$safevalues$dom$globals$dom_parser_parseHtml;
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$dom_parser_parseXml(parser, xml) {
+  for (var doc = module$contents$google3$third_party$javascript$safevalues$dom$globals$dom_parser_parseFromString(parser, (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(xml), "text/xml"), iterator = document.createNodeIterator(doc, NodeFilter.SHOW_ALL, null, !1), currentNode; currentNode = iterator.nextNode();) {
+    if (currentNode instanceof HTMLElement || currentNode instanceof SVGElement) {
+      var message = "unsafe XML";
+      goog.DEBUG && (message = "attempted to parse an XML document that embeds HTML or SVG content");
+      throw Error(message);
+    }
+  }
+  return doc;
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$dom_parser.parseXml = module$contents$google3$third_party$javascript$safevalues$dom$globals$dom_parser_parseXml;
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$dom_parser_parseFromString(parser, content, contentType) {
+  return parser.parseFromString((0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.unwrapHtml)(content), contentType);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$dom_parser.parseFromString = module$contents$google3$third_party$javascript$safevalues$dom$globals$dom_parser_parseFromString;
+var module$exports$google3$third_party$javascript$safevalues$dom$globals$fetch = {IncorrectContentTypeError:function(url, typeName, contentType) {
+  var $jscomp$tmp$error = Error.call(this, url + " was requested as a " + typeName + ', but the response Content-Type, "' + contentType + " is not appropriate for this type of content.");
+  this.message = $jscomp$tmp$error.message;
+  "stack" in $jscomp$tmp$error && (this.stack = $jscomp$tmp$error.stack);
+  this.url = url;
+  this.contentType = contentType;
+}};
+$jscomp.inherits(module$exports$google3$third_party$javascript$safevalues$dom$globals$fetch.IncorrectContentTypeError, Error);
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$fetch_SafeResponse() {
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$fetch.SafeResponse = module$contents$google3$third_party$javascript$safevalues$dom$globals$fetch_SafeResponse;
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$fetch_fetchResourceUrl(u, init) {
+  var response, $jscomp$optchain$tmp1153895636$0, $jscomp$optchain$tmp1153895636$1, $jscomp$optchain$tmp1153895636$2, mimeType;
+  return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context$1153895636$6) {
+    if (1 == $jscomp$generator$context$1153895636$6.nextAddress) {
+      return $jscomp$generator$context$1153895636$6.yield(fetch(module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(u).toString(), init), 2);
+    }
+    response = $jscomp$generator$context$1153895636$6.yieldResult;
+    mimeType = null == ($jscomp$optchain$tmp1153895636$0 = response.headers.get("Content-Type")) ? void 0 : null == ($jscomp$optchain$tmp1153895636$1 = $jscomp$optchain$tmp1153895636$0.split(";", 2)) ? void 0 : null == ($jscomp$optchain$tmp1153895636$2 = $jscomp$optchain$tmp1153895636$1[0]) ? void 0 : $jscomp$optchain$tmp1153895636$2.toLowerCase();
+    return $jscomp$generator$context$1153895636$6.return({html:function() {
+      var text;
+      return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context$1153895636$3) {
+        if (1 == $jscomp$generator$context$1153895636$3.nextAddress) {
+          if ("text/html" !== mimeType) {
+            throw new module$exports$google3$third_party$javascript$safevalues$dom$globals$fetch.IncorrectContentTypeError(response.url, "SafeHtml", "text/html");
+          }
+          return $jscomp$generator$context$1153895636$3.yield(response.text(), 2);
+        }
+        text = $jscomp$generator$context$1153895636$3.yieldResult;
+        return $jscomp$generator$context$1153895636$3.return((0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(text));
+      });
+    }, script:function() {
+      var text;
+      return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context$1153895636$4) {
+        if (1 == $jscomp$generator$context$1153895636$4.nextAddress) {
+          if ("text/javascript" !== mimeType && "application/javascript" !== mimeType) {
+            throw new module$exports$google3$third_party$javascript$safevalues$dom$globals$fetch.IncorrectContentTypeError(response.url, "SafeScript", "text/javascript");
+          }
+          return $jscomp$generator$context$1153895636$4.yield(response.text(), 2);
+        }
+        text = $jscomp$generator$context$1153895636$4.yieldResult;
+        return $jscomp$generator$context$1153895636$4.return(module$contents$google3$third_party$javascript$safevalues$internals$script_impl_createScriptInternal(text));
+      });
+    }, styleSheet:function() {
+      var text;
+      return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context$1153895636$5) {
+        if (1 == $jscomp$generator$context$1153895636$5.nextAddress) {
+          if ("text/css" !== mimeType) {
+            throw new module$exports$google3$third_party$javascript$safevalues$dom$globals$fetch.IncorrectContentTypeError(response.url, "SafeStyleSheet", "text/css");
+          }
+          return $jscomp$generator$context$1153895636$5.yield(response.text(), 2);
+        }
+        text = $jscomp$generator$context$1153895636$5.yieldResult;
+        return $jscomp$generator$context$1153895636$5.return((0,module$exports$goog$html$internals.createSafeStyleSheet)(text));
+      });
+    }});
+  });
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$fetch.fetchResourceUrl = module$contents$google3$third_party$javascript$safevalues$dom$globals$fetch_fetchResourceUrl;
+var module$exports$google3$third_party$javascript$safevalues$dom$globals$global = {};
+module$exports$google3$third_party$javascript$safevalues$dom$globals$global.fetchResourceUrl = module$contents$google3$third_party$javascript$safevalues$dom$globals$fetch_fetchResourceUrl;
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$global_globalEval(win, script) {
+  var trustedScript = module$contents$google3$third_party$javascript$safevalues$internals$script_impl_unwrapScript(script), result = win.eval(trustedScript);
+  result === trustedScript && (result = win.eval(trustedScript.toString()));
+  return result;
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$global.globalEval = module$contents$google3$third_party$javascript$safevalues$dom$globals$global_globalEval;
+var module$exports$google3$third_party$javascript$safevalues$dom$globals$location = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$location_setHref(loc, url) {
+  var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(url);
+  void 0 !== sanitizedUrl && (loc.href = sanitizedUrl);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$location.setHref = module$contents$google3$third_party$javascript$safevalues$dom$globals$location_setHref;
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$location_replace(loc, url) {
+  var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(url);
+  void 0 !== sanitizedUrl && loc.replace(sanitizedUrl);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$location.replace = module$contents$google3$third_party$javascript$safevalues$dom$globals$location_replace;
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$location_assign(loc, url) {
+  var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(url);
+  void 0 !== sanitizedUrl && loc.assign(sanitizedUrl);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$location.assign = module$contents$google3$third_party$javascript$safevalues$dom$globals$location_assign;
+var module$exports$google3$third_party$javascript$safevalues$dom$globals$service_worker_container = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$service_worker_container_register(container, scriptURL, options) {
+  return container.register(module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(scriptURL), options);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$service_worker_container.register = module$contents$google3$third_party$javascript$safevalues$dom$globals$service_worker_container_register;
+var module$exports$google3$third_party$javascript$safevalues$dom$globals$url = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$url_objectUrlFromSafeSource(source) {
+  return module$contents$google3$third_party$javascript$safevalues$builders$url_builders_objectUrlFromSafeSource(source).toString();
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$url.objectUrlFromSafeSource = module$contents$google3$third_party$javascript$safevalues$dom$globals$url_objectUrlFromSafeSource;
+var module$exports$google3$third_party$javascript$safevalues$dom$globals$worker = {};
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$worker_ScopeWithImportScripts() {
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$worker.ScopeWithImportScripts = module$contents$google3$third_party$javascript$safevalues$dom$globals$worker_ScopeWithImportScripts;
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$worker_create(url, options) {
+  return new Worker(module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(url), options);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$worker.create = module$contents$google3$third_party$javascript$safevalues$dom$globals$worker_create;
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$worker_createShared(url, options) {
+  return new SharedWorker(module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(url), options);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$worker.createShared = module$contents$google3$third_party$javascript$safevalues$dom$globals$worker_createShared;
+function module$contents$google3$third_party$javascript$safevalues$dom$globals$worker_importScripts(scope) {
+  var urls = $jscomp.getRestArguments.apply(1, arguments);
+  scope.importScripts.apply(scope, $jscomp.arrayFromIterable(urls.map(function(url) {
+    return module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(url);
+  })));
+}
+module$exports$google3$third_party$javascript$safevalues$dom$globals$worker.importScripts = module$contents$google3$third_party$javascript$safevalues$dom$globals$worker_importScripts;
+safevalues.dom = {};
+safevalues.dom.safeAnchorEl = module$exports$google3$third_party$javascript$safevalues$dom$elements$anchor;
+safevalues.dom.safeAreaEl = module$exports$google3$third_party$javascript$safevalues$dom$elements$area;
+safevalues.dom.safeBaseEl = module$exports$google3$third_party$javascript$safevalues$dom$elements$base;
+safevalues.dom.safeButtonEl = module$exports$google3$third_party$javascript$safevalues$dom$elements$button;
+safevalues.dom.safeElement = module$exports$google3$third_party$javascript$safevalues$dom$elements$element;
+safevalues.dom.safeEmbedEl = module$exports$google3$third_party$javascript$safevalues$dom$elements$embed;
+safevalues.dom.safeFormEl = module$exports$google3$third_party$javascript$safevalues$dom$elements$form;
+safevalues.dom.safeIframeEl = module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe;
+safevalues.dom.safeInputEl = module$exports$google3$third_party$javascript$safevalues$dom$elements$input;
+safevalues.dom.safeLinkEl = module$exports$google3$third_party$javascript$safevalues$dom$elements$link;
+safevalues.dom.safeObjectEl = module$exports$google3$third_party$javascript$safevalues$dom$elements$object;
+safevalues.dom.safeScriptEl = module$exports$google3$third_party$javascript$safevalues$dom$elements$script;
+safevalues.dom.safeStyleEl = module$exports$google3$third_party$javascript$safevalues$dom$elements$style;
+safevalues.dom.safeSvgEl = module$exports$google3$third_party$javascript$safevalues$dom$elements$svg;
+safevalues.dom.safeSvgUseEl = module$exports$google3$third_party$javascript$safevalues$dom$elements$svg_use;
+safevalues.dom.safeDocument = module$exports$google3$third_party$javascript$safevalues$dom$globals$document;
+safevalues.dom.safeDomParser = module$exports$google3$third_party$javascript$safevalues$dom$globals$dom_parser;
+safevalues.dom.safeGlobal = module$exports$google3$third_party$javascript$safevalues$dom$globals$global;
+safevalues.dom.safeLocation = module$exports$google3$third_party$javascript$safevalues$dom$globals$location;
+safevalues.dom.safeRange = module$exports$google3$third_party$javascript$safevalues$dom$globals$range;
+safevalues.dom.safeServiceWorkerContainer = module$exports$google3$third_party$javascript$safevalues$dom$globals$service_worker_container;
+safevalues.dom.safeUrl = module$exports$google3$third_party$javascript$safevalues$dom$globals$url;
+safevalues.dom.safeWindow = module$exports$google3$third_party$javascript$safevalues$dom$globals$window;
+safevalues.dom.safeWorker = module$exports$google3$third_party$javascript$safevalues$dom$globals$worker;
 goog.string.DETECT_DOUBLE_ESCAPING = !1;
 goog.string.FORCE_NON_DOM_HTML_UNESCAPING = !1;
 goog.string.Unicode = {NBSP:"\u00a0", ZERO_WIDTH_SPACE:"\u200b"};
@@ -4791,7 +6632,7 @@ goog.string.unescapeEntitiesUsingDom_ = function(str, opt_document) {
       var n = Number("0" + entity.slice(1));
       isNaN(n) || (value = String.fromCharCode(n));
     }
-    value || (goog.dom.safe.setInnerHtml(div, module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_htmlSafeByReview(s + " ", {justification:"Single HTML entity."})), value = div.firstChild.nodeValue.slice(0, -1));
+    value || (module$exports$google3$third_party$javascript$safevalues$dom$elements$element.setInnerHtml(div, module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_htmlSafeByReview(s + " ", {justification:"Single HTML entity."})), value = div.firstChild.nodeValue.slice(0, -1));
     return seen[s] = value;
   });
 };
@@ -5852,34 +7693,9 @@ goog.dom.DomHelper.prototype.getAncestorByTagNameAndClass = goog.dom.getAncestor
 goog.dom.DomHelper.prototype.getAncestorByClass = goog.dom.getAncestorByClass;
 goog.dom.DomHelper.prototype.getAncestor = goog.dom.getAncestor;
 goog.dom.DomHelper.prototype.getCanvasContext2D = goog.dom.getCanvasContext2D;
-goog.async = {};
-var module$contents$goog$async$FreeList_FreeList = function(create, reset, limit) {
-  this.limit_ = limit;
-  this.create_ = create;
-  this.reset_ = reset;
-  this.occupants_ = 0;
-  this.head_ = null;
-};
-module$contents$goog$async$FreeList_FreeList.prototype.get = function() {
-  if (0 < this.occupants_) {
-    this.occupants_--;
-    var item = this.head_;
-    this.head_ = item.next;
-    item.next = null;
-  } else {
-    item = this.create_();
-  }
-  return item;
-};
-module$contents$goog$async$FreeList_FreeList.prototype.put = function(item) {
-  this.reset_(item);
-  this.occupants_ < this.limit_ && (this.occupants_++, item.next = this.head_, this.head_ = item);
-};
-goog.async.FreeList = module$contents$goog$async$FreeList_FreeList;
 goog.debug.entryPointRegistry = {};
 goog.debug.entryPointRegistry.EntryPointMonitor = function() {
 };
-goog.debug.EntryPointMonitor = goog.debug.entryPointRegistry.EntryPointMonitor;
 goog.debug.entryPointRegistry.refList_ = [];
 goog.debug.entryPointRegistry.monitors_ = [];
 goog.debug.entryPointRegistry.monitorsMayExist_ = !1;
@@ -5905,504 +7721,6 @@ goog.debug.entryPointRegistry.unmonitorAllIfPossible = function(monitor) {
     goog.debug.entryPointRegistry.refList_[i](transformer);
   }
   monitors.length--;
-};
-goog.async.nextTick = function(callback, opt_context, opt_useSetImmediate) {
-  var cb = callback;
-  opt_context && (cb = goog.bind(callback, opt_context));
-  cb = goog.async.nextTick.wrapCallback_(cb);
-  "function" === typeof goog.global.setImmediate && (opt_useSetImmediate || goog.async.nextTick.useSetImmediate_()) ? goog.global.setImmediate(cb) : (goog.async.nextTick.nextTickImpl || (goog.async.nextTick.nextTickImpl = goog.async.nextTick.getNextTickImpl_()), goog.async.nextTick.nextTickImpl(cb));
-};
-goog.async.nextTick.useSetImmediate_ = function() {
-  return goog.global.Window && goog.global.Window.prototype && !module$contents$goog$labs$userAgent$browser_matchEdgeHtml() && goog.global.Window.prototype.setImmediate == goog.global.setImmediate ? !1 : !0;
-};
-goog.async.nextTick.getNextTickImpl_ = function() {
-  var Channel = goog.global.MessageChannel;
-  "undefined" === typeof Channel && "undefined" !== typeof window && window.postMessage && window.addEventListener && !module$contents$goog$labs$userAgent$engine_isPresto() && (Channel = function() {
-    var iframe = goog.dom.createElement(goog.dom.TagName.IFRAME);
-    iframe.style.display = "none";
-    document.documentElement.appendChild(iframe);
-    var win = iframe.contentWindow, doc = win.document;
-    doc.open();
-    doc.close();
-    var message = "callImmediate" + Math.random(), origin = "file:" == win.location.protocol ? "*" : win.location.protocol + "//" + win.location.host, onmessage = goog.bind(function(e) {
-      if (("*" == origin || e.origin == origin) && e.data == message) {
-        this.port1.onmessage();
-      }
-    }, this);
-    win.addEventListener("message", onmessage, !1);
-    this.port1 = {};
-    this.port2 = {postMessage:function() {
-      win.postMessage(message, origin);
-    }};
-  });
-  if ("undefined" !== typeof Channel && !module$contents$goog$labs$userAgent$browser_matchIE()) {
-    var channel = new Channel(), head = {}, tail = head;
-    channel.port1.onmessage = function() {
-      if (void 0 !== head.next) {
-        head = head.next;
-        var cb = head.cb;
-        head.cb = null;
-        cb();
-      }
-    };
-    return function(cb) {
-      tail.next = {cb:cb};
-      tail = tail.next;
-      channel.port2.postMessage(0);
-    };
-  }
-  return function(cb) {
-    goog.global.setTimeout(cb, 0);
-  };
-};
-goog.async.nextTick.wrapCallback_ = goog.functions.identity;
-goog.debug.entryPointRegistry.register(function(transformer) {
-  goog.async.nextTick.wrapCallback_ = transformer;
-});
-function module$contents$goog$async$throwException_throwException(exception) {
-  goog.global.setTimeout(function() {
-    throw exception;
-  }, 0);
-}
-goog.async.throwException = module$contents$goog$async$throwException_throwException;
-var module$contents$goog$async$WorkQueue_WorkQueue = function() {
-  this.workTail_ = this.workHead_ = null;
-};
-module$contents$goog$async$WorkQueue_WorkQueue.prototype.add = function(fn, scope) {
-  var item = this.getUnusedItem_();
-  item.set(fn, scope);
-  this.workTail_ ? this.workTail_.next = item : ((0,goog.asserts.assert)(!this.workHead_), this.workHead_ = item);
-  this.workTail_ = item;
-};
-module$contents$goog$async$WorkQueue_WorkQueue.prototype.remove = function() {
-  var item = null;
-  this.workHead_ && (item = this.workHead_, this.workHead_ = this.workHead_.next, this.workHead_ || (this.workTail_ = null), item.next = null);
-  return item;
-};
-module$contents$goog$async$WorkQueue_WorkQueue.prototype.returnUnused = function(item) {
-  module$contents$goog$async$WorkQueue_WorkQueue.freelist_.put(item);
-};
-module$contents$goog$async$WorkQueue_WorkQueue.prototype.getUnusedItem_ = function() {
-  return module$contents$goog$async$WorkQueue_WorkQueue.freelist_.get();
-};
-module$contents$goog$async$WorkQueue_WorkQueue.DEFAULT_MAX_UNUSED = 100;
-module$contents$goog$async$WorkQueue_WorkQueue.freelist_ = new module$contents$goog$async$FreeList_FreeList(function() {
-  return new module$contents$goog$async$WorkQueue_WorkItem();
-}, function(item) {
-  return item.reset();
-}, module$contents$goog$async$WorkQueue_WorkQueue.DEFAULT_MAX_UNUSED);
-var module$contents$goog$async$WorkQueue_WorkItem = function() {
-  this.next = this.scope = this.fn = null;
-};
-module$contents$goog$async$WorkQueue_WorkItem.prototype.set = function(fn, scope) {
-  this.fn = fn;
-  this.scope = scope;
-  this.next = null;
-};
-module$contents$goog$async$WorkQueue_WorkItem.prototype.reset = function() {
-  this.next = this.scope = this.fn = null;
-};
-goog.async.WorkQueue = module$contents$goog$async$WorkQueue_WorkQueue;
-goog.debug.asyncStackTag = {};
-var module$contents$goog$debug$asyncStackTag_createTask = goog.DEBUG && goog.global.console && goog.global.console.createTask ? goog.global.console.createTask.bind(goog.global.console) : void 0, module$contents$goog$debug$asyncStackTag_CONSOLE_TASK_SYMBOL = module$contents$goog$debug$asyncStackTag_createTask ? Symbol("consoleTask") : void 0;
-function module$contents$goog$debug$asyncStackTag_wrap(fn, name) {
-  function wrappedFn() {
-    var args = $jscomp.getRestArguments.apply(0, arguments), $jscomp$this$1621498202$2 = this;
-    return consoleTask.run(function() {
-      return fn.call.apply(fn, [$jscomp$this$1621498202$2].concat($jscomp.arrayFromIterable(args)));
-    });
-  }
-  name = void 0 === name ? "anonymous" : name;
-  if (!goog.DEBUG || !module$contents$goog$debug$asyncStackTag_createTask || fn[(0,goog.asserts.assertExists)(module$contents$goog$debug$asyncStackTag_CONSOLE_TASK_SYMBOL)]) {
-    return fn;
-  }
-  var consoleTask = module$contents$goog$debug$asyncStackTag_createTask(fn.name || name);
-  wrappedFn[(0,goog.asserts.assertExists)(module$contents$goog$debug$asyncStackTag_CONSOLE_TASK_SYMBOL)] = consoleTask;
-  return wrappedFn;
-}
-goog.debug.asyncStackTag.wrap = module$contents$goog$debug$asyncStackTag_wrap;
-goog.ASSUME_NATIVE_PROMISE = !1;
-var module$contents$goog$async$run_schedule, module$contents$goog$async$run_workQueueScheduled = !1, module$contents$goog$async$run_workQueue = new module$contents$goog$async$WorkQueue_WorkQueue(), module$contents$goog$async$run_run = function(callback, context) {
-  module$contents$goog$async$run_schedule || module$contents$goog$async$run_initializeRunner();
-  module$contents$goog$async$run_workQueueScheduled || (module$contents$goog$async$run_schedule(), module$contents$goog$async$run_workQueueScheduled = !0);
-  callback = module$contents$goog$debug$asyncStackTag_wrap(callback, "goog.async.run");
-  module$contents$goog$async$run_workQueue.add(callback, context);
-}, module$contents$goog$async$run_initializeRunner = function() {
-  if (goog.ASSUME_NATIVE_PROMISE || goog.global.Promise && goog.global.Promise.resolve) {
-    var promise = goog.global.Promise.resolve(void 0);
-    module$contents$goog$async$run_schedule = function() {
-      promise.then(module$contents$goog$async$run_run.processWorkQueue);
-    };
-  } else {
-    module$contents$goog$async$run_schedule = function() {
-      (0,goog.async.nextTick)(module$contents$goog$async$run_run.processWorkQueue);
-    };
-  }
-};
-module$contents$goog$async$run_run.processWorkQueue = function() {
-  for (var item; item = module$contents$goog$async$run_workQueue.remove();) {
-    try {
-      item.fn.call(item.scope);
-    } catch (e) {
-      module$contents$goog$async$throwException_throwException(e);
-    }
-    module$contents$goog$async$run_workQueue.returnUnused(item);
-  }
-  module$contents$goog$async$run_workQueueScheduled = !1;
-};
-goog.async.run = module$contents$goog$async$run_run;
-goog.collections = {};
-goog.collections.maps = {};
-var module$contents$goog$collections$maps_MapLike = function() {
-};
-module$contents$goog$collections$maps_MapLike.prototype.set = function() {
-};
-module$contents$goog$collections$maps_MapLike.prototype.get = function() {
-};
-module$contents$goog$collections$maps_MapLike.prototype.keys = function() {
-};
-module$contents$goog$collections$maps_MapLike.prototype.values = function() {
-};
-module$contents$goog$collections$maps_MapLike.prototype.has = function() {
-};
-goog.collections.maps.MapLike = module$contents$goog$collections$maps_MapLike;
-function module$contents$goog$collections$maps_setAll(map, entries) {
-  if (entries) {
-    for (var $jscomp$iter$0 = $jscomp.makeIterator(entries), $jscomp$key$1866876209$13$ = $jscomp$iter$0.next(); !$jscomp$key$1866876209$13$.done; $jscomp$key$1866876209$13$ = $jscomp$iter$0.next()) {
-      var $jscomp$destructuring$var12 = $jscomp$key$1866876209$13$.value, $jscomp$destructuring$var13 = $jscomp.makeIterator($jscomp$destructuring$var12), k = $jscomp$destructuring$var13.next().value, v = $jscomp$destructuring$var13.next().value;
-      map.set(k, v);
-    }
-  }
-}
-goog.collections.maps.setAll = module$contents$goog$collections$maps_setAll;
-function module$contents$goog$collections$maps_hasValue(map, val, valueEqualityFn) {
-  valueEqualityFn = void 0 === valueEqualityFn ? module$contents$goog$collections$maps_defaultEqualityFn : valueEqualityFn;
-  for (var $jscomp$iter$1 = $jscomp.makeIterator(map.values()), $jscomp$key$1866876209$14$v = $jscomp$iter$1.next(); !$jscomp$key$1866876209$14$v.done; $jscomp$key$1866876209$14$v = $jscomp$iter$1.next()) {
-    var v = $jscomp$key$1866876209$14$v.value;
-    if (valueEqualityFn(v, val)) {
-      return !0;
-    }
-  }
-  return !1;
-}
-goog.collections.maps.hasValue = module$contents$goog$collections$maps_hasValue;
-var module$contents$goog$collections$maps_defaultEqualityFn = function(a, b) {
-  return a === b;
-};
-function module$contents$goog$collections$maps_equals(map, otherMap, valueEqualityFn) {
-  valueEqualityFn = void 0 === valueEqualityFn ? module$contents$goog$collections$maps_defaultEqualityFn : valueEqualityFn;
-  if (map === otherMap) {
-    return !0;
-  }
-  if (map.size !== otherMap.size) {
-    return !1;
-  }
-  for (var $jscomp$iter$2 = $jscomp.makeIterator(map.keys()), $jscomp$key$1866876209$15$key = $jscomp$iter$2.next(); !$jscomp$key$1866876209$15$key.done; $jscomp$key$1866876209$15$key = $jscomp$iter$2.next()) {
-    var key = $jscomp$key$1866876209$15$key.value;
-    if (!otherMap.has(key) || !valueEqualityFn(map.get(key), otherMap.get(key))) {
-      return !1;
-    }
-  }
-  return !0;
-}
-goog.collections.maps.equals = module$contents$goog$collections$maps_equals;
-function module$contents$goog$collections$maps_transpose(map) {
-  for (var transposed = new Map(), $jscomp$iter$3 = $jscomp.makeIterator(map.keys()), $jscomp$key$1866876209$16$key = $jscomp$iter$3.next(); !$jscomp$key$1866876209$16$key.done; $jscomp$key$1866876209$16$key = $jscomp$iter$3.next()) {
-    var key = $jscomp$key$1866876209$16$key.value, val = map.get(key);
-    transposed.set(val, key);
-  }
-  return transposed;
-}
-goog.collections.maps.transpose = module$contents$goog$collections$maps_transpose;
-function module$contents$goog$collections$maps_toObject(map) {
-  for (var obj = {}, $jscomp$iter$4 = $jscomp.makeIterator(map.keys()), $jscomp$key$1866876209$17$key = $jscomp$iter$4.next(); !$jscomp$key$1866876209$17$key.done; $jscomp$key$1866876209$17$key = $jscomp$iter$4.next()) {
-    var key = $jscomp$key$1866876209$17$key.value;
-    obj[key] = map.get(key);
-  }
-  return obj;
-}
-goog.collections.maps.toObject = module$contents$goog$collections$maps_toObject;
-goog.debug.errorcontext = {};
-goog.debug.errorcontext.addErrorContext = function(err, contextKey, contextValue) {
-  err[goog.debug.errorcontext.CONTEXT_KEY_] || (err[goog.debug.errorcontext.CONTEXT_KEY_] = {});
-  err[goog.debug.errorcontext.CONTEXT_KEY_][contextKey] = contextValue;
-};
-goog.debug.errorcontext.getErrorContext = function(err) {
-  return err[goog.debug.errorcontext.CONTEXT_KEY_] || {};
-};
-goog.debug.errorcontext.CONTEXT_KEY_ = "__closure__error__context__984382";
-goog.debug.LOGGING_ENABLED = goog.DEBUG;
-goog.debug.FORCE_SLOPPY_STACKS = !1;
-goog.debug.CHECK_FOR_THROWN_EVENT = !1;
-goog.debug.catchErrors = function(logFunc, opt_cancel, opt_target) {
-  var target = opt_target || goog.global, oldErrorHandler = target.onerror, retVal = !!opt_cancel;
-  target.onerror = function(message, url, line, opt_col, opt_error) {
-    oldErrorHandler && oldErrorHandler(message, url, line, opt_col, opt_error);
-    logFunc({message:message, fileName:url, line:line, lineNumber:line, col:opt_col, error:opt_error});
-    return retVal;
-  };
-};
-goog.debug.expose = function(obj, opt_showFn) {
-  if ("undefined" == typeof obj) {
-    return "undefined";
-  }
-  if (null == obj) {
-    return "NULL";
-  }
-  var str = [], x;
-  for (x in obj) {
-    if (opt_showFn || "function" !== typeof obj[x]) {
-      var s = x + " = ";
-      try {
-        s += obj[x];
-      } catch (e) {
-        s += "*** " + e + " ***";
-      }
-      str.push(s);
-    }
-  }
-  return str.join("\n");
-};
-goog.debug.deepExpose = function(obj, opt_showFn) {
-  var str = [], uidsToCleanup = [], ancestorUids = {}, helper = function(obj, space) {
-    var nestspace = space + "  ";
-    try {
-      if (void 0 === obj) {
-        str.push("undefined");
-      } else if (null === obj) {
-        str.push("NULL");
-      } else if ("string" === typeof obj) {
-        str.push('"' + obj.replace(/\n/g, "\n" + space) + '"');
-      } else if ("function" === typeof obj) {
-        str.push(String(obj).replace(/\n/g, "\n" + space));
-      } else if (goog.isObject(obj)) {
-        goog.hasUid(obj) || uidsToCleanup.push(obj);
-        var uid = goog.getUid(obj);
-        if (ancestorUids[uid]) {
-          str.push("*** reference loop detected (id=" + uid + ") ***");
-        } else {
-          ancestorUids[uid] = !0;
-          str.push("{");
-          for (var x in obj) {
-            if (opt_showFn || "function" !== typeof obj[x]) {
-              str.push("\n"), str.push(nestspace), str.push(x + " = "), helper(obj[x], nestspace);
-            }
-          }
-          str.push("\n" + space + "}");
-          delete ancestorUids[uid];
-        }
-      } else {
-        str.push(obj);
-      }
-    } catch (e) {
-      str.push("*** " + e + " ***");
-    }
-  };
-  helper(obj, "");
-  for (var i = 0; i < uidsToCleanup.length; i++) {
-    goog.removeUid(uidsToCleanup[i]);
-  }
-  return str.join("");
-};
-goog.debug.exposeArray = function(arr) {
-  for (var str = [], i = 0; i < arr.length; i++) {
-    Array.isArray(arr[i]) ? str.push(goog.debug.exposeArray(arr[i])) : str.push(arr[i]);
-  }
-  return "[ " + str.join(", ") + " ]";
-};
-goog.debug.normalizeErrorObject = function(err) {
-  var href = goog.getObjectByName("window.location.href");
-  null == err && (err = 'Unknown Error of type "null/undefined"');
-  if ("string" === typeof err) {
-    return {message:err, name:"Unknown error", lineNumber:"Not available", fileName:href, stack:"Not available"};
-  }
-  var threwError = !1;
-  try {
-    var lineNumber = err.lineNumber || err.line || "Not available";
-  } catch (e) {
-    lineNumber = "Not available", threwError = !0;
-  }
-  try {
-    var fileName = err.fileName || err.filename || err.sourceURL || goog.global.$googDebugFname || href;
-  } catch (e) {
-    fileName = "Not available", threwError = !0;
-  }
-  var stack = goog.debug.serializeErrorStack_(err);
-  if (!(!threwError && err.lineNumber && err.fileName && err.stack && err.message && err.name)) {
-    var message = err.message;
-    if (null == message) {
-      if (err.constructor && err.constructor instanceof Function) {
-        var ctorName = err.constructor.name ? err.constructor.name : goog.debug.getFunctionName(err.constructor);
-        message = 'Unknown Error of type "' + ctorName + '"';
-        if (goog.debug.CHECK_FOR_THROWN_EVENT && "Event" == ctorName) {
-          try {
-            message = message + ' with Event.type "' + (err.type || "") + '"';
-          } catch (e) {
-          }
-        }
-      } else {
-        message = "Unknown Error of unknown type";
-      }
-      "function" === typeof err.toString && Object.prototype.toString !== err.toString && (message += ": " + err.toString());
-    }
-    return {message:message, name:err.name || "UnknownError", lineNumber:lineNumber, fileName:fileName, stack:stack || "Not available"};
-  }
-  return {message:err.message, name:err.name, lineNumber:err.lineNumber, fileName:err.fileName, stack:stack};
-};
-goog.debug.serializeErrorStack_ = function(e, seen) {
-  seen || (seen = {});
-  seen[goog.debug.serializeErrorAsKey_(e)] = !0;
-  var stack = e.stack || "", cause = e.cause;
-  cause && !seen[goog.debug.serializeErrorAsKey_(cause)] && (stack += "\nCaused by: ", cause.stack && 0 == cause.stack.indexOf(cause.toString()) || (stack += "string" === typeof cause ? cause : cause.message + "\n"), stack += goog.debug.serializeErrorStack_(cause, seen));
-  return stack;
-};
-goog.debug.serializeErrorAsKey_ = function(e) {
-  var keyPrefix = "";
-  "function" === typeof e.toString && (keyPrefix = "" + e);
-  return keyPrefix + e.stack;
-};
-goog.debug.enhanceError = function(err, opt_message) {
-  if (err instanceof Error) {
-    var error = err;
-  } else {
-    error = Error(err), Error.captureStackTrace && Error.captureStackTrace(error, goog.debug.enhanceError);
-  }
-  error.stack || (error.stack = goog.debug.getStacktrace(goog.debug.enhanceError));
-  if (opt_message) {
-    for (var x = 0; error["message" + x];) {
-      ++x;
-    }
-    error["message" + x] = String(opt_message);
-  }
-  return error;
-};
-goog.debug.enhanceErrorWithContext = function(err, opt_context) {
-  var error = goog.debug.enhanceError(err);
-  if (opt_context) {
-    for (var key in opt_context) {
-      goog.debug.errorcontext.addErrorContext(error, key, opt_context[key]);
-    }
-  }
-  return error;
-};
-goog.debug.getStacktraceSimple = function(opt_depth) {
-  if (!goog.debug.FORCE_SLOPPY_STACKS) {
-    var stack = goog.debug.getNativeStackTrace_(goog.debug.getStacktraceSimple);
-    if (stack) {
-      return stack;
-    }
-  }
-  for (var sb = [], fn = arguments.callee.caller, depth = 0; fn && (!opt_depth || depth < opt_depth);) {
-    sb.push(goog.debug.getFunctionName(fn));
-    sb.push("()\n");
-    try {
-      fn = fn.caller;
-    } catch (e) {
-      sb.push("[exception trying to get caller]\n");
-      break;
-    }
-    depth++;
-    if (depth >= goog.debug.MAX_STACK_DEPTH) {
-      sb.push("[...long stack...]");
-      break;
-    }
-  }
-  opt_depth && depth >= opt_depth ? sb.push("[...reached max depth limit...]") : sb.push("[end]");
-  return sb.join("");
-};
-goog.debug.MAX_STACK_DEPTH = 50;
-goog.debug.getNativeStackTrace_ = function(fn) {
-  var tempErr = Error();
-  if (Error.captureStackTrace) {
-    return Error.captureStackTrace(tempErr, fn), String(tempErr.stack);
-  }
-  try {
-    throw tempErr;
-  } catch (e) {
-    tempErr = e;
-  }
-  var stack = tempErr.stack;
-  return stack ? String(stack) : null;
-};
-goog.debug.getStacktrace = function(fn) {
-  if (!goog.debug.FORCE_SLOPPY_STACKS) {
-    var contextFn = fn || goog.debug.getStacktrace;
-    var stack = goog.debug.getNativeStackTrace_(contextFn);
-  }
-  stack || (stack = goog.debug.getStacktraceHelper_(fn || arguments.callee.caller, []));
-  return stack;
-};
-goog.debug.getStacktraceHelper_ = function(fn, visited) {
-  var sb = [];
-  if (module$contents$goog$array_contains(visited, fn)) {
-    sb.push("[...circular reference...]");
-  } else if (fn && visited.length < goog.debug.MAX_STACK_DEPTH) {
-    sb.push(goog.debug.getFunctionName(fn) + "(");
-    for (var args = fn.arguments, i = 0; args && i < args.length; i++) {
-      0 < i && sb.push(", ");
-      var arg = args[i];
-      switch(typeof arg) {
-        case "object":
-          var argDesc = arg ? "object" : "null";
-          break;
-        case "string":
-          argDesc = arg;
-          break;
-        case "number":
-          argDesc = String(arg);
-          break;
-        case "boolean":
-          argDesc = arg ? "true" : "false";
-          break;
-        case "function":
-          argDesc = (argDesc = goog.debug.getFunctionName(arg)) ? argDesc : "[fn]";
-          break;
-        default:
-          argDesc = typeof arg;
-      }
-      40 < argDesc.length && (argDesc = argDesc.slice(0, 40) + "...");
-      sb.push(argDesc);
-    }
-    visited.push(fn);
-    sb.push(")\n");
-    try {
-      sb.push(goog.debug.getStacktraceHelper_(fn.caller, visited));
-    } catch (e) {
-      sb.push("[exception trying to get caller]\n");
-    }
-  } else {
-    fn ? sb.push("[...long stack...]") : sb.push("[end]");
-  }
-  return sb.join("");
-};
-goog.debug.getFunctionName = function(fn) {
-  if (goog.debug.fnNameCache_[fn]) {
-    return goog.debug.fnNameCache_[fn];
-  }
-  var functionSource = String(fn);
-  if (!goog.debug.fnNameCache_[functionSource]) {
-    var matches = /function\s+([^\(]+)/m.exec(functionSource);
-    if (matches) {
-      var method = matches[1];
-      goog.debug.fnNameCache_[functionSource] = method;
-    } else {
-      goog.debug.fnNameCache_[functionSource] = "[Anonymous]";
-    }
-  }
-  return goog.debug.fnNameCache_[functionSource];
-};
-goog.debug.makeWhitespaceVisible = function(string) {
-  return string.replace(/ /g, "[_]").replace(/\f/g, "[f]").replace(/\n/g, "[n]\n").replace(/\r/g, "[r]").replace(/\t/g, "[t]");
-};
-goog.debug.runtimeType = function(value) {
-  return value instanceof Function ? value.displayName || value.name || "unknown type name" : value instanceof Object ? value.constructor.displayName || value.constructor.name || Object.prototype.toString.call(value) : null === value ? "null" : typeof value;
-};
-goog.debug.fnNameCache_ = {};
-goog.debug.freezeInternal_ = goog.DEBUG && Object.freeze || function(arg) {
-  return arg;
-};
-goog.debug.freeze = function(arg) {
-  return goog.debug.freezeInternal_(arg);
 };
 function module$contents$goog$dispose_dispose(obj) {
   obj && "function" == typeof obj.dispose && obj.dispose();
@@ -6975,6 +8293,89 @@ goog.events.wrapListener = function(listener) {
 goog.debug.entryPointRegistry.register(function(transformer) {
   goog.events.handleBrowserEvent_ = transformer(goog.events.handleBrowserEvent_);
 });
+goog.events.EventHandler = function(opt_scope) {
+  goog.Disposable.call(this);
+  this.handler_ = opt_scope;
+  this.keys_ = {};
+};
+goog.inherits(goog.events.EventHandler, goog.Disposable);
+goog.events.EventHandler.typeArray_ = [];
+goog.events.EventHandler.prototype.listen = function(src, type, opt_fn, opt_options) {
+  var self = this;
+  return self.listen_(src, type, opt_fn, opt_options);
+};
+goog.events.EventHandler.prototype.listen_ = function(src, type, opt_fn, opt_options, opt_scope) {
+  var self = this;
+  Array.isArray(type) || (type && (goog.events.EventHandler.typeArray_[0] = type.toString()), type = goog.events.EventHandler.typeArray_);
+  for (var i = 0; i < type.length; i++) {
+    var listenerObj = goog.events.listen(src, type[i], opt_fn || self.handleEvent, opt_options || !1, opt_scope || self.handler_ || self);
+    if (!listenerObj) {
+      break;
+    }
+    var key = listenerObj.key;
+    self.keys_[key] = listenerObj;
+  }
+  return self;
+};
+goog.events.EventHandler.prototype.listenOnce = function(src, type, opt_fn, opt_options) {
+  var self = this;
+  return self.listenOnce_(src, type, opt_fn, opt_options);
+};
+goog.events.EventHandler.prototype.listenOnce_ = function(src, type, opt_fn, opt_options, opt_scope) {
+  var self = this;
+  if (Array.isArray(type)) {
+    for (var i = 0; i < type.length; i++) {
+      self.listenOnce_(src, type[i], opt_fn, opt_options, opt_scope);
+    }
+  } else {
+    var listenerObj = goog.events.listenOnce(src, type, opt_fn || self.handleEvent, opt_options, opt_scope || self.handler_ || self);
+    if (!listenerObj) {
+      return self;
+    }
+    var key = listenerObj.key;
+    self.keys_[key] = listenerObj;
+  }
+  return self;
+};
+goog.events.EventHandler.prototype.listenWithWrapper = function(src, wrapper, listener, opt_capt) {
+  var self = this;
+  return self.listenWithWrapper_(src, wrapper, listener, opt_capt);
+};
+goog.events.EventHandler.prototype.listenWithWrapper_ = function(src, wrapper, listener, opt_capt, opt_scope) {
+  var self = this;
+  wrapper.listen(src, listener, opt_capt, opt_scope || self.handler_ || self, self);
+  return self;
+};
+goog.events.EventHandler.prototype.unlisten = function(src, type, opt_fn, opt_options, opt_scope) {
+  var self = this;
+  if (Array.isArray(type)) {
+    for (var i = 0; i < type.length; i++) {
+      self.unlisten(src, type[i], opt_fn, opt_options, opt_scope);
+    }
+  } else {
+    var capture = goog.isObject(opt_options) ? !!opt_options.capture : !!opt_options, listener = goog.events.getListener(src, type, opt_fn || self.handleEvent, capture, opt_scope || self.handler_ || self);
+    listener && (goog.events.unlistenByKey(listener), delete self.keys_[listener.key]);
+  }
+  return self;
+};
+goog.events.EventHandler.prototype.unlistenWithWrapper = function(src, wrapper, listener, opt_capt, opt_scope) {
+  var self = this;
+  wrapper.unlisten(src, listener, opt_capt, opt_scope || self.handler_ || self, self);
+  return self;
+};
+goog.events.EventHandler.prototype.removeAll = function() {
+  module$contents$goog$object_forEach(this.keys_, function(listenerObj, key) {
+    this.keys_.hasOwnProperty(key) && goog.events.unlistenByKey(listenerObj);
+  }, this);
+  this.keys_ = {};
+};
+goog.events.EventHandler.prototype.disposeInternal = function() {
+  goog.events.EventHandler.superClass_.disposeInternal.call(this);
+  this.removeAll();
+};
+goog.events.EventHandler.prototype.handleEvent = function() {
+  throw Error("EventHandler.handleEvent not implemented");
+};
 goog.events.EventTarget = function() {
   goog.Disposable.call(this);
   this.eventTargetListeners_ = new goog.events.ListenerMap(this);
@@ -7080,6 +8481,276 @@ goog.events.EventTarget.dispatchEventInternal_ = function(target, e, opt_ancesto
   }
   return rv;
 };
+goog.events.EventWrapper = function() {
+};
+goog.events.EventWrapper.prototype.listen = function() {
+};
+goog.events.EventWrapper.prototype.unlisten = function() {
+};
+goog.async = {};
+var module$contents$goog$async$FreeList_FreeList = function(create, reset, limit) {
+  this.limit_ = limit;
+  this.create_ = create;
+  this.reset_ = reset;
+  this.occupants_ = 0;
+  this.head_ = null;
+};
+module$contents$goog$async$FreeList_FreeList.prototype.get = function() {
+  if (0 < this.occupants_) {
+    this.occupants_--;
+    var item = this.head_;
+    this.head_ = item.next;
+    item.next = null;
+  } else {
+    item = this.create_();
+  }
+  return item;
+};
+module$contents$goog$async$FreeList_FreeList.prototype.put = function(item) {
+  this.reset_(item);
+  this.occupants_ < this.limit_ && (this.occupants_++, item.next = this.head_, this.head_ = item);
+};
+goog.async.FreeList = module$contents$goog$async$FreeList_FreeList;
+goog.async.nextTick = function(callback, opt_context, opt_useSetImmediate) {
+  var cb = callback;
+  opt_context && (cb = goog.bind(callback, opt_context));
+  cb = goog.async.nextTick.wrapCallback_(cb);
+  "function" === typeof goog.global.setImmediate && (opt_useSetImmediate || goog.async.nextTick.useSetImmediate_()) ? goog.global.setImmediate(cb) : (goog.async.nextTick.nextTickImpl || (goog.async.nextTick.nextTickImpl = goog.async.nextTick.getNextTickImpl_()), goog.async.nextTick.nextTickImpl(cb));
+};
+goog.async.nextTick.useSetImmediate_ = function() {
+  return goog.global.Window && goog.global.Window.prototype && !module$contents$goog$labs$userAgent$browser_matchEdgeHtml() && goog.global.Window.prototype.setImmediate == goog.global.setImmediate ? !1 : !0;
+};
+goog.async.nextTick.getNextTickImpl_ = function() {
+  var Channel = goog.global.MessageChannel;
+  "undefined" === typeof Channel && "undefined" !== typeof window && window.postMessage && window.addEventListener && !module$contents$goog$labs$userAgent$engine_isPresto() && (Channel = function() {
+    var iframe = goog.dom.createElement(goog.dom.TagName.IFRAME);
+    iframe.style.display = "none";
+    document.documentElement.appendChild(iframe);
+    var win = iframe.contentWindow, doc = win.document;
+    doc.open();
+    doc.close();
+    var message = "callImmediate" + Math.random(), origin = "file:" == win.location.protocol ? "*" : win.location.protocol + "//" + win.location.host, onmessage = goog.bind(function(e) {
+      if (("*" == origin || e.origin == origin) && e.data == message) {
+        this.port1.onmessage();
+      }
+    }, this);
+    win.addEventListener("message", onmessage, !1);
+    this.port1 = {};
+    this.port2 = {postMessage:function() {
+      win.postMessage(message, origin);
+    }};
+  });
+  if ("undefined" !== typeof Channel && !module$contents$goog$labs$userAgent$browser_matchIE()) {
+    var channel = new Channel(), head = {}, tail = head;
+    channel.port1.onmessage = function() {
+      if (void 0 !== head.next) {
+        head = head.next;
+        var cb = head.cb;
+        head.cb = null;
+        cb();
+      }
+    };
+    return function(cb) {
+      tail.next = {cb:cb};
+      tail = tail.next;
+      channel.port2.postMessage(0);
+    };
+  }
+  return function(cb) {
+    goog.global.setTimeout(cb, 0);
+  };
+};
+goog.async.nextTick.wrapCallback_ = goog.functions.identity;
+goog.debug.entryPointRegistry.register(function(transformer) {
+  goog.async.nextTick.wrapCallback_ = transformer;
+});
+function module$contents$goog$async$throwException_throwException(exception) {
+  goog.global.setTimeout(function() {
+    throw exception;
+  }, 0);
+}
+goog.async.throwException = module$contents$goog$async$throwException_throwException;
+var module$contents$goog$async$WorkQueue_WorkQueue = function() {
+  this.workTail_ = this.workHead_ = null;
+};
+module$contents$goog$async$WorkQueue_WorkQueue.prototype.add = function(fn, scope) {
+  var item = this.getUnusedItem_();
+  item.set(fn, scope);
+  this.workTail_ ? this.workTail_.next = item : ((0,goog.asserts.assert)(!this.workHead_), this.workHead_ = item);
+  this.workTail_ = item;
+};
+module$contents$goog$async$WorkQueue_WorkQueue.prototype.remove = function() {
+  var item = null;
+  this.workHead_ && (item = this.workHead_, this.workHead_ = this.workHead_.next, this.workHead_ || (this.workTail_ = null), item.next = null);
+  return item;
+};
+module$contents$goog$async$WorkQueue_WorkQueue.prototype.returnUnused = function(item) {
+  module$contents$goog$async$WorkQueue_WorkQueue.freelist_.put(item);
+};
+module$contents$goog$async$WorkQueue_WorkQueue.prototype.getUnusedItem_ = function() {
+  return module$contents$goog$async$WorkQueue_WorkQueue.freelist_.get();
+};
+module$contents$goog$async$WorkQueue_WorkQueue.DEFAULT_MAX_UNUSED = 100;
+module$contents$goog$async$WorkQueue_WorkQueue.freelist_ = new module$contents$goog$async$FreeList_FreeList(function() {
+  return new module$contents$goog$async$WorkQueue_WorkItem();
+}, function(item) {
+  return item.reset();
+}, module$contents$goog$async$WorkQueue_WorkQueue.DEFAULT_MAX_UNUSED);
+var module$contents$goog$async$WorkQueue_WorkItem = function() {
+  this.next = this.scope = this.fn = null;
+};
+module$contents$goog$async$WorkQueue_WorkItem.prototype.set = function(fn, scope) {
+  this.fn = fn;
+  this.scope = scope;
+  this.next = null;
+};
+module$contents$goog$async$WorkQueue_WorkItem.prototype.reset = function() {
+  this.next = this.scope = this.fn = null;
+};
+goog.async.WorkQueue = module$contents$goog$async$WorkQueue_WorkQueue;
+goog.debug.asyncStackTag = {};
+var module$contents$goog$debug$asyncStackTag_createTask = goog.DEBUG && goog.global.console && goog.global.console.createTask ? goog.global.console.createTask.bind(goog.global.console) : void 0, module$contents$goog$debug$asyncStackTag_CONSOLE_TASK_SYMBOL = module$contents$goog$debug$asyncStackTag_createTask ? Symbol("consoleTask") : void 0;
+function module$contents$goog$debug$asyncStackTag_wrap(fn, name) {
+  function wrappedFn() {
+    var args = $jscomp.getRestArguments.apply(0, arguments), $jscomp$this$1621498202$5 = this;
+    return consoleTask.run(function() {
+      return fn.call.apply(fn, [$jscomp$this$1621498202$5].concat($jscomp.arrayFromIterable(args)));
+    });
+  }
+  name = void 0 === name ? "anonymous" : name;
+  if (!goog.DEBUG || module$contents$goog$debug$asyncStackTag_CONSOLE_TASK_SYMBOL && fn[module$contents$goog$debug$asyncStackTag_CONSOLE_TASK_SYMBOL]) {
+    return fn;
+  }
+  var originalFn = fn, $jscomp$optchain$tmp1621498202$0, originalTest = null == ($jscomp$optchain$tmp1621498202$0 = module$contents$goog$debug$asyncStackTag_testNameProvider) ? void 0 : $jscomp$optchain$tmp1621498202$0();
+  fn = function() {
+    var args = $jscomp.getRestArguments.apply(0, arguments), $jscomp$optchain$tmp1621498202$1, currentTest = null == ($jscomp$optchain$tmp1621498202$1 = module$contents$goog$debug$asyncStackTag_testNameProvider) ? void 0 : $jscomp$optchain$tmp1621498202$1();
+    if (originalTest !== currentTest) {
+      throw Error(name + " was scheduled in '" + originalTest + "' but called in '" + currentTest + "'.\nMake sure your test awaits all async calls.\n\nTIP: To help investigate, debug the test in Chrome and look at the async portion\nof the call stack to see what originally scheduled the callback.  Then, make the\ntest wait for the relevant asynchronous work to finish.");
+    }
+    return originalFn.call.apply(originalFn, [this].concat($jscomp.arrayFromIterable(args)));
+  };
+  if (!module$contents$goog$debug$asyncStackTag_createTask) {
+    return fn;
+  }
+  var consoleTask = module$contents$goog$debug$asyncStackTag_createTask(fn.name || name);
+  wrappedFn[(0,goog.asserts.assertExists)(module$contents$goog$debug$asyncStackTag_CONSOLE_TASK_SYMBOL)] = consoleTask;
+  return wrappedFn;
+}
+goog.debug.asyncStackTag.wrap = module$contents$goog$debug$asyncStackTag_wrap;
+var module$contents$goog$debug$asyncStackTag_testNameProvider;
+goog.debug.asyncStackTag.setTestNameProvider = function(provider) {
+  if (!goog.DEBUG) {
+    throw Error("This feature is debug-only");
+  }
+  module$contents$goog$debug$asyncStackTag_testNameProvider = provider;
+};
+goog.debug.asyncStackTag.getTestNameProvider = function() {
+  if (!goog.DEBUG) {
+    throw Error("This feature is debug-only");
+  }
+  return module$contents$goog$debug$asyncStackTag_testNameProvider;
+};
+goog.ASSUME_NATIVE_PROMISE = !1;
+var module$contents$goog$async$run_schedule, module$contents$goog$async$run_workQueueScheduled = !1, module$contents$goog$async$run_workQueue = new module$contents$goog$async$WorkQueue_WorkQueue(), module$contents$goog$async$run_run = function(callback, context) {
+  module$contents$goog$async$run_schedule || module$contents$goog$async$run_initializeRunner();
+  module$contents$goog$async$run_workQueueScheduled || (module$contents$goog$async$run_schedule(), module$contents$goog$async$run_workQueueScheduled = !0);
+  callback = module$contents$goog$debug$asyncStackTag_wrap(callback, "goog.async.run");
+  module$contents$goog$async$run_workQueue.add(callback, context);
+}, module$contents$goog$async$run_initializeRunner = function() {
+  if (goog.ASSUME_NATIVE_PROMISE || goog.global.Promise && goog.global.Promise.resolve) {
+    var promise = goog.global.Promise.resolve(void 0);
+    module$contents$goog$async$run_schedule = function() {
+      promise.then(module$contents$goog$async$run_run.processWorkQueue);
+    };
+  } else {
+    module$contents$goog$async$run_schedule = function() {
+      (0,goog.async.nextTick)(module$contents$goog$async$run_run.processWorkQueue);
+    };
+  }
+};
+module$contents$goog$async$run_run.processWorkQueue = function() {
+  for (var item; item = module$contents$goog$async$run_workQueue.remove();) {
+    try {
+      item.fn.call(item.scope);
+    } catch (e) {
+      module$contents$goog$async$throwException_throwException(e);
+    }
+    module$contents$goog$async$run_workQueue.returnUnused(item);
+  }
+  module$contents$goog$async$run_workQueueScheduled = !1;
+};
+goog.async.run = module$contents$goog$async$run_run;
+goog.collections = {};
+goog.collections.maps = {};
+var module$contents$goog$collections$maps_MapLike = function() {
+};
+module$contents$goog$collections$maps_MapLike.prototype.set = function() {
+};
+module$contents$goog$collections$maps_MapLike.prototype.get = function() {
+};
+module$contents$goog$collections$maps_MapLike.prototype.keys = function() {
+};
+module$contents$goog$collections$maps_MapLike.prototype.values = function() {
+};
+module$contents$goog$collections$maps_MapLike.prototype.has = function() {
+};
+goog.collections.maps.MapLike = module$contents$goog$collections$maps_MapLike;
+function module$contents$goog$collections$maps_setAll(map, entries) {
+  if (entries) {
+    for (var $jscomp$iter$12 = $jscomp.makeIterator(entries), $jscomp$key$1866876209$13$ = $jscomp$iter$12.next(); !$jscomp$key$1866876209$13$.done; $jscomp$key$1866876209$13$ = $jscomp$iter$12.next()) {
+      var $jscomp$destructuring$var20 = $jscomp$key$1866876209$13$.value, $jscomp$destructuring$var21 = $jscomp.makeIterator($jscomp$destructuring$var20), k = $jscomp$destructuring$var21.next().value, v = $jscomp$destructuring$var21.next().value;
+      map.set(k, v);
+    }
+  }
+}
+goog.collections.maps.setAll = module$contents$goog$collections$maps_setAll;
+function module$contents$goog$collections$maps_hasValue(map, val, valueEqualityFn) {
+  valueEqualityFn = void 0 === valueEqualityFn ? module$contents$goog$collections$maps_defaultEqualityFn : valueEqualityFn;
+  for (var $jscomp$iter$13 = $jscomp.makeIterator(map.values()), $jscomp$key$1866876209$14$v = $jscomp$iter$13.next(); !$jscomp$key$1866876209$14$v.done; $jscomp$key$1866876209$14$v = $jscomp$iter$13.next()) {
+    var v = $jscomp$key$1866876209$14$v.value;
+    if (valueEqualityFn(v, val)) {
+      return !0;
+    }
+  }
+  return !1;
+}
+goog.collections.maps.hasValue = module$contents$goog$collections$maps_hasValue;
+var module$contents$goog$collections$maps_defaultEqualityFn = function(a, b) {
+  return a === b;
+};
+function module$contents$goog$collections$maps_equals(map, otherMap, valueEqualityFn) {
+  valueEqualityFn = void 0 === valueEqualityFn ? module$contents$goog$collections$maps_defaultEqualityFn : valueEqualityFn;
+  if (map === otherMap) {
+    return !0;
+  }
+  if (map.size !== otherMap.size) {
+    return !1;
+  }
+  for (var $jscomp$iter$14 = $jscomp.makeIterator(map.keys()), $jscomp$key$1866876209$15$key = $jscomp$iter$14.next(); !$jscomp$key$1866876209$15$key.done; $jscomp$key$1866876209$15$key = $jscomp$iter$14.next()) {
+    var key = $jscomp$key$1866876209$15$key.value;
+    if (!otherMap.has(key) || !valueEqualityFn(map.get(key), otherMap.get(key))) {
+      return !1;
+    }
+  }
+  return !0;
+}
+goog.collections.maps.equals = module$contents$goog$collections$maps_equals;
+function module$contents$goog$collections$maps_transpose(map) {
+  for (var transposed = new Map(), $jscomp$iter$15 = $jscomp.makeIterator(map.keys()), $jscomp$key$1866876209$16$key = $jscomp$iter$15.next(); !$jscomp$key$1866876209$16$key.done; $jscomp$key$1866876209$16$key = $jscomp$iter$15.next()) {
+    var key = $jscomp$key$1866876209$16$key.value, val = map.get(key);
+    transposed.set(val, key);
+  }
+  return transposed;
+}
+goog.collections.maps.transpose = module$contents$goog$collections$maps_transpose;
+function module$contents$goog$collections$maps_toObject(map) {
+  for (var obj = {}, $jscomp$iter$16 = $jscomp.makeIterator(map.keys()), $jscomp$key$1866876209$17$key = $jscomp$iter$16.next(); !$jscomp$key$1866876209$17$key.done; $jscomp$key$1866876209$17$key = $jscomp$iter$16.next()) {
+    var key = $jscomp$key$1866876209$17$key.value;
+    obj[key] = map.get(key);
+  }
+  return obj;
+}
+goog.collections.maps.toObject = module$contents$goog$collections$maps_toObject;
 goog.json = {};
 goog.json.Replacer = {};
 goog.json.Reviver = {};
@@ -7215,249 +8886,6 @@ goog.json.hybrid.parse_ = function(jsonString, fallbackParser) {
 };
 goog.json.hybrid.parse = goog.json.USE_NATIVE_JSON ? goog.global.JSON.parse : function(jsonString) {
   return goog.json.hybrid.parse_(jsonString, goog.json.parse);
-};
-goog.log = {};
-goog.log.ENABLED = goog.debug.LOGGING_ENABLED;
-goog.log.ROOT_LOGGER_NAME = "";
-var third_party$javascript$closure$log$log$classdecl$var0 = function(name, value) {
-  this.name = name;
-  this.value = value;
-};
-third_party$javascript$closure$log$log$classdecl$var0.prototype.toString = function() {
-  return this.name;
-};
-goog.log.Level = third_party$javascript$closure$log$log$classdecl$var0;
-goog.log.Level.OFF = new goog.log.Level("OFF", Infinity);
-goog.log.Level.SHOUT = new goog.log.Level("SHOUT", 1200);
-goog.log.Level.SEVERE = new goog.log.Level("SEVERE", 1E3);
-goog.log.Level.WARNING = new goog.log.Level("WARNING", 900);
-goog.log.Level.INFO = new goog.log.Level("INFO", 800);
-goog.log.Level.CONFIG = new goog.log.Level("CONFIG", 700);
-goog.log.Level.FINE = new goog.log.Level("FINE", 500);
-goog.log.Level.FINER = new goog.log.Level("FINER", 400);
-goog.log.Level.FINEST = new goog.log.Level("FINEST", 300);
-goog.log.Level.ALL = new goog.log.Level("ALL", 0);
-goog.log.Level.PREDEFINED_LEVELS = [goog.log.Level.OFF, goog.log.Level.SHOUT, goog.log.Level.SEVERE, goog.log.Level.WARNING, goog.log.Level.INFO, goog.log.Level.CONFIG, goog.log.Level.FINE, goog.log.Level.FINER, goog.log.Level.FINEST, goog.log.Level.ALL];
-goog.log.Level.predefinedLevelsCache_ = null;
-goog.log.Level.createPredefinedLevelsCache_ = function() {
-  goog.log.Level.predefinedLevelsCache_ = {};
-  for (var i = 0, level; level = goog.log.Level.PREDEFINED_LEVELS[i]; i++) {
-    goog.log.Level.predefinedLevelsCache_[level.value] = level, goog.log.Level.predefinedLevelsCache_[level.name] = level;
-  }
-};
-goog.log.Level.getPredefinedLevel = function(name) {
-  goog.log.Level.predefinedLevelsCache_ || goog.log.Level.createPredefinedLevelsCache_();
-  return goog.log.Level.predefinedLevelsCache_[name] || null;
-};
-goog.log.Level.getPredefinedLevelByValue = function(value) {
-  goog.log.Level.predefinedLevelsCache_ || goog.log.Level.createPredefinedLevelsCache_();
-  if (value in goog.log.Level.predefinedLevelsCache_) {
-    return goog.log.Level.predefinedLevelsCache_[value];
-  }
-  for (var i = 0; i < goog.log.Level.PREDEFINED_LEVELS.length; ++i) {
-    var level = goog.log.Level.PREDEFINED_LEVELS[i];
-    if (level.value <= value) {
-      return level;
-    }
-  }
-  return null;
-};
-var third_party$javascript$closure$log$log$classdecl$var1 = function() {
-};
-third_party$javascript$closure$log$log$classdecl$var1.prototype.getName = function() {
-};
-goog.log.Logger = third_party$javascript$closure$log$log$classdecl$var1;
-goog.log.Logger.Level = goog.log.Level;
-var third_party$javascript$closure$log$log$classdecl$var2 = function(capacity) {
-  this.capacity_ = "number" === typeof capacity ? capacity : goog.log.LogBuffer.CAPACITY;
-  this.clear();
-};
-third_party$javascript$closure$log$log$classdecl$var2.prototype.addRecord = function(level, msg, loggerName) {
-  if (!this.isBufferingEnabled()) {
-    return new goog.log.LogRecord(level, msg, loggerName);
-  }
-  var curIndex = (this.curIndex_ + 1) % this.capacity_;
-  this.curIndex_ = curIndex;
-  if (this.isFull_) {
-    var ret = this.buffer_[curIndex];
-    ret.reset(level, msg, loggerName);
-    return ret;
-  }
-  this.isFull_ = curIndex == this.capacity_ - 1;
-  return this.buffer_[curIndex] = new goog.log.LogRecord(level, msg, loggerName);
-};
-third_party$javascript$closure$log$log$classdecl$var2.prototype.isBufferingEnabled = function() {
-  return 0 < this.capacity_;
-};
-third_party$javascript$closure$log$log$classdecl$var2.prototype.clear = function() {
-  this.buffer_ = Array(this.capacity_);
-  this.curIndex_ = -1;
-  this.isFull_ = !1;
-};
-goog.log.LogBuffer = third_party$javascript$closure$log$log$classdecl$var2;
-goog.log.LogBuffer.CAPACITY = 0;
-goog.log.LogBuffer.getInstance = function() {
-  goog.log.LogBuffer.instance_ || (goog.log.LogBuffer.instance_ = new goog.log.LogBuffer(goog.log.LogBuffer.CAPACITY));
-  return goog.log.LogBuffer.instance_;
-};
-goog.log.LogBuffer.isBufferingEnabled = function() {
-  return goog.log.LogBuffer.getInstance().isBufferingEnabled();
-};
-var third_party$javascript$closure$log$log$classdecl$var3 = function(level, msg, loggerName, time, sequenceNumber) {
-  this.reset(level || goog.log.Level.OFF, msg, loggerName, time, sequenceNumber);
-};
-third_party$javascript$closure$log$log$classdecl$var3.prototype.reset = function(level) {
-  this.level_ = level;
-};
-third_party$javascript$closure$log$log$classdecl$var3.prototype.getLevel = function() {
-  return this.level_;
-};
-third_party$javascript$closure$log$log$classdecl$var3.prototype.setLevel = function(level) {
-  this.level_ = level;
-};
-goog.log.LogRecord = third_party$javascript$closure$log$log$classdecl$var3;
-goog.log.LogRecord.nextSequenceNumber_ = 0;
-var third_party$javascript$closure$log$log$classdecl$var4 = function(name, parent) {
-  parent = void 0 === parent ? null : parent;
-  this.level = null;
-  this.handlers = [];
-  this.parent = parent || null;
-  this.children = [];
-  this.logger = {getName:function() {
-    return name;
-  }};
-};
-third_party$javascript$closure$log$log$classdecl$var4.prototype.getEffectiveLevel = function() {
-  if (this.level) {
-    return this.level;
-  }
-  if (this.parent) {
-    return this.parent.getEffectiveLevel();
-  }
-  goog.asserts.fail("Root logger has no level set.");
-  return goog.log.Level.OFF;
-};
-third_party$javascript$closure$log$log$classdecl$var4.prototype.publish = function(logRecord) {
-  for (var target = this; target;) {
-    target.handlers.forEach(function(handler) {
-      handler(logRecord);
-    }), target = target.parent;
-  }
-};
-goog.log.LogRegistryEntry_ = third_party$javascript$closure$log$log$classdecl$var4;
-var third_party$javascript$closure$log$log$classdecl$var5 = function() {
-  this.entries = {};
-  var rootLogRegistryEntry = new goog.log.LogRegistryEntry_(goog.log.ROOT_LOGGER_NAME);
-  rootLogRegistryEntry.level = goog.log.Level.CONFIG;
-  this.entries[goog.log.ROOT_LOGGER_NAME] = rootLogRegistryEntry;
-};
-third_party$javascript$closure$log$log$classdecl$var5.prototype.getLogRegistryEntry = function(name, level) {
-  var entry = this.entries[name];
-  if (entry) {
-    return void 0 !== level && (entry.level = level), entry;
-  }
-  var lastDotIndex = name.lastIndexOf("."), parentName = name.slice(0, Math.max(lastDotIndex, 0)), parentLogRegistryEntry = this.getLogRegistryEntry(parentName), logRegistryEntry = new goog.log.LogRegistryEntry_(name, parentLogRegistryEntry);
-  this.entries[name] = logRegistryEntry;
-  parentLogRegistryEntry.children.push(logRegistryEntry);
-  void 0 !== level && (logRegistryEntry.level = level);
-  return logRegistryEntry;
-};
-third_party$javascript$closure$log$log$classdecl$var5.prototype.getAllLoggers = function() {
-  var $jscomp$this$17096019$34 = this;
-  return Object.keys(this.entries).map(function(loggerName) {
-    return $jscomp$this$17096019$34.entries[loggerName].logger;
-  });
-};
-goog.log.LogRegistry_ = third_party$javascript$closure$log$log$classdecl$var5;
-goog.log.LogRegistry_.getInstance = function() {
-  goog.log.LogRegistry_.instance_ || (goog.log.LogRegistry_.instance_ = new goog.log.LogRegistry_());
-  return goog.log.LogRegistry_.instance_;
-};
-goog.log.getLogger = function(name, level) {
-  if (goog.log.ENABLED) {
-    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(name, level);
-    return loggerEntry.logger;
-  }
-  return null;
-};
-goog.log.getRootLogger = function() {
-  if (goog.log.ENABLED) {
-    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(goog.log.ROOT_LOGGER_NAME);
-    return loggerEntry.logger;
-  }
-  return null;
-};
-goog.log.addHandler = function(logger, handler) {
-  if (goog.log.ENABLED && logger) {
-    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(logger.getName());
-    loggerEntry.handlers.push(handler);
-  }
-};
-goog.log.removeHandler = function(logger, handler) {
-  if (goog.log.ENABLED && logger) {
-    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(logger.getName()), indexOfHandler = loggerEntry.handlers.indexOf(handler);
-    if (-1 !== indexOfHandler) {
-      return loggerEntry.handlers.splice(indexOfHandler, 1), !0;
-    }
-  }
-  return !1;
-};
-goog.log.setLevel = function(logger, level) {
-  if (goog.log.ENABLED && logger) {
-    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(logger.getName());
-    loggerEntry.level = level;
-  }
-};
-goog.log.getLevel = function(logger) {
-  if (goog.log.ENABLED && logger) {
-    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(logger.getName());
-    return loggerEntry.level;
-  }
-  return null;
-};
-goog.log.getEffectiveLevel = function(logger) {
-  if (goog.log.ENABLED && logger) {
-    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(logger.getName());
-    return loggerEntry.getEffectiveLevel();
-  }
-  return goog.log.Level.OFF;
-};
-goog.log.isLoggable = function(logger, level) {
-  return goog.log.ENABLED && logger && level ? level.value >= goog.log.getEffectiveLevel(logger).value : !1;
-};
-goog.log.getAllLoggers = function() {
-  return goog.log.ENABLED ? goog.log.LogRegistry_.getInstance().getAllLoggers() : [];
-};
-goog.log.getLogRecord = function(logger, level, msg) {
-  var logRecord = goog.log.LogBuffer.getInstance().addRecord(level || goog.log.Level.OFF, msg, logger.getName());
-  return logRecord;
-};
-goog.log.publishLogRecord = function(logger, logRecord) {
-  if (goog.log.ENABLED && logger && goog.log.isLoggable(logger, logRecord.getLevel())) {
-    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(logger.getName());
-    loggerEntry.publish(logRecord);
-  }
-};
-goog.log.log = function(logger, level, msg) {
-  if (goog.log.ENABLED && logger && goog.log.isLoggable(logger, level)) {
-    level = level || goog.log.Level.OFF;
-    var loggerEntry = goog.log.LogRegistry_.getInstance().getLogRegistryEntry(logger.getName());
-    "function" === typeof msg && (msg = msg());
-    var logRecord = goog.log.LogBuffer.getInstance().addRecord(level, msg, logger.getName());
-    loggerEntry.publish(logRecord);
-  }
-};
-goog.log.error = function(logger, msg, exception) {
-  goog.log.ENABLED && logger && goog.log.log(logger, goog.log.Level.SEVERE, msg, exception);
-};
-goog.log.warning = function(logger, msg, exception) {
-  goog.log.ENABLED && logger && goog.log.log(logger, goog.log.Level.WARNING, msg, exception);
-};
-goog.log.info = function(logger, msg, exception) {
-  goog.log.ENABLED && logger && goog.log.log(logger, goog.log.Level.INFO, msg, exception);
-};
-goog.log.fine = function(logger, msg, exception) {
-  goog.log.ENABLED && logger && goog.log.log(logger, goog.log.Level.FINE, msg, exception);
 };
 goog.net = {};
 goog.net.ErrorCode = {NO_ERROR:0, ACCESS_DENIED:1, FILE_NOT_FOUND:2, FF_SILENT_ERROR:3, CUSTOM_ERROR:4, EXCEPTION:5, HTTP_ERROR:6, ABORT:7, TIMEOUT:8, OFFLINE:9};
@@ -8368,7 +9796,7 @@ goog.net.XhrIo.prototype.send = function(url, opt_method, opt_content, opt_heade
         headers.set(key, opt_headers[key]);
       }
     } else if ("function" === typeof opt_headers.keys && "function" === typeof opt_headers.get) {
-      for (var $jscomp$iter$5 = $jscomp.makeIterator(opt_headers.keys()), $jscomp$key$m71669834$55$key = $jscomp$iter$5.next(); !$jscomp$key$m71669834$55$key.done; $jscomp$key$m71669834$55$key = $jscomp$iter$5.next()) {
+      for (var $jscomp$iter$17 = $jscomp.makeIterator(opt_headers.keys()), $jscomp$key$m71669834$55$key = $jscomp$iter$17.next(); !$jscomp$key$m71669834$55$key.done; $jscomp$key$m71669834$55$key = $jscomp$iter$17.next()) {
         var key$jscomp$0 = $jscomp$key$m71669834$55$key.value;
         headers.set(key$jscomp$0, opt_headers.get(key$jscomp$0));
       }
@@ -8380,8 +9808,8 @@ goog.net.XhrIo.prototype.send = function(url, opt_method, opt_content, opt_heade
     return goog.string.caseInsensitiveEquals(goog.net.XhrIo.CONTENT_TYPE_HEADER, header);
   }), contentIsFormData = goog.global.FormData && content instanceof goog.global.FormData;
   !module$contents$goog$array_contains(goog.net.XhrIo.METHODS_WITH_FORM_DATA, method) || contentTypeKey || contentIsFormData || headers.set(goog.net.XhrIo.CONTENT_TYPE_HEADER, goog.net.XhrIo.FORM_CONTENT_TYPE);
-  for (var $jscomp$iter$6 = $jscomp.makeIterator(headers), $jscomp$key$m71669834$56$ = $jscomp$iter$6.next(); !$jscomp$key$m71669834$56$.done; $jscomp$key$m71669834$56$ = $jscomp$iter$6.next()) {
-    var $jscomp$destructuring$var14 = $jscomp$key$m71669834$56$.value, $jscomp$destructuring$var15 = $jscomp.makeIterator($jscomp$destructuring$var14), key$jscomp$1 = $jscomp$destructuring$var15.next().value, value = $jscomp$destructuring$var15.next().value;
+  for (var $jscomp$iter$18 = $jscomp.makeIterator(headers), $jscomp$key$m71669834$56$ = $jscomp$iter$18.next(); !$jscomp$key$m71669834$56$.done; $jscomp$key$m71669834$56$ = $jscomp$iter$18.next()) {
+    var $jscomp$destructuring$var22 = $jscomp$key$m71669834$56$.value, $jscomp$destructuring$var23 = $jscomp.makeIterator($jscomp$destructuring$var22), key$jscomp$1 = $jscomp$destructuring$var23.next().value, value = $jscomp$destructuring$var23.next().value;
     this.xhr_.setRequestHeader(key$jscomp$1, value);
   }
   this.responseType_ && (this.xhr_.responseType = this.responseType_);

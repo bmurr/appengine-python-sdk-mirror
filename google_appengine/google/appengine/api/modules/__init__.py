@@ -16,4 +16,4 @@
 #
 """Modules API module."""
 
-from modules import *
+from google.appengine.api.modules.modules import *

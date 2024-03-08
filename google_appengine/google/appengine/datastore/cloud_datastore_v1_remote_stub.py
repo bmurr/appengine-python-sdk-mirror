@@ -17,11 +17,13 @@
 """A Cloud Datastore stub that connects to a remote Datastore service."""
 
 from google.appengine.api import apiproxy_rpc
+from google.appengine.api import apiproxy_stub
 from google.appengine.api import datastore_errors
 from google.appengine.datastore import datastore_pbs
 from google.appengine.datastore import datastore_rpc
 
-class CloudDatastoreV1RemoteStub(object):
+
+class CloudDatastoreV1RemoteStub(apiproxy_stub.APIProxyStub):
   """A stub for calling Cloud Datastore via the Cloud Datastore API."""
 
   def __init__(self, datastore):
@@ -36,7 +38,9 @@ class CloudDatastoreV1RemoteStub(object):
     assert service == 'cloud_datastore_v1'
 
 
-    call = call[0:1].lower() + call[1:]
+    call = (call[0:1].lower() + call[1:])
+
+    call = call.encode('utf-8')
 
 
     try:

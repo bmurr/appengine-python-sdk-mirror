@@ -1,5 +1,6 @@
+#!/usr/bin/env python
 #
-# Copyright 2008 The ndb Authors. All Rights Reserved.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +13,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 """Polymorphic models and queries.
 
@@ -30,7 +45,8 @@ that support polymorphic queries.  Simply subclass PolyModel instead
 of Model.
 """
 
-from . import model
+import six
+from google.appengine.ext.ndb import model
 
 __all__ = ['PolyModel']
 
@@ -81,7 +97,7 @@ class _ClassKeyProperty(model.StringProperty):
 
   def _prepare_for_put(self, entity):
     """Ensure the class_ property is initialized before it is serialized."""
-    self._get_value(entity)  # For its side effects.
+    self._get_value(entity)
 
 
 class PolyModel(model.Model):
@@ -162,7 +178,7 @@ class PolyModel(model.Model):
 
   class_ = _ClassKeyProperty()
 
-  _class_map = {}  # Map class key -> suitable subclass.
+  _class_map = {}
 
   @classmethod
   def _update_kind_map(cls):
@@ -187,10 +203,10 @@ class PolyModel(model.Model):
     """
     prop_name = cls.class_._name
     class_name = []
-    for plist in [pb.property_list(), pb.raw_property_list()]:
+    for plist in [pb.property, pb.raw_property]:
       for p in plist:
-        if p.name() == prop_name:
-          class_name.append(p.value().stringvalue())
+        if six.ensure_binary(p.name) == prop_name:
+          class_name.append(p.value.stringValue)
     cls = cls._class_map.get(tuple(class_name), cls)
     return super(PolyModel, cls)._from_pb(pb, set_key, ent, key)
 
@@ -200,7 +216,7 @@ class PolyModel(model.Model):
 
     This is a list of class names, e.g. ['Animal', 'Feline', 'Cat'].
     """
-    return [c._class_name() for c in cls._get_hierarchy()]
+    return [six.ensure_binary(c._class_name()) for c in cls._get_hierarchy()]
 
   @classmethod
   def _get_kind(cls):
@@ -211,13 +227,13 @@ class PolyModel(model.Model):
     """
     bases = cls._get_hierarchy()
     if not bases:
-      # We have to jump through some hoops to call the superclass'
-      # _get_kind() method.  First, this is called by the metaclass
-      # before the PolyModel name is defined, so it can't use
-      # super(PolyModel, cls)._get_kind().  Second, we can't just call
-      # Model._get_kind() because that always returns 'Model'.  Hence
-      # the 'im_func' hack.
-      return model.Model._get_kind.im_func(cls)
+
+
+
+
+
+
+      return model.Model._get_kind.__func__(cls)
     else:
       return bases[0]._class_name()
 
@@ -245,10 +261,10 @@ class PolyModel(model.Model):
     This returns a list of class objects, e.g. [Animal, Feline, Cat].
     """
     bases = []
-    for base in cls.mro():  # pragma: no branch
+    for base in cls.mro():
       if hasattr(base, '_get_hierarchy'):
         bases.append(base)
-    del bases[-1]  # Delete PolyModel itself
+    del bases[-1]
     bases.reverse()
     return bases
 

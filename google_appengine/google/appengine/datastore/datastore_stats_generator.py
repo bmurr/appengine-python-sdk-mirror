@@ -30,6 +30,9 @@
 import datetime
 import logging
 
+import six
+from six.moves import range
+
 from google.appengine.api import datastore
 from google.appengine.api import datastore_admin
 from google.appengine.api import datastore_types
@@ -47,9 +50,9 @@ _GLOBAL_KEY = (stats.GlobalStat, 'total_entity_usage', '')
 
 
 _PROPERTY_TYPE_TO_DSS_NAME = {
-    unicode: ('String', 'STRING'),
+    six.text_type: ('String', 'STRING'),
     bool: ('Boolean', 'BOOLEAN'),
-    long: ('Integer', 'INT64'),
+    int: ('Integer', 'INT64'),
     type(None): ('NULL', 'NULL'),
     float: ('Float', 'DOUBLE'),
     datastore_types.Key: ('Key', 'REFERENCE'),
@@ -68,7 +71,10 @@ _PROPERTY_TYPE_TO_DSS_NAME = {
     datastore_types.PostalAddress: ('PostalAddress', 'STRING'),
     datastore_types.Rating: ('Rating', 'INT64'),
     datastore_types.BlobKey: ('BlobKey', 'STRING'),
-    }
+}
+
+if six.PY2:
+  _PROPERTY_TYPE_TO_DSS_NAME[long] = ('Integer', 'INT64')
 
 
 
@@ -131,7 +137,7 @@ class DatastoreStatsProcessor(object):
     """Return the size and count of indexes for a property of an EntityProto."""
 
     property_index_size = (len(self.app_id) + len(kind_name) +
-                           len(prop.value().SerializeToString()) +
+                           len(prop.value.SerializeToString()) +
                            len(namespace) + entity_key_size)
 
     return (property_index_size, 2)
@@ -148,9 +154,9 @@ class DatastoreStatsProcessor(object):
 
     kind_name = key.kind()
 
-    entity_key_size = (len(proto.key().app()) + len(namespace) +
-                       len(proto.key().path().SerializeToString()) +
-                       len(proto.entity_group().SerializeToString()))
+    entity_key_size = (len(proto.key.app) + len(namespace) +
+                       len(proto.key.path.SerializeToString()) +
+                       len(proto.entity_group.SerializeToString()))
 
     self.__AggregateCompositeIndices(proto, namespace, kind_name,
                                      entity_key_size)
@@ -162,7 +168,7 @@ class DatastoreStatsProcessor(object):
     property_index_size = 0
 
 
-    for prop_list in (proto.property_list(), proto.raw_property_list()):
+    for prop_list in (proto.property, proto.raw_property):
       for prop in prop_list:
         index_size, index_count = self.__GetPropertyIndexStat(namespace,
                                                               kind_name,
@@ -211,7 +217,7 @@ class DatastoreStatsProcessor(object):
         kind_name,
         namespace,
         entity_key_size,
-        (proto.property_list(), proto.raw_property_list()))
+        (proto.property, proto.raw_property))
 
   def __ProcessProperties(self, kind_name, namespace, entity_key_size,
                           prop_lists):
@@ -227,7 +233,7 @@ class DatastoreStatsProcessor(object):
 
   def __AggregateProperty(self, kind_name, namespace, entity_key_size,
                           prop, value):
-    property_name = prop.name()
+    property_name = prop.name
     property_type = _PROPERTY_TYPE_TO_DSS_NAME[type(value)][0]
     index_property_type = _PROPERTY_TYPE_TO_DSS_NAME[type(value)][1]
     size = len(prop.SerializeToString())
@@ -370,16 +376,16 @@ class DatastoreStatsProcessor(object):
 
 
 
-    property_list = proto.property_list()
+    property_list = proto.property
     property_count = []
     property_size = []
     index_count = 1
-    for indexed_prop in definition.property_list():
-      name = indexed_prop.name()
+    for indexed_prop in definition.property:
+      name = indexed_prop.name
       count = 0
       prop_size = 0
       for prop in property_list:
-        if prop.name() == name:
+        if prop.name == name:
           count += 1
           prop_size += len(prop.SerializeToString())
 
@@ -398,9 +404,10 @@ class DatastoreStatsProcessor(object):
 
 
 
-    index_size = (index_count * (entity_key_size + len(kind_name) +
-                                 len(self.app_id) + len(namespace)) +
-                  index_only_size * 2)
+    index_size = int((
+        index_count *
+        (entity_key_size + len(kind_name) + len(self.app_id) + len(namespace)) +
+        index_only_size * 2))
 
     return (index_size, index_count)
 
@@ -409,8 +416,8 @@ class DatastoreStatsProcessor(object):
     """Aggregate statistics of composite indexes for an entity."""
     composite_indices = datastore_admin.GetIndices(self.app_id)
     for index in composite_indices:
-      definition = index.definition()
-      if kind_name != definition.entity_type():
+      definition = index.definition
+      if kind_name != definition.entity_type:
         continue
 
       index_size, index_count = self.__GetCompositeIndexStat(definition, proto,
@@ -457,7 +464,7 @@ class DatastoreStatsProcessor(object):
                        kind_name=kind_name)
 
 
-      index_id = index.id()
+      index_id = index.id
       self.__Increment(self.whole_app_stats, index_count,
                        (stats.KindCompositeIndexStat,
                         kind_name + '_%s' % index_id, ''), index_size,
@@ -472,16 +479,16 @@ class DatastoreStatsProcessor(object):
     """Aggregate total datastore stats."""
     kind_name = key.kind()
 
-    entity_key_size = (len(proto.key().app()) +
-                       len(proto.key().path().SerializeToString()) +
-                       len(proto.entity_group().SerializeToString()))
+    entity_key_size = (len(proto.key.app) +
+                       len(proto.key.path.SerializeToString()) +
+                       len(proto.entity_group.SerializeToString()))
 
     type_index_size, type_index_count = self.__GetTypeIndexStat(namespace,
                                                                 kind_name,
                                                                 entity_key_size)
     property_index_count = 0
     property_index_size = 0
-    for prop_list in (proto.property_list(), proto.raw_property_list()):
+    for prop_list in (proto.property, proto.raw_property):
       for prop in prop_list:
         index_size, index_count = self.__GetPropertyIndexStat(namespace,
                                                               kind_name,
@@ -557,7 +564,7 @@ class DatastoreStatsProcessor(object):
                                             _app=self.app_id),
           _app=self.app_id)
       stats_dict[stat_key] = stat_model
-      for field, value in kwds.iteritems():
+      for field, value in six.iteritems(kwds):
         setattr(stat_model, field, value)
       stat_model.count = count
       if size:
@@ -591,7 +598,7 @@ class DatastoreStatsProcessor(object):
 
     self.written = 0
 
-    for stat in self.whole_app_stats.itervalues():
+    for stat in six.itervalues(self.whole_app_stats):
       if stat.count or not (isinstance(stat, stats.GlobalStat) or
                             isinstance(stat, stats.NamespaceStat)):
         stat.put()
@@ -600,7 +607,7 @@ class DatastoreStatsProcessor(object):
 
 
     if self.found_non_empty_namespace:
-      for stat in self.namespace_stats.itervalues():
+      for stat in six.itervalues(self.namespace_stats):
         if stat.count or not isinstance(stat, stats.NamespaceGlobalStat):
           stat.put()
           self.written += 1

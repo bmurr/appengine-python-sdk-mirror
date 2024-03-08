@@ -17,9 +17,7 @@
 
 
 
-
-
-"""The User Python datastore class to be used as a datastore data type."""
+"""The User Python `datastore` class to be used as a datastore data type."""
 
 
 
@@ -27,17 +25,18 @@
 
 
 
-from __future__ import absolute_import
-
-
-
-
-
+import functools
 import os
-from google.appengine._internal import six_subset
+
+import six
+
 from google.appengine.api import apiproxy_stub_map
-from google.appengine.api import user_service_pb
+from google.appengine.api import user_service_pb2
 from google.appengine.runtime import apiproxy_errors
+from google.appengine.runtime import context
+
+
+
 
 
 class Error(Exception):
@@ -56,8 +55,9 @@ class NotAllowedError(Error):
   """The requested redirect URL is not allowed."""
 
 
+@functools.total_ordering
 class User(object):
-  """Provides the email address, nickname, and ID for a user.
+  """Provides the email address, nickname, and `ID` for a user.
 
   A nickname is a human-readable string that uniquely identifies a Google user,
   akin to a username. For some users, this nickname is an email address, but for
@@ -68,7 +68,6 @@ class User(object):
   `federated_identity` and `federated_provider` are decommissioned and should
   not be used.
   """
-
 
 
 
@@ -101,12 +100,12 @@ class User(object):
 
 
     if _auth_domain is None:
-      _auth_domain = os.environ.get('AUTH_DOMAIN')
+      _auth_domain = context.get('AUTH_DOMAIN')
     assert _auth_domain
 
     if email is None and federated_identity is None:
-      email = os.environ.get('USER_EMAIL', email)
-      _user_id = os.environ.get('USER_ID', _user_id)
+      email = context.get('USER_EMAIL', email)
+      _user_id = context.get('USER_ID', _user_id)
       federated_identity = os.environ.get('FEDERATED_IDENTITY',
                                           federated_identity)
       federated_provider = os.environ.get('FEDERATED_PROVIDER',
@@ -155,7 +154,7 @@ class User(object):
     return self.__email
 
   def user_id(self):
-    """Obtains the user ID of the user.
+    """Obtains the user `ID` of the user.
 
     Returns:
       A permanent unique identifying string or `None`. If the email address was
@@ -191,7 +190,7 @@ class User(object):
     return self.__federated_provider
 
   def __unicode__(self):
-    return six_subset.text_type(self.nickname())
+    return six.text_type(self.nickname())
 
   def __str__(self):
     return str(self.nickname())
@@ -212,15 +211,29 @@ class User(object):
     else:
       return hash((self.__email, self.__auth_domain))
 
-  def __cmp__(self, other):
+  def __eq__(self, other):
     if not isinstance(other, User):
       return NotImplemented
+
     if self.__federated_identity:
-      return cmp((self.__federated_identity, self.__auth_domain),
-                 (other.__federated_identity, other.__auth_domain))
-    else:
-      return cmp((self.__email, self.__auth_domain),
-                 (other.__email, other.__auth_domain))
+      return ((self.__federated_identity,
+               self.__auth_domain) == (other.__federated_identity,
+                                       other.__auth_domain))
+
+    return ((self.__email, self.__auth_domain) == (other.__email,
+                                                   other.__auth_domain))
+
+  def __ne__(self, other):
+    return not self == other
+
+  def __lt__(self, other):
+
+    if self.__federated_identity:
+      return ((self.__federated_identity, self.__auth_domain) <
+              (other.__federated_identity, other.__auth_domain))
+
+    return ((self.__email, self.__auth_domain) <
+            (other.__email, other.__auth_domain))
 
 
 def create_login_url(dest_url=None, _auth_domain=None,
@@ -232,7 +245,7 @@ def create_login_url(dest_url=None, _auth_domain=None,
         once login is complete. If `dest_url` does not specify a host, the host
         from the current request is used.
     federated_identity: Decommissioned, don't use. Setting this to a non-None
-        value raises a NotAllowedError
+        value raises a `NotAllowedError`
 
   Returns:
        Login URL as a string. The login URL will use Google Accounts.
@@ -240,14 +253,14 @@ def create_login_url(dest_url=None, _auth_domain=None,
   Raises:
       NotAllowedError: If federated_identity is not None.
   """
-  req = user_service_pb.CreateLoginURLRequest()
-  resp = user_service_pb.CreateLoginURLResponse()
+  req = user_service_pb2.CreateLoginURLRequest()
+  resp = user_service_pb2.CreateLoginURLResponse()
   if dest_url:
-    req.set_destination_url(dest_url)
+    req.destination_url = dest_url
   else:
-    req.set_destination_url('')
+    req.destination_url = ''
   if _auth_domain:
-    req.set_auth_domain(_auth_domain)
+    req.auth_domain = _auth_domain
   if federated_identity:
     raise NotAllowedError('OpenID 2.0 support is decomissioned')
 
@@ -255,14 +268,14 @@ def create_login_url(dest_url=None, _auth_domain=None,
     apiproxy_stub_map.MakeSyncCall('user', 'CreateLoginURL', req, resp)
   except apiproxy_errors.ApplicationError as e:
     if (e.application_error ==
-        user_service_pb.UserServiceError.REDIRECT_URL_TOO_LONG):
+        user_service_pb2.UserServiceError.REDIRECT_URL_TOO_LONG):
       raise RedirectTooLongError
     elif (e.application_error ==
-          user_service_pb.UserServiceError.NOT_ALLOWED):
+          user_service_pb2.UserServiceError.NOT_ALLOWED):
       raise NotAllowedError
     else:
       raise e
-  return resp.login_url()
+  return resp.login_url
 
 
 CreateLoginURL = create_login_url
@@ -284,21 +297,21 @@ def create_logout_url(dest_url, _auth_domain=None):
   Returns:
     Logout URL as a string.
   """
-  req = user_service_pb.CreateLogoutURLRequest()
-  resp = user_service_pb.CreateLogoutURLResponse()
-  req.set_destination_url(dest_url)
+  req = user_service_pb2.CreateLogoutURLRequest()
+  resp = user_service_pb2.CreateLogoutURLResponse()
+  req.destination_url = dest_url
   if _auth_domain:
-    req.set_auth_domain(_auth_domain)
+    req.auth_domain = _auth_domain
 
   try:
     apiproxy_stub_map.MakeSyncCall('user', 'CreateLogoutURL', req, resp)
   except apiproxy_errors.ApplicationError as e:
     if (e.application_error ==
-        user_service_pb.UserServiceError.REDIRECT_URL_TOO_LONG):
+        user_service_pb2.UserServiceError.REDIRECT_URL_TOO_LONG):
       raise RedirectTooLongError
     else:
       raise e
-  return resp.logout_url()
+  return resp.logout_url
 
 
 CreateLogoutURL = create_logout_url
@@ -330,7 +343,7 @@ def is_current_user_admin():
   Returns:
     `True` if the user is an administrator; all other user types return `False`.
   """
-  return (os.environ.get('USER_IS_ADMIN', '0')) == '1'
+  return (context.get('USER_IS_ADMIN', '0')) == '1'
 
 
 IsCurrentUserAdmin = is_current_user_admin

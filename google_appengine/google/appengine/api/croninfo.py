@@ -22,50 +22,34 @@ A library for working with CronInfo records, describing cron entries for an
 application. Supports loading the records from yaml.
 """
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
-
-
-
-
-
-
 import datetime
 import logging
-import os
 import sys
 import traceback
 
+import pytz
+import six
+
+from google.appengine.api import appinfo
+from google.appengine.api import validation
+from google.appengine.api import yaml_builder
+from google.appengine.api import yaml_listener
+from google.appengine.api import yaml_object
+
+
 try:
-  import pytz
-except ImportError:
-  pytz = None
-
-
-from google.appengine._internal import six_subset
-
-
-
-if six_subset.PY2:
   from google.appengine.cron import groc
   from google.appengine.cron import groctimespecification
-else:
+except ImportError:
   groc = None
   groctimespecification = None
 
-if os.environ.get('APPENGINE_RUNTIME') == 'python27':
-  from google.appengine.api import appinfo
-  from google.appengine.api import validation
-  from google.appengine.api import yaml_builder
-  from google.appengine.api import yaml_listener
-  from google.appengine.api import yaml_object
-else:
-  from google.appengine.api import appinfo
-  from google.appengine.api import validation
-  from google.appengine.api import yaml_builder
-  from google.appengine.api import yaml_listener
-  from google.appengine.api import yaml_object
+
+
+
+
+
+
 
 
 _URL_REGEX = r'^/.*$'
@@ -92,10 +76,8 @@ class GrocValidator(validation.Validator):
     """Validates a schedule."""
     if value is None:
       raise validation.MissingAttribute('schedule must be specified')
-    if not isinstance(value, six_subset.string_types):
+    if not isinstance(value, six.string_types):
       raise TypeError('schedule must be a string, not \'%r\''%type(value))
-
-
     if groc and groctimespecification:
       try:
         groctimespecification.GrocTimeSpecification(value)
@@ -110,7 +92,7 @@ class TimezoneValidator(validation.Validator):
 
   def Validate(self, value, key=None):
     """Validates a timezone."""
-    if not isinstance(value, six_subset.string_types):
+    if not isinstance(value, six.string_types):
       raise TypeError('timezone must be a string, not \'%r\'' % type(value))
     if pytz is None:
 
@@ -216,6 +198,7 @@ class CronInfoExternal(validation.Validated):
 
 def LoadSingleCron(cron_info, open_fn=None):
   """Load a cron.yaml file or string and return a CronInfoExternal object."""
+  del open_fn
   builder = yaml_object.ObjectBuilder(CronInfoExternal)
   handler = yaml_builder.BuilderHandler(builder)
   listener = yaml_listener.EventListener(handler)

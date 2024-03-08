@@ -1,25 +1,9 @@
-#!/usr/bin/env python
-#
-# Copyright 2007 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+# Copyright 2005 Google Inc. All Rights Reserved.
 
-
-
-
-
-
+# WARNING: This file is externally viewable by our users.  All comments from
+# this file will be stripped.  The docstrings will NOT.  Do not put sensitive
+# information in docstrings.  If you must communicate internal information in
+# this source file, please place them in comments only.
 """Implementation of scheduling for Groc format schedules.
 
 A Groc schedule looks like '1st,2nd monday 9:00', or 'every 20 mins'. This
@@ -41,10 +25,10 @@ from . import groc
 
 
 
-
-
-
-
+# Because this module is used in some App Engine client code, it is possible
+# that it be run in an environment without pytz. So, we except the ImportError
+# for that module and set the field to None. This allows us to selectively
+# operate on time data without pytz.
 try:
   import pytz
 except ImportError:
@@ -165,18 +149,18 @@ def _ToTimeZone(t, tzinfo):
     a datetime object in the time zone 'tzinfo'
   """
   if pytz is None:
-
-    return t.replace(tzinfo=None)
+    # Not much we can do...
+    return t.replace(tzinfo=None)  # pylint: disable=g-datetime-replace-tzinfo
   elif tzinfo:
-
+    # Convert 't' to the target time zone.
     if not t.tzinfo:
       t = pytz.utc.localize(t)
     return tzinfo.normalize(t.astimezone(tzinfo))
   elif t.tzinfo:
-
+    # Convert 't' to UTC and strip time zone information.
     return pytz.utc.normalize(t.astimezone(pytz.utc)).replace(tzinfo=None)
   else:
-
+    # Nothing to do.
     return t
 
 
@@ -228,7 +212,7 @@ class IntervalTimeSpecification(TimeSpecification):
       self.seconds = self.interval * 60
     self.timezone = _GetTimezone(timezone)
 
-
+    # This section sets timezone, start_time, and end_time.
     if self.synchronized:
       if start_time_string:
         raise ValueError(
@@ -239,8 +223,8 @@ class IntervalTimeSpecification(TimeSpecification):
       if (self.seconds > 86400) or ((86400 % self.seconds) != 0):
         raise groc.GrocException('can only use synchronized for periods that'
                                  ' divide evenly into 24 hours')
-
-
+      # 'synchronized' is equivalent to a time range that covers the entire
+      # range.
       self.start_time = datetime.time(0, 0)
       self.end_time = datetime.time(23, 59)
     elif start_time_string:
@@ -268,20 +252,20 @@ class IntervalTimeSpecification(TimeSpecification):
       a datetime object in the timezone of the input 'start'
     """
     if self.start_time is None:
-
-
-
+      # This is a simple interval with no range restriction. But we want the
+      # value to fall exactly on the closest minute up to |self.seconds| in the
+      # future, so we subtract the extra seconds in the result to round down.
       result = start + datetime.timedelta(seconds=self.seconds)
       return result - datetime.timedelta(seconds=result.second)
 
-
+    # Convert the start time to our time zone.
     t = _ToTimeZone(start, self.timezone)
 
-
+    # Get the beginning of the time range immediately preceding 't'.
     start_time = self._GetPreviousDateTime(t, self.start_time, self.timezone)
 
-
-
+    # Get the next time after 't' that is an even multiple of self.seconds
+    # after start_time.
     t_delta = t - start_time
     t_delta_seconds = (t_delta.days * 60 * 60 * 24 + t_delta.seconds)
     num_intervals = (t_delta_seconds + self.seconds) // self.seconds
@@ -290,8 +274,8 @@ class IntervalTimeSpecification(TimeSpecification):
     if self.timezone:
       interval_time = self.timezone.normalize(interval_time)
 
-
-
+    # If 't' and interval_time are contained in the same day's range, we return
+    # interval_time.  Otherwise, we return the start of the next range.
     next_start_time = self._GetNextDateTime(t, self.start_time, self.timezone)
     if (self._TimeIsInRange(t) and self._TimeIsInRange(interval_time) and
         interval_time < next_start_time):
@@ -299,7 +283,7 @@ class IntervalTimeSpecification(TimeSpecification):
     else:
       result = next_start_time
 
-
+    # Finally, convert back to the original time zone.
     return _ToTimeZone(result, start.tzinfo)
 
   def _TimeIsInRange(self, t):
@@ -311,8 +295,8 @@ class IntervalTimeSpecification(TimeSpecification):
     Returns:
       a boolean
     """
-
-
+    # Determine whether a start time or end time happened more recently before
+    # 't'.
     previous_start_time = self._GetPreviousDateTime(t, self.start_time,
                                                     self.timezone)
     previous_end_time = self._GetPreviousDateTime(t, self.end_time,
@@ -334,7 +318,7 @@ class IntervalTimeSpecification(TimeSpecification):
     Returns:
       a datetime.datetime object, in the timezone 'tzinfo'
     """
-
+    # The result may be either on this day or a previous day.
     date = t.date()
     while True:
       result = IntervalTimeSpecification._CombineDateAndTime(
@@ -355,7 +339,7 @@ class IntervalTimeSpecification(TimeSpecification):
     Returns:
       a datetime.datetime object, in the timezone 'tzinfo'
     """
-
+    # The result may be either on this day or a subsequent day.
     date = t.date()
     while True:
       result = IntervalTimeSpecification._CombineDateAndTime(
@@ -387,16 +371,16 @@ class IntervalTimeSpecification(TimeSpecification):
     try:
       return tzinfo.localize(naive_result, is_dst=None)
     except AmbiguousTimeError:
-
-
+      # Return the daylight version, which should be earlier than the
+      # standard version.
       return min(
           tzinfo.localize(naive_result, is_dst=True),
           tzinfo.localize(naive_result, is_dst=False))
     except NonExistentTimeError:
-
-
-
-
+      # Advance a minute at a time until we find a time that exists.  This
+      # has some potentially counterintuitive effects -- for example, a job
+      # set to fire from 2:15 to 2:45 will fire at 3:00 on the day that time
+      # "springs forward."
       while True:
         naive_result += datetime.timedelta(minutes=1)
         try:
@@ -438,7 +422,7 @@ class SpecificTimeSpecification(TimeSpecification):
     if weekdays and monthdays:
       raise ValueError('cannot supply both monthdays and weekdays')
     if ordinals is None:
-
+      # The default is 1-5
       self.ordinals = set(range(1, 6))
     else:
       self.ordinals = set(ordinals)
@@ -447,7 +431,7 @@ class SpecificTimeSpecification(TimeSpecification):
                          'got %r' % ordinals)
 
     if weekdays is None:
-
+      # default is 0-6
       self.weekdays = set(range(7))
     else:
       self.weekdays = set(weekdays)
@@ -457,7 +441,7 @@ class SpecificTimeSpecification(TimeSpecification):
                          'got %r' % weekdays)
 
     if months is None:
-
+      # default is 1-12
       self.months = set(range(1, 13))
     else:
       self.months = set(months)
@@ -475,9 +459,9 @@ class SpecificTimeSpecification(TimeSpecification):
         raise ValueError('day of month must be less than 32')
       if self.months:
         for month in self.months:
-          _, ndays = calendar.monthrange(4, month)
+          _, ndays = calendar.monthrange(4, month)  # assume leap year
           if min(monthdays) <= ndays:
-            break
+            break  # The specification is valid if at least one day is valid.
         else:
           raise ValueError('invalid day of month, '
                            'got day %r of month %r' % (max(monthdays), month))
@@ -504,7 +488,7 @@ class SpecificTimeSpecification(TimeSpecification):
     if self.monthdays:
       return sorted([day for day in self.monthdays if day <= last_day])
 
-
+    # Groc has sunday = 0, calendar module has monday = 0. of course.
     out_days = []
     start_day = (start_day + 1) % 7
     for ordinal in self.ordinals:
@@ -530,15 +514,15 @@ class SpecificTimeSpecification(TimeSpecification):
       a two-tuple of (match, wrap counter). match is an int in range (1-12),
       wrapcount is a int indicating how many times we've wrapped around.
     """
-    potential = matches = sorted(matches)
-
+    potential = matches = sorted(matches)  # just in case
+    # the first result has to be >= start. decrement it, so we can use > below.
     after = start - 1
     wrapcount = 0
     while True:
       potential = [x for x in potential if x > after]
       if not potential:
-
-
+        # None in the current set, increment the wrapcount and take the first
+        # value
         wrapcount += 1
         potential = matches
       after = potential[0]
@@ -557,49 +541,49 @@ class SpecificTimeSpecification(TimeSpecification):
     Returns:
       a datetime object in the timezone of the input 'start'
     """
-
-
-
-
-
+    # If the timezone is set, we do the following:
+    # Convert the start time to the time in the specified timezone.
+    # Strip the timezone, making it a naive (no timezone) datetime.
+    # Do the schedule calculations.
+    # At the end, add the timezone back.
     start_time = _ToTimeZone(start, self.timezone).replace(tzinfo=None)
     if self.months:
-
+      # creates an infinite generator of fun^Wmatching months
       months = self._NextMonthGenerator(start_time.month, self.months)
     while True:
-
+      # Get the next month that matches
       month, yearwraps = next(months)
       candidate_month = start_time.replace(
           day=1, month=month, year=start_time.year + yearwraps)
 
-
+      # find days in the month that match
       day_matches = self._MatchingDays(candidate_month.year, month)
 
       if ((candidate_month.year, candidate_month.month) == (start_time.year,
                                                             start_time.month)):
-
+        # we're looking at the current month. Remove days earlier than today
         day_matches = [x for x in day_matches if x >= start_time.day]
       while day_matches:
-
+        # try all the remaining days to see if we can find a good one.
         out = candidate_month.replace(
             day=day_matches[0],
             hour=self.time.hour,
             minute=self.time.minute,
             second=0,
             microsecond=0)
-
+        # convert back to UTC, first putting the timezone back.
         if self.timezone and pytz is not None:
-
-
-
-
+          # First we ask pytz to just localise the time, asking it to throw
+          # an exception in case of DST problems. If we have no time available,
+          # we skip to the next day. If there are two times, we determine which
+          # to return using our start time.
           try:
             out = self.timezone.localize(out, is_dst=None)
           except AmbiguousTimeError:
-
-
-
-
+            # Our match falls in the 'witching hour'. When the time 'falls back'
+            # at the end of DST, times may occur twice in a row. If our start
+            # time is before both of these match times, then we return the first
+            # one. Otherwise, we return the second.
             start_utc = _ToTimeZone(start, pytz.utc)
             dst_doubled_time_first_match_utc = _ToTimeZone(
                 self.timezone.localize(out, is_dst=True), pytz.utc)
@@ -610,8 +594,8 @@ class SpecificTimeSpecification(TimeSpecification):
           except NonExistentTimeError:
             day_matches.pop(0)
             continue
-
-
+        # We may have found a match that is earlier and on the same day as our
+        # start time. If so, we need to skip it and continue on the next day.
         if start < _ToTimeZone(out, start.tzinfo):
           return _ToTimeZone(out, start.tzinfo)
         else:

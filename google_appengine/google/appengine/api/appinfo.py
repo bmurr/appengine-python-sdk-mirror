@@ -16,6 +16,7 @@
 #
 
 
+
 """AppInfo tools.
 
 This library allows you to work with AppInfo records in memory, as well as store
@@ -35,34 +36,20 @@ and load from configuration files.
 
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 import logging
-import os
 import re
 import string
 import sys
 import wsgiref.util
 
-
-if os.environ.get('APPENGINE_RUNTIME') == 'python27':
-  from google.appengine.api import validation
-  from google.appengine.api import yaml_builder
-  from google.appengine.api import yaml_listener
-  from google.appengine.api import yaml_object
-else:
-
-  from google.appengine.api import validation
-  from google.appengine.api import yaml_builder
-  from google.appengine.api import yaml_listener
-  from google.appengine.api import yaml_object
+import six
 
 from google.appengine.api import appinfo_errors
 from google.appengine.api import backendinfo
-from google.appengine._internal import six_subset
-
-
+from google.appengine.api import validation
+from google.appengine.api import yaml_builder
+from google.appengine.api import yaml_listener
+from google.appengine.api import yaml_object
 
 
 
@@ -347,9 +334,6 @@ SINGLE_INSTANCE_ASSIGNMENT = 'single_instance_assignment'
 FILTER = 'filter'
 
 
-OPERATING_SYSTEM = 'operating_system'
-RUNTIME_VERSION = 'runtime_version'
-
 
 INSTANCES = 'instances'
 
@@ -423,6 +407,13 @@ STANDARD_TARGET_THROUGHPUT_UTILIZATION = 'target_throughput_utilization'
 
 
 VPC_ACCESS_CONNECTOR_NAME = 'name'
+VPC_ACCESS_CONNECTOR_EGRESS_SETTING = 'egress_setting'
+EGRESS_SETTING_ALL_TRAFFIC = 'all-traffic'
+EGRESS_SETTING_PRIVATE_RANGES_ONLY = 'private-ranges-only'
+
+
+OPERATING_SYSTEM = 'operating_system'
+RUNTIME_VERSION = 'runtime_version'
 
 
 class _VersionedLibrary(object):
@@ -517,7 +508,7 @@ _SUPPORTED_LIBRARIES = [
         'django',
         'http://www.djangoproject.com/',
         'A full-featured web application framework for Python.',
-        ['1.2', '1.3', '1.4', '1.5', '1.9', '1.11', '1.11.29'],
+        ['1.2', '1.3', '1.4', '1.5', '1.9', '1.11'],
         latest_version='1.4',
         deprecated_versions=['1.2', '1.3', '1.5', '1.9'],
 
@@ -764,7 +755,6 @@ _NAME_TO_SUPPORTED_LIBRARY = dict((library.name, library)
 
 REQUIRED_LIBRARIES = {
     ('django', '1.11'): [('pytz', '2017.2')],
-    ('django', '1.11.29'): [('pytz', '2017.2')],
     ('flask', '0.12'): [('click', '6.6'), ('itsdangerous', '0.24'),
                         ('jinja2', '2.6'), ('werkzeug', '0.11.10')],
     ('jinja2', '2.6'): [('markupsafe', '0.15'), ('setuptools', '0.6c11')],
@@ -846,30 +836,31 @@ def GetAllRuntimes():
   return _all_runtimes
 
 
-def EnsureAsciiBytes(s, err):
+def EnsureAsciiString(s, err):
   """Ensure s contains only ASCII-safe characters; return it as bytes-type.
 
   Arguments:
-    s: the string or bytes to check
+    s: the string or bytes to check.
     err: the error to raise if not good.
   Raises:
     err if it's not ASCII-safe.
   Returns:
-    s as a byte string
+    s as a string. In python2, string as byte. In python3m string as unicode.
   """
+
+  if isinstance(s, six.binary_type):
+    s = s.decode('utf8')
+
   try:
-    return s.encode('ascii')
-  except UnicodeEncodeError:
-    raise err
-  except UnicodeDecodeError:
+    s = s.encode('ascii')
+  except (UnicodeDecodeError, UnicodeEncodeError):
 
 
     raise err
-  except AttributeError:
-    try:
-      return s.decode('ascii').encode('ascii')
-    except UnicodeDecodeError:
-      raise err
+
+  if six.PY3:
+    s = s.decode('utf8')
+  return s
 
 
 class HandlerBase(validation.Validated):
@@ -966,12 +957,12 @@ class HttpHeadersDict(validation.ValidatedDict):
       original_name = name
 
 
-      if isinstance(name, six_subset.string_types):
-        name = EnsureAsciiBytes(name, appinfo_errors.InvalidHttpHeaderName(
+      if isinstance(name, six.string_types):
+        name = EnsureAsciiString(name, appinfo_errors.InvalidHttpHeaderName(
             'HTTP header values must not contain non-ASCII data'))
 
 
-      name = name.lower().decode('ascii')
+      name = name.lower()
 
       if not _HTTP_TOKEN_RE.match(name):
         raise appinfo_errors.InvalidHttpHeaderName(
@@ -1030,10 +1021,9 @@ class HttpHeadersDict(validation.ValidatedDict):
 
       error = appinfo_errors.InvalidHttpHeaderValue(
           'HTTP header values must not contain non-ASCII data')
-      if isinstance(value, six_subset.string_types):
-        b_value = EnsureAsciiBytes(value, error)
-      else:
-        b_value = EnsureAsciiBytes(('%s' % value), error)
+      if isinstance(value, six.string_types):
+        value = EnsureAsciiString(value, error)
+      b_value = ('%s' % value).encode('ascii')
 
 
       key = key.lower()
@@ -1391,6 +1381,28 @@ class URLMap(HandlerBase):
           'The position attribute was specified for this handler, but this is '
           'an app.yaml file.  Position attribute is only valid for '
           'include.yaml files.')
+
+  def PrettyRepr(self):
+    """Short human-readable representation."""
+    data = {}
+    handler = None
+    handler_type = self.GetHandlerType()
+    if handler_type == HANDLER_SCRIPT:
+      handler = self.script
+    else:
+      handler = '[handler type {}]'.format(handler_type)
+    skip_attrs = {
+        'url', HANDLER_STATIC_FILES, HANDLER_STATIC_DIR, HANDLER_SCRIPT,
+        HANDLER_API_ENDPOINT}
+    for attr, validator in self.ATTRIBUTES.items():
+      if attr in skip_attrs:
+        continue
+      value = getattr(self, attr)
+      if value == validator.default:
+        continue
+      data[attr] = value
+
+    return '{}\t{}\t'.format(self.url, handler) + (str(data) if data else '')
 
 
 class AdminConsolePage(validation.Validated):
@@ -2079,6 +2091,10 @@ class VpcAccessConnector(validation.Validated):
   ATTRIBUTES = {
       VPC_ACCESS_CONNECTOR_NAME:
           validation.Regex(VPC_ACCESS_CONNECTOR_NAME_REGEX),
+      VPC_ACCESS_CONNECTOR_EGRESS_SETTING:
+          validation.Optional(
+              validation.Options(EGRESS_SETTING_PRIVATE_RANGES_ONLY,
+                                 EGRESS_SETTING_ALL_TRAFFIC)),
   }
 
 
@@ -2308,7 +2324,7 @@ class AppInfoExternal(validation.Validated):
         See the documentation for the `URLMap.expiration` field for more
         information.
     skip_files: A regular expression object. Files that match this regular
-        expression will not be uploaded by `gcloud app deploy`. For example::
+        expression will not be uploaded by `appcfg.py`. For example::
             skip_files: |
               .svn.*|
               #.*#
@@ -2316,127 +2332,80 @@ class AppInfoExternal(validation.Validated):
         expression will not be built into the app. This directive is valid for
         Go only.
     api_config: URL root and script or servlet path for enhanced API serving.
+    service_account: Service account that the deployed app will run as.
   """
 
   ATTRIBUTES = {
 
 
-      APPLICATION:
-          validation.Optional(APPLICATION_RE_STRING),
+      APPLICATION: validation.Optional(APPLICATION_RE_STRING),
 
-      PROJECT:
-          validation.Optional(APPLICATION_RE_STRING),
-      SERVICE:
-          validation.Preferred(MODULE,
-                               validation.Optional(MODULE_ID_RE_STRING)),
-      MODULE:
-          validation.Deprecated(SERVICE,
-                                validation.Optional(MODULE_ID_RE_STRING)),
-      VERSION:
-          validation.Optional(MODULE_VERSION_ID_RE_STRING),
-      RUNTIME:
-          validation.Optional(RUNTIME_RE_STRING),
-      RUNTIME_CHANNEL:
-          validation.Optional(validation.Type(str)),
+      PROJECT: validation.Optional(APPLICATION_RE_STRING),
+      SERVICE: validation.Preferred(MODULE,
+                                    validation.Optional(MODULE_ID_RE_STRING)),
+      MODULE: validation.Deprecated(SERVICE,
+                                    validation.Optional(MODULE_ID_RE_STRING)),
+      VERSION: validation.Optional(MODULE_VERSION_ID_RE_STRING),
+      RUNTIME: validation.Optional(RUNTIME_RE_STRING),
+      RUNTIME_CHANNEL: validation.Optional(validation.Type(str)),
 
 
-      API_VERSION:
-          validation.Optional(API_VERSION_RE_STRING),
-      MAIN:
-          validation.Optional(_FILES_REGEX),
+      API_VERSION: validation.Optional(API_VERSION_RE_STRING),
+      MAIN: validation.Optional(_FILES_REGEX),
 
-      ENV:
-          validation.Optional(ENV_RE_STRING),
-      ENDPOINTS_API_SERVICE:
-          validation.Optional(EndpointsApiService),
+      ENV: validation.Optional(ENV_RE_STRING),
+      ENDPOINTS_API_SERVICE: validation.Optional(EndpointsApiService),
 
 
-      ENTRYPOINT:
-          validation.Optional(validation.Exec(
-          ) if hasattr(validation, 'Exec') else validation.Type(str)),
-      RUNTIME_CONFIG:
-          validation.Optional(RuntimeConfig),
-      INSTANCE_CLASS:
-          validation.Optional(validation.Type(str)),
-      SOURCE_LANGUAGE:
-          validation.Optional(validation.Regex(SOURCE_LANGUAGE_RE_STRING)),
-      AUTOMATIC_SCALING:
-          validation.Optional(AutomaticScaling),
-      MANUAL_SCALING:
-          validation.Optional(ManualScaling),
-      BASIC_SCALING:
-          validation.Optional(BasicScaling),
-      VM:
-          validation.Optional(bool),
-      VM_SETTINGS:
-          validation.Optional(VmSettings),
-      BETA_SETTINGS:
-          validation.Optional(BetaSettings),
-      VM_HEALTH_CHECK:
-          validation.Optional(VmHealthCheck),
-      HEALTH_CHECK:
-          validation.Optional(HealthCheck),
-      RESOURCES:
-          validation.Optional(Resources),
-      LIVENESS_CHECK:
-          validation.Optional(LivenessCheck),
-      READINESS_CHECK:
-          validation.Optional(ReadinessCheck),
-      NETWORK:
-          validation.Optional(Network),
-      VPC_ACCESS_CONNECTOR:
-          validation.Optional(VpcAccessConnector),
-      ZONES:
-          validation.Optional(validation.Repeated(validation.TYPE_STR)),
-      BUILTINS:
-          validation.Optional(validation.Repeated(BuiltinHandler)),
-      INCLUDES:
-          validation.Optional(validation.Type(list)),
-      HANDLERS:
-          validation.Optional(validation.Repeated(URLMap), default=[]),
-      LIBRARIES:
-          validation.Optional(validation.Repeated(Library)),
+      ENTRYPOINT: validation.Optional(
+          validation.Exec() if hasattr(
+              validation, 'Exec') else validation.Type(str)),
+      RUNTIME_CONFIG: validation.Optional(RuntimeConfig),
+      INSTANCE_CLASS: validation.Optional(validation.Type(str)),
+      SOURCE_LANGUAGE: validation.Optional(
+          validation.Regex(SOURCE_LANGUAGE_RE_STRING)),
+      AUTOMATIC_SCALING: validation.Optional(AutomaticScaling),
+      MANUAL_SCALING: validation.Optional(ManualScaling),
+      BASIC_SCALING: validation.Optional(BasicScaling),
+      VM: validation.Optional(bool),
+      VM_SETTINGS: validation.Optional(VmSettings),
+      BETA_SETTINGS: validation.Optional(BetaSettings),
+      VM_HEALTH_CHECK: validation.Optional(VmHealthCheck),
+      HEALTH_CHECK: validation.Optional(HealthCheck),
+      RESOURCES: validation.Optional(Resources),
+      LIVENESS_CHECK: validation.Optional(LivenessCheck),
+      READINESS_CHECK: validation.Optional(ReadinessCheck),
+      NETWORK: validation.Optional(Network),
+      VPC_ACCESS_CONNECTOR: validation.Optional(VpcAccessConnector),
+      ZONES: validation.Optional(validation.Repeated(validation.TYPE_STR)),
+      BUILTINS: validation.Optional(validation.Repeated(BuiltinHandler)),
+      INCLUDES: validation.Optional(validation.Type(list)),
+      HANDLERS: validation.Optional(validation.Repeated(URLMap), default=[]),
+      LIBRARIES: validation.Optional(validation.Repeated(Library)),
 
-      SERVICES:
-          validation.Optional(
-              validation.Repeated(validation.Regex(_SERVICE_RE_STRING))),
-      DEFAULT_EXPIRATION:
-          validation.Optional(_EXPIRATION_REGEX),
-      SKIP_FILES:
-          validation.RegexStr(default=DEFAULT_SKIP_FILES),
-      NOBUILD_FILES:
-          validation.RegexStr(default=DEFAULT_NOBUILD_FILES),
-      DERIVED_FILE_TYPE:
-          validation.Optional(
-              validation.Repeated(
-                  validation.Options(JAVA_PRECOMPILED, PYTHON_PRECOMPILED))),
-      ADMIN_CONSOLE:
-          validation.Optional(AdminConsole),
-      ERROR_HANDLERS:
-          validation.Optional(validation.Repeated(ErrorHandlers)),
-      BACKENDS:
-          validation.Optional(validation.Repeated(backendinfo.BackendEntry)),
-      THREADSAFE:
-          validation.Optional(bool),
-      SERVICEACCOUNT:
-          validation.Optional(validation.Type(str)),
-      DATASTORE_AUTO_ID_POLICY:
-          validation.Optional(
-              validation.Options(DATASTORE_ID_POLICY_LEGACY,
-                                 DATASTORE_ID_POLICY_DEFAULT)),
-      API_CONFIG:
-          validation.Optional(ApiConfigHandler),
-      CODE_LOCK:
-          validation.Optional(bool),
-      ENV_VARIABLES:
-          validation.Optional(EnvironmentVariables),
+      SERVICES: validation.Optional(validation.Repeated(
+          validation.Regex(_SERVICE_RE_STRING))),
+      DEFAULT_EXPIRATION: validation.Optional(_EXPIRATION_REGEX),
+      SKIP_FILES: validation.RegexStr(default=DEFAULT_SKIP_FILES),
+      NOBUILD_FILES: validation.RegexStr(default=DEFAULT_NOBUILD_FILES),
+      DERIVED_FILE_TYPE: validation.Optional(validation.Repeated(
+          validation.Options(JAVA_PRECOMPILED, PYTHON_PRECOMPILED))),
+      ADMIN_CONSOLE: validation.Optional(AdminConsole),
+      ERROR_HANDLERS: validation.Optional(validation.Repeated(ErrorHandlers)),
+      BACKENDS: validation.Optional(validation.Repeated(
+          backendinfo.BackendEntry)),
+      THREADSAFE: validation.Optional(bool),
+      SERVICEACCOUNT: validation.Optional(validation.Type(str)),
+      DATASTORE_AUTO_ID_POLICY: validation.Optional(
+          validation.Options(DATASTORE_ID_POLICY_LEGACY,
+                             DATASTORE_ID_POLICY_DEFAULT)),
+      API_CONFIG: validation.Optional(ApiConfigHandler),
+      CODE_LOCK: validation.Optional(bool),
+      ENV_VARIABLES: validation.Optional(EnvironmentVariables),
       BUILD_ENV_VARIABLES: validation.Optional(EnvironmentVariables),
-      STANDARD_WEBSOCKET:
-          validation.Optional(bool),
-      APP_ENGINE_APIS:
-          validation.Optional(bool),
-      FLEXIBLE_RUNTIME_SETTINGS:
-          validation.Optional(FlexibleRuntimeSettings),
+      STANDARD_WEBSOCKET: validation.Optional(bool),
+      APP_ENGINE_APIS: validation.Optional(bool),
+      FLEXIBLE_RUNTIME_SETTINGS: validation.Optional(FlexibleRuntimeSettings),
   }
 
   def CheckInitialized(self):
@@ -2461,9 +2430,9 @@ class AppInfoExternal(validation.Validated):
       MissingURLMapping: If no `URLMap` object is present in the object.
       TooManyURLMappings: If there are too many `URLMap` entries.
       MissingApiConfig: If `api_endpoints` exists without an `api_config`.
-      MissingThreadsafe: If `threadsafe` is not set but the runtime requires it.
-      ThreadsafeWithCgiHandler: If the `runtime` is `python27`, `threadsafe` is
-          set and CGI handlers are specified.
+      ThreadsafeWithCgiHandler: If the `runtime` is `python27`,
+          `max_concurrent_requests` under `automatic_scaling` is not 1
+          and CGI handlers are specified.
       TooManyScalingSettingsError: If more than one scaling settings block is
           present.
       RuntimeDoesNotSupportLibraries: If the libraries clause is used for a
@@ -2491,19 +2460,6 @@ class AppInfoExternal(validation.Validated):
          self.beta_settings and
          self.beta_settings.get('vm_runtime') == 'python27'))
 
-    try:
-      max_concurrent_requests = self.automatic_scaling.max_concurrent_requests
-    except AttributeError:
-      max_concurrent_requests = None
-
-    if self.threadsafe is None and max_concurrent_requests:
-      self.threadsafe = int(max_concurrent_requests) > 1
-
-    if (self.threadsafe is None and
-        (self.runtime == 'python27' or vm_runtime_python27)):
-      raise appinfo_errors.MissingThreadsafe(
-          'threadsafe must be present and set to a true or false YAML value')
-
     if self.auto_id_policy == DATASTORE_ID_POLICY_LEGACY:
       datastore_auto_ids_url = ('http://developers.google.com/'
                                 'appengine/docs/python/datastore/'
@@ -2516,7 +2472,7 @@ class AppInfoExternal(validation.Validated):
           "Legacy auto ids are deprecated. You can continue to allocate\n"
           "legacy ids manually using the allocate_ids() API functions.\n"
           "For more information see:\n"
-          + datastore_auto_ids_url + '\n' + appcfg_auto_ids_url + '\n')
+          "%s\n%s\n" % (datastore_auto_ids_url, appcfg_auto_ids_url))
 
     if (hasattr(self, 'beta_settings') and self.beta_settings
         and self.beta_settings.get('source_reference')):
@@ -2550,7 +2506,8 @@ class AppInfoExternal(validation.Validated):
         raise appinfo_errors.MissingApiConfig(
             'An api_endpoint handler was specified, but the required '
             'api_config stanza was not configured.')
-      if self.threadsafe and self.runtime == 'python27':
+
+      if self.IsThreadsafe() and self.runtime == 'python27':
 
 
         for handler in self.handlers:
@@ -2715,6 +2672,14 @@ class AppInfoExternal(validation.Validated):
   def IsVm(self):
     return (self.vm or
             self.env in ['2', 'flex', 'flexible'])
+
+  def IsThreadsafe(self):
+    try:
+      if self.automatic_scaling.max_concurrent_requests == '1':
+        return False
+    except AttributeError:
+      pass
+    return self.threadsafe is None or self.threadsafe
 
 
 def ValidateHandlers(handlers, is_include_file=False):

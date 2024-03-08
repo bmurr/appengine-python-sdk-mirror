@@ -36,7 +36,6 @@ information and make it available.
 
 
 
-import logging
 import os
 
 
@@ -47,7 +46,6 @@ _handler_dir = None
 
 
 _available_builtins = None
-BUILTINS_NOT_AVAIABLE_IN_PYTHON27 = set(['datastore_admin', 'mapreduce'])
 
 
 INCLUDE_FILENAME_TEMPLATE = 'include-%s.yaml'
@@ -85,6 +83,13 @@ def _initialize_builtins():
 
 def _get_yaml_path(builtin_name, runtime):
   """Return expected path to a builtin handler's yaml file without error check.
+
+  Args:
+    builtin_name: single word name of builtin handler
+    runtime: name of the runtime
+
+  Returns:
+    the absolute path to a valid builtin handler include.yaml file
   """
   runtime_specific = os.path.join(_handler_dir, builtin_name,
                                   INCLUDE_FILENAME_TEMPLATE % runtime)
@@ -101,7 +106,7 @@ def get_yaml_path(builtin_name, runtime=''):
     runtime: name of the runtime
 
   Raises:
-    ValueError: if handler does not exist in expected directory
+    InvalidBuiltinName: if handler does not exist in expected directory
 
   Returns:
     the absolute path to a valid builtin handler include.yaml file
@@ -110,8 +115,6 @@ def get_yaml_path(builtin_name, runtime=''):
     set_builtins_dir(DEFAULT_DIR)
 
   available_builtins = set(_available_builtins)
-  if runtime == 'python27':
-    available_builtins = available_builtins - BUILTINS_NOT_AVAIABLE_IN_PYTHON27
 
   if builtin_name not in available_builtins:
     raise InvalidBuiltinName(

@@ -12,9 +12,9 @@ import sys
 import copy
 
 
-from google.appengine._internal.ruamel.yaml.compat import ordereddict, PY2, string_types, MutableSliceableSequence
-from google.appengine._internal.ruamel.yaml.scalarstring import ScalarString
-from google.appengine._internal.ruamel.yaml.anchor import Anchor
+from ruamel.yaml.compat import ordereddict, PY2, string_types, MutableSliceableSequence
+from ruamel.yaml.scalarstring import ScalarString
+from ruamel.yaml.anchor import Anchor
 
 if PY2:
     from collections import MutableSet, Sized, Set, Mapping
@@ -238,8 +238,8 @@ class CommentedBase(object):
         """
         expects comment (before/after) to be without `#` and possible have multiple lines
         """
-        from google.appengine._internal.ruamel.yaml.error import CommentMark
-        from google.appengine._internal.ruamel.yaml.tokens import CommentToken
+        from ruamel.yaml.error import CommentMark
+        from ruamel.yaml.tokens import CommentToken
 
         def comment_token(s, mark):
             # type: (Any, Any) -> Any

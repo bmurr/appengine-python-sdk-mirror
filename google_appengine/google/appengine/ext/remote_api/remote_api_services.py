@@ -21,68 +21,69 @@
 This module is shared by both the remote_api_stub and the handler.
 """
 
-from google.appengine.api import api_base_pb
-from google.appengine.api import mail_service_pb
-from google.appengine.api import mail_stub_service_pb
-from google.appengine.api import urlfetch_service_pb
-from google.appengine.api import urlfetch_stub_service_pb
-from google.appengine.api import user_service_pb
-from google.appengine.api import user_stub_service_pb
-from google.appengine.api.app_identity import app_identity_service_pb
-from google.appengine.api.app_identity import app_identity_stub_service_pb
-from google.appengine.api.blobstore import blobstore_service_pb
-from google.appengine.api.blobstore import blobstore_stub_service_pb
-from google.appengine.api.capabilities import capability_service_pb
-from google.appengine.api.capabilities import capability_stub_service_pb
-from google.appengine.api.images import images_service_pb
-from google.appengine.api.logservice import log_service_pb
-from google.appengine.api.logservice import log_stub_service_pb
-from google.appengine.api.memcache import memcache_service_pb
-from google.appengine.api.memcache import memcache_stub_service_pb
-from google.appengine.api.modules import modules_service_pb
-from google.appengine.api.search import search_service_pb
-from google.appengine.api.system import system_service_pb
-from google.appengine.api.taskqueue import taskqueue_service_pb
-from google.appengine.api.taskqueue import taskqueue_stub_service_pb
+import six
+from google.appengine.api import api_base_pb2
+from google.appengine.api import mail_service_pb2
+from google.appengine.api import mail_stub_service_pb2
+from google.appengine.api import urlfetch_service_pb2
+from google.appengine.api import urlfetch_stub_service_pb2
+from google.appengine.api import user_service_pb2
+from google.appengine.api import user_stub_service_pb2
+from google.appengine.api.app_identity import app_identity_service_pb2
+from google.appengine.api.app_identity import app_identity_stub_service_pb2
+from google.appengine.api.blobstore import blobstore_service_pb2
+from google.appengine.api.blobstore import blobstore_stub_service_pb2
+from google.appengine.api.capabilities import capability_service_pb2
+from google.appengine.api.capabilities import capability_stub_service_pb2
+from google.appengine.api.images import images_service_pb2
+from google.appengine.api.logservice import log_service_pb2
+from google.appengine.api.logservice import log_stub_service_pb2
+from google.appengine.api.memcache import memcache_service_pb2
+from google.appengine.api.memcache import memcache_stub_service_pb2
+from google.appengine.api.modules import modules_service_pb2
+from google.appengine.api.search import search_service_pb2
+from google.appengine.api.system import system_service_pb2
+from google.appengine.api.taskqueue import taskqueue_service_bytes_pb2 as taskqueue_service_pb2
+from google.appengine.api.taskqueue import taskqueue_stub_service_bytes_pb2 as taskqueue_stub_service_pb2
 from google.appengine.datastore import datastore_pb
-from google.appengine.datastore import datastore_v4_pb
-from google.appengine.ext.remote_api import remote_api_pb
+from google.appengine.datastore import datastore_v4_pb2
+from google.appengine.ext.remote_api import remote_api_bytes_pb2 as remote_api_pb2
 
 
 def get_service_pb_map():
   """Returns a mapping of all API services defined for prod Remote API use."""
   return {
       'app_identity_service': {
-          'SignForApp': (app_identity_service_pb.SignForAppRequest,
-                         app_identity_service_pb.SignForAppResponse),
-          'GetPublicCertificatesForApp': (
-              app_identity_service_pb.GetPublicCertificateForAppRequest,
-              app_identity_service_pb.GetPublicCertificateForAppResponse),
-          'GetServiceAccountName': (
-              app_identity_service_pb.GetServiceAccountNameRequest,
-              app_identity_service_pb.GetServiceAccountNameResponse),
-          'GetDefaultGcsBucketName': (
-              app_identity_service_pb.GetDefaultGcsBucketNameRequest,
-              app_identity_service_pb.GetDefaultGcsBucketNameResponse),
-          'GetAccessToken': (app_identity_service_pb.GetAccessTokenRequest,
-                             app_identity_service_pb.GetAccessTokenResponse),
+          'SignForApp': (app_identity_service_pb2.SignForAppRequest,
+                         app_identity_service_pb2.SignForAppResponse),
+          'GetPublicCertificatesForApp':
+              (app_identity_service_pb2.GetPublicCertificateForAppRequest,
+               app_identity_service_pb2.GetPublicCertificateForAppResponse),
+          'GetServiceAccountName':
+              (app_identity_service_pb2.GetServiceAccountNameRequest,
+               app_identity_service_pb2.GetServiceAccountNameResponse),
+          'GetDefaultGcsBucketName':
+              (app_identity_service_pb2.GetDefaultGcsBucketNameRequest,
+               app_identity_service_pb2.GetDefaultGcsBucketNameResponse),
+          'GetAccessToken': (app_identity_service_pb2.GetAccessTokenRequest,
+                             app_identity_service_pb2.GetAccessTokenResponse),
       },
       'blobstore': {
-          'CreateUploadURL': (blobstore_service_pb.CreateUploadURLRequest,
-                              blobstore_service_pb.CreateUploadURLResponse),
-          'DeleteBlob': (blobstore_service_pb.DeleteBlobRequest,
-                         api_base_pb.VoidProto),
-          'FetchData': (blobstore_service_pb.FetchDataRequest,
-                        blobstore_service_pb.FetchDataResponse),
-          'DecodeBlobKey': (blobstore_service_pb.DecodeBlobKeyRequest,
-                            blobstore_service_pb.DecodeBlobKeyResponse),
-          'CreateEncodedGoogleStorageKey': (
-              blobstore_service_pb.CreateEncodedGoogleStorageKeyRequest,
-              blobstore_service_pb.CreateEncodedGoogleStorageKeyResponse),
+          'CreateUploadURL': (blobstore_service_pb2.CreateUploadURLRequest,
+                              blobstore_service_pb2.CreateUploadURLResponse),
+          'DeleteBlob':
+              (blobstore_service_pb2.DeleteBlobRequest, api_base_pb2.VoidProto),
+          'FetchData': (blobstore_service_pb2.FetchDataRequest,
+                        blobstore_service_pb2.FetchDataResponse),
+          'DecodeBlobKey': (blobstore_service_pb2.DecodeBlobKeyRequest,
+                            blobstore_service_pb2.DecodeBlobKeyResponse),
+          'CreateEncodedGoogleStorageKey':
+              (blobstore_service_pb2.CreateEncodedGoogleStorageKeyRequest,
+               blobstore_service_pb2.CreateEncodedGoogleStorageKeyResponse),
       },
       'capability_service': {
-          'IsEnabled': (capability_service_pb.IsEnabledRequest,
-                        capability_service_pb.IsEnabledResponse),
+          'IsEnabled': (capability_service_pb2.IsEnabledRequest,
+                        capability_service_pb2.IsEnabledResponse),
       },
       'datastore_v3': {
           'Get': (datastore_pb.GetRequest, datastore_pb.GetResponse),
@@ -92,152 +93,153 @@ def get_service_pb_map():
                           datastore_pb.AllocateIdsResponse),
           'RunQuery': (datastore_pb.Query, datastore_pb.QueryResult),
           'Next': (datastore_pb.NextRequest, datastore_pb.QueryResult),
-          'BeginTransaction': (datastore_pb.BeginTransactionRequest,
-                               datastore_pb.Transaction),
+          'BeginTransaction':
+              (datastore_pb.BeginTransactionRequest, datastore_pb.Transaction),
           'Commit': (datastore_pb.Transaction, datastore_pb.CommitResponse),
-          'Rollback': (datastore_pb.Transaction, api_base_pb.VoidProto),
-          'GetIndices': (datastore_pb.GetIndicesRequest,
-                         datastore_pb.CompositeIndices),
+          'Rollback': (datastore_pb.Transaction, api_base_pb2.VoidProto),
+          'GetIndices':
+              (datastore_pb.GetIndicesRequest, datastore_pb.CompositeIndices),
       },
       'datastore_v4': {
-          'AllocateIds': (datastore_v4_pb.AllocateIdsRequest,
-                          datastore_v4_pb.AllocateIdsResponse),
+          'AllocateIds': (datastore_v4_pb2.AllocateIdsRequest,
+                          datastore_v4_pb2.AllocateIdsResponse),
       },
       'images': {
-          'Transform': (images_service_pb.ImagesTransformRequest,
-                        images_service_pb.ImagesTransformResponse),
-          'Composite': (images_service_pb.ImagesCompositeRequest,
-                        images_service_pb.ImagesCompositeResponse),
-          'Histogram': (images_service_pb.ImagesHistogramRequest,
-                        images_service_pb.ImagesHistogramResponse),
-          'GetUrlBase': (images_service_pb.ImagesGetUrlBaseRequest,
-                         images_service_pb.ImagesGetUrlBaseResponse),
-          'DeleteUrlBase': (images_service_pb.ImagesDeleteUrlBaseRequest,
-                            images_service_pb.ImagesDeleteUrlBaseResponse),
+          'Transform': (images_service_pb2.ImagesTransformRequest,
+                        images_service_pb2.ImagesTransformResponse),
+          'Composite': (images_service_pb2.ImagesCompositeRequest,
+                        images_service_pb2.ImagesCompositeResponse),
+          'Histogram': (images_service_pb2.ImagesHistogramRequest,
+                        images_service_pb2.ImagesHistogramResponse),
+          'GetUrlBase': (images_service_pb2.ImagesGetUrlBaseRequest,
+                         images_service_pb2.ImagesGetUrlBaseResponse),
+          'DeleteUrlBase': (images_service_pb2.ImagesDeleteUrlBaseRequest,
+                            images_service_pb2.ImagesDeleteUrlBaseResponse),
       },
       'logservice': {
-          'Flush': (log_service_pb.FlushRequest, api_base_pb.VoidProto),
+          'Flush': (log_service_pb2.FlushRequest, api_base_pb2.VoidProto),
           'Read':
-              (log_service_pb.LogReadRequest, log_service_pb.LogReadResponse),
+              (log_service_pb2.LogReadRequest, log_service_pb2.LogReadResponse),
       },
       'mail': {
-          'Send': (mail_service_pb.MailMessage, api_base_pb.VoidProto),
-          'SendToAdmins': (mail_service_pb.MailMessage, api_base_pb.VoidProto),
+          'Send': (mail_service_pb2.MailMessage, api_base_pb2.VoidProto),
+          'SendToAdmins':
+              (mail_service_pb2.MailMessage, api_base_pb2.VoidProto),
       },
       'memcache': {
-          'Get': (memcache_service_pb.MemcacheGetRequest,
-                  memcache_service_pb.MemcacheGetResponse),
-          'Set': (memcache_service_pb.MemcacheSetRequest,
-                  memcache_service_pb.MemcacheSetResponse),
-          'Delete': (memcache_service_pb.MemcacheDeleteRequest,
-                     memcache_service_pb.MemcacheDeleteResponse),
-          'Increment': (memcache_service_pb.MemcacheIncrementRequest,
-                        memcache_service_pb.MemcacheIncrementResponse),
-          'BatchIncrement': (
-              memcache_service_pb.MemcacheBatchIncrementRequest,
-              memcache_service_pb.MemcacheBatchIncrementResponse),
-          'FlushAll': (memcache_service_pb.MemcacheFlushRequest,
-                       memcache_service_pb.MemcacheFlushResponse),
-          'Stats': (memcache_service_pb.MemcacheStatsRequest,
-                    memcache_service_pb.MemcacheStatsResponse),
+          'Get': (memcache_service_pb2.MemcacheGetRequest,
+                  memcache_service_pb2.MemcacheGetResponse),
+          'Set': (memcache_service_pb2.MemcacheSetRequest,
+                  memcache_service_pb2.MemcacheSetResponse),
+          'Delete': (memcache_service_pb2.MemcacheDeleteRequest,
+                     memcache_service_pb2.MemcacheDeleteResponse),
+          'Increment': (memcache_service_pb2.MemcacheIncrementRequest,
+                        memcache_service_pb2.MemcacheIncrementResponse),
+          'BatchIncrement':
+              (memcache_service_pb2.MemcacheBatchIncrementRequest,
+               memcache_service_pb2.MemcacheBatchIncrementResponse),
+          'FlushAll': (memcache_service_pb2.MemcacheFlushRequest,
+                       memcache_service_pb2.MemcacheFlushResponse),
+          'Stats': (memcache_service_pb2.MemcacheStatsRequest,
+                    memcache_service_pb2.MemcacheStatsResponse),
       },
       'remote_datastore': {
           'RunQuery': (datastore_pb.Query, datastore_pb.QueryResult),
-          'TransactionQuery': (datastore_pb.Query,
-                               remote_api_pb.TransactionQueryResult),
-          'Transaction': (remote_api_pb.TransactionRequest,
-                          datastore_pb.PutResponse),
+          'TransactionQuery':
+              (datastore_pb.Query, remote_api_pb2.TransactionQueryResult),
+          'Transaction':
+              (remote_api_pb2.TransactionRequest, datastore_pb.PutResponse),
           'GetIDs': (datastore_pb.PutRequest, datastore_pb.PutResponse),
           'GetIDsXG': (datastore_pb.PutRequest, datastore_pb.PutResponse),
       },
       'search': {
-          'IndexDocument': (search_service_pb.IndexDocumentRequest,
-                            search_service_pb.IndexDocumentResponse),
-          'DeleteDocument': (search_service_pb.DeleteDocumentRequest,
-                             search_service_pb.DeleteDocumentResponse),
-          'ListDocuments': (search_service_pb.ListDocumentsRequest,
-                            search_service_pb.ListDocumentsResponse),
-          'ListIndexes': (search_service_pb.ListIndexesRequest,
-                          search_service_pb.ListIndexesResponse),
-          'Search': (search_service_pb.SearchRequest,
-                     search_service_pb.SearchResponse),
-          'DeleteSchema': (search_service_pb.DeleteSchemaRequest,
-                           search_service_pb.DeleteSchemaResponse),
+          'IndexDocument': (search_service_pb2.IndexDocumentRequest,
+                            search_service_pb2.IndexDocumentResponse),
+          'DeleteDocument': (search_service_pb2.DeleteDocumentRequest,
+                             search_service_pb2.DeleteDocumentResponse),
+          'ListDocuments': (search_service_pb2.ListDocumentsRequest,
+                            search_service_pb2.ListDocumentsResponse),
+          'ListIndexes': (search_service_pb2.ListIndexesRequest,
+                          search_service_pb2.ListIndexesResponse),
+          'Search': (search_service_pb2.SearchRequest,
+                     search_service_pb2.SearchResponse),
+          'DeleteSchema': (search_service_pb2.DeleteSchemaRequest,
+                           search_service_pb2.DeleteSchemaResponse),
       },
       'modules': {
-          'GetModules': (modules_service_pb.GetModulesRequest,
-                         modules_service_pb.GetModulesResponse),
-          'GetVersions': (modules_service_pb.GetVersionsRequest,
-                          modules_service_pb.GetVersionsResponse),
-          'GetDefaultVersion': (modules_service_pb.GetDefaultVersionRequest,
-                                modules_service_pb.GetDefaultVersionResponse),
-          'GetNumInstances': (modules_service_pb.GetNumInstancesRequest,
-                              modules_service_pb.GetNumInstancesResponse),
-          'SetNumInstances': (modules_service_pb.SetNumInstancesRequest,
-                              modules_service_pb.SetNumInstancesResponse),
-          'StartModule': (modules_service_pb.StartModuleRequest,
-                          modules_service_pb.StartModuleResponse),
-          'StopModule': (modules_service_pb.StopModuleRequest,
-                         modules_service_pb.StopModuleResponse),
-          'GetHostname': (modules_service_pb.GetHostnameRequest,
-                          modules_service_pb.GetHostnameResponse),
+          'GetModules': (modules_service_pb2.GetModulesRequest,
+                         modules_service_pb2.GetModulesResponse),
+          'GetVersions': (modules_service_pb2.GetVersionsRequest,
+                          modules_service_pb2.GetVersionsResponse),
+          'GetDefaultVersion': (modules_service_pb2.GetDefaultVersionRequest,
+                                modules_service_pb2.GetDefaultVersionResponse),
+          'GetNumInstances': (modules_service_pb2.GetNumInstancesRequest,
+                              modules_service_pb2.GetNumInstancesResponse),
+          'SetNumInstances': (modules_service_pb2.SetNumInstancesRequest,
+                              modules_service_pb2.SetNumInstancesResponse),
+          'StartModule': (modules_service_pb2.StartModuleRequest,
+                          modules_service_pb2.StartModuleResponse),
+          'StopModule': (modules_service_pb2.StopModuleRequest,
+                         modules_service_pb2.StopModuleResponse),
+          'GetHostname': (modules_service_pb2.GetHostnameRequest,
+                          modules_service_pb2.GetHostnameResponse),
       },
       'system': {
-          'GetSystemStats': (system_service_pb.GetSystemStatsRequest,
-                             system_service_pb.GetSystemStatsResponse),
-          'StartBackgroundRequest': (
-              system_service_pb.StartBackgroundRequestRequest,
-              system_service_pb.StartBackgroundRequestResponse),
+          'GetSystemStats': (system_service_pb2.GetSystemStatsRequest,
+                             system_service_pb2.GetSystemStatsResponse),
+          'StartBackgroundRequest':
+              (system_service_pb2.StartBackgroundRequestRequest,
+               system_service_pb2.StartBackgroundRequestResponse),
       },
       'taskqueue': {
-          'Add': (taskqueue_service_pb.TaskQueueAddRequest,
-                  taskqueue_service_pb.TaskQueueAddResponse),
-          'BulkAdd': (taskqueue_service_pb.TaskQueueBulkAddRequest,
-                      taskqueue_service_pb.TaskQueueBulkAddResponse),
-          'FetchQueues': (taskqueue_service_pb.TaskQueueFetchQueuesRequest,
-                          taskqueue_service_pb.TaskQueueFetchQueuesResponse),
-          'FetchQueueStats': (
-              taskqueue_service_pb.TaskQueueFetchQueueStatsRequest,
-              taskqueue_service_pb.TaskQueueFetchQueueStatsResponse),
-          'Delete': (taskqueue_service_pb.TaskQueueDeleteRequest,
-                     taskqueue_service_pb.TaskQueueDeleteResponse),
-          'ForceRun': (taskqueue_service_pb.TaskQueueForceRunRequest,
-                       taskqueue_service_pb.TaskQueueForceRunResponse),
-          'UpdateQueue': (taskqueue_service_pb.TaskQueueUpdateQueueRequest,
-                          taskqueue_service_pb.TaskQueueUpdateQueueResponse),
-          'PauseQueue': (taskqueue_service_pb.TaskQueuePauseQueueRequest,
-                         taskqueue_service_pb.TaskQueuePauseQueueResponse),
-          'PurgeQueue': (taskqueue_service_pb.TaskQueuePurgeQueueRequest,
-                         taskqueue_service_pb.TaskQueuePurgeQueueResponse),
-          'DeleteQueue': (taskqueue_service_pb.TaskQueueDeleteQueueRequest,
-                          taskqueue_service_pb.TaskQueueDeleteQueueResponse),
-          'DeleteGroup': (taskqueue_service_pb.TaskQueueDeleteGroupRequest,
-                          taskqueue_service_pb.TaskQueueDeleteGroupResponse),
-          'QueryTasks': (taskqueue_service_pb.TaskQueueQueryTasksRequest,
-                         taskqueue_service_pb.TaskQueueQueryTasksResponse),
-          'FetchTask': (taskqueue_service_pb.TaskQueueFetchTaskRequest,
-                        taskqueue_service_pb.TaskQueueFetchTaskResponse),
-          'QueryAndOwnTasks': (
-              taskqueue_service_pb.TaskQueueQueryAndOwnTasksRequest,
-              taskqueue_service_pb.TaskQueueQueryAndOwnTasksResponse),
-          'ModifyTaskLease': (
-              taskqueue_service_pb.TaskQueueModifyTaskLeaseRequest,
-              taskqueue_service_pb.TaskQueueModifyTaskLeaseResponse),
-          'UpdateStorageLimit': (
-              taskqueue_service_pb.TaskQueueUpdateStorageLimitRequest,
-              taskqueue_service_pb.TaskQueueUpdateStorageLimitResponse),
+          'Add': (taskqueue_service_pb2.TaskQueueAddRequest,
+                  taskqueue_service_pb2.TaskQueueAddResponse),
+          'BulkAdd': (taskqueue_service_pb2.TaskQueueBulkAddRequest,
+                      taskqueue_service_pb2.TaskQueueBulkAddResponse),
+          'FetchQueues': (taskqueue_service_pb2.TaskQueueFetchQueuesRequest,
+                          taskqueue_service_pb2.TaskQueueFetchQueuesResponse),
+          'FetchQueueStats':
+              (taskqueue_service_pb2.TaskQueueFetchQueueStatsRequest,
+               taskqueue_service_pb2.TaskQueueFetchQueueStatsResponse),
+          'Delete': (taskqueue_service_pb2.TaskQueueDeleteRequest,
+                     taskqueue_service_pb2.TaskQueueDeleteResponse),
+          'ForceRun': (taskqueue_service_pb2.TaskQueueForceRunRequest,
+                       taskqueue_service_pb2.TaskQueueForceRunResponse),
+          'UpdateQueue': (taskqueue_service_pb2.TaskQueueUpdateQueueRequest,
+                          taskqueue_service_pb2.TaskQueueUpdateQueueResponse),
+          'PauseQueue': (taskqueue_service_pb2.TaskQueuePauseQueueRequest,
+                         taskqueue_service_pb2.TaskQueuePauseQueueResponse),
+          'PurgeQueue': (taskqueue_service_pb2.TaskQueuePurgeQueueRequest,
+                         taskqueue_service_pb2.TaskQueuePurgeQueueResponse),
+          'DeleteQueue': (taskqueue_service_pb2.TaskQueueDeleteQueueRequest,
+                          taskqueue_service_pb2.TaskQueueDeleteQueueResponse),
+          'DeleteGroup': (taskqueue_service_pb2.TaskQueueDeleteGroupRequest,
+                          taskqueue_service_pb2.TaskQueueDeleteGroupResponse),
+          'QueryTasks': (taskqueue_service_pb2.TaskQueueQueryTasksRequest,
+                         taskqueue_service_pb2.TaskQueueQueryTasksResponse),
+          'FetchTask': (taskqueue_service_pb2.TaskQueueFetchTaskRequest,
+                        taskqueue_service_pb2.TaskQueueFetchTaskResponse),
+          'QueryAndOwnTasks':
+              (taskqueue_service_pb2.TaskQueueQueryAndOwnTasksRequest,
+               taskqueue_service_pb2.TaskQueueQueryAndOwnTasksResponse),
+          'ModifyTaskLease':
+              (taskqueue_service_pb2.TaskQueueModifyTaskLeaseRequest,
+               taskqueue_service_pb2.TaskQueueModifyTaskLeaseResponse),
+          'UpdateStorageLimit':
+              (taskqueue_service_pb2.TaskQueueUpdateStorageLimitRequest,
+               taskqueue_service_pb2.TaskQueueUpdateStorageLimitResponse),
       },
       'urlfetch': {
-          'Fetch': (urlfetch_service_pb.URLFetchRequest,
-                    urlfetch_service_pb.URLFetchResponse),
+          'Fetch': (urlfetch_service_pb2.URLFetchRequest,
+                    urlfetch_service_pb2.URLFetchResponse),
       },
       'user': {
-          'CreateLoginURL': (user_service_pb.CreateLoginURLRequest,
-                             user_service_pb.CreateLoginURLResponse),
-          'CreateLogoutURL': (user_service_pb.CreateLogoutURLRequest,
-                              user_service_pb.CreateLogoutURLResponse),
-          'GetOAuthUser': (user_service_pb.GetOAuthUserRequest,
-                           user_service_pb.GetOAuthUserResponse),
+          'CreateLoginURL': (user_service_pb2.CreateLoginURLRequest,
+                             user_service_pb2.CreateLoginURLResponse),
+          'CreateLogoutURL': (user_service_pb2.CreateLogoutURLRequest,
+                              user_service_pb2.CreateLogoutURLResponse),
+          'GetOAuthUser': (user_service_pb2.GetOAuthUserRequest,
+                           user_service_pb2.GetOAuthUserResponse),
       },
   }
 
@@ -247,87 +249,88 @@ def get_stub_exclusive_service_pb_map():
   return {
       'app_identity_service': {
           'SetDefaultGcsBucketName': (
-              app_identity_stub_service_pb.SetDefaultGcsBucketNameRequest,
-              api_base_pb.VoidProto),
+              app_identity_stub_service_pb2.SetDefaultGcsBucketNameRequest,
+              api_base_pb2.VoidProto),
       },
       'blobstore': {
-          'StoreBlob': (blobstore_stub_service_pb.StoreBlobRequest,
-                        api_base_pb.VoidProto),
+          'StoreBlob': (blobstore_stub_service_pb2.StoreBlobRequest,
+                        api_base_pb2.VoidProto),
           'SetBlobStorageType': (
-              blobstore_stub_service_pb.SetBlobStorageTypeRequest,
-              api_base_pb.VoidProto),
+              blobstore_stub_service_pb2.SetBlobStorageTypeRequest,
+              api_base_pb2.VoidProto),
       },
       'capability_service': {
           'SetCapabilityStatus': (
-              capability_stub_service_pb.SetCapabilityStatusRequest,
-              capability_stub_service_pb.SetCapabilityStatusResponse),
+              capability_stub_service_pb2.SetCapabilityStatusRequest,
+              capability_stub_service_pb2.SetCapabilityStatusResponse),
       },
       'logservice': {
-          'AddAppLogLine': (log_stub_service_pb.AddAppLogLineRequest,
-                            api_base_pb.VoidProto),
-          'AddRequestInfo': (log_stub_service_pb.AddRequestInfoRequest,
-                             api_base_pb.VoidProto),
-          'EndRequestLog': (log_stub_service_pb.EndRequestLogRequest,
-                            api_base_pb.VoidProto),
-          'StartRequestLog': (log_stub_service_pb.StartRequestLogRequest,
-                              api_base_pb.VoidProto)
+          'AddAppLogLine': (log_stub_service_pb2.AddAppLogLineRequest,
+                            api_base_pb2.VoidProto),
+          'AddRequestInfo': (log_stub_service_pb2.AddRequestInfoRequest,
+                             api_base_pb2.VoidProto),
+          'EndRequestLog': (log_stub_service_pb2.EndRequestLogRequest,
+                            api_base_pb2.VoidProto),
+          'StartRequestLog': (log_stub_service_pb2.StartRequestLogRequest,
+                              api_base_pb2.VoidProto)
       },
       'mail': {
-          'GetSentMessages': (api_base_pb.VoidProto,
-                              mail_stub_service_pb.GetSentMessagesResponse),
-          'ClearSentMessages': (api_base_pb.VoidProto,
-                                mail_stub_service_pb.ClearSentMessagesResponse),
-          'GetLogMailBody': (api_base_pb.VoidProto,
-                             mail_stub_service_pb.GetLogMailBodyResponse),
-          'SetLogMailBody': (mail_stub_service_pb.SetLogMailBodyRequest,
-                             api_base_pb.VoidProto),
-          'GetLogMailLevel': (api_base_pb.VoidProto,
-                              mail_stub_service_pb.GetLogMailLevelResponse),
-          'SetLogMailLevel': (mail_stub_service_pb.SetLogMailLevelRequest,
-                              api_base_pb.VoidProto),
+          'GetSentMessages': (api_base_pb2.VoidProto,
+                              mail_stub_service_pb2.GetSentMessagesResponse),
+          'ClearSentMessages': (
+              api_base_pb2.VoidProto,
+              mail_stub_service_pb2.ClearSentMessagesResponse),
+          'GetLogMailBody': (api_base_pb2.VoidProto,
+                             mail_stub_service_pb2.GetLogMailBodyResponse),
+          'SetLogMailBody': (mail_stub_service_pb2.SetLogMailBodyRequest,
+                             api_base_pb2.VoidProto),
+          'GetLogMailLevel': (api_base_pb2.VoidProto,
+                              mail_stub_service_pb2.GetLogMailLevelResponse),
+          'SetLogMailLevel': (mail_stub_service_pb2.SetLogMailLevelRequest,
+                              api_base_pb2.VoidProto),
       },
       'memcache': {
-          'AdvanceClock': (memcache_stub_service_pb.AdvanceClockRequest,
-                           memcache_stub_service_pb.AdvanceClockResponse),
-          'SetClock': (memcache_stub_service_pb.SetClockRequest,
-                       api_base_pb.VoidProto),
+          'AdvanceClock': (memcache_stub_service_pb2.AdvanceClockRequest,
+                           memcache_stub_service_pb2.AdvanceClockResponse),
+          'SetClock': (memcache_stub_service_pb2.SetClockRequest,
+                       api_base_pb2.VoidProto),
           'GetLruChainLength': (
-              api_base_pb.VoidProto,
-              memcache_stub_service_pb.GetLruChainLengthResponse),
-          'SetMaxSize': (memcache_stub_service_pb.SetMaxSizeRequest,
-                         api_base_pb.VoidProto),
+              api_base_pb2.VoidProto,
+              memcache_stub_service_pb2.GetLruChainLengthResponse),
+          'SetMaxSize': (memcache_stub_service_pb2.SetMaxSizeRequest,
+                         api_base_pb2.VoidProto),
       },
       'taskqueue': {
-          'SetUpStub': (taskqueue_stub_service_pb.SetUpStubRequest,
-                        api_base_pb.VoidProto),
-          'GetQueues': (api_base_pb.VoidProto,
-                        taskqueue_stub_service_pb.GetQueuesResponse),
-          'DeleteTask': (taskqueue_service_pb.TaskQueueDeleteRequest,
-                         api_base_pb.VoidProto),
-          'FlushQueue': (taskqueue_stub_service_pb.FlushQueueRequest,
-                         api_base_pb.VoidProto),
+          'SetUpStub': (taskqueue_stub_service_pb2.SetUpStubRequest,
+                        api_base_pb2.VoidProto),
+          'GetQueues': (api_base_pb2.VoidProto,
+                        taskqueue_stub_service_pb2.GetQueuesResponse),
+          'DeleteTask': (taskqueue_service_pb2.TaskQueueDeleteRequest,
+                         api_base_pb2.VoidProto),
+          'FlushQueue': (taskqueue_stub_service_pb2.FlushQueueRequest,
+                         api_base_pb2.VoidProto),
           'GetFilteredTasks': (
-              taskqueue_stub_service_pb.GetFilteredTasksRequest,
-              taskqueue_stub_service_pb.GetFilteredTasksResponse),
+              taskqueue_stub_service_pb2.GetFilteredTasksRequest,
+              taskqueue_stub_service_pb2.GetFilteredTasksResponse),
           'GetQueueStateInfo': (
-              api_base_pb.VoidProto,
-              taskqueue_stub_service_pb.GetQueueStateInfoResponse),
-          'LoadQueueXml': (taskqueue_stub_service_pb.LoadQueueXmlRequest,
-                           api_base_pb.VoidProto),
+              api_base_pb2.VoidProto,
+              taskqueue_stub_service_pb2.GetQueueStateInfoResponse),
+          'LoadQueueXml': (taskqueue_stub_service_pb2.LoadQueueXmlRequest,
+                           api_base_pb2.VoidProto),
           'SetTaskQueueClock': (
-              taskqueue_stub_service_pb.SetTaskQueueClockRequest,
-              api_base_pb.VoidProto),
+              taskqueue_stub_service_pb2.SetTaskQueueClockRequest,
+              api_base_pb2.VoidProto),
           'PatchQueueYamlParser': (
-              taskqueue_stub_service_pb.PatchQueueYamlParserRequest,
-              api_base_pb.VoidProto),
+              taskqueue_stub_service_pb2.PatchQueueYamlParserRequest,
+              api_base_pb2.VoidProto),
       },
       'urlfetch': {
-          'SetHttpProxy': (urlfetch_stub_service_pb.SetHttpProxyRequest,
-                           api_base_pb.VoidProto),
+          'SetHttpProxy': (urlfetch_stub_service_pb2.SetHttpProxyRequest,
+                           api_base_pb2.VoidProto),
       },
       'user': {
-          'SetOAuthUser': (user_stub_service_pb.SetOAuthUserRequest,
-                           api_base_pb.VoidProto),
+          'SetOAuthUser': (user_stub_service_pb2.SetOAuthUserRequest,
+                           api_base_pb2.VoidProto),
       }
   }
 
@@ -341,7 +344,7 @@ def get_stub_service_pb_map():
   service_pb_map = get_service_pb_map()
   stub_exclusive_services = get_stub_exclusive_service_pb_map()
 
-  for stub, services in service_pb_map.iteritems():
+  for stub, services in six.iteritems(service_pb_map):
     services.update(stub_exclusive_services.get(stub, {}))
 
   return service_pb_map

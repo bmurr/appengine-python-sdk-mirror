@@ -436,11 +436,20 @@ class MessageTest extends ApiProxyTestBase {
     $header->setName("in-reply-to");
     $header->setValue("data");
 
-    $multi_header = array("list-id" => "data2", "references" => "data3");
+    $multi_header = array("list-id" => "data2",
+      "list-unsubscribe" => "http://example.org/unsub",
+      "list-unsubscribe-post" => "http://example.org/unsub_post",
+      "references" => "data3");
     $message->addHeaderArray($multi_header);
     $header = $message_proto->addHeader();
     $header->setName("list-id");
     $header->setValue("data2");
+    $header = $message_proto->addHeader();
+    $header->setName("list-unsubscribe");
+    $header->setValue("http://example.org/unsub");
+    $header = $message_proto->addHeader();
+    $header->setName("list-unsubscribe-post");
+    $header->setValue("http://example.org/unsub_post");
     $header = $message_proto->addHeader();
     $header->setName("references");
     $header->setValue("data3");

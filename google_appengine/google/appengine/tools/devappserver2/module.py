@@ -61,7 +61,6 @@ from google.appengine.tools.devappserver2 import errors
 from google.appengine.tools.devappserver2 import file_watcher
 from google.appengine.tools.devappserver2 import gcs_server
 from google.appengine.tools.devappserver2 import http_proxy
-from google.appengine.tools.devappserver2 import http_runtime
 from google.appengine.tools.devappserver2 import http_runtime_constants
 from google.appengine.tools.devappserver2 import instance
 from google.appengine.tools.devappserver2 import login
@@ -782,17 +781,6 @@ class Module(object):
       environ['SERVER_NAME'] = environ['HTTP_HOST'].rsplit(':', 1)[0]  # pytype: disable=attribute-error  # dynamic-method-lookup
     environ['DEFAULT_VERSION_HOSTNAME'] = '%s:%s' % (environ['SERVER_NAME'],
                                                      self._default_version_port)
-
-    runtime_config = self._get_runtime_config()
-    # Python monkey-patches out os.environ because some environment variables
-    # are set per-request (REQUEST_ID_HASE and REQUEST_LOG_ID for example).
-    # This means that although these environment variables could be set once
-    # at startup, they must be passed in during each request.
-    if (runtime_config.vm and
-        self._module_configuration.effective_runtime == 'python27'):
-      environ.update(
-          http_runtime.get_vm_environment_variables(self._module_configuration,
-                                                    runtime_config))
 
     with self._request_data.request(environ,
                                     self._module_configuration) as request_id:

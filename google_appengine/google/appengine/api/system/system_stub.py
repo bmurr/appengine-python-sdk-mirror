@@ -29,7 +29,7 @@ import random
 
 from google.appengine.api import apiproxy_stub
 from google.appengine.api import request_info
-from google.appengine.api.system import system_service_pb
+from google.appengine.api.system import system_service_pb2
 from google.appengine.runtime import apiproxy_errors
 
 
@@ -70,13 +70,11 @@ class SystemServiceStub(apiproxy_stub.APIProxyStub):
                               unused_request_id):
     """Mock version of System stats always returns fixed values."""
 
-    cpu = response.mutable_cpu()
     if self.default_cpu:
-      cpu.CopyFrom(self.default_cpu)
+      response.cpu.CopyFrom(self.default_cpu)
 
-    memory = response.mutable_memory()
     if self.default_memory:
-      memory.CopyFrom(self.default_memory)
+      response.memory.CopyFrom(self.default_memory)
 
     self.num_calls["GetSystemStats"] = (
         self.num_calls.get("GetSystemStats", 0) + 1)
@@ -92,11 +90,15 @@ class SystemServiceStub(apiproxy_stub.APIProxyStub):
           background_request_id)
     except request_info.NotSupportedWithAutoScalingError:
       raise apiproxy_errors.ApplicationError(
-          system_service_pb.SystemServiceError.BACKEND_REQUIRED)
+          system_service_pb2.SystemServiceError.BACKEND_REQUIRED)
     except request_info.BackgroundThreadLimitReachedError:
       raise apiproxy_errors.ApplicationError(
-          system_service_pb.SystemServiceError.LIMIT_REACHED)
-    response.set_request_id(background_request_id)
+          system_service_pb2.SystemServiceError.LIMIT_REACHED)
+    except request_info.Error as error:
+      raise apiproxy_errors.ApplicationError(
+          system_service_pb2.SystemServiceError.INTERNAL_ERROR,
+          error.args[0] if error.args else '')
+    response.request_id = background_request_id
 
   def set_backend_info(self, backend_info):
     """Set backend info. Typically a list of BackendEntry objects."""

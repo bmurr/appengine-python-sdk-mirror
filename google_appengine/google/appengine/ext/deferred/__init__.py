@@ -21,12 +21,4 @@
 
 
 
-
-
-
-
-from deferred import *
-
-
-if __name__ == "__main__":
-  main()
+from google.appengine.ext.deferred.deferred import *

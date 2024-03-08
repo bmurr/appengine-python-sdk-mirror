@@ -1,5 +1,6 @@
+#!/usr/bin/env python
 #
-# Copyright 2008 The ndb Authors. All Rights Reserved.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +13,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 """The Key class, and associated utilities.
 
@@ -83,24 +100,29 @@ namespace manager.  To explicitly select the empty namespace pass
 namespace=''.
 """
 
-__author__ = 'guido@google.com (Guido van Rossum)'
-
 import base64
 import os
 
-from .google_imports import datastore_errors
-from .google_imports import datastore_types
-from .google_imports import namespace_manager
-from .google_imports import entity_pb
+from google.appengine.api import cmp_compat
+from google.appengine.api import datastore_errors
+from google.appengine.api import datastore_types
+from google.appengine.api import full_app_id
+from google.appengine.api import namespace_manager
+from google.appengine.ext.ndb import utils
+import six
+from six.moves import range
 
-from . import utils
+from google.appengine.datastore import entity_bytes_pb2 as entity_pb2
 
 __all__ = ['Key']
 
-_MAX_LONG = 2L ** 63  # Use 2L, see issue 65.  http://goo.gl/ELczz
+_MAX_LONG = 2**63
 _MAX_KEYPART_BYTES = 500
 
 
+
+
+@cmp_compat.total_ordering_from_cmp
 class Key(object):
   """An immutable datastore key.
 
@@ -219,10 +241,15 @@ class Key(object):
           raise TypeError('Key() with positional arguments '
                           'cannot accept flat as a keyword argument.')
         kwargs['flat'] = _args
+
+
+    if int(os.environ.get('NDB_PY2_UNPICKLE_COMPAT', '0')):
+      kwargs = {six.ensure_str(k): v for (k, v) in kwargs.items()}
+
     self = super(Key, cls).__new__(cls)
-    # Either __reference or (__pairs, __app, __namespace) must be set.
-    # Either one fully specifies a key; if both are set they must be
-    # consistent with each other.
+
+
+
     if 'reference' in kwargs or 'serialized' in kwargs or 'urlsafe' in kwargs:
       (self.__reference,
        self.__pairs,
@@ -246,29 +273,29 @@ class Key(object):
       if len(flat) % 2:
         raise ValueError('Key() must have an even number of positional '
                          'arguments.')
-      pairs = [(flat[i], flat[i + 1]) for i in xrange(0, len(flat), 2)]
+      pairs = [(flat[i], flat[i + 1]) for i in range(0, len(flat), 2)]
     else:
       pairs = list(pairs)
     if not pairs:
       raise TypeError('Key must consist of at least one pair.')
     for i, (kind, id) in enumerate(pairs):
-      if isinstance(id, unicode):
-        id = id.encode('utf8')
+      if isinstance(id, six.text_type):
+        id = six.ensure_binary(id)
       elif id is None:
         if i + 1 < len(pairs):
           raise datastore_errors.BadArgumentError(
               'Incomplete Key entry must be last')
       else:
-        if not isinstance(id, (int, long, str)):
+        if not isinstance(id, six.integer_types + (six.binary_type,)):
           raise TypeError('Key id must be a string or a number; received %r' %
                           id)
       if isinstance(kind, type):
         kind = kind._get_kind()
-      if isinstance(kind, unicode):
-        kind = kind.encode('utf8')
-      if not isinstance(kind, str):
-        raise TypeError('Key kind must be a string or Model class; '
-                        'received %r' % kind)
+      if isinstance(kind, six.text_type):
+        kind = six.ensure_binary(kind)
+      if not isinstance(kind, six.binary_type):
+        raise TypeError(
+            'Key kind must be a string or Model class; received %r' % kind)
       if not id:
         id = None
       pairs[i] = (kind, id)
@@ -279,25 +306,31 @@ class Key(object):
       if not parent.id():
         raise datastore_errors.BadArgumentError(
             'Parent cannot have incomplete key')
-      pairs[:0] = parent.pairs()
+      pairs[:0] = parent.__pairs
       if app:
         if app != parent.app():
           raise ValueError('Cannot specify a different app %r '
                            'than the parent app %r' %
                            (app, parent.app()))
       else:
-        app = parent.app()
+        app = parent.__app
       if namespace is not None:
         if namespace != parent.namespace():
           raise ValueError('Cannot specify a different namespace %r '
                            'than the parent namespace %r' %
                            (namespace, parent.namespace()))
       else:
-        namespace = parent.namespace()
+        namespace = parent.__namespace
     if not app:
       app = _DefaultAppId()
     if namespace is None:
-      namespace = _DefaultNamespace()
+      namespace = namespace_manager.get_namespace()
+
+
+
+    app = six.ensure_binary(app)
+    namespace = six.ensure_binary(namespace)
+
     return tuple(pairs), app, namespace
 
   @staticmethod
@@ -320,13 +353,13 @@ class Key(object):
       reference = _ReferenceFromReference(reference)
     pairs = []
     elem = None
-    path = reference.path()
-    for elem in path.element_list():
-      kind = elem.type()
-      if elem.has_id():
-        id_or_name = elem.id()
+    path = reference.path
+    for elem in path.element:
+      kind = six.ensure_binary(elem.type)
+      if elem.HasField('id'):
+        id_or_name = elem.id
       else:
-        id_or_name = elem.name()
+        id_or_name = six.ensure_binary(elem.name)
       if not id_or_name:
         id_or_name = None
       tup = (kind, id_or_name)
@@ -334,23 +367,34 @@ class Key(object):
     if elem is None:
       raise RuntimeError('Key reference has no path or elements (%r, %r, %r).'
                          % (urlsafe, serialized, str(reference)))
-    # TODO: ensure that each element has a type and either an id or a name
-    # You needn't specify app= or namespace= together with reference=,
-    # serialized= or urlsafe=, but if you do, their values must match
-    # what is already in the reference.
-    ref_app = reference.app()
+
+
+
+
+    ref_app = reference.app
     if app is not None:
       if app != ref_app:
         raise RuntimeError('Key reference constructed uses a different app %r '
                            'than the one specified %r' %
                            (ref_app, app))
-    ref_namespace = reference.name_space()
+    ref_namespace = reference.name_space
     if namespace is not None:
       if namespace != ref_namespace:
         raise RuntimeError('Key reference constructed uses a different '
                            'namespace %r than the one specified %r' %
                            (ref_namespace, namespace))
+
+
+
+    ref_app = six.ensure_binary(ref_app)
+    ref_namespace = six.ensure_binary(ref_namespace)
+
     return (reference, tuple(pairs), ref_app, ref_namespace)
+
+  def _bytes2str(self, val):
+    if isinstance(val, bytes):
+      val = six.ensure_str(val)
+    return val
 
   def __repr__(self):
     """String representation, used by str() and repr().
@@ -358,20 +402,18 @@ class Key(object):
     We produce a short string that conveys all relevant information,
     suppressing app and namespace when they are equal to the default.
     """
-    # TODO: Instead of "Key('Foo', 1)" perhaps return "Key(Foo, 1)" ?
+
     args = []
     for item in self.flat():
       if not item:
         args.append('None')
-      elif isinstance(item, basestring):
-        if not isinstance(item, str):
-          raise TypeError('Key item is not an 8-bit string %r' % item)
+      elif isinstance(item, six.string_types):
         args.append(repr(item))
       else:
         args.append(str(item))
     if self.app() != _DefaultAppId():
       args.append('app=%r' % self.app())
-    if self.namespace() != _DefaultNamespace():
+    if self.namespace() != namespace_manager.get_namespace():
       args.append('namespace=%r' % self.namespace())
     return 'Key(%s)' % ', '.join(args)
 
@@ -379,16 +421,16 @@ class Key(object):
 
   def __hash__(self):
     """Hash value, for use in dict lookups."""
-    # This ignores app and namespace, which is fine since hash()
-    # doesn't need to return a unique value -- it only needs to ensure
-    # that the hashes of equal keys are equal, not the other way
-    # around.
+
+
+
+
     return hash(tuple(self.pairs()))
 
   def __eq__(self, other):
     """Equality comparison operation."""
-    # This does not use __tuple() because it is usually enough to
-    # compare pairs(), and we're performance-conscious here.
+
+
     if not isinstance(other, Key):
       return NotImplemented
     return (self.__pairs == other.__pairs and
@@ -401,38 +443,27 @@ class Key(object):
       return NotImplemented
     return not self.__eq__(other)
 
-  def __tuple(self):
-    """Helper to return an orderable tuple."""
-    return (self.__app, self.__namespace, self.__pairs)
+  def __cmp__(self, other):
 
-  def __lt__(self, other):
-    """Less than ordering."""
     if not isinstance(other, Key):
       return NotImplemented
-    return self.__tuple() < other.__tuple()
 
-  def __le__(self, other):
-    """Less than or equal ordering."""
-    if not isinstance(other, Key):
-      return NotImplemented
-    return self.__tuple() <= other.__tuple()
 
-  def __gt__(self, other):
-    """Greater than ordering."""
-    if not isinstance(other, Key):
-      return NotImplemented
-    return self.__tuple() > other.__tuple()
+    tuple_1 = (
+        self.__app,
+        self.__namespace,
+        _ConvertPairsForComparison(self.__pairs))
+    tuple_2 = (
+        other.__app,
+        other.__namespace,
+        _ConvertPairsForComparison(other.__pairs))
 
-  def __ge__(self, other):
-    """Greater than or equal ordering."""
-    if not isinstance(other, Key):
-      return NotImplemented
-    return self.__tuple() >= other.__tuple()
+    return cmp_compat.cmp(tuple_1, tuple_2)
 
   def __getstate__(self):
     """Private API used for pickling."""
-    # If any changes are made to this function pickle compatibility tests should
-    # be updated.
+
+
     return ({'pairs': self.__pairs,
              'app': self.__app,
              'namespace': self.__namespace},)
@@ -446,10 +477,12 @@ class Key(object):
     if not isinstance(kwargs, dict):
       raise TypeError('Key accepts a dict of keyword arguments as state; '
                       'received %r' % kwargs)
+    kwargs = {six.ensure_text(k): v for k, v in kwargs.items()}
     self.__reference = None
-    self.__pairs = tuple(kwargs['pairs'])
-    self.__app = kwargs['app']
-    self.__namespace = kwargs['namespace']
+    (self.__pairs, self.__app, self.__namespace) = self._parse_from_args(
+        pairs=tuple(kwargs['pairs']),
+        app=kwargs['app'],
+        namespace=kwargs['namespace'])
 
   def __getnewargs__(self):
     """Private API used for pickling."""
@@ -476,11 +509,11 @@ class Key(object):
 
   def namespace(self):
     """Return the namespace."""
-    return self.__namespace
+    return self._bytes2str(self.__namespace)
 
   def app(self):
     """Return the application id."""
-    return self.__app
+    return self._bytes2str(self.__app)
 
   def id(self):
     """Return the string or integer id in the last (kind, id) pair, if any.
@@ -488,7 +521,7 @@ class Key(object):
     Returns:
       A string or integer id, or None if the key is incomplete.
     """
-    return self.__pairs[-1][1]
+    return self._bytes2str(self.__pairs[-1][1])
 
   def string_id(self):
     """Return the string id in the last (kind, id) pair, if any.
@@ -497,7 +530,7 @@ class Key(object):
       A string id, or None if the key has an integer id or is incomplete.
     """
     id = self.id()
-    if not isinstance(id, basestring):
+    if not isinstance(id, (str, bytes)):
       id = None
     return id
 
@@ -508,20 +541,21 @@ class Key(object):
       An integer id, or None if the key has a string id or is incomplete.
     """
     id = self.id()
-    if not isinstance(id, (int, long)):
+    if not isinstance(id, six.integer_types):
       id = None
     return id
 
   def pairs(self):
     """Return a tuple of (kind, id) pairs."""
-    return self.__pairs
+    return tuple((self._bytes2str(p[0]), self._bytes2str(p[1]))
+                 for p in self.__pairs)
 
   def flat(self):
     """Return a tuple of alternating kind and id values."""
     flat = []
-    for kind, id in self.__pairs:
+    for kind, ID in self.pairs():
       flat.append(kind)
-      flat.append(id)
+      flat.append(ID)
     return tuple(flat)
 
   def kind(self):
@@ -529,12 +563,12 @@ class Key(object):
 
     This is the kind from the last (kind, id) pair.
     """
-    return self.__pairs[-1][0]
+    return self._bytes2str(self.__pairs[-1][0])
 
   def reference(self):
     """Return the Reference object for this Key.
 
-    This is a entity_pb.Reference instance -- a protocol buffer class
+    This is a entity_pb2.Reference instance -- a protocol buffer class
     used by the lower-level API to the datastore.
 
     NOTE: The caller should not mutate the return value.
@@ -548,7 +582,7 @@ class Key(object):
 
   def serialized(self):
     """Return a serialized Reference object for this Key."""
-    return self.reference().Encode()
+    return self.reference().SerializeToString()
 
   def urlsafe(self):
     """Return a url-safe string encoding this Key's Reference.
@@ -557,12 +591,12 @@ class Key(object):
     the strings used to represent Keys in GQL and in the App Engine
     Admin Console.
     """
-    # This is 3-4x faster than urlsafe_b64decode()
-    urlsafe = base64.b64encode(self.reference().Encode())
-    return urlsafe.rstrip('=').replace('+', '-').replace('/', '_')
 
-  # Datastore API using the default context.
-  # These use local import since otherwise they'd be recursive imports.
+    urlsafe = base64.b64encode(self.reference().SerializeToString())
+    return urlsafe.rstrip(b'=').replace(b'+', b'-').replace(b'/', b'_')
+
+
+
 
   def get(self, **ctx_options):
     """Synchronously get the entity for this Key.
@@ -577,7 +611,7 @@ class Key(object):
     If no such entity exists, a Future is still returned, and the
     Future's eventual return result be None.
     """
-    from . import model, tasklets
+    from google.appengine.ext.ndb import model, tasklets
     ctx = tasklets.get_context()
     cls = model.Model._kind_map.get(self.kind())
     if cls:
@@ -605,7 +639,7 @@ class Key(object):
     returned.  In all cases the Future's result is None (i.e. there is
     no way to tell whether the entity existed or not).
     """
-    from . import tasklets, model
+    from google.appengine.ext.ndb import tasklets, model
     ctx = tasklets.get_context()
     cls = model.Model._kind_map.get(self.kind())
     if cls:
@@ -626,8 +660,8 @@ class Key(object):
     return datastore_types.Key(encoded=self.urlsafe())
 
 
-# The remaining functions in this module are private.
-# TODO: Conform to PEP 8 naming, e.g. _construct_reference() etc.
+
+
 
 @utils.positional(1)
 def _ConstructReference(cls, pairs=None, flat=None,
@@ -646,7 +680,7 @@ def _ConstructReference(cls, pairs=None, flat=None,
       if len(flat) % 2:
         raise TypeError('_ConstructReference() must have an even number of '
                         'positional arguments.')
-      pairs = [(flat[i], flat[i + 1]) for i in xrange(0, len(flat), 2)]
+      pairs = [(flat[i], flat[i + 1]) for i in range(0, len(flat), 2)]
     elif parent is not None:
       pairs = list(pairs)
     if not pairs:
@@ -683,12 +717,12 @@ def _ConstructReference(cls, pairs=None, flat=None,
     if not reference.path().element_size():
       raise RuntimeError('Key reference has no path or elements (%r, %r, %r).'
                          % (urlsafe, serialized, str(reference)))
-    # TODO: ensure that each element has a type and either an id or a name
+
     if not serialized:
       reference = _ReferenceFromReference(reference)
-    # You needn't specify app= or namespace= together with reference=,
-    # serialized= or urlsafe=, but if you do, their values must match
-    # what is already in the reference.
+
+
+
     if app is not None:
       ref_app = reference.app()
       if app != ref_app:
@@ -712,113 +746,114 @@ def _ReferenceFromPairs(pairs, reference=None, app=None, namespace=None):
   keyword arguments, with the customary defaults.
   """
   if reference is None:
-    reference = entity_pb.Reference()
-  path = reference.mutable_path()
+    reference = entity_pb2.Reference()
+  reference.path.SetInParent()
+  path = reference.path
   last = False
   for kind, idorname in pairs:
     if last:
       raise datastore_errors.BadArgumentError(
           'Incomplete Key entry must be last')
     t = type(kind)
-    if t is str:
+    if t is six.binary_type:
       pass
-    elif t is unicode:
-      kind = kind.encode('utf8')
+    elif t is six.text_type:
+      kind = six.ensure_binary(kind)
     else:
       if issubclass(t, type):
-        # Late import to avoid cycles.
-        from .model import Model
+
+        from google.appengine.ext.ndb.model import Model
         modelclass = kind
         if not issubclass(modelclass, Model):
           raise TypeError('Key kind must be either a string or subclass of '
                           'Model; received %r' % modelclass)
         kind = modelclass._get_kind()
         t = type(kind)
-      if t is str:
+      if t is six.binary_type:
         pass
-      elif t is unicode:
-        kind = kind.encode('utf8')
-      elif issubclass(t, str):
+      elif t is six.text_type:
+        kind = six.ensure_binary(kind)
+      elif issubclass(t, six.binary_type):
         pass
-      elif issubclass(t, unicode):
-        kind = kind.encode('utf8')
+      elif issubclass(t, six.text_type):
+        kind = six.ensure_binary(kind)
       else:
         raise TypeError('Key kind must be either a string or subclass of Model;'
                         ' received %r' % kind)
-    # pylint: disable=superfluous-parens
+
     if not (1 <= len(kind) <= _MAX_KEYPART_BYTES):
       raise ValueError('Key kind string must be a non-empty string up to %i'
                        'bytes; received %s' %
                        (_MAX_KEYPART_BYTES, kind))
-    elem = path.add_element()
-    elem.set_type(kind)
+    elem = path.element.add()
+    elem.type = kind
     t = type(idorname)
-    if t is int or t is long:
-      # pylint: disable=superfluous-parens
+    if t is int or t is int:
+
       if not (1 <= idorname < _MAX_LONG):
         raise ValueError('Key id number is too long; received %i' % idorname)
-      elem.set_id(idorname)
+      elem.id = idorname
     elif t is str:
-      # pylint: disable=superfluous-parens
+
       if not (1 <= len(idorname) <= _MAX_KEYPART_BYTES):
         raise ValueError('Key name strings must be non-empty strings up to %i '
                          'bytes; received %s' %
                          (_MAX_KEYPART_BYTES, idorname))
-      elem.set_name(idorname)
-    elif t is unicode:
+      elem.name = idorname
+    elif t is six.text_type:
       idorname = idorname.encode('utf8')
-      # pylint: disable=superfluous-parens
+
       if not (1 <= len(idorname) <= _MAX_KEYPART_BYTES):
         raise ValueError('Key name unicode strings must be non-empty strings up'
                          ' to %i bytes; received %s' %
                          (_MAX_KEYPART_BYTES, idorname))
-      elem.set_name(idorname)
+      elem.name = idorname
     elif idorname is None:
       last = True
-    elif issubclass(t, (int, long)):
-      # pylint: disable=superfluous-parens
+    elif issubclass(t, six.integer_types):
+
       if not (1 <= idorname < _MAX_LONG):
         raise ValueError('Key id number is too long; received %i' % idorname)
-      elem.set_id(idorname)
-    elif issubclass(t, basestring):
-      if issubclass(t, unicode):
+      elem.id = idorname
+    elif issubclass(t, six.string_types) or t is six.binary_type:
+      if issubclass(t, six.text_type):
         idorname = idorname.encode('utf8')
-      # pylint: disable=superfluous-parens
+
       if not (1 <= len(idorname) <= _MAX_KEYPART_BYTES):
         raise ValueError('Key name strings must be non-empty strings up to %i '
                          'bytes; received %s' % (_MAX_KEYPART_BYTES, idorname))
-      elem.set_name(idorname)
+      elem.name = idorname
     else:
       raise TypeError('id must be either a numeric id or a string name; '
                       'received %r' % idorname)
-  # An empty app id means to use the default app id.
+
   if not app:
     app = _DefaultAppId()
-  # Always set the app id, since it is mandatory.
-  reference.set_app(app)
-  # An empty namespace overrides the default namespace.
+
+  reference.app = app
+
   if namespace is None:
-    namespace = _DefaultNamespace()
-  # Only set the namespace if it is not empty.
+    namespace = namespace_manager.get_namespace()
+
   if namespace:
-    reference.set_name_space(namespace)
+    reference.name_space = namespace
   return reference
 
 
 def _ReferenceFromReference(reference):
   """Copy a Reference."""
-  new_reference = entity_pb.Reference()
+  new_reference = entity_pb2.Reference()
   new_reference.CopyFrom(reference)
   return new_reference
 
 
 def _ReferenceFromSerialized(serialized):
   """Construct a Reference from a serialized Reference."""
-  if not isinstance(serialized, basestring):
+  if not isinstance(serialized, (six.text_type, six.binary_type)):
     raise TypeError('serialized must be a string; received %r' % serialized)
-  elif isinstance(serialized, unicode):
+  elif isinstance(serialized, six.text_type):
     serialized = serialized.encode('utf8')
-  return entity_pb.Reference(serialized)
+  return entity_pb2.Reference.FromString(serialized)
 
 
 def _DecodeUrlSafe(urlsafe):
@@ -826,28 +861,50 @@ def _DecodeUrlSafe(urlsafe):
 
   This returns the decoded string.
   """
-  if not isinstance(urlsafe, basestring):
+  if not isinstance(urlsafe, (six.text_type, six.binary_type)):
     raise TypeError('urlsafe must be a string; received %r' % urlsafe)
-  if isinstance(urlsafe, unicode):
+  if isinstance(urlsafe, six.text_type):
     urlsafe = urlsafe.encode('utf8')
   mod = len(urlsafe) % 4
   if mod:
-    urlsafe += '=' * (4 - mod)
-  # This is 3-4x faster than urlsafe_b64decode()
-  return base64.b64decode(urlsafe.replace('-', '+').replace('_', '/'))
+    urlsafe += b'=' * (4 - mod)
+
+  return base64.b64decode(urlsafe.replace(b'-', b'+').replace(b'_', b'/'))
 
 
 def _DefaultAppId():
   """Return the default application id.
 
-  This is taken from the APPLICATION_ID environment variable.
+  This is taken from environment variables.
   """
-  return os.getenv('APPLICATION_ID', '_')
+  return full_app_id.get()
 
 
-def _DefaultNamespace():
-  """Return the default namespace.
+def _ConvertPairsForComparison(pairs):
+  """Converts Key pairs to a format that enables consistent comparison.
 
-  This is taken from the namespace manager.
+  Here's a nasty one. Due to the tighter constraints on what can be compared
+  in PY3, we can't compare Keys tuples directly, as they can contain a mix of
+  strings and integers. The PY2 behavior in such cases seems to be that in
+  cases of differing types, comparisons are determined via the type name
+  itself.
+
+  Now the nasty part. While this could be addressed by something along the
+  lines of...
+
+    cmp(str(type(x)), str(type(y)))
+
+  ...in PY2, this results in 'int' < 'str'. But in PY3, this results in
+  'bytes' < 'int', which produces a different sorted ordering of said Keys. In
+  the interest of minimizing breakage in existing code, I implemented this
+  method to maintain the PY2 sort ordering for Keys. Comparing mixed items in
+  PY2 now results in 'int' < 'unicode', and PY3 results in 'int' < 'str'.
+
+  Args:
+    pairs: A tuple of tuples, corresponding to the (kind, id) pairs of a Key.
+
+  Returns:
+    A tuple of tuples, converted for consistent comparison.
   """
-  return namespace_manager.get_namespace()
+  conv = lambda x: six.ensure_text(x) if isinstance(x, six.binary_type) else x
+  return tuple((conv(i), conv(j)) for i, j in pairs)

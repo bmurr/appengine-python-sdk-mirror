@@ -51,11 +51,9 @@ from google.appengine.tools.devappserver2 import module
 from google.appengine.tools.devappserver2 import runtime_config_pb2
 from google.appengine.tools.devappserver2 import start_response_utils
 from google.appengine.tools.devappserver2 import stub_testing
-from google.appengine.tools.devappserver2 import util
 from google.appengine.tools.devappserver2 import wsgi_server
 from google.appengine.tools.devappserver2.go import gaego as gaego_application
 from google.appengine.tools.devappserver2.go import instance_factory as go_factory
-from google.appengine.tools.devappserver2.python import instance_factory as python_factory
 from google.testing.pybase import googletest
 from google.testing.pybase import parameterized
 
@@ -68,7 +66,7 @@ class ModuleConfigurationStub(object):
                module_name='default',
                automatic_scaling=appinfo.AutomaticScaling(),
                version='version',
-               runtime='python27',
+               runtime='python312',
                env='1',
                effective_runtime='',
                threadsafe=False,
@@ -106,6 +104,33 @@ class ModuleConfigurationStub(object):
     return set()
 
 
+class InstanceFactoryFacade(instance.InstanceFactory):
+  START_URL_MAP = appinfo.URLMap(
+      url='/_ah/start', script='ignored', login='admin')
+  WARMUP_URL_MAP = appinfo.URLMap(
+      url='/_ah/warmup', script='ignored', login='admin')
+
+
+class NoOpInstanceFactoryFacade(instance.InstanceFactory):
+  START_URL_MAP = appinfo.URLMap(
+      url='/_ah/start', script='ignored', login='admin')
+  WARMUP_URL_MAP = appinfo.URLMap(
+      url='/_ah/warmup', script='ignored', login='admin')
+
+  def new_instance(self, instance_id, expect_ready_request=False):
+    pass
+
+
+class FakeInstanceFactory:
+  START_URL_MAP = appinfo.URLMap(
+      url='/_ah/start', script='ignored', login='admin')
+  WARMUP_URL_MAP = appinfo.URLMap(
+      url='/_ah/warmup', script='ignored', login='admin')
+
+  def get_restart_directories(self):
+    return []
+
+
 class ModuleFacade(module.Module):
 
   def __init__(self,
@@ -119,6 +144,7 @@ class ModuleFacade(module.Module):
                python_config=None,
                go_config=None,
                vm_config=None):
+    self._instance_factory = instance_factory
     super(ModuleFacade, self).__init__(
         module_configuration,
         host='fakehost',
@@ -143,8 +169,6 @@ class ModuleFacade(module.Module):
         automatic_restarts=True,
         allow_skipped_files=allow_skipped_files,
         threadsafe_override=threadsafe_override)
-    if instance_factory is not None:
-      self._instance_factory = instance_factory
     self._ready = ready
 
   @property
@@ -155,6 +179,17 @@ class ModuleFacade(module.Module):
   def balanced_port(self):
     return self._balanced_port
 
+  def _create_instance_factory(self, module_configuration):
+    if self._instance_factory:
+      return self._instance_factory
+    return super(
+        ModuleFacade, self)._create_instance_factory(module_configuration)
+
+
+class NoHandlersModuleFacade(ModuleFacade):
+  def  _create_url_handlers(self):
+    return []
+
 
 class AutoScalingModuleFacade(module.AutoScalingModule):
 
@@ -164,6 +199,7 @@ class AutoScalingModuleFacade(module.AutoScalingModule):
                instance_factory=None,
                max_instances=None,
                ready=True):
+    self._instance_factory = instance_factory
     super(AutoScalingModuleFacade, self).__init__(
         module_configuration=module_configuration,
         host='fakehost',
@@ -188,8 +224,6 @@ class AutoScalingModuleFacade(module.AutoScalingModule):
         automatic_restarts=True,
         allow_skipped_files=False,
         threadsafe_override=None)
-    if instance_factory is not None:
-      self._instance_factory = instance_factory
     self._ready = ready
 
   @property
@@ -203,6 +237,11 @@ class AutoScalingModuleFacade(module.AutoScalingModule):
   def get_file_change_count(self):
     return self._file_change_count
 
+  def _create_instance_factory(self, module_configuration):
+    if self._instance_factory:
+      return self._instance_factory
+    return FakeInstanceFactory()
+
 
 class ManualScalingModuleFacade(module.ManualScalingModule):
 
@@ -212,6 +251,7 @@ class ManualScalingModuleFacade(module.ManualScalingModule):
                instance_factory=None,
                ready=True,
                vm_config=None):
+    self._instance_factory = instance_factory
     if module_configuration is None:
       module_configuration = ModuleConfigurationStub()
     super(ManualScalingModuleFacade, self).__init__(
@@ -238,8 +278,6 @@ class ManualScalingModuleFacade(module.ManualScalingModule):
         automatic_restarts=True,
         allow_skipped_files=False,
         threadsafe_override=None)
-    if instance_factory is not None:
-      self._instance_factory = instance_factory
     self._ready = ready
 
   @property
@@ -253,6 +291,11 @@ class ManualScalingModuleFacade(module.ManualScalingModule):
   def get_file_change_count(self):
     return self._file_change_count
 
+  def _create_instance_factory(self, module_configuration):
+    if self._instance_factory:
+      return self._instance_factory
+    return FakeInstanceFactory()
+
 
 class BasicScalingModuleFacade(module.BasicScalingModule):
 
@@ -262,6 +305,7 @@ class BasicScalingModuleFacade(module.BasicScalingModule):
                balanced_port=0,
                instance_factory=None,
                ready=True):
+    self._instance_factory = instance_factory
     super(BasicScalingModuleFacade, self).__init__(
         module_configuration=module_configuration,
         host=host,
@@ -286,8 +330,6 @@ class BasicScalingModuleFacade(module.BasicScalingModule):
         automatic_restarts=True,
         allow_skipped_files=False,
         threadsafe_override=None)
-    if instance_factory is not None:
-      self._instance_factory = instance_factory
     self._ready = ready
 
   @property
@@ -300,6 +342,14 @@ class BasicScalingModuleFacade(module.BasicScalingModule):
 
   def get_file_change_count(self):
     return self._file_change_count
+
+  def _create_url_handlers(self):
+    pass
+
+  def _create_instance_factory(self, module_configuration):
+    if self._instance_factory:
+      return self._instance_factory
+    return FakeInstanceFactory()
 
 
 class ExternalModuleFacade(module.ExternalModule):
@@ -346,12 +396,16 @@ class ExternalModuleFacade(module.ExternalModule):
   def balanced_port(self):
     return self._balanced_port
 
+  def  _create_url_handlers(self):
+    pass
+
 
 class BuildRequestEnvironTest(stub_testing.StubTestCase):
 
   def setUp(self):
     super(BuildRequestEnvironTest, self).setUp()
-    self.module = ModuleFacade()
+    self.instance_factory = NoOpInstanceFactoryFacade(None, 1)
+    self.module = ModuleFacade(instance_factory=self.instance_factory)
 
   def test_build_request_environ(self):
     expected_environ = {
@@ -472,16 +526,18 @@ class TestModuleCreateUrlHandlers(stub_testing.StubTestCase):
   def setUp(self):
     super(TestModuleCreateUrlHandlers, self).setUp()
     self.module_configuration = ModuleConfigurationStub()
-    self.instance_factory = instance.InstanceFactory(None, 1)
+    self.instance_factory = InstanceFactoryFacade(None, 1)
     self.servr = ModuleFacade(
         instance_factory=self.instance_factory,
         module_configuration=self.module_configuration)
+    # pylint: disable-next=invalid-name
     self.instance_factory.START_URL_MAP = appinfo.URLMap(
         url='/_ah/start', script='start_handler', login='admin')
+    # pylint: disable-next=invalid-name
     self.instance_factory.WARMUP_URL_MAP = appinfo.URLMap(
         url='/_ah/warmup', script='warmup_handler', login='admin')
-    # Built-in: login, logout, blob_upload, blob_image, channel, gcs
-    self.num_builtin_handlers = 5
+    # Built-in: login, logout, blob_upload, blob_image, gcs, modern default
+    self.num_builtin_handlers = 6
 
   def test_match_all(self):
     self.module_configuration.handlers = [
@@ -583,7 +639,7 @@ class TestModuleGetRuntimeConfig(parameterized.TestCase,
             upload=r'app_readable_static_images/*.png',
             application_readable=True),
     ]
-    self.instance_factory = instance.InstanceFactory(None, 1)
+    self.instance_factory = InstanceFactoryFacade(None, 1)
 
   def test_static_files_regex(self):
     servr = ModuleFacade(
@@ -638,10 +694,8 @@ class TestModuleGetRuntimeConfig(parameterized.TestCase,
     self.assertTrue(config.threadsafe)
 
   @parameterized.parameters(
-      ('php55', 'php_config', runtime_config_pb2.PhpConfig),
-      ('python', 'python_config', runtime_config_pb2.PythonConfig),
-      ('python27', 'python_config', runtime_config_pb2.PythonConfig),
-      ('python-compat', 'python_config', runtime_config_pb2.PythonConfig),
+      ('php82', 'php_config', runtime_config_pb2.PhpConfig),
+      ('python312', 'python_config', runtime_config_pb2.PythonConfig),
   )
   def test_copy_runtime_config(self, runtime, field_to_set, field_class):
     module_configuration = ModuleConfigurationStub(runtime=runtime)
@@ -667,7 +721,7 @@ class TestModuleShutdownInstance(stub_testing.StubTestCase):
     super(TestModuleShutdownInstance, self).setUp()
     self.mox = mox.Mox()
     self.module_configuration = ModuleConfigurationStub()
-    self.instance_factory = instance.InstanceFactory(None, 1)
+    self.instance_factory = NoOpInstanceFactoryFacade(None, 1)
     self.servr = ModuleFacade(
         instance_factory=self.instance_factory,
         module_configuration=self.module_configuration)
@@ -735,7 +789,7 @@ class TestModuleRuntime(stub_testing.StubTestCase):
         application='app',
         module='module1',
         version='1',
-        runtime='python27',
+        runtime='python312',
         threadsafe=False,
         automatic_scaling=automatic_scaling,
         skip_files=r'\*.gif',
@@ -752,39 +806,8 @@ class TestModuleRuntime(stub_testing.StubTestCase):
     self.mox.ReplayAll()
     config = application_configuration.ModuleConfiguration('/appdir/app.yaml')
     servr = TestModuleRuntime.ModuleStubRuntime(module_configuration=config)
-    self.assertEqual(servr.runtime, 'python27')
-    self.assertEqual(servr.effective_runtime, 'python27')
-    self.mox.VerifyAll()
-
-  def test_vm_true(self):
-    manual_scaling = appinfo.ManualScaling()
-    vm_settings = appinfo.VmSettings()
-    vm_settings['vm_runtime'] = 'python27'
-    handlers = [appinfo.URLMap(url=r'/*', script=r'\1.py')]
-    info = appinfo.AppInfoExternal(
-        application='app',
-        module='module1',
-        version='1',
-        runtime='vm',
-        vm_settings=vm_settings,
-        threadsafe=False,
-        manual_scaling=manual_scaling,
-        handlers=handlers,
-    )
-    config_path = '/appdir/app.yaml'
-    application_configuration.ModuleConfiguration._parse_configuration(
-        config_path).AndReturn((info, [config_path]))
-    os.path.getmtime(config_path).AndReturn(10)
-
-    self.mox.ReplayAll()
-
-    module_configuration = application_configuration.ModuleConfiguration(
-        config_path)
-    servr = TestModuleRuntime.ModuleStubRuntime(
-        module_configuration=module_configuration)
-    self.assertEqual(servr.runtime, 'vm')
-    self.assertEqual(servr.effective_runtime, 'python27')
-
+    self.assertEqual(servr.runtime, 'python312')
+    self.assertEqual(servr.effective_runtime, 'python312')
     self.mox.VerifyAll()
 
 
@@ -801,7 +824,9 @@ class TestAutoScalingModuleWarmup(stub_testing.StubTestCase):
     super(TestAutoScalingModuleWarmup, self).tearDown()
 
   def test_warmup(self):
-    s = AutoScalingModuleFacade(balanced_port=8080)
+    s = AutoScalingModuleFacade(
+        balanced_port=8080,
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10))
     self.mox.StubOutWithMock(s, '_handle_request')
     self.mox.StubOutWithMock(s._condition, 'notify')
 
@@ -836,8 +861,15 @@ class TestAutoScalingModuleAddInstance(stub_testing.StubTestCase):
     self.mox.UnsetStubs()
     super(TestAutoScalingModuleAddInstance, self).tearDown()
 
+  def create_server(self, max_instances=None):
+    s = AutoScalingModuleFacade(
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10),
+        max_instances=max_instances)
+    s._instance_factory = self.factory
+    return s
+
   def test_permit_warmup(self):
-    s = AutoScalingModuleFacade(instance_factory=self.factory)
+    s = self.create_server()
     self.mox.StubOutWithMock(s, '_async_warmup')
     self.mox.StubOutWithMock(s._condition, 'notify')
 
@@ -854,7 +886,7 @@ class TestAutoScalingModuleAddInstance(stub_testing.StubTestCase):
     self.assertLen(s._instances, 1)
 
   def test_no_permit_warmup(self):
-    s = AutoScalingModuleFacade(instance_factory=self.factory)
+    s = self.create_server()
     self.mox.StubOutWithMock(s._condition, 'notify')
 
     inst = self.mox.CreateMock(instance.Instance)
@@ -870,7 +902,7 @@ class TestAutoScalingModuleAddInstance(stub_testing.StubTestCase):
     self.assertIn(inst, s._instances)
 
   def test_failed_to_start(self):
-    s = AutoScalingModuleFacade(instance_factory=self.factory)
+    s = self.create_server()
     self.mox.StubOutWithMock(s, '_async_warmup')
     self.mox.StubOutWithMock(s._condition, 'notify')
 
@@ -886,7 +918,7 @@ class TestAutoScalingModuleAddInstance(stub_testing.StubTestCase):
     self.assertLen(s._instances, 1)
 
   def test_max_instances(self):
-    s = AutoScalingModuleFacade(instance_factory=self.factory, max_instances=1)
+    s = self.create_server(max_instances=1)
     self.mox.StubOutWithMock(s._condition, 'notify')
 
     inst = self.mox.CreateMock(instance.Instance)
@@ -919,7 +951,7 @@ class TestAutoScalingInstancePoolHandleScriptRequest(stub_testing.StubTestCase
     self.match = object()
     self.request_id = object()
     self.auto_module = AutoScalingModuleFacade(
-        instance_factory=instance.InstanceFactory(object(), 10))
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10))
     self.mox.StubOutWithMock(self.auto_module, '_choose_instance')
     self.mox.StubOutWithMock(self.auto_module, '_add_instance')
     self.mox.stubs.Set(time, 'time', lambda: 0.0)
@@ -1009,7 +1041,7 @@ class TestAutoScalingInstancePoolTrimRequestTimesAndOutstanding(
 
   def test_trim_outstanding_request_history(self):
     servr = AutoScalingModuleFacade(
-        instance_factory=instance.InstanceFactory(object(), 10))
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10))
     servr._outstanding_request_history.append((0, 100))
     servr._outstanding_request_history.append((1.0, 101))
     servr._outstanding_request_history.append((1.2, 102))
@@ -1033,7 +1065,7 @@ class TestAutoScalingInstancePoolGetNumRequiredInstances(
   def setUp(self):
     super(TestAutoScalingInstancePoolGetNumRequiredInstances, self).setUp()
     self.servr = AutoScalingModuleFacade(
-        instance_factory=instance.InstanceFactory(object(), 5))
+        instance_factory=NoOpInstanceFactoryFacade(object(), 5))
 
   def test_get_num_required_instances(self):
     now = time.time()
@@ -1063,7 +1095,7 @@ class TestAutoScalingInstancePoolSplitInstances(stub_testing.StubTestCase):
     super(TestAutoScalingInstancePoolSplitInstances, self).setUp()
     self.mox = mox.Mox()
     self.servr = AutoScalingModuleFacade(
-        instance_factory=instance.InstanceFactory(object(), 10))
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10))
     self.mox.StubOutWithMock(self.servr, '_get_num_required_instances')
 
   def tearDown(self):
@@ -1155,7 +1187,7 @@ class TestAutoScalingInstancePoolChooseInstances(stub_testing.StubTestCase):
     super(TestAutoScalingInstancePoolChooseInstances, self).setUp()
     self.mox = mox.Mox()
     self.servr = AutoScalingModuleFacade(
-        instance_factory=instance.InstanceFactory(object(), 10))
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10))
     self.mox.StubOutWithMock(self.servr, '_split_instances')
     self.mox.StubOutWithMock(self.servr._condition, 'wait')
     self.time = 10
@@ -1234,8 +1266,6 @@ class TestAutoScalingModuleReportStats(stub_testing.StubTestCase):
   def setUp(self):
     super(TestAutoScalingModuleReportStats, self).setUp()
     self.mox = mox.Mox()
-    self.factory = self.mox.CreateMock(instance.InstanceFactory)
-    self.factory.max_concurrent_requests = 10
     self.servr = AutoScalingModuleFacade(
         module_configuration=ModuleConfigurationStub(
             automatic_scaling=appinfo.AutomaticScaling(
@@ -1243,7 +1273,10 @@ class TestAutoScalingModuleReportStats(stub_testing.StubTestCase):
                 max_pending_latency='1.0s',
                 min_idle_instances=1,
                 max_idle_instances=2)),
-        instance_factory=self.factory)
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10))
+    self.factory = self.mox.CreateMock(instance.InstanceFactory)
+    self.factory.max_concurrent_requests = 10
+    self.servr._instance_factory = self.factory
     self.mox.StubOutWithMock(self.servr, 'report_quit_metrics')
     self.mox.StubOutWithMock(self.servr, '_split_instances')
     self.mox.StubOutWithMock(self.servr, '_instance_adjustment_thread')
@@ -1301,7 +1334,7 @@ class TestAutoScalingInstancePoolAdjustInstances(stub_testing.StubTestCase):
                 max_pending_latency='1.0s',
                 min_idle_instances=1,
                 max_idle_instances=2)),
-        instance_factory=instance.InstanceFactory(object(), 10))
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10))
 
     self.mox.StubOutWithMock(self.servr, '_split_instances')
     self.mox.StubOutWithMock(self.servr, '_add_instance')
@@ -1401,7 +1434,7 @@ class TestAutoScalingInstancePoolHandleChanges(InstancePoolHandleChangesBase):
   """Tests for module.AutoScalingModule._handle_changes."""
 
   def setUp(self):
-    self.instance_factory = instance.InstanceFactory(object(), 10)
+    self.instance_factory = NoOpInstanceFactoryFacade(object(), 10)
     self.servr = AutoScalingModuleFacade(instance_factory=self.instance_factory)
     super(TestAutoScalingInstancePoolHandleChanges, self).setUp()
     self.mox.StubOutWithMock(self.servr, '_maybe_restart_instances')
@@ -1494,7 +1527,8 @@ class TestAutoScalingInstancePoolMaybeRestartInstances(
   def setUp(self):
     super(TestAutoScalingInstancePoolMaybeRestartInstances, self).setUp()
     self.mox = mox.Mox()
-    self.instance_factory = instance.InstanceFactory(object(), 10)
+    self.instance_factory = NoOpInstanceFactoryFacade(object(), 10)
+    # pylint: disable-next=invalid-name
     self.instance_factory.FILE_CHANGE_INSTANCE_RESTART_POLICY = instance.ALWAYS
     self.servr = AutoScalingModuleFacade(instance_factory=self.instance_factory)
 
@@ -1567,7 +1601,7 @@ class TestAutoScalingInstancePoolLoopAdjustingInstances(googletest.TestCase):
 
     self.mox = mox.Mox()
     self.servr = AutoScalingModuleFacade(
-        instance_factory=instance.InstanceFactory(object(), 10))
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10))
 
   def tearDown(self):
     self.mox.UnsetStubs()
@@ -1602,7 +1636,7 @@ class TestAutoScalingInstancePoolAutomaticScaling(stub_testing.StubTestCase):
     return AutoScalingModuleFacade(
         module_configuration=ModuleConfigurationStub(
             automatic_scaling=automatic_scaling),
-        instance_factory=instance.InstanceFactory(object(), 10))
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10))
 
   def test_unset_automatic_settings(self):
     settings = appinfo.AutomaticScaling()
@@ -1649,8 +1683,13 @@ class TestManualScalingModuleStart(stub_testing.StubTestCase):
     self.mox.UnsetStubs()
     super(TestManualScalingModuleStart, self).tearDown()
 
+  def create_server(self):
+    return ManualScalingModuleFacade(
+        balanced_port=8080,
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10))
+
   def test_instance_start_success(self):
-    s = ManualScalingModuleFacade(balanced_port=8080)
+    s = self.create_server()
     self.mox.StubOutWithMock(s, '_handle_request')
     self.mox.StubOutWithMock(s._condition, 'notify')
 
@@ -1676,7 +1715,7 @@ class TestManualScalingModuleStart(stub_testing.StubTestCase):
     self.mox.VerifyAll()
 
   def test_instance_start_failure(self):
-    s = ManualScalingModuleFacade(balanced_port=8080)
+    s = self.create_server()
     self.mox.StubOutWithMock(s, '_handle_request')
     self.mox.StubOutWithMock(s._condition, 'notify')
 
@@ -1709,8 +1748,14 @@ class TestManualScalingModuleAddInstance(stub_testing.StubTestCase):
     self.mox.UnsetStubs()
     super(TestManualScalingModuleAddInstance, self).tearDown()
 
+  def create_server(self):
+    servr = ManualScalingModuleFacade(
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10))
+    servr._instance_factory = self.factory
+    return servr
+
   def test_add_while_started(self):
-    servr = ManualScalingModuleFacade(instance_factory=self.factory)
+    servr = self.create_server()
 
     inst = self.mox.CreateMock(instance.Instance)
     self.mox.StubOutWithMock(module._THREAD_POOL, 'submit')
@@ -1729,7 +1774,7 @@ class TestManualScalingModuleAddInstance(stub_testing.StubTestCase):
     self.assertEqual((servr, inst), servr._port_registry.get(12345))
 
   def test_add_while_stopped(self):
-    servr = ManualScalingModuleFacade(instance_factory=self.factory)
+    servr = self.create_server()
     servr._suspended = True
 
     inst = self.mox.CreateMock(instance.Instance)
@@ -1748,6 +1793,7 @@ class TestManualScalingModuleAddInstance(stub_testing.StubTestCase):
     self.assertEqual((servr, inst), servr._port_registry.get(12345))
 
   def test_restart_instance(self):
+    servr = self.create_server()
     inst = self.mox.CreateMock(instance.Instance)
     new_inst = self.mox.CreateMock(instance.Instance)
     inst.instance_id = 0
@@ -1757,7 +1803,6 @@ class TestManualScalingModuleAddInstance(stub_testing.StubTestCase):
     self.mox.StubOutWithMock(new_inst, 'start')
     self.mox.StubOutWithMock(self.factory, 'new_instance')
 
-    servr = ManualScalingModuleFacade(instance_factory=self.factory)
     servr.module_configuration.runtime = 'vm'
     wsgi_servr = self.mox.CreateMock(wsgi_server.WsgiServer)
     self.mox.StubOutWithMock(wsgi_servr, 'set_app')
@@ -1792,7 +1837,7 @@ class TestManualScalingInstancePoolHandleScriptRequest(
     self.match = object()
     self.request_id = object()
     self.manual_module = ManualScalingModuleFacade(
-        instance_factory=instance.InstanceFactory(object(), 10))
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10))
     self.mox.StubOutWithMock(self.manual_module, '_choose_instance')
     self.mox.StubOutWithMock(self.manual_module, '_add_instance')
     self.mox.StubOutWithMock(self.manual_module._condition, 'notify')
@@ -1892,7 +1937,7 @@ class TestManualScalingInstancePoolChooseInstances(stub_testing.StubTestCase):
     self.mox = mox.Mox()
     super(TestManualScalingInstancePoolChooseInstances, self).setUp()
     self.servr = ManualScalingModuleFacade(
-        instance_factory=instance.InstanceFactory(object(), 10))
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10))
     self.mox.StubOutWithMock(self.servr._condition, 'wait')
     self.time = 0
     self.mox.stubs.Set(time, 'time', lambda: self.time)
@@ -1943,7 +1988,7 @@ class TestManualScalingInstancePoolSetNumInstances(stub_testing.StubTestCase):
     super(TestManualScalingInstancePoolSetNumInstances, self).setUp()
     self.mox = mox.Mox()
     self.module = ManualScalingModuleFacade(
-        instance_factory=instance.InstanceFactory(object(), 10))
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10))
     self._instance = self.mox.CreateMock(instance.Instance)
     self._wsgi_server = self.mox.CreateMock(wsgi_server.WsgiServer)
     self._wsgi_server.port = 8080
@@ -1989,8 +2034,10 @@ class TestManualScalingInstancePoolSuspendAndResume(googletest.TestCase):
   def setUp(self):
     super(TestManualScalingInstancePoolSuspendAndResume, self).setUp()
     self.mox = mox.Mox()
+    self.module = ManualScalingModuleFacade(
+        instance_factory=NoOpInstanceFactoryFacade(object(), 10))
     self.factory = self.mox.CreateMock(instance.InstanceFactory)
-    self.module = ManualScalingModuleFacade(instance_factory=self.factory)
+    self.module._instance_factory = self.factory
     self._instance = self.mox.CreateMock(instance.Instance)
     self._wsgi_server = wsgi_server.WsgiServer(('localhost', 0), None)
     self.module._instances = [self._instance]
@@ -2065,7 +2112,7 @@ class TestManualScalingInstancePoolHandleChanges(InstancePoolHandleChangesBase):
   """Tests for module.ManualScalingModule._handle_changes."""
 
   def setUp(self):
-    self.instance_factory = instance.InstanceFactory(object(), 10)
+    self.instance_factory = NoOpInstanceFactoryFacade(object(), 10)
     self.servr = ManualScalingModuleFacade(
         instance_factory=self.instance_factory)
     super(TestManualScalingInstancePoolHandleChanges, self).setUp()
@@ -2159,6 +2206,7 @@ class TestBasicScalingModuleStart(stub_testing.StubTestCase):
 
   def setUp(self):
     super(TestBasicScalingModuleStart, self).setUp()
+    self.instance_factory = NoOpInstanceFactoryFacade(object(), 10)
     self.mox = mox.Mox()
     self.mox.StubOutWithMock(module.Module, 'build_request_environ')
 
@@ -2167,7 +2215,8 @@ class TestBasicScalingModuleStart(stub_testing.StubTestCase):
     super(TestBasicScalingModuleStart, self).tearDown()
 
   def test_instance_start_success(self):
-    s = BasicScalingModuleFacade(balanced_port=8080)
+    s = BasicScalingModuleFacade(
+        balanced_port=8080, instance_factory=self.instance_factory)
     self.mox.StubOutWithMock(s, '_handle_request')
     self.mox.StubOutWithMock(s._condition, 'notify')
 
@@ -2195,7 +2244,8 @@ class TestBasicScalingModuleStart(stub_testing.StubTestCase):
     self.mox.VerifyAll()
 
   def test_instance_start_failure(self):
-    s = BasicScalingModuleFacade(balanced_port=8080)
+    s = BasicScalingModuleFacade(
+        balanced_port=8080, instance_factory=self.instance_factory)
     self.mox.StubOutWithMock(s, '_handle_request')
     self.mox.StubOutWithMock(s._condition, 'notify')
 
@@ -2212,7 +2262,8 @@ class TestBasicScalingModuleStart(stub_testing.StubTestCase):
     self.mox.VerifyAll()
 
   def test_start_any_instance_success(self):
-    s = BasicScalingModuleFacade(balanced_port=8080)
+    s = BasicScalingModuleFacade(
+        balanced_port=8080, instance_factory=self.instance_factory)
     s._instance_running = [True, False, False, True]
     inst = object()
     s._instances = [None, inst, None, None]
@@ -2224,7 +2275,8 @@ class TestBasicScalingModuleStart(stub_testing.StubTestCase):
     self.assertEqual([True, True, False, True], s._instance_running)
 
   def test_start_any_instance_all_already_running(self):
-    s = BasicScalingModuleFacade(balanced_port=8080)
+    s = BasicScalingModuleFacade(
+        balanced_port=8080, instance_factory=self.instance_factory)
     s._instance_running = [True, True, True, True]
     self.mox.StubOutWithMock(module._THREAD_POOL, 'submit')
     self.mox.ReplayAll()
@@ -2239,8 +2291,8 @@ class TestBasicScalingInstancePoolHandleScriptRequest(
 
   def setUp(self):
     super(TestBasicScalingInstancePoolHandleScriptRequest, self).setUp()
+    self.instance_factory = NoOpInstanceFactoryFacade(object(), 10)
     self.mox = mox.Mox()
-
     self.inst = self.mox.CreateMock(instance.Instance)
     self.inst.instance_id = 0
     self.environ = {}
@@ -2250,7 +2302,7 @@ class TestBasicScalingInstancePoolHandleScriptRequest(
     self.match = object()
     self.request_id = object()
     self.basic_module = BasicScalingModuleFacade(
-        instance_factory=instance.InstanceFactory(object(), 10))
+        instance_factory=self.instance_factory)
     self.mox.StubOutWithMock(self.basic_module, '_choose_instance')
     self.mox.StubOutWithMock(self.basic_module, '_start_any_instance')
     self.mox.StubOutWithMock(self.basic_module, '_start_instance')
@@ -2432,10 +2484,11 @@ class TestBasicScalingInstancePoolChooseInstances(stub_testing.StubTestCase):
       self.can_accept_requests = can_accept_requests
 
   def setUp(self):
+    self.instance_factory = NoOpInstanceFactoryFacade(object(), 10)
     super(TestBasicScalingInstancePoolChooseInstances, self).setUp()
     self.mox = mox.Mox()
     self.servr = BasicScalingModuleFacade(
-        instance_factory=instance.InstanceFactory(object(), 10))
+        instance_factory=self.instance_factory)
     self.mox.stubs.Set(time, 'time', lambda: self.time)
     self.mox.StubOutWithMock(self.servr._condition, 'wait')
     self.mox.StubOutWithMock(self.servr, '_start_any_instance')
@@ -2488,6 +2541,10 @@ class TestBasicScalingInstancePoolChooseInstances(stub_testing.StubTestCase):
     self.mox.VerifyAll()
 
   def test_choose_instance_no_instances(self):
+    instance1 = self.Instance(False)
+    instance2 = self.Instance(False)
+    self.servr._instances = [instance1, instance2]
+    self.servr._instance_running = [True, True]
     self.servr._start_any_instance().AndReturn(None)
     self.servr._condition.wait(1).WithSideEffects(self.advance_time)
     self.mox.ReplayAll()
@@ -2502,10 +2559,16 @@ class TestBasicScalingInstancePoolInstanceManagement(stub_testing.StubTestCase
     super(TestBasicScalingInstancePoolInstanceManagement, self).setUp()
     self.mox = mox.Mox()
     self.factory = self.mox.CreateMock(instance.InstanceFactory)
+    self.factory.get_restart_directories = lambda: []
     self.factory.max_concurrent_requests = 10
     self.mox.StubOutWithMock(module._THREAD_POOL, 'submit')
     self.module = BasicScalingModuleFacade(
-        instance_factory=self.factory, host='localhost')
+        # Before replay we construct self.module using a
+        # NoOpInstanceFactoryFacade which does not call mocks mocks.
+        instance_factory=NoOpInstanceFactoryFacade(
+            object(), 10), host='localhost')
+    # Now we substitute a mock factory for testing.
+    self.module._instance_factory = self.factory
     self.wsgi_server = self.module._wsgi_servers[0]
     self.wsgi_server.start()
 
@@ -2540,7 +2603,6 @@ class TestBasicScalingInstancePoolInstanceManagement(stub_testing.StubTestCase
                      self.module._wsgi_servers[0]._app.keywords)
 
   def test_shutdown_idle_instances(self):
-    s = BasicScalingModuleFacade(instance_factory=self.factory)
     old_instances = [
         self.mox.CreateMock(instance.Instance),
         self.mox.CreateMock(instance.Instance),
@@ -2573,7 +2635,7 @@ class TestBasicScalingInstancePoolHandleChanges(InstancePoolHandleChangesBase):
   """Tests for module.BasicScalingModule._handle_changes."""
 
   def setUp(self):
-    self.instance_factory = instance.InstanceFactory(object(), 10)
+    self.instance_factory = NoOpInstanceFactoryFacade(object(), 10)
     self.servr = BasicScalingModuleFacade(
         instance_factory=self.instance_factory)
     super(TestBasicScalingInstancePoolHandleChanges, self).setUp()
@@ -2641,23 +2703,10 @@ class TestExternalModuleGetInstancePort(googletest.TestCase):
     self.assertEqual(8080, instance_port)
 
 
-class TestInteractiveCommandModule(stub_testing.StubTestCase):
-
-  def setUp(self):
-    super(TestInteractiveCommandModule, self).setUp()
-
-    self.mox = mox.Mox()
-    self.inst = self.mox.CreateMock(instance.Instance)
-    self.inst.instance_id = 0
-    self.environ = object()
-    self.start_response = object()
-    self.response = [object()]
-    self.url_map = object()
-    self.match = object()
-    self.request_id = object()
-
-    self.servr = module.InteractiveCommandModule(
-        ModuleConfigurationStub(),
+class InteractiveCommandModuleFacade(module.InteractiveCommandModule):
+  def __init__(self):
+    super(InteractiveCommandModuleFacade, self).__init__(
+        ModuleConfigurationStub(runtime='python312'),
         'fakehost',
         balanced_port=8000,
         api_host='localhost',
@@ -2678,7 +2727,27 @@ class TestInteractiveCommandModule(stub_testing.StubTestCase):
         watcher_ignore_re=None,
         allow_skipped_files=False,
         threadsafe_override=None)
-    self.mox.StubOutWithMock(self.servr._instance_factory, 'new_instance')
+
+  def _create_instance_factory(self, module_configuration):
+    return FakeInstanceFactory()
+
+
+class TestInteractiveCommandModule(stub_testing.StubTestCase):
+  def setUp(self):
+    super(TestInteractiveCommandModule, self).setUp()
+
+    self.mox = mox.Mox()
+    self.inst = self.mox.CreateMock(instance.Instance)
+    self.inst.instance_id = 0
+    self.environ = object()
+    self.start_response = object()
+    self.response = [object()]
+    self.url_map = object()
+    self.match = object()
+    self.request_id = object()
+
+    self.servr = InteractiveCommandModuleFacade()
+    self.servr._instance_factory.new_instance = self.mox.CreateMockAnything()
     self.mox.StubOutWithMock(self.servr, '_handle_request')
     self.mox.StubOutWithMock(self.servr, 'build_request_environ')
 
@@ -2774,7 +2843,7 @@ class TestInteractiveCommandModule(stub_testing.StubTestCase):
   def test_handle_script_request_timeout(self):
     old_timeout = self.servr._MAX_REQUEST_WAIT_TIME
     try:
-      self.servr._MAX_REQUEST_WAIT_TIME = 0
+      self.servr._MAX_REQUEST_WAIT_TIME = 0  # pylint: disable=invalid-name
       start_response = start_response_utils.CapturingStartResponse()
 
       self.mox.ReplayAll()
@@ -2786,6 +2855,7 @@ class TestInteractiveCommandModule(stub_testing.StubTestCase):
       self.mox.VerifyAll()
       self.assertEqual('503 Service Unavailable', start_response.status)
     finally:
+      # pylint: disable-next=invalid-name
       self.servr._MAX_REQUEST_WAIT_TIME = old_timeout
 
   def test_handle_script_request_restart(self):
@@ -2838,61 +2908,20 @@ class InstanceFactoryTest(googletest.TestCase):
     self.mox.UnsetStubs()
     self.mox.VerifyAll()
 
-  def _run_test(self, runtime, expected_factory_class, vm=False, env='1'):
-    if vm or util.is_env_flex(env):
-      module_stub = ModuleFacade(vm_config=runtime_config_pb2.VMConfig())
-      module_configuration = ModuleConfigurationStub(runtime='vm')
-      module_configuration.env = env
-      module_configuration.effective_runtime = runtime
-    else:
-      module_stub = ModuleFacade()
-      module_configuration = ModuleConfigurationStub(runtime=runtime)
-
+  def _run_test(self, runtime, expected_factory_class):
     self.mox.ReplayAll()
+    module_configuration = ModuleConfigurationStub(runtime=runtime)
+    module_stub = NoHandlersModuleFacade(
+        module_configuration=module_configuration)
     instance_factory = module_stub._create_instance_factory(
         module_configuration)
     self.assertIsInstance(instance_factory, expected_factory_class)
-
-  def test_non_vm_python(self):
-    self._run_test('python', python_factory.PythonRuntimeInstanceFactory)
 
   def test_gaego(self):
     self.mox.StubOutWithMock(gaego_application, 'GaeGoApplication')
     gaego_application.GaeGoApplication(mox.IgnoreArg(), mox.IgnoreArg(),
                                        mox.IgnoreArg())
-    self._run_test('go111', go_factory.GoRuntimeInstanceFactory)
-
-  def test_vm_python(self):
-    self._run_test(
-        'python', python_factory.PythonRuntimeInstanceFactory, vm=True)
-
-  def test_vm_go(self):
-    self._run_test('go', go_factory.GoRuntimeInstanceFactory, vm=True)
-
-  def test_env_2_python_compat(self):
-    self._run_test(
-        'python-compat', python_factory.PythonRuntimeInstanceFactory, env='2')
-
-  def test_env_2_go(self):
-    self._run_test('go', go_factory.GoRuntimeInstanceFactory, env='2')
-
-  def test_env_flex_python_compat(self):
-    self._run_test(
-        'python-compat',
-        python_factory.PythonRuntimeInstanceFactory,
-        env='flex')
-
-  def test_env_flex_go(self):
-    self._run_test('go', go_factory.GoRuntimeInstanceFactory, env='flex')
-
-  def test_env_flexible_python_compat(self):
-    self._run_test(
-        'python-compat',
-        python_factory.PythonRuntimeInstanceFactory,
-        env='flexible')
-
-  def test_env_flexible_go(self):
-    self._run_test('go', go_factory.GoRuntimeInstanceFactory, env='flexible')
+    self._run_test('go122', go_factory.GoRuntimeInstanceFactory)
 
 
 if __name__ == '__main__':

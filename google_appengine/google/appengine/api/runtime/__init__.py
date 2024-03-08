@@ -23,4 +23,4 @@
 """
 
 
-from runtime import *
+from google.appengine.api.runtime.runtime import *

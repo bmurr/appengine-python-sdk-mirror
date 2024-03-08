@@ -4,10 +4,10 @@ from __future__ import absolute_import, print_function
 
 import warnings
 
-from google.appengine._internal.ruamel.yaml.error import MarkedYAMLError, ReusedAnchorWarning
-from google.appengine._internal.ruamel.yaml.compat import utf8, nprint, nprintf  # NOQA
+from ruamel.yaml.error import MarkedYAMLError, ReusedAnchorWarning
+from ruamel.yaml.compat import utf8, nprint, nprintf  # NOQA
 
-from google.appengine._internal.ruamel.yaml.events import (
+from ruamel.yaml.events import (
     StreamStartEvent,
     StreamEndEvent,
     MappingStartEvent,
@@ -17,7 +17,7 @@ from google.appengine._internal.ruamel.yaml.events import (
     AliasEvent,
     ScalarEvent,
 )
-from google.appengine._internal.ruamel.yaml.nodes import MappingNode, ScalarNode, SequenceNode
+from ruamel.yaml.nodes import MappingNode, ScalarNode, SequenceNode
 
 if False:  # MYPY
     from typing import Any, Dict, Optional, List  # NOQA

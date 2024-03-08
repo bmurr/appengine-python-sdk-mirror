@@ -23,21 +23,9 @@ and searches are implemented as in-memory scans over all entities.
 
 Stores entities across sessions as pickled proto bufs in a single file. On
 startup, all entities are read from the file and loaded into memory. On
-every Put(), the file is wiped and all entities are written from scratch.
-Clients can also manually Read() and Write() the file themselves.
+every `Put()`, the file is wiped and all entities are written from scratch.
+Clients can also manually `Read()` and `Write()` the file themselves.
 """
-
-
-
-
-
-
-
-
-
-
-
-
 
 import collections
 import logging
@@ -47,43 +35,63 @@ import tempfile
 import threading
 import weakref
 
-
-
-import cPickle as pickle
+import six
+from six.moves import filter
+from six.moves import map
+import six.moves.cPickle as pickle
 
 from google.appengine.api import apiproxy_stub
+from google.appengine.api import cmp_compat
 from google.appengine.api import datastore
 from google.appengine.api import datastore_types
 from google.appengine.datastore import datastore_pb
 from google.appengine.datastore import datastore_stub_util
 from google.appengine.runtime import apiproxy_errors
-from google.net.proto import ProtocolBuffer
-from google.appengine.datastore import entity_pb
+from google.protobuf import message
+from google.appengine.datastore import entity_bytes_pb2 as entity_pb2
 
 
 
-datastore_pb.Query.__hash__ = lambda self: hash(self.Encode())
+
+
+
+
+
+
+
+
+
+
+
+
+
+datastore_pb.Query.__hash__ = lambda self: hash(self.SerializeToString())
+
+logger = logging.getLogger('google.appengine.api.stubs.datastore')
+
+if six.PY3:
+  long = int
 
 
 def _FinalElement(key):
   """Return final element of a key's path."""
-  return key.path().element_list()[-1]
+  return key.path.element[-1]
 
 
 class _StoredEntity(object):
   """Simple wrapper around an entity (and its metadata) stored by the stub.
 
   Public properties:
-    record: the original EntityRecord that was stored by the stub.
+    record: The original `EntityRecord` that was stored by the stub.
     encoded_protobuf: Encoded binary representation of entity protobuf,
         including a special property that holds the pickled metadata object.
   """
 
   def __init__(self, record):
-    """Create a _StoredEntity object and store an entity.
+    """Creates a `_StoredEntity` object and store an entity.
 
     Args:
-      record: the EntityRecord to store.
+      record: The `EntityRecord` to store.
     """
     self.record = record
 
@@ -93,7 +101,7 @@ class _StoredEntity(object):
 
 
     entity = datastore_stub_util._ToStorageEntity(record)
-    self.encoded_protobuf = entity.Encode()
+    self.encoded_protobuf = entity.SerializeToString()
 
 
 class KindPseudoKind(object):
@@ -102,7 +110,7 @@ class KindPseudoKind(object):
   Provides a Query method to perform the actual query.
 
   Public properties:
-    name: the pseudo-kind name
+    name: The pseudo-kind name
   """
   name = '__kind__'
 
@@ -110,28 +118,29 @@ class KindPseudoKind(object):
     """Perform a query on this pseudo-kind.
 
     Args:
-      query: the original datastore_pb.Query.
-      filters: the filters from query.
-      orders: the orders from query.
+      query: The original `datastore_pb.Query`.
+      filters: The filters from query.
+      orders: The orders from query.
 
     Returns:
-      (results, remaining_filters, remaining_orders)
-      results is a list of entity_pb.EntityProto
-      remaining_filters and remaining_orders are the filters and orders that
-      should be applied in memory
+      `(results, remaining_filters, remaining_orders)`.
+      `results` is a list of `entity_pb2.EntityProto`.
+      `remaining_filters` and `remaining_orders` are the filters and orders that
+      should be applied in memory.
     """
     kind_range = datastore_stub_util.ParseKindQuery(query, filters, orders)
     app_namespace_str = datastore_types.EncodeAppIdNamespace(
-        query.app(), query.name_space())
+        query.app, query.name_space)
     kinds = []
 
 
     for app_namespace, kind in self._stub._GetAllEntities():
       if app_namespace != app_namespace_str: continue
-      kind = kind.decode('utf-8')
       if not kind_range.Contains(kind): continue
-      kinds.append(datastore.Entity(self.name, name=kind, _app=query.app(),
-                                    namespace=query.name_space())._ToPb())
+      kinds.append(
+          datastore.Entity(
+              self.name, name=kind, _app=query.app,
+              namespace=query.name_space)._ToPb())
 
     return (kinds, [], [])
 
@@ -142,7 +151,7 @@ class PropertyPseudoKind(object):
   Provides a Query method to perform the actual query.
 
   Public properties:
-    name: the pseudo-kind name
+    name: The pseudo-kind name.
   """
   name = '__property__'
 
@@ -150,21 +159,21 @@ class PropertyPseudoKind(object):
     """Perform a query on this pseudo-kind.
 
     Args:
-      query: the original datastore_pb.Query.
-      filters: the filters from query.
-      orders: the orders from query.
+      query: The original `datastore_pb.Query`.
+      filters: The filters from query.
+      orders: The orders from query.
 
     Returns:
-      (results, remaining_filters, remaining_orders)
-      results is a list of entity_pb.EntityProto
-      remaining_filters and remaining_orders are the filters and orders that
-      should be applied in memory
+      `(results, remaining_filters, remaining_orders)`.
+      `results` is a list of `entity_pb2.EntityProto`.
+      `remaining_filters` and `remaining_orders` are the filters and orders that
+      should be applied in memory.
     """
     property_range = datastore_stub_util.ParsePropertyQuery(query, filters,
                                                             orders)
-    keys_only = query.keys_only()
+    keys_only = query.keys_only
     app_namespace_str = datastore_types.EncodeAppIdNamespace(
-        query.app(), query.name_space())
+        query.app, query.name_space)
 
     properties = []
     if keys_only:
@@ -177,12 +186,11 @@ class PropertyPseudoKind(object):
       if app_namespace != app_namespace_str: continue
 
       app_kind = (app_namespace_str, kind)
-      kind = kind.decode('utf-8')
 
 
 
       (start_cmp, end_cmp) = property_range.MapExtremes(
-          lambda extreme, inclusive, is_end: cmp(kind, extreme[0]))
+          lambda extreme, inclusive, is_end: cmp_compat.cmp(kind, extreme[0]))
       if not((start_cmp is None or start_cmp >= 0) and
              (end_cmp is None or end_cmp <= 0)):
         continue
@@ -191,29 +199,34 @@ class PropertyPseudoKind(object):
       kind_properties = self._stub._GetSchemaCache(app_kind, usekey)
       if not kind_properties:
         kind_properties = []
-        kind_key = datastore_types.Key.from_path(KindPseudoKind.name, kind,
-                                                 _app=query.app(),
-                                                 namespace=query.name_space())
+        kind_key = datastore_types.Key.from_path(
+            KindPseudoKind.name,
+            kind,
+            _app=query.app,
+            namespace=query.name_space)
 
         props = collections.defaultdict(set)
 
 
 
         for entity in entities[app_kind].values():
-          for prop in entity.record.entity.property_list():
-            prop_name = prop.name()
+          for prop in entity.record.entity.property:
+            prop_name = prop.name
 
             if (prop_name in
                 datastore_stub_util.GetInvisibleSpecialPropertyNames()):
               continue
-            value_pb = prop.value()
+            value_pb = prop.value
             props[prop_name].add(datastore_types.GetPropertyValueTag(value_pb))
 
 
         for prop in sorted(props):
-          property_e = datastore.Entity(self.name, name=prop, parent=kind_key,
-                                        _app=query.app(),
-                                        namespace=query.name_space())
+          property_e = datastore.Entity(
+              self.name,
+              name=prop,
+              parent=kind_key,
+              _app=query.app,
+              namespace=query.name_space)
 
           if not keys_only and props[prop]:
             property_e['property_representation'] = [
@@ -226,9 +239,10 @@ class PropertyPseudoKind(object):
 
 
       def InQuery(property_e):
-        return property_range.Contains(
-            (kind, _FinalElement(property_e.key()).name()))
-      properties += filter(InQuery, kind_properties)
+        return property_range.Contains((kind,
+                                        _FinalElement(property_e.key).name))
+
+      properties += list(filter(InQuery, kind_properties))
 
     return (properties, [], [])
 
@@ -239,7 +253,7 @@ class NamespacePseudoKind(object):
   Provides a Query method to perform the actual query.
 
   Public properties:
-    name: the pseudo-kind name
+    name: The pseudo-kind name.
   """
   name = '__namespace__'
 
@@ -247,19 +261,19 @@ class NamespacePseudoKind(object):
     """Perform a query on this pseudo-kind.
 
     Args:
-      query: the original datastore_pb.Query.
-      filters: the filters from query.
-      orders: the orders from query.
+      query: The original `datastore_pb.Query`.
+      filters: The filters from query.
+      orders: The orders from query.
 
     Returns:
-      (results, remaining_filters, remaining_orders)
-      results is a list of entity_pb.EntityProto
+      `(results, remaining_filters, remaining_orders)`.
+      `results` is a list of entity_pb2.EntityProto
       remaining_filters and remaining_orders are the filters and orders that
       should be applied in memory
     """
     namespace_range = datastore_stub_util.ParseNamespaceQuery(query, filters,
                                                               orders)
-    app_str = query.app()
+    app_str = query.app
 
     namespaces = set()
 
@@ -268,28 +282,25 @@ class NamespacePseudoKind(object):
       if app_id == app_str and namespace_range.Contains(namespace):
         namespaces.add(namespace)
 
-
     namespace_entities = []
     for namespace in namespaces:
       if namespace:
-        namespace_e = datastore.Entity(self.name, name=namespace,
-                                       _app=query.app())
+        namespace_e = datastore.Entity(
+            self.name, name=namespace, _app=query.app)
       else:
-        namespace_e = datastore.Entity(self.name,
-                                       id=datastore_types._EMPTY_NAMESPACE_ID,
-                                       _app=query.app())
+        namespace_e = datastore.Entity(
+            self.name, id=datastore_types._EMPTY_NAMESPACE_ID, _app=query.app)
       namespace_entities.append(namespace_e._ToPb())
-
     return (namespace_entities, [], [])
 
 
 class DatastoreFileStub(datastore_stub_util.BaseDatastore,
                         apiproxy_stub.APIProxyStub,
                         datastore_stub_util.DatastoreStub):
-  """ Persistent stub for the Python datastore API.
+  """Persistent stub for the Python datastore API.
 
   Stores all entities in memory, and persists them to a file as pickled
-  protocol buffers. A DatastoreFileStub instance handles a single app's data
+  protocol buffers. A `DatastoreFileStub` instance handles a single app's data
   and is backed by files on disk.
   """
 
@@ -310,23 +321,23 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
     Initializes and loads the datastore from the backing files, if they exist.
 
     Args:
-      app_id: string
-      datastore_file: string, stores all entities across sessions.  Use None
+      app_id: String
+      datastore_file: String. Stores all entities across sessions. Use `None`
           not to use a file.
-      history_file: DEPRECATED. No-op.
-      require_indexes: bool, default False.  If True, composite indexes must
-          exist in index.yaml for queries that need them.
-      service_name: Service name expected for all calls.
-      trusted: bool, default False.  If True, this stub allows an app to
+      history_file: DEPRECATE`. No-op.
+      require_indexes: Bool. Default is `False`. If `True`, composite indexes
+          must exist in `index.yaml` for queries that need them.
+      service_name: Service name is expected for all calls.
+      trusted: Bool. Default is `False`. If `True`, this stub allows an app to
         access the data of another app.
-      consistency_policy: The consistency policy to use or None to use the
+      consistency_policy: The consistency policy to use or `None` to use the
         default. Consistency policies can be found in
-        datastore_stub_util.*ConsistencyPolicy
-      save_changes: bool, default True. If this stub should modify
-        datastore_file when entities are changed.
-      root_path: string, the root path of the app.
-      use_atexit: bool, indicates if the stub should save itself atexit.
-      auto_id_policy: enum, datastore_stub_util.SEQUENTIAL or .SCATTERED
+        `datastore_stub_util.*ConsistencyPolicy`.
+      save_changes: Bool. Default is `True`. If this stub should modify
+        `datastore_file` when entities are changed.
+      root_path: String. The root path of the app.
+      use_atexit: Bool. Indicates if the stub should save itself atexit.
+      auto_id_policy: Enum. `datastore_stub_util.SEQUENTIAL` or `.SCATTERED`.
     """
 
 
@@ -352,9 +363,10 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
 
     self.__schema_cache = {}
 
-    self.__id_counters = {datastore_stub_util.SEQUENTIAL: 1L,
-                          datastore_stub_util.SCATTERED: 1L
-                         }
+    self.__id_counters = {
+        datastore_stub_util.SEQUENTIAL: long(1),
+        datastore_stub_util.SCATTERED: long(1)
+    }
     self.__id_lock = threading.Lock()
 
     self.__file_lock = threading.Lock()
@@ -375,8 +387,8 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
     self.Read()
 
   def Clear(self):
-    """ Clears the datastore by deleting all currently stored entities and
-    queries. """
+    """Clears the datastore by deleting all currently stored entities and queries.
+    """
     self.__entities_lock.acquire()
     try:
       datastore_stub_util.BaseDatastore.Clear(self)
@@ -392,7 +404,7 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
     """Get all entities.
 
     Returns:
-      Map from kind to _StoredEntity() list. Do not modify directly.
+      Map from kind to `_StoredEntity()` list. Do not modify directly.
     """
     return self.__entities_by_kind
 
@@ -405,13 +417,13 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
       self.__entities_by_entity_group[eg_k][k]
 
     Args:
-      key: entity_pb.Reference
+      key: entity_pb2.Reference
 
     Returns:
       Tuple (by_kind key, by_entity_group key, entity key)
     """
-    app_ns = datastore_types.EncodeAppIdNamespace(key.app(), key.name_space())
-    kind = _FinalElement(key).type()
+    app_ns = datastore_types.EncodeAppIdNamespace(key.app, key.name_space)
+    kind = _FinalElement(key).type
     entity_group = datastore_stub_util._GetEntityGroup(key)
     eg_k = datastore_types.ReferenceToKeyValue(entity_group)
     k = datastore_types.ReferenceToKeyValue(key)
@@ -424,10 +436,10 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
     Any needed locking should be managed by the caller.
 
     Args:
-      record: The EntityRecord to store.
+      record: The `EntityRecord` to store.
       insert: If we should check for existence.
     """
-    app_kind, eg_k, k = self._GetEntityLocation(record.entity.key())
+    app_kind, eg_k, k = self._GetEntityLocation(record.entity.key)
 
     assert not insert or k not in self.__entities_by_kind[app_kind]
 
@@ -439,8 +451,7 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
     if app_kind in self.__schema_cache:
       del self.__schema_cache[app_kind]
 
-  READ_PB_EXCEPTIONS = (ProtocolBuffer.ProtocolBufferDecodeError, LookupError,
-                        TypeError, ValueError)
+  READ_PB_EXCEPTIONS = (message.DecodeError, LookupError, TypeError, ValueError)
   READ_ERROR_MSG = ('Data in %s is corrupt or a different version. '
                     'Try running with the --clear_datastore flag.\n%r')
   READ_PY250_MSG = ('Are you using FloatProperty and/or GeoPtProperty? '
@@ -450,45 +461,45 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
                     'the --clear_datastore flag.\n')
 
   def Read(self):
-    """ Reads the datastore and history files into memory.
+    """Reads the datastore and history files into memory.
 
     The in-memory query history is cleared, but the datastore is *not*
     cleared; the entities in the files are merged into the entities in memory.
-    If you want them to overwrite the in-memory datastore, call Clear() before
-    calling Read().
+    If you want them to overwrite the in-memory datastore, call `Clear()` before
+    calling `Read()`.
 
     If the datastore file contains an entity with the same app name, kind, and
     key as an entity already in the datastore, the entity from the file
     overwrites the entity in the datastore.
 
-    Also sets each ID counter to one greater than the highest ID allocated so
-    far in that counter's ID space.
+    Also sets each `ID` counter to one greater than the highest `ID` allocated
+    so far in that counter's `ID` space.
     """
     if self.__datastore_file and self.__datastore_file != '/dev/null':
       entities = self.__ReadPickled(self.__datastore_file)
-      if entities and isinstance(entities[-1], (int, long)):
+      if entities and isinstance(entities[-1], six.integer_types):
         self._commit_timestamp = int(entities.pop())
       for encoded_entity in entities:
         try:
-          entity = entity_pb.EntityProto(encoded_entity)
+          entity = entity_pb2.EntityProto.FromString(encoded_entity)
           record = datastore_stub_util._FromStorageEntity(entity)
-        except self.READ_PB_EXCEPTIONS, e:
+        except self.READ_PB_EXCEPTIONS as e:
           raise apiproxy_errors.ApplicationError(
               datastore_pb.Error.INTERNAL_ERROR,
               self.READ_ERROR_MSG % (self.__datastore_file, e))
-        except struct.error, e:
+        except struct.error as e:
           raise
 
         self._StoreRecord(record)
 
-        last_path = _FinalElement(entity.key())
-        if last_path.id():
-          self._SetMaxId(last_path.id())
+        last_path = _FinalElement(entity.key)
+        if last_path.id:
+          self._SetMaxId(last_path.id)
 
   def Write(self):
     """Writes out the datastore and history files.
 
-    Be careful! If the files already exist, this method overwrites them!
+    Important: If the files already exist, this method overwrites them.
     """
     super(DatastoreFileStub, self).Write()
     self.__WriteDatastore()
@@ -498,8 +509,9 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
             self.__save_changes)
 
   def __WriteDatastore(self):
-    """ Writes out the datastore file. Be careful! If the file already exists,
-    this method overwrites it!
+    """Writes out the datastore file.
+
+    Be careful: If the file already exists, this method overwrites it!
     """
     if self.__IsSaveable():
       encoded = []
@@ -520,11 +532,15 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
             filename != '/dev/null' and
             os.path.isfile(filename) and
             os.stat(filename).st_size > 0):
-          return pickle.load(open(filename, 'rb'))
+          pickle_kwargs = {}
+          if six.PY3:
+
+            pickle_kwargs['encoding'] = 'bytes'
+          return pickle.load(open(filename, 'rb'), **pickle_kwargs)
         else:
-          logging.warning('Could not read datastore data from %s', filename)
+          logger.warning('Could not read datastore data from %s', filename)
       except (AttributeError, LookupError, ImportError, NameError, TypeError,
-              ValueError, struct.error, pickle.PickleError), e:
+              ValueError, struct.error, pickle.PickleError) as e:
 
 
         raise apiproxy_errors.ApplicationError(
@@ -572,7 +588,7 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
       self.__file_lock.release()
 
   def MakeSyncCall(self, service, call, request, response, request_id=None):
-    """ The main RPC entry point. service must be 'datastore_v3'."""
+    """The main RPC entry point. Service must be datastore_v3."""
     self.assertPbIsInitialized(request)
     super(DatastoreFileStub, self).MakeSyncCall(service,
                                                 call,
@@ -582,11 +598,10 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
     self.assertPbIsInitialized(response)
 
   def assertPbIsInitialized(self, pb):
-    """Raises an exception if the given PB is not initialized and valid."""
+    """Raises an exception if the given `PB` is not initialized and valid."""
     explanation = []
-    assert pb.IsInitialized(explanation), explanation
 
-    pb.Encode()
+    pb.SerializeToString()
 
   def _GetSchemaCache(self, kind, usekey):
     if kind in self.__schema_cache and usekey in self.__schema_cache[kind]:
@@ -644,15 +659,15 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
   def _GetEntitiesInEntityGroup(self, entity_group):
     eg_k = datastore_types.ReferenceToKeyValue(entity_group)
     return dict((k, e.record)
-                for (k, e) in self.__entities_by_group[eg_k].iteritems())
+                for (k, e) in six.iteritems(self.__entities_by_group[eg_k]))
 
   def _GetQueryCursor(self, query, filters, orders, index_list):
-    app_id = query.app()
-    namespace = query.name_space()
+    app_id = query.app
+    namespace = query.name_space
 
     pseudo_kind = None
-    if query.has_kind() and query.kind() in self._pseudo_kinds:
-      pseudo_kind = self._pseudo_kinds[query.kind()]
+    if query.HasField('kind') and query.kind in self._pseudo_kinds:
+      pseudo_kind = self._pseudo_kinds[query.kind]
 
 
 
@@ -663,15 +678,16 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
       if pseudo_kind:
 
         (results, filters, orders) = pseudo_kind.Query(query, filters, orders)
-        results = map(datastore_stub_util.EntityRecord, results)
-      elif query.has_kind():
-        stored_entities = self.__entities_by_kind[app_ns, query.kind()].values()
+        results = list(map(datastore_stub_util.EntityRecord, results))
+      elif query.HasField('kind'):
+        stored_entities = list(
+            self.__entities_by_kind[app_ns, query.kind].values())
         results = [stored_entity.record for stored_entity in stored_entities]
       else:
         results = []
-        for (cur_app_ns, _), entities in self.__entities_by_kind.iteritems():
+        for (cur_app_ns, _), entities in six.iteritems(self.__entities_by_kind):
           if cur_app_ns == app_ns:
-            results.extend(entity.record for entity in entities.itervalues())
+            results.extend(entity.record for entity in six.itervalues(entities))
     except KeyError:
       results = []
     finally:
@@ -681,15 +697,15 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
                                              index_list)
 
   def _SetIdCounter(self, id_space, value):
-    """Set the ID counter for id_space to value."""
+    """Sets the `ID` counter for id_space to value."""
     self.__id_counters[id_space] = value
 
   def _IdCounter(self, id_space):
-    """Return current value of ID counter for id_space."""
+    """Returns current value of `ID` counter for id_space."""
     return self.__id_counters[id_space]
 
   def _SetMaxId(self, max_id):
-    """Infer ID space and advance corresponding counter."""
+    """Infers `ID` space and advance corresponding counter."""
     count, id_space = datastore_stub_util.IdToCounter(max_id)
     if count >= self._IdCounter(id_space):
       self._SetIdCounter(id_space, count + 1)
@@ -722,15 +738,15 @@ class DatastoreFileStub(datastore_stub_util.BaseDatastore,
       for key in keys:
         last_element = _FinalElement(key)
 
-        if last_element.id() or last_element.has_name():
-          for el in key.path().element_list():
-            if el.id():
-              self._SetMaxId(el.id())
+        if last_element.id or last_element.HasField('name'):
+          for el in key.path.element:
+            if el.HasField('id'):
+              self._SetMaxId(el.id)
 
         else:
           id_space = datastore_stub_util.SCATTERED
           count = self._IdCounter(id_space)
-          last_element.set_id(datastore_stub_util.ToScatteredId(count))
+          last_element.id = datastore_stub_util.ToScatteredId(count)
           self._SetIdCounter(id_space, count + 1)
           full_keys.append(key)
     finally:

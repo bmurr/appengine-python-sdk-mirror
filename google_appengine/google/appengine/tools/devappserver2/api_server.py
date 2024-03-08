@@ -19,9 +19,8 @@ import os.path
 import sys
 
 import google
-from google.appengine._internal import six
 
-filename = 'api_server_py2.py' if six.PY2 else 'api_server_py3.py'
+filename = 'api_server_py3.py'
 
 api_server_src = os.path.join(os.path.dirname(__file__), filename)
 

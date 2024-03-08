@@ -3,21 +3,21 @@
 from __future__ import absolute_import
 
 
-from google.appengine._internal.ruamel.yaml.reader import Reader
-from google.appengine._internal.ruamel.yaml.scanner import Scanner, RoundTripScanner
-from google.appengine._internal.ruamel.yaml.parser import Parser, RoundTripParser
-from google.appengine._internal.ruamel.yaml.composer import Composer
-from google.appengine._internal.ruamel.yaml.constructor import (
+from ruamel.yaml.reader import Reader
+from ruamel.yaml.scanner import Scanner, RoundTripScanner
+from ruamel.yaml.parser import Parser, RoundTripParser
+from ruamel.yaml.composer import Composer
+from ruamel.yaml.constructor import (
     BaseConstructor,
     SafeConstructor,
     Constructor,
     RoundTripConstructor,
 )
-from google.appengine._internal.ruamel.yaml.resolver import VersionedResolver
+from ruamel.yaml.resolver import VersionedResolver
 
 if False:  # MYPY
     from typing import Any, Dict, List, Union, Optional  # NOQA
-    from google.appengine._internal.ruamel.yaml.compat import StreamTextType, VersionType  # NOQA
+    from ruamel.yaml.compat import StreamTextType, VersionType  # NOQA
 
 __all__ = ['BaseLoader', 'SafeLoader', 'Loader', 'RoundTripLoader']
 

@@ -27,29 +27,29 @@ programmatically access their request and application logs.
 
 
 
-from __future__ import print_function
-from __future__ import with_statement
 import base64
 import collections
-import cStringIO
+import io
 import json
-import logging
-import os
 import re
 import sys
 import threading
 import time
 import warnings
 
-from google.net.proto import ProtocolBuffer
-from google.appengine.api import api_base_pb
+from google.appengine import common
+from google.appengine.api import api_base_pb2
 from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import full_app_id
 from google.appengine.api.app_identity import app_identity
-from google.appengine.api.logservice import log_service_pb
+from google.appengine.api.logservice import log_service_pb2
 from google.appengine.api.logservice import logsutil
-from google.appengine.datastore import datastore_rpc
+from google.appengine.api.modules import modules
 from google.appengine.runtime import apiproxy_errors
 from google.appengine.runtime import features
+import six
+
+from google.protobuf import message
 
 
 AUTOFLUSH_ENABLED = True
@@ -74,6 +74,7 @@ LOG_LEVEL_ERROR = logsutil.LOG_LEVEL_ERROR
 LOG_LEVEL_CRITICAL = logsutil.LOG_LEVEL_CRITICAL
 
 
+
 MODULE_ID_RE_STRING = r'(?!-)[a-z\d\-]{1,63}'
 
 
@@ -83,7 +84,7 @@ _MAJOR_VERSION_ID_PATTERN = r'^(?:(?:(%s):)?)(%s)$' % (MODULE_ID_RE_STRING,
 
 _MAJOR_VERSION_ID_RE = re.compile(_MAJOR_VERSION_ID_PATTERN)
 
-_REQUEST_ID_PATTERN = r'^[\da-fA-F]+$'
+_REQUEST_ID_PATTERN = br'^[\da-fA-F]+$'
 _REQUEST_ID_RE = re.compile(_REQUEST_ID_PATTERN)
 
 
@@ -91,10 +92,6 @@ _REQUEST_ID_RE = re.compile(_REQUEST_ID_PATTERN)
 
 
 _NEWLINE_REPLACEMENT = '\0'
-
-
-
-_sys_stderr = sys.stderr
 
 LOGFILE = '/var/log/app'
 
@@ -142,9 +139,27 @@ def cleanup_message(message):
   message = message.replace('\r\n', _NEWLINE_REPLACEMENT)
   message = message.replace('\r', _NEWLINE_REPLACEMENT)
   message = message.replace('\n', _NEWLINE_REPLACEMENT)
-  if isinstance(message, unicode):
+  if isinstance(message, six.text_type):
     message = message.encode('UTF-8')
   return message
+
+
+def length_string(n):
+  """A copy of google.net.proto.ProtocolBuffer.lengthString().
+
+  Args:
+    n: ByteSize of the string.
+
+  Returns:
+      The encoded length of a string including its length marker.
+  """
+  result = n
+  while 1:
+    result += 1
+    n >>= 7
+    if n == 0:
+      break
+  return result
 
 
 class _LogsDequeBuffer(object):
@@ -183,7 +198,7 @@ class _LogsDequeBuffer(object):
     """Returns the underlying file-like object used to buffer logs."""
 
 
-    return cStringIO.StringIO(self.contents())
+    return six.StringIO(self.contents())
 
   def lines(self):
     """Returns the number of log lines currently buffered."""
@@ -246,7 +261,7 @@ class _LogsDequeBuffer(object):
 
   @staticmethod
   def _clean(message):
-    return logsutil.Stripnl(message.replace('\0', '\n'))
+    return logsutil.Stripnl(str(message).replace('\0', '\n'))
 
   def parse_logs(self):
     """Return the logs as an array of tuples.
@@ -273,13 +288,15 @@ class _LogsDequeBuffer(object):
 
 
     message = cleanup_message(message)
+    if type(message) is bytes:
+      message = message.decode('utf-8')
     with self._lock:
       if self._request != logsutil.RequestID():
 
 
         self._reset()
-      record = logsutil.LoggingRecord(
-          level, long(created * 1000 * 1000), message, source_location)
+      record = logsutil.LoggingRecord(level, int(created * 1000 * 1000),
+                                      message, source_location)
       self._buffer.append(record)
       self._bytes += len(record)
       self._autoflush()
@@ -288,8 +305,12 @@ class _LogsDequeBuffer(object):
     """Writes a line to the logs buffer."""
     with self._lock:
 
-      for line in cStringIO.StringIO(lines):
-        self._write(line)
+      if type(lines) is bytes:
+        for line in io.BytesIO(lines):
+          self._write(line.decode('utf-8'))
+      else:
+        for line in io.StringIO(lines):
+          self._write(line)
 
   def writelines(self, seq):
     """Writes each line in the given sequence to the logs buffer."""
@@ -354,7 +375,7 @@ class _LogsDequeBuffer(object):
     records_to_be_flushed = []
     try:
       while True:
-        group = log_service_pb.UserAppLogGroup()
+        group = log_service_pb2.UserAppLogGroup()
         bytes_left = self._MAX_FLUSH_SIZE
         while self._buffer:
           record = self._get_record()
@@ -374,21 +395,20 @@ class _LogsDequeBuffer(object):
 
           records_to_be_flushed.append(record)
 
-          line = group.add_log_line()
-          line.set_timestamp_usec(record.created)
-          line.set_level(record.level)
+          line = group.log_line.add()
+          line.timestamp_usec = record.created
+          line.level = record.level
           if record.source_location is not None:
-            line.mutable_source_location().set_file(record.source_location[0])
-            line.mutable_source_location().set_line(record.source_location[1])
-            line.mutable_source_location().set_function_name(
-                record.source_location[2])
-          line.set_message(message)
+            line.source_location.file = record.source_location[0]
+            line.source_location.line = record.source_location[1]
+            line.source_location.function_name = record.source_location[2]
+          line.message = message
 
-          bytes_left -= 1 + group.lengthString(line.ByteSize())
+          bytes_left -= 1 + length_string(line.ByteSize())
 
-        request = log_service_pb.FlushRequest()
-        request.set_logs(group.Encode())
-        response = api_base_pb.VoidProto()
+        request = log_service_pb2.FlushRequest()
+        request.logs = group.SerializeToString()
+        response = api_base_pb2.VoidProto()
         apiproxy_stub_map.MakeSyncCall('logservice', 'Flush', request, response)
         if not self._buffer:
           break
@@ -406,7 +426,7 @@ class _LogsDequeBuffer(object):
 
 
 
-      _sys_stderr.write(msg % (e, line, self._contents(), line))
+      sys.stderr.write(msg % (e, line, self._contents(), line))
       self._clear()
       raise
     else:
@@ -540,11 +560,11 @@ class _LogQueryResult(object):
     while True:
       for log_item in self._logs:
         yield RequestLog(log_item)
-      if not self._read_called or self._request.has_offset():
+      if not self._read_called or self._request.HasField("offset"):
         if self._end_time and time.time() >= self._end_time:
           offset = None
-          if self._request.has_offset():
-            offset = self._request.offset().Encode()
+          if self._request.HasField("offset"):
+            offset = self._request.offset.SerializeToString()
           raise TimeoutError('A timeout occurred while iterating results',
                              offset=offset, last_end_time=self._last_end_time)
         self._read_called = True
@@ -558,23 +578,23 @@ class _LogQueryResult(object):
     This method is used by the iterator when it has exhausted its current set of
     logs to acquire more logs and update its internal structures accordingly.
     """
-    response = log_service_pb.LogReadResponse()
+    response = log_service_pb2.LogReadResponse()
 
     try:
       apiproxy_stub_map.MakeSyncCall('logservice', 'Read', self._request,
                                      response)
     except apiproxy_errors.ApplicationError as e:
-      if e.application_error == log_service_pb.LogServiceError.INVALID_REQUEST:
+      if e.application_error == log_service_pb2.LogServiceError.INVALID_REQUEST:
         raise InvalidArgumentError(e.error_detail)
       raise Error(e.error_detail)
 
-    self._logs = response.log_list()
-    self._request.clear_offset()
-    if response.has_offset():
-      self._request.mutable_offset().CopyFrom(response.offset())
+    self._logs = response.log
+    self._request.ClearField("offset")
+    if response.HasField("offset"):
+      self._request.offset.CopyFrom(response.offset)
     self._last_end_time = None
-    if response.has_last_end_time():
-      self._last_end_time = response.last_end_time() / 1e6
+    if response.HasField("last_end_time"):
+      self._last_end_time = response.last_end_time / 1e6
 
 
 class RequestLog(object):
@@ -582,15 +602,17 @@ class RequestLog(object):
 
   def __init__(self, request_log=None):
     if type(request_log) is str:
-      self.__pb = log_service_pb.RequestLog(base64.b64decode(request_log))
-    elif request_log.__class__ == log_service_pb.RequestLog:
+      self.__pb = (log_service_pb2.RequestLog
+                   .FromString(base64.b64decode(request_log)))
+    elif request_log.__class__ == log_service_pb2.RequestLog:
       self.__pb = request_log
     else:
-      self.__pb = log_service_pb.RequestLog()
+      self.__pb = log_service_pb2.RequestLog()
     self.__lines = []
 
   def __repr__(self):
-    return 'RequestLog(\'%s\')' % base64.b64encode(self.__pb.Encode())
+    return ('RequestLog(\'%s\')' %
+            base64.b64encode(self.__pb.SerializeToString()).decode('utf-8'))
 
   def __str__(self):
     if self.module_id == 'default':
@@ -609,17 +631,17 @@ class RequestLog(object):
   @property
   def app_id(self):
     """Application id that handled this request, as a string."""
-    return self.__pb.app_id()
+    return self.__pb.app_id
 
   @property
   def module_id(self):
     """Module id that handled this request, as a string."""
-    return self.__pb.module_id()
+    return self.__pb.module_id
 
   @property
   def version_id(self):
     """Version of the application that handled this request, as a string."""
-    return self.__pb.version_id()
+    return self.__pb.version_id
 
   @property
   def request_id(self):
@@ -631,7 +653,7 @@ class RequestLog(object):
     Returns:
         A byte string containing a unique identifier for this request.
     """
-    return self.__pb.request_id()
+    return self.__pb.request_id
 
   @property
   def offset(self):
@@ -643,14 +665,14 @@ class RequestLog(object):
     Returns:
         A byte string representing an offset into the active result stream.
     """
-    if self.__pb.has_offset():
-      return self.__pb.offset().Encode()
+    if self.__pb.HasField('offset'):
+      return self.__pb.offset.SerializeToString()
     return None
 
   @property
   def ip(self):
     """The origin IP address of the request, as a string."""
-    return self.__pb.ip()
+    return self.__pb.ip
 
   @property
   def nickname(self):
@@ -659,8 +681,8 @@ class RequestLog(object):
     Returns:
         A string representation of the logged in user's nickname, or None.
     """
-    if self.__pb.has_nickname():
-      return self.__pb.nickname()
+    if self.__pb.HasField('nickname'):
+      return self.__pb.nickname
     return None
 
   @property
@@ -671,7 +693,7 @@ class RequestLog(object):
         A float representing the time this request began processing in seconds
         since the Unix epoch.
     """
-    return self.__pb.start_time() / 1e6
+    return self.__pb.start_time / 1e6
 
   @property
   def end_time(self):
@@ -681,22 +703,22 @@ class RequestLog(object):
         A float representing the request completion time in seconds since the
         Unix epoch.
     """
-    return self.__pb.end_time() / 1e6
+    return self.__pb.end_time / 1e6
 
   @property
   def latency(self):
     """Time required to process request in seconds, as a float."""
-    return self.__pb.latency() / 1e6
+    return self.__pb.latency / 1e6
 
   @property
   def mcycles(self):
     """Number of machine cycles used to process request, as an integer."""
-    return self.__pb.mcycles()
+    return self.__pb.mcycles
 
   @property
   def method(self):
     """Request method (GET, PUT, POST, etc), as a string."""
-    return self.__pb.method()
+    return self.__pb.method
 
   @property
   def resource(self):
@@ -707,35 +729,35 @@ class RequestLog(object):
     Returns:
         A string containing the path component of the request URL.
     """
-    return self.__pb.resource()
+    return self.__pb.resource
 
   @property
   def http_version(self):
     """HTTP version of request, as a string."""
-    return self.__pb.http_version()
+    return self.__pb.http_version
 
   @property
   def status(self):
     """Response status of request, as an int."""
-    return self.__pb.status()
+    return self.__pb.status
 
   @property
   def response_size(self):
     """Size in bytes sent back to client by request, as a long."""
-    return self.__pb.response_size()
+    return self.__pb.response_size
 
   @property
   def referrer(self):
     """Referrer URL of request as a string, or None."""
-    if self.__pb.has_referrer():
-      return self.__pb.referrer()
+    if self.__pb.HasField('referrer'):
+      return self.__pb.referrer
     return None
 
   @property
   def user_agent(self):
     """User agent used to make the request as a string, or None."""
-    if self.__pb.has_user_agent():
-      return self.__pb.user_agent()
+    if self.__pb.HasField('user_agent'):
+      return self.__pb.user_agent
     return None
 
   @property
@@ -748,7 +770,7 @@ class RequestLog(object):
     Returns:
         A string containing a file or class name.
     """
-    return self.__pb.url_map_entry()
+    return self.__pb.url_map_entry
 
   @property
   def combined(self):
@@ -761,7 +783,7 @@ class RequestLog(object):
         A string containing an Apache-style log line in the form documented at
         http://httpd.apache.org/docs/1.3/logs.html.
     """
-    return self.__pb.combined()
+    return self.__pb.combined
 
   @property
   def api_mcycles(self):
@@ -774,8 +796,8 @@ class RequestLog(object):
     """
     warnings.warn('api_mcycles does not return a meaningful value.',
                   DeprecationWarning, stacklevel=2)
-    if self.__pb.has_api_mcycles():
-      return self.__pb.api_mcycles()
+    if self.__pb.HasField('api_mcycles'):
+      return self.__pb.api_mcycles
     return None
 
   @property
@@ -786,8 +808,8 @@ class RequestLog(object):
         A string representing the host and port receiving the request, or None
         if not available.
     """
-    if self.__pb.has_host():
-      return self.__pb.host()
+    if self.__pb.HasField('host'):
+      return self.__pb.host
     return None
 
   @property
@@ -797,8 +819,8 @@ class RequestLog(object):
     Returns:
         A string containing the request's queue name if relevant, or None.
     """
-    if self.__pb.has_task_queue_name():
-      return self.__pb.task_queue_name()
+    if self.__pb.HasField('task_queue_name'):
+      return self.__pb.task_queue_name
     return None
 
   @property
@@ -808,8 +830,8 @@ class RequestLog(object):
     Returns:
        A string containing the request's task name if relevant, or None.
     """
-    if self.__pb.has_task_name():
-      return self.__pb.task_name()
+    if self.__pb.HasField('task_name'):
+      return self.__pb.task_name
 
   @property
   def was_loading_request(self):
@@ -818,7 +840,7 @@ class RequestLog(object):
     Returns:
         A bool indicating whether this request was a loading request.
     """
-    return bool(self.__pb.was_loading_request())
+    return bool(self.__pb.was_loading_request)
 
   @property
   def pending_time(self):
@@ -827,19 +849,19 @@ class RequestLog(object):
     Returns:
         A float representing the time in seconds that this request was pending.
     """
-    return self.__pb.pending_time() / 1e6
+    return self.__pb.pending_time / 1e6
 
   @property
   def replica_index(self):
     """The module replica that handled the request as an integer, or None."""
-    if self.__pb.has_replica_index():
-      return self.__pb.replica_index()
+    if self.__pb.HasField('replica_index'):
+      return self.__pb.replica_index
     return None
 
   @property
   def finished(self):
     """Whether or not this log represents a finished request, as a bool."""
-    return bool(self.__pb.finished())
+    return bool(self.__pb.finished)
 
   @property
   def instance_key(self):
@@ -848,8 +870,8 @@ class RequestLog(object):
     Returns:
         A string encoding of an instance key if available, or None.
     """
-    if self.__pb.has_clone_key():
-      return self.__pb.clone_key()
+    if self.__pb.HasField('clone_key'):
+      return self.__pb.clone_key
     return None
 
   @property
@@ -860,12 +882,12 @@ class RequestLog(object):
        A list of AppLog objects representing the log lines for this request, or
        an empty list if none were emitted or the query did not request them.
     """
-    if not self.__lines and self.__pb.line_size():
-      self.__lines = [AppLog(time=line.time() / 1e6, level=line.level(),
-                             message=line.log_message(),
+    if not self.__lines and len(self.__pb.line):
+      self.__lines = [AppLog(time=line.time / 1e6, level=line.level,
+                             message=line.log_message,
                              source_location=
-                             source_location_to_tuple(line.source_location()))
-                      for line in self.__pb.line_list()]
+                             source_location_to_tuple(line.source_location))
+                      for line in self.__pb.line]
     return self.__lines
 
   @property
@@ -876,8 +898,8 @@ class RequestLog(object):
        A string containing App Engine version that served this request, or None
        if not available.
     """
-    if self.__pb.has_app_engine_release():
-      return self.__pb.app_engine_release()
+    if self.__pb.HasField('app_engine_release'):
+      return self.__pb.app_engine_release
     return None
 
 
@@ -885,9 +907,9 @@ def source_location_to_tuple(locpb):
   """Converts a SourceLocation proto into a tuple of primitive types."""
   if locpb is None:
     return None
-  if not locpb.file() and not locpb.line() and not locpb.function_name():
+  if not locpb.file and not locpb.line and not locpb.function_name:
     return None
-  return locpb.file(), locpb.line(), locpb.function_name()
+  return locpb.file, locpb.line, locpb.function_name
 
 
 class AppLog(object):
@@ -934,7 +956,7 @@ class AppLog(object):
 _FETCH_KWARGS = frozenset(['prototype_request', 'timeout', 'batch_size'])
 
 
-@datastore_rpc._positional(0)
+@common.positional(0)
 def fetch(start_time=None,
           end_time=None,
           offset=None,
@@ -1002,24 +1024,24 @@ def fetch(start_time=None,
   if args_diff:
     raise InvalidArgumentError('Invalid arguments: %s' % ', '.join(args_diff))
 
-  request = log_service_pb.LogReadRequest()
+  request = log_service_pb2.LogReadRequest()
 
-  request.set_app_id(os.environ['APPLICATION_ID'])
+  request.app_id = full_app_id.get()
 
   if start_time is not None:
-    if not isinstance(start_time, (float, int, long)):
+    if not isinstance(start_time, (float, int, int)):
       raise InvalidArgumentError('start_time must be a float or integer')
-    request.set_start_time(long(start_time * 1000000))
+    request.start_time = int(start_time * 1000000)
 
   if end_time is not None:
-    if not isinstance(end_time, (float, int, long)):
+    if not isinstance(end_time, (float, int, int)):
       raise InvalidArgumentError('end_time must be a float or integer')
-    request.set_end_time(long(end_time * 1000000))
+    request.end_time = int(end_time * 1000000)
 
   if offset is not None:
     try:
-      request.mutable_offset().ParseFromString(offset)
-    except (TypeError, ProtocolBuffer.ProtocolBufferDecodeError):
+      request.offset.ParseFromString(offset)
+    except (TypeError, message.DecodeError):
       raise InvalidArgumentError('offset must be a string or read-only buffer')
 
   if minimum_log_level is not None:
@@ -1030,27 +1052,27 @@ def fetch(start_time=None,
       raise InvalidArgumentError(
           'minimum_log_level must be one of %s' % repr(
               logsutil.LOG_LEVELS))
-    request.set_minimum_log_level(minimum_log_level)
+    request.minimum_log_level = minimum_log_level
 
   if not isinstance(include_incomplete, bool):
     raise InvalidArgumentError('include_incomplete must be a boolean')
-  request.set_include_incomplete(include_incomplete)
+  request.include_incomplete = include_incomplete
 
   if not isinstance(include_app_logs, bool):
     raise InvalidArgumentError('include_app_logs must be a boolean')
-  request.set_include_app_logs(include_app_logs)
+  request.include_app_logs = include_app_logs
 
   if version_ids and module_versions:
     raise InvalidArgumentError('version_ids and module_versions may not be '
                                'used at the same time.')
 
   if version_ids is None and module_versions is None:
-    module_version = request.add_module_version()
-    if os.environ['CURRENT_MODULE_ID'] != 'default':
+    module_version = request.module_version.add()
+    current_module_name = modules.get_current_module_name()
+    if current_module_name != 'default':
 
-      module_version.set_module_id(os.environ['CURRENT_MODULE_ID'])
-    module_version.set_version_id(
-        os.environ['CURRENT_VERSION_ID'].split('.')[0])
+      module_version.module_id = current_module_name
+    module_version.version_id = modules.get_current_version_name()
 
   if module_versions:
     if not isinstance(module_versions, list):
@@ -1067,12 +1089,12 @@ def fetch(start_time=None,
       req_module_versions.add((entry[0], entry[1]))
 
     for module, version in sorted(req_module_versions):
-      req_module_version = request.add_module_version()
+      req_module_version = request.module_version.add()
 
 
       if module != 'default':
-        req_module_version.set_module_id(module)
-      req_module_version.set_version_id(version)
+        req_module_version.module_id = module
+      req_module_version.version_id = version
 
   if version_ids:
     if not isinstance(version_ids, list):
@@ -1081,7 +1103,7 @@ def fetch(start_time=None,
       if not _MAJOR_VERSION_ID_RE.match(version_id):
         raise InvalidArgumentError(
             'version_ids must only contain valid major version identifiers')
-      request.add_module_version().set_version_id(version_id)
+      request.module_version.add().version_id = version_id
 
   if request_ids is not None:
     if not isinstance(request_ids, list):
@@ -1094,22 +1116,22 @@ def fetch(start_time=None,
       if not _REQUEST_ID_RE.match(request_id):
         raise InvalidArgumentError(
             '%s is not a valid request log id' % request_id)
-    request.request_id_list()[:] = request_ids
+    request.request_id[:] = request_ids
 
   prototype_request = kwargs.get('prototype_request')
   if prototype_request:
-    if not isinstance(prototype_request, log_service_pb.LogReadRequest):
+    if not isinstance(prototype_request, log_service_pb2.LogReadRequest):
       raise InvalidArgumentError('prototype_request must be a LogReadRequest')
     request.MergeFrom(prototype_request)
 
   timeout = kwargs.get('timeout')
   if timeout is not None:
-    if not isinstance(timeout, (float, int, long)):
+    if not isinstance(timeout, (float, int, int)):
       raise InvalidArgumentError('timeout must be a float or integer')
 
   batch_size = kwargs.get('batch_size')
   if batch_size is not None:
-    if not isinstance(batch_size, (int, long)):
+    if not isinstance(batch_size, six.integer_types):
       raise InvalidArgumentError('batch_size must be an integer')
 
     if batch_size < 1:
@@ -1117,7 +1139,7 @@ def fetch(start_time=None,
 
     if batch_size > MAX_ITEMS_PER_FETCH:
       raise InvalidArgumentError('batch_size specified is too large')
-    request.set_count(batch_size)
+    request.count = batch_size
 
   return _LogQueryResult(request, timeout=timeout)
 
@@ -1144,14 +1166,14 @@ class _LogsStreamBuffer(object):
     'unlock()' calls have been performed.
 
     Args:
-      stream: A file-like object to store logs. Defaults to a cStringIO object.
+      stream: A file-like object to store logs. Defaults to a six.StringIO object.
       stderr: If specified, use sys.stderr as the underlying stream.
     """
     self._stderr = stderr
     if self._stderr:
       assert stream is None
     else:
-      self._stream = stream or cStringIO.StringIO()
+      self._stream = stream or six.StringIO()
     self._lock = threading.RLock()
     self._reset()
 
@@ -1240,16 +1262,18 @@ class _LogsStreamBuffer(object):
 
 
     message = cleanup_message(message)
+    if isinstance(message, bytes):
+      message = message.decode('utf-8')
 
 
 
 
-    self.write('LOG %d %d %s\n' % (level,
-                                   long(created * 1000 * 1000),
-                                   message))
+    self.write('LOG %d %d %s\n' % (level, int(created * 1000 * 1000), message))
 
   def write(self, line):
     """Writes a line to the logs buffer."""
+    if isinstance(line, bytes):
+      line = line.decode('utf-8')
     with self._lock:
       return self._write(line)
 
@@ -1264,6 +1288,8 @@ class _LogsStreamBuffer(object):
 
 
       self._reset()
+    if isinstance(line, bytes):
+      line = line.decode('utf-8')
     self.stream().write(line)
 
     self._lines += 1
@@ -1297,7 +1323,7 @@ class _LogsStreamBuffer(object):
     self._clear()
 
     while True:
-      group = log_service_pb.UserAppLogGroup()
+      group = log_service_pb2.UserAppLogGroup()
       byte_size = 0
       n = 0
       for timestamp_usec, level, message, unused_source_location in logs:
@@ -1307,18 +1333,18 @@ class _LogsStreamBuffer(object):
 
         if byte_size + len(message) > self._MAX_FLUSH_SIZE:
           break
-        line = group.add_log_line()
-        line.set_timestamp_usec(timestamp_usec)
-        line.set_level(level)
-        line.set_message(message)
-        byte_size += 1 + group.lengthString(line.ByteSize())
+        line = group.log_line.add()
+        line.timestamp_usec = timestamp_usec
+        line.level = level
+        line.message = message
+        byte_size += 1 + length_string(line.ByteSize())
         n += 1
       assert n > 0 or not logs
       logs = logs[n:]
 
-      request = log_service_pb.FlushRequest()
-      request.set_logs(group.Encode())
-      response = api_base_pb.VoidProto()
+      request = log_service_pb2.FlushRequest()
+      request.logs = group.SerializeToString()
+      response = api_base_pb2.VoidProto()
       apiproxy_stub_map.MakeSyncCall('logservice', 'Flush', request, response)
       if not logs:
         break
@@ -1407,15 +1433,15 @@ class _LogsFileBuffer(object):
     """Parse the contents of the buffer and return an array of log lines."""
     pass
 
-  def write_record(self, level, created, message, unused_source_location=None):
+  def write_record(self, level, created, msg, unused_source_location=None):
 
 
-    message = cleanup_message(message)
+    msg = cleanup_message(msg)
 
 
 
 
-    self.write('LOG %d %d %s\n' % (level, long(created * 1000 * 1000), message))
+    self.write('LOG %d %d %s\n' % (level, int(created * 1000 * 1000), msg))
 
   def writelines(self, seq):
     """Writes each line in the given sequence to the logs buffer."""
@@ -1424,7 +1450,7 @@ class _LogsFileBuffer(object):
 
   def write(self, line):
     """Writes a line to the logs buffer."""
-    logs = logsutil.ParseLogs(line)
+    logs = logsutil.ParseLogs(six.ensure_str(line))
     for log in logs:
       entry = self.outputjson(log)
       self.stream().write(entry + '\n')
@@ -1440,11 +1466,11 @@ class _LogsFileBuffer(object):
 
   def outputjson(self, log):
     """Convert log entry into json to be written to loggingfs gofer."""
-    _, level, message, _ = log
-    message = self._truncate(message, self._MAX_LINE_SIZE)
+    _, level, msg, _ = log
+    msg = self._truncate(msg, self._MAX_LINE_SIZE)
     trace = logsutil.TraceID()
     severity = logsutil.LogLevelString(level)
-    entry = {'severity': severity, 'message': message}
+    entry = {'severity': severity, 'message': msg}
     project = app_identity.get_application_id()
 
     entry['logging.googleapis.com/trace'] = ('projects/%s/traces/%s' %
@@ -1453,7 +1479,7 @@ class _LogsFileBuffer(object):
 
   def flush(self):
     """Flushes the contents of the logs buffer."""
-    pass
+    self.stream().flush()
 
   def autoflush(self):
     """Flushes the buffer if certain conditions have been met."""

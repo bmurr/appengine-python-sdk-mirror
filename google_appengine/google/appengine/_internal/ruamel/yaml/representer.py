@@ -3,21 +3,21 @@
 from __future__ import print_function, absolute_import, division
 
 
-from google.appengine._internal.ruamel.yaml.error import *  # NOQA
-from google.appengine._internal.ruamel.yaml.nodes import *  # NOQA
-from google.appengine._internal.ruamel.yaml.compat import text_type, binary_type, to_unicode, PY2, PY3, ordereddict
-from google.appengine._internal.ruamel.yaml.compat import nprint, nprintf  # NOQA
-from google.appengine._internal.ruamel.yaml.scalarstring import (
+from ruamel.yaml.error import *  # NOQA
+from ruamel.yaml.nodes import *  # NOQA
+from ruamel.yaml.compat import text_type, binary_type, to_unicode, PY2, PY3, ordereddict
+from ruamel.yaml.compat import nprint, nprintf  # NOQA
+from ruamel.yaml.scalarstring import (
     LiteralScalarString,
     FoldedScalarString,
     SingleQuotedScalarString,
     DoubleQuotedScalarString,
     PlainScalarString,
 )
-from google.appengine._internal.ruamel.yaml.scalarint import ScalarInt, BinaryInt, OctalInt, HexInt, HexCapsInt
-from google.appengine._internal.ruamel.yaml.scalarfloat import ScalarFloat
-from google.appengine._internal.ruamel.yaml.scalarbool import ScalarBoolean
-from google.appengine._internal.ruamel.yaml.timestamp import TimeStamp
+from ruamel.yaml.scalarint import ScalarInt, BinaryInt, OctalInt, HexInt, HexCapsInt
+from ruamel.yaml.scalarfloat import ScalarFloat
+from ruamel.yaml.scalarbool import ScalarBoolean
+from ruamel.yaml.timestamp import TimeStamp
 
 import datetime
 import sys
@@ -193,7 +193,7 @@ class BaseRepresenter(object):
             item_val = omap[item_key]
             node_item = self.represent_data({item_key: item_val})
             # if not (isinstance(node_item, ScalarNode) \
- #    and not node_item.style):
+            #    and not node_item.style):
             #     best_style = False
             value.append(node_item)
         if flow_style is None:
@@ -643,7 +643,7 @@ Representer.add_multi_representer(object, Representer.represent_object)
 
 Representer.add_multi_representer(type, Representer.represent_name)
 
-from google.appengine._internal.ruamel.yaml.comments import (
+from ruamel.yaml.comments import (
     CommentedMap,
     CommentedOrderedMap,
     CommentedSeq,
@@ -1096,7 +1096,7 @@ class RoundTripRepresenter(SafeRepresenter):
                 else:
                     node_item.value[0][1].comment = item_comment[2:]
             # if not (isinstance(node_item, ScalarNode) \
- #    and not node_item.style):
+            #    and not node_item.style):
             #     best_style = False
             value.append(node_item)
         if flow_style is None:

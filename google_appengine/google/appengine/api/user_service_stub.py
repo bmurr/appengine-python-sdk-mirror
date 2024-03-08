@@ -17,24 +17,20 @@
 
 
 
+"""Trivial implementation of the `UserService`."""
 
-
-"""Trivial implementation of the UserService."""
 
 
 
 
 import logging
-import os
-import urllib
-import urlparse
+from six.moves import urllib
+import six.moves.urllib.parse
 from google.appengine.api import apiproxy_stub
-from google.appengine.api import user_service_pb
-
-if os.environ.get('APPENGINE_RUNTIME') == 'python27':
-  from google.appengine.runtime import apiproxy_errors
-else:
-  from google.appengine.runtime import apiproxy_errors
+from google.appengine.api.oauth import oauth_api
+from google.appengine.api import user_service_pb2
+from google.appengine.runtime import apiproxy_errors
+from google.appengine.runtime.context import ctx_test_util
 
 _DEFAULT_LOGIN_URL = 'https://www.google.com/accounts/Login?continue=%s'
 _DEFAULT_LOGOUT_URL = 'https://www.google.com/accounts/Logout?continue=%s'
@@ -57,7 +53,7 @@ _OPENID_DEPRECATION_WARNING = (
 
 
 class UserServiceStub(apiproxy_stub.APIProxyStub):
-  """Trivial implementation of the UserService."""
+  """Trivial implementation of the `UserService`."""
 
   _ACCEPTS_REQUEST_ID = True
 
@@ -75,13 +71,13 @@ class UserServiceStub(apiproxy_stub.APIProxyStub):
       login_url: String containing the URL to use for logging in.
       logout_url: String containing the URL to use for logging out.
       service_name: Service name expected for all calls.
-      auth_domain: The authentication domain for the service e.g. "gmail.com".
-      request_data: A apiproxy_stub.RequestData instance used to look up state
+      auth_domain: The authentication domain for the service (e.g. "gmail.com").
+      request_data: A `apiproxy_stub.RequestData` instance used to look up state
           associated with the request that generated an API call.
 
-    Note: Both the login_url and logout_url arguments must contain one format
-    parameter, which will be replaced with the continuation URL where the user
-    should be redirected after log-in or log-out has been completed.
+    Note: Both the `login_url` and `logout_url` arguments must contain one
+    format parameter, which will be replaced with the continuation URL where
+    the user should be redirected after log-in or log-out has been completed.
     """
     super(UserServiceStub, self).__init__(service_name,
                                           request_data=request_data)
@@ -89,12 +85,12 @@ class UserServiceStub(apiproxy_stub.APIProxyStub):
     self._logout_url = logout_url
     self.__scopes = None
 
-    self.SetOAuthUser(is_admin=(os.environ.get('OAUTH_IS_ADMIN', '0') == '1'))
+    self.SetOAuthUser(is_admin=oauth_api._OAUTH_IS_ADMIN.get(False))
 
 
 
 
-    os.environ['AUTH_DOMAIN'] = auth_domain
+    ctx_test_util.set_both('AUTH_DOMAIN', auth_domain)
 
   def SetOAuthUser(self,
                    email=_OAUTH_EMAIL,
@@ -105,13 +101,13 @@ class UserServiceStub(apiproxy_stub.APIProxyStub):
                    client_id=_OAUTH_CLIENT_ID):
     """Set test OAuth user.
 
-    Determines what user is returned by requests to GetOAuthUser.
+    Determines what user is returned by requests to `GetOAuthUser`.
 
     Args:
-      email: Email address of oauth user.  None indicates that no oauth user
+      email: Email address of OAuth user.  None indicates that no oauth user
         is authenticated.
-      domain: Domain of oauth user.
-      user_id: User ID of oauth user.
+      domain: Domain of OAuth user.
+      user_id: User ID of OAuth user.
       is_admin:  Whether the user is an admin.
       scopes: List of scopes that user is authenticated against.
       client_id: Client ID of the OAuth2 request
@@ -124,98 +120,92 @@ class UserServiceStub(apiproxy_stub.APIProxyStub):
     self.__client_id = client_id
 
   def _Dynamic_SetOAuthUser(self, request, unused_response, unused_request_id):
-    """Local implementation of UserStubService.SetOAuthUser().
+    """Local implementation of `UserStubService.SetOAuthUser()`.
 
     Args:
-      request: A user_stub_service_pb.SetOAuthUserRequest message.
+      request: A `user_stub_service_pb.SetOAuthUserRequest` message.
     """
     self.SetOAuthUser(
-        email=request.email() or self.__email,
-        domain=request.auth_domain() or self.__domain,
-        user_id=request.user_id() or self.__user_id,
-        is_admin=request.is_admin() or self.__is_admin,
-        scopes=request.scopes_list() or self.__scopes,
-        client_id=request.client_id() or self.__client_id)
+        email=request.email or self.__email,
+        domain=request.auth_domain or self.__domain,
+        user_id=request.user_id or self.__user_id,
+        is_admin=request.is_admin or self.__is_admin,
+        scopes=request.scopes or self.__scopes,
+        client_id=request.client_id or self.__client_id)
 
   def _Dynamic_CreateLoginURL(self, request, response, request_id):
-    """Trivial implementation of UserService.CreateLoginURL().
+    """Trivial implementation of `UserService.CreateLoginURL()`.
 
     Args:
-      request: a CreateLoginURLRequest
-      response: a CreateLoginURLResponse
+      request: A `CreateLoginURLRequest`.
+      response: A `CreateLoginURLResponse`.
       request_id: A unique string identifying the request associated with the
           API call.
     """
-    if request.has_federated_identity():
+    if request.HasField('federated_identity'):
       logging.warning(_OPENID_DEPRECATION_WARNING)
 
-    response.set_login_url(
-        self._login_url %
-        urllib.quote(self._AddHostToContinueURL(request.destination_url(),
-                                                request_id)))
+    response.login_url = self._login_url % urllib.parse.quote(
+            self._AddHostToContinueURL(request.destination_url, request_id))
 
   def _Dynamic_CreateLogoutURL(self, request, response, request_id):
-    """Trivial implementation of UserService.CreateLogoutURL().
+    """Trivial implementation of `UserService.CreateLogoutURL()`.
 
     Args:
-      request: a CreateLogoutURLRequest
-      response: a CreateLogoutURLResponse
+      request: A `CreateLogoutURLRequest`.
+      response: A `CreateLogoutURLResponse`.
       request_id: A unique string identifying the request associated with the
           API call.
     """
-    response.set_logout_url(
-        self._logout_url %
-        urllib.quote(self._AddHostToContinueURL(request.destination_url(),
-                                                request_id)))
+    response.logout_url = self._logout_url % urllib.parse.quote(self._AddHostToContinueURL(request.destination_url, request_id))
 
   def _Dynamic_GetOAuthUser(self, request, response, request_id):
-    """Trivial implementation of UserService.GetOAuthUser().
+    """Trivial implementation of `UserService.GetOAuthUser()`.
 
     Args:
-      request: a GetOAuthUserRequest
-      response: a GetOAuthUserResponse
+      request: A `GetOAuthUserRequest`.
+      response: A `GetOAuthUserResponse`.
       request_id: A unique string identifying the request associated with the
           API call.
     """
     if self.__email is None:
       raise apiproxy_errors.ApplicationError(
-          user_service_pb.UserServiceError.OAUTH_INVALID_REQUEST)
+          user_service_pb2.UserServiceError.OAUTH_INVALID_REQUEST)
     else:
       if self.__scopes is None:
         authorized_scopes = set()
       else:
 
-        authorized_scopes = set(request.scopes_list()).intersection(
+        authorized_scopes = set(request.scopes).intersection(
             self.__scopes)
         if not authorized_scopes:
           raise apiproxy_errors.ApplicationError(
-              user_service_pb.UserServiceError.OAUTH_INVALID_TOKEN)
-      response.set_email(self.__email)
-      response.set_user_id(self.__user_id)
-      response.set_auth_domain(self.__domain)
-      response.set_is_admin(self.__is_admin)
-      response.set_client_id(self.__client_id)
-      for scope in authorized_scopes:
-        response.add_scopes(scope)
+              user_service_pb2.UserServiceError.OAUTH_INVALID_TOKEN)
+      response.email = self.__email
+      response.user_id = self.__user_id
+      response.auth_domain = self.__domain
+      response.is_admin = self.__is_admin
+      response.client_id = self.__client_id
+      response.scopes.extend(authorized_scopes)
 
   def _AddHostToContinueURL(self, continue_url, request_id):
-    """Adds the request host to the continue url if no host is specified.
+    """Adds the request host to the continue URL if no host is specified.
 
     Args:
-      continue_url: the URL which may or may not have a host specified
+      continue_url: The URL which may or may not have a host specified
       request_id: A unique string identifying the request associated with the
           API call.
 
     Returns:
-      string
+      String.
     """
-    (protocol, host, path, parameters, query, fragment) = urlparse.urlparse(continue_url)
+    (protocol, host, path, parameters, query, fragment) = six.moves.urllib.parse.urlparse(continue_url)
 
     if host and protocol:
       return continue_url
 
     try:
-      protocol, host, _, _, _, _ = urlparse.urlparse(
+      protocol, host, _, _, _, _ = six.moves.urllib.parse.urlparse(
           self.request_data.get_request_url(request_id))
     except KeyError:
 
@@ -227,5 +217,5 @@ class UserServiceStub(apiproxy_stub.APIProxyStub):
     if path == '':
       path = '/'
 
-    return urlparse.urlunparse(
-      (protocol, host, path, parameters, query, fragment))
+    return six.moves.urllib.parse.urlunparse(
+        (protocol, host, path, parameters, query, fragment))

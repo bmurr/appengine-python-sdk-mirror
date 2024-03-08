@@ -24,20 +24,10 @@ import sys
 def enable_python3():
   """Enable Python3.
 
-  Needed during our upgrade to python3 rather than depending on
-  sys.version_info[0] for a couple of reasons.
-  o Requires users to explicitly opt into python3 until it is
-    working.
-  o Allows for our unit tests which run under python3 to validate python2
-    codepaths while depending on sys.version_info[0] does not. Note that
-    patching sys.version_info[0] for tests ends up causing test breakages
-    such as importing incompatible classes.
-
   Returns:
-    True if python3 was enabled by setting the XX_GOOGLE_ENABLE_PY3
-    environment variale.
+    True.
   """
-  return bool(os.getenv('XX_GOOGLE_ENABLE_PY3'))
+  return True
 
 
 def reject_old_python_versions(minimum_version):
@@ -155,8 +145,7 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'antlr3'),
         os.path.join(dir_path, 'lib', 'fancy_urllib'),
         os.path.join(dir_path, 'lib', 'ipaddr'),
-        os.path.join(dir_path, 'lib', 'jinja2-2.6'),
-        os.path.join(dir_path, 'lib', 'protorpc-1.0'),
+        os.path.join(dir_path, 'lib', 'jinja2'),
         os.path.join(dir_path, 'lib', 'yaml-3.10'),
         os.path.join(dir_path, 'lib', 'simplejson'),
         os.path.join(dir_path, 'lib', 'six_subset'),
@@ -167,22 +156,16 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'py27_urlquote'),
     ]
 
-    if enable_python3():
-      self.v1_extra_paths.extend([
-          os.path.join(dir_path, 'lib', 'webob'),
-          os.path.join(dir_path, 'lib', 'webapp2'),
-      ])
-    else:
-      self.v1_extra_paths.extend([
-          os.path.join(dir_path, 'lib', 'webob_0_9'),
-          os.path.join(dir_path, 'lib', 'webapp2-2.5.2'),
-      ])
+    self.v1_extra_paths.extend([
+        os.path.join(dir_path, 'lib', 'webob'),
+        os.path.join(dir_path, 'lib', 'webapp2'),
+    ])
 
     if sys.version_info >= (2, 6):
       self.v1_extra_paths.extend([
           os.path.join(dir_path, 'lib', 'httplib2'),
           os.path.join(dir_path, 'lib', 'oauth2client'),
-          os.path.join(dir_path, 'lib', 'six-1.12.0'),
+          os.path.join(dir_path, 'lib', 'six'),
       ])
 
     self.api_server_extra_paths = [
@@ -210,51 +193,10 @@ class Paths(object):
       self.v1_extra_paths.extend([
       ])
 
-
-
-
-    self.endpointscfg_extra_paths = [
-        os.path.join(dir_path, 'lib', 'cherrypy'),
-        os.path.join(dir_path, 'lib', 'concurrent'),
-        os.path.join(dir_path, 'lib', 'endpoints-1.0'),
-        os.path.join(dir_path, 'lib', 'portpicker'),
-    ]
-
-
-    self.oauth_client_extra_paths = [
-        os.path.join(dir_path, 'lib', 'httplib2'),
-        os.path.join(dir_path, 'lib', 'python-gflags'),
-    ]
-
-    if sys.version_info >= (2, 6):
-      self.oauth_client_extra_paths.extend([
-          os.path.join(dir_path, 'lib', 'apiclient'),
-          os.path.join(dir_path, 'lib', 'oauth2client'),
-          os.path.join(dir_path, 'lib', 'six-1.12.0'),
-          os.path.join(dir_path, 'lib', 'uritemplate'),
-      ])
-    else:
-      self.oauth_client_extra_paths.append(
-          os.path.join(dir_path, 'lib', 'google-api-python-client'))
-
-
-    self.google_sql_extra_paths = self.oauth_client_extra_paths + [
-        os.path.join(dir_path, 'lib', 'deprecated_enum'),
-        os.path.join(dir_path, 'lib', 'grizzled'),
-        os.path.join(dir_path, 'lib', 'oauth2'),
-        os.path.join(dir_path, 'lib', 'prettytable'),
-        os.path.join(dir_path, 'lib', 'sqlcmd'),
-    ]
-
     devappserver2_dir = os.path.join(dir_path, 'google', 'appengine', 'tools',
                                      'devappserver2')
 
-    python27_sdk_dir = os.path.join(dir_path, 'python27', 'sdk', 'google',
-                                    'appengine', 'tools', 'devappserver2')
-
     php_runtime_dir = os.path.join(devappserver2_dir, 'php', 'runtime')
-    python_runtime_dir = os.path.join(python27_sdk_dir, 'python', 'runtime')
-
     stub_paths = [
         os.path.join(dir_path, 'lib', 'fancy_urllib'),
         os.path.join(dir_path, 'lib', 'ipaddr'),
@@ -266,7 +208,7 @@ class Paths(object):
         os.path.join(dir_path, 'lib', 'pyasn1_modules'),
         os.path.join(dir_path, 'lib', 'httplib2'),
         os.path.join(dir_path, 'lib', 'oauth2client_devserver'),
-        os.path.join(dir_path, 'lib', 'six-1.12.0'),
+        os.path.join(dir_path, 'lib', 'six'),
     ]
     if enable_python3():
       stub_paths.extend([
@@ -284,19 +226,6 @@ class Paths(object):
 
     self.v2_extra_paths = stub_paths + [
         dir_path,
-        os.path.join(dir_path, 'lib', 'simplejson'),
-
-
-
-        os.path.join(dir_path, 'lib', 'django-1.4'),
-        os.path.join(dir_path, 'lib', 'endpoints-1.0'),
-        os.path.join(dir_path, 'lib', 'jinja2-2.6'),
-        os.path.join(dir_path, 'lib', 'protorpc-1.0'),
-        os.path.join(dir_path, 'lib', 'PyAMF-0.6.1'),
-        os.path.join(dir_path, 'lib', 'markupsafe-0.15'),
-        os.path.join(dir_path, 'lib', 'webob-1.2.3'),
-        os.path.join(dir_path, 'lib', 'webapp2-2.5.2'),
-        os.path.join(dir_path, 'lib', 'py27_urlquote'),
     ]
 
     devappserver2_paths = stub_paths + [
@@ -334,7 +263,7 @@ class Paths(object):
       ])
     else:
       devappserver2_paths.extend([
-          os.path.join(dir_path, 'lib', 'jinja2-2.6'),
+          os.path.join(dir_path, 'lib', 'jinja2'),
           os.path.join(dir_path, 'lib', 'webob-1.2.3'),
           os.path.join(dir_path, 'lib', 'webapp2'),
           os.path.join(dir_path, 'lib', 'webapp2-2.5.1'),
@@ -353,50 +282,29 @@ class Paths(object):
     ]
     if sys.version_info >= (2, 6):
       php_runtime_paths.extend([
-          os.path.join(dir_path, 'lib', 'six-1.12.0'),
+          os.path.join(dir_path, 'lib', 'six'),
       ])
-
-    python_runtime_paths = [
-        os.path.join(dir_path, 'python27', 'sdk'),
-        os.path.join(dir_path, 'lib', 'concurrent'),
-        os.path.join(dir_path, 'lib', 'cherrypy'),
-        os.path.join(dir_path, 'lib', 'fancy_urllib'),
-        os.path.join(dir_path, 'lib', 'ipaddr'),
-        os.path.join(dir_path, 'lib', 'protorpc-1.0'),
-        os.path.join(dir_path, 'lib', 'six_subset'),
-        os.path.join(dir_path, 'lib', 'yaml-3.10'),
-    ]
 
     self._script_to_paths = {
         'api_server.py': self.v1_extra_paths + self.api_server_extra_paths,
-        'backends_conversion.py': self.v1_extra_paths,
         'dev_appserver.py': devappserver2_paths,
-        'gen_protorpc.py': self.v1_extra_paths,
         'php_cli.py': devappserver2_paths,
-        'remote_api_shell.py': self.v1_extra_paths,
-        'vmboot.py': self.v1_extra_paths,
         '_php_runtime.py': php_runtime_paths,
-        '_python_runtime.py': python_runtime_paths,
     }
 
     self._wrapper_name_to_real_name = {
         'api_server.py': 'api_server.py',
         'dev_appserver.py': 'devappserver2.py',
         '_php_runtime.py': 'runtime.py',
-        '_python_runtime.py': 'runtime.py',
     }
 
     self.default_script_dir = os.path.join(dir_path, 'google', 'appengine',
                                            'tools')
 
-    self.google_sql_dir = os.path.join(dir_path, 'google', 'storage', 'speckle',
-                                       'python', 'tool')
-
     self._script_to_dir = {
         'api_server.py': devappserver2_dir,
         'dev_appserver.py': devappserver2_dir,
         '_php_runtime.py': php_runtime_dir,
-        '_python_runtime.py': python_runtime_dir,
     }
 
 

@@ -2,19 +2,19 @@
 
 from __future__ import absolute_import
 
-from google.appengine._internal.ruamel.yaml.emitter import Emitter
-from google.appengine._internal.ruamel.yaml.serializer import Serializer
-from google.appengine._internal.ruamel.yaml.representer import (
+from ruamel.yaml.emitter import Emitter
+from ruamel.yaml.serializer import Serializer
+from ruamel.yaml.representer import (
     Representer,
     SafeRepresenter,
     BaseRepresenter,
     RoundTripRepresenter,
 )
-from google.appengine._internal.ruamel.yaml.resolver import Resolver, BaseResolver, VersionedResolver
+from ruamel.yaml.resolver import Resolver, BaseResolver, VersionedResolver
 
 if False:  # MYPY
     from typing import Any, Dict, List, Union, Optional  # NOQA
-    from google.appengine._internal.ruamel.yaml.compat import StreamType, VersionType  # NOQA
+    from ruamel.yaml.compat import StreamType, VersionType  # NOQA
 
 __all__ = ['BaseDumper', 'SafeDumper', 'Dumper', 'RoundTripDumper']
 

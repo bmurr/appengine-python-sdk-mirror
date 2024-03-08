@@ -22,47 +22,60 @@ data in memory when reliable storage via the DataStore API isn't
 required and higher performance is desired.
 """
 
-
-
-
-
-
-
-
-import cPickle
-import cStringIO
 import hashlib
 import math
+import os
+import pickle
 import types
 
-from google.appengine.api import api_base_pb
+import six
+from six.moves import zip
+import six.moves.cPickle
+
+from google.appengine.api import api_base_pb2
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import capabilities
 from google.appengine.api import namespace_manager
-from google.appengine.api.memcache import memcache_service_pb
+from google.appengine.api.memcache import memcache_service_pb2
 from google.appengine.runtime import apiproxy_errors
 
 
-MemcacheSetResponse = memcache_service_pb.MemcacheSetResponse
-MemcacheSetRequest = memcache_service_pb.MemcacheSetRequest
 
-MemcacheGetResponse = memcache_service_pb.MemcacheGetResponse
-MemcacheGetRequest = memcache_service_pb.MemcacheGetRequest
 
-MemcacheDeleteResponse = memcache_service_pb.MemcacheDeleteResponse
-MemcacheDeleteRequest = memcache_service_pb.MemcacheDeleteRequest
 
-MemcacheIncrementResponse = memcache_service_pb.MemcacheIncrementResponse
-MemcacheIncrementRequest = memcache_service_pb.MemcacheIncrementRequest
 
-MemcacheBatchIncrementResponse = memcache_service_pb.MemcacheBatchIncrementResponse
-MemcacheBatchIncrementRequest = memcache_service_pb.MemcacheBatchIncrementRequest
 
-MemcacheFlushResponse = memcache_service_pb.MemcacheFlushResponse
-MemcacheFlushRequest = memcache_service_pb.MemcacheFlushRequest
 
-MemcacheStatsRequest = memcache_service_pb.MemcacheStatsRequest
-MemcacheStatsResponse = memcache_service_pb.MemcacheStatsResponse
+
+
+if six.PY2:
+  import cStringIO
+  BytesIO = cStringIO.StringIO
+else:
+  BytesIO = six.BytesIO
+  long = int
+
+
+MemcacheSetResponse = memcache_service_pb2.MemcacheSetResponse
+MemcacheSetRequest = memcache_service_pb2.MemcacheSetRequest
+
+MemcacheGetResponse = memcache_service_pb2.MemcacheGetResponse
+MemcacheGetRequest = memcache_service_pb2.MemcacheGetRequest
+
+MemcacheDeleteResponse = memcache_service_pb2.MemcacheDeleteResponse
+MemcacheDeleteRequest = memcache_service_pb2.MemcacheDeleteRequest
+
+MemcacheIncrementResponse = memcache_service_pb2.MemcacheIncrementResponse
+MemcacheIncrementRequest = memcache_service_pb2.MemcacheIncrementRequest
+
+MemcacheBatchIncrementResponse = memcache_service_pb2.MemcacheBatchIncrementResponse
+MemcacheBatchIncrementRequest = memcache_service_pb2.MemcacheBatchIncrementRequest
+
+MemcacheFlushResponse = memcache_service_pb2.MemcacheFlushResponse
+MemcacheFlushRequest = memcache_service_pb2.MemcacheFlushRequest
+
+MemcacheStatsRequest = memcache_service_pb2.MemcacheStatsRequest
+MemcacheStatsResponse = memcache_service_pb2.MemcacheStatsResponse
 
 
 DELETE_NETWORK_FAILURE = 0
@@ -164,27 +177,27 @@ def _is_pair(obj):
 
 
 def _add_name_space(message, namespace=None):
-  """Populate the name_space field in a messagecol buffer.
+  """Populate the name_space field in a `messagecol` buffer.
 
   Args:
-    message: A messagecol buffer supporting the set_name_space() operation.
-    namespace: The name of the namespace part. If None, use the
-      default namespace. The empty namespace (i.e. '') will clear
-      the name_space field.
+    message: A `messagecol` buffer supporting the `set_name_space()` operation.
+    namespace: The name of the namespace part. If `None`, use the
+      default namespace. The empty namespace (i.e. `''`) will clear
+      the `name_space` field.
   """
   if namespace is None:
     namespace = namespace_manager.get_namespace()
   if not namespace:
-    message.clear_name_space()
+    message.ClearField('name_space')
   else:
-    message.set_name_space(namespace)
+    message.name_space = namespace
 
 
 def _key_string(key, key_prefix='', server_to_user_dict=None):
   """Utility function to handle different ways of requesting keys.
 
   Args:
-    key: Either a string or tuple of (shard_number, string).  In Google App
+    key: Either a string or tuple of `(shard_number, string)`.  In Google App
       Engine the sharding is automatic so the shard number is ignored.
       To memcache, the key is just bytes (no defined encoding).
     key_prefix: Optional string prefix to prepend to key.
@@ -193,20 +206,20 @@ def _key_string(key, key_prefix='', server_to_user_dict=None):
       (which does not have the prefix).
 
   Returns:
-    The key as a non-unicode string prepended with key_prefix. This is
+    The key as a non-unicode string prepended with `key_prefix`. This is
     the key sent to and stored by the server. If the resulting key is
-    longer then MAX_KEY_SIZE, it will be hashed with sha1 and will be
+    longer then `MAX_KEY_SIZE`, it will be hashed with sha1 and will be
     replaced with the hex representation of the said hash.
 
   Raises:
-    TypeError: If provided key isn't a string or tuple of (int, string)
-      or key_prefix.
+    TypeError: If provided key isn't a string or tuple of `(int, string)`
+      or `key_prefix`.
   """
   if _is_pair(key):
     key = key[1]
-  if not isinstance(key, basestring):
+  if not isinstance(key, (six.string_types, six.binary_type)):
     raise TypeError('Key must be a string instance, received %r' % key)
-  if not isinstance(key_prefix, basestring):
+  if not isinstance(key_prefix, (six.string_types, six.binary_type)):
     raise TypeError(
         'key_prefix must be a string instance, received %r' % key_prefix)
 
@@ -214,12 +227,18 @@ def _key_string(key, key_prefix='', server_to_user_dict=None):
 
 
 
-  server_key = key_prefix + key
-  if isinstance(server_key, unicode):
-    server_key = server_key.encode('utf-8')
+  key_bytes = key
+  if isinstance(key, six.text_type):
+    key_bytes = key.encode('utf-8')
 
+  if isinstance(key_prefix, six.text_type):
+    key_prefix = key_prefix.encode('utf-8')
+
+  server_key = key_prefix + key_bytes
   if len(server_key) > MAX_KEY_SIZE:
     server_key = hashlib.sha1(server_key).hexdigest()
+    if isinstance(server_key, six.text_type):
+      server_key = server_key.encode('utf-8')
 
   if server_to_user_dict is not None:
     assert isinstance(server_to_user_dict, dict)
@@ -241,10 +260,10 @@ def _validate_encode_value(value, do_pickle):
       string containing the pickled object.
 
   Returns:
-    Tuple (stored_value, flags) where:
+    Tuple `(stored_value, flags)` where:
       stored_value: The value as a non-unicode string that should be stored
         in memcache.
-      flags: An integer with bits set from the FLAG_* constants in this file
+      flags: An integer with bits set from the `FLAG_*` constants in this file
         to indicate the encoding of the key and value.
 
   Raises:
@@ -256,21 +275,21 @@ def _validate_encode_value(value, do_pickle):
   flags = 0
   stored_value = value
 
-  if isinstance(value, str):
+  if isinstance(value, six.binary_type):
     pass
-  elif isinstance(value, unicode):
+  elif isinstance(value, six.text_type):
     stored_value = value.encode('utf-8')
     flags |= TYPE_UNICODE
   elif isinstance(value, bool):
 
 
-    stored_value = str(int(value))
+    stored_value = str(int(value)).encode()
     flags |= TYPE_BOOL
   elif isinstance(value, int):
-    stored_value = str(value)
+    stored_value = str(value).encode()
     flags |= TYPE_INT
-  elif isinstance(value, long):
-    stored_value = str(value)
+  elif isinstance(value, six.integer_types):
+    stored_value = str(value).encode()
     flags |= TYPE_LONG
   else:
     stored_value = do_pickle(value)
@@ -292,20 +311,20 @@ def _decode_value(stored_value, flags, do_unpickle):
 
   Args:
     stored_value: The value as a non-unicode string that was stored.
-    flags: An integer with bits set from the FLAG_* constants in this file
+    flags: An integer with bits set from the `FLAG_*` constants in this file
       that indicate the encoding of the key and value.
     do_unpickle: Callable that takes a non-unicode string object that contains
       a pickled object and returns the pickled object.
 
   Returns:
     The original object that was stored, be it a normal string, a unicode
-    string, int, long, or a Python object that was pickled.
+    `string`, `int`, `long`, or a Python object that was pickled.
 
   Raises:
     pickle.UnpicklingError: If the value could not be unpickled.
   """
-  assert isinstance(stored_value, str)
-  assert isinstance(flags, (int, long))
+  assert isinstance(stored_value, six.binary_type)
+  assert isinstance(flags, six.integer_types)
 
   type_number = flags & FLAG_TYPE_MASK
   value = stored_value
@@ -315,7 +334,7 @@ def _decode_value(stored_value, flags, do_unpickle):
   if type_number == TYPE_STR:
     return value
   elif type_number == TYPE_UNICODE:
-    return unicode(value, 'utf-8')
+    return six.text_type(value, 'utf-8')
   elif type_number == TYPE_PICKLED:
     return do_unpickle(value)
   elif type_number == TYPE_BOOL:
@@ -338,7 +357,7 @@ def create_rpc(deadline=None, callback=None):
     callback: Optional callable to invoke on completion.
 
   Returns:
-    An apiproxy_stub_map.UserRPC object specialized for this service.
+    An `apiproxy_stub_map.UserRPC` object specialized for this service.
   """
   return apiproxy_stub_map.UserRPC('memcache', deadline, callback)
 
@@ -350,30 +369,31 @@ class Client(object):
   with the existing popular Python memcache library.
 
   Any method that takes a 'key' argument will accept that key as a string
-  (unicode or not) or a tuple of (hash_value, string) where the hash_value,
+  (unicode or not) or a tuple of `(hash_value, string)` where the hash_value,
   normally used for sharding onto a memcache instance, is instead ignored, as
   Google App Engine deals with the sharding transparently. Keys in memcache are
-  just bytes, without a specified encoding. All such methods may raise TypeError
-  if provided a bogus key value and a ValueError if the key is too large.
+  just bytes, without a specified encoding. All such methods may raise
+  `TypeError` if provided a bogus key value and a `ValueError` if the key is too
+  large.
 
   Any method that takes a 'value' argument will accept as that value any
-  string (unicode or not), int, long, or pickle-able Python object, including
-  all built-in types.  You'll get back from the cache the same type that you
-  originally put in.
+  `string` (unicode or not), `int`, `long`, or pickle-able Python object,
+  including all native types.  You'll get back from the cache the same type that
+  you originally put in.
 
-  The Client class is not thread-safe with respect to the gets(), cas() and
-  cas_multi() methods (and other compare-and-set-related methods). Therefore,
-  Client objects should not be used by more than one thread for CAS purposes.
-  Note that the global Client for the module-level functions is okay because it
-  does not expose any of the CAS methods.
+  The `Client` class is not thread-safe with respect to the `gets()`, `cas()`
+  and `cas_multi()` methods (and other compare-and-set-related methods).
+  Therefore, `Client` objects should not be used by more than one thread for CAS
+  purposes. Note that the global `Client` for the module-level functions is okay
+  because it does not expose any of the CAS methods.
   """
 
   def __init__(self,
                servers=None,
                debug=0,
-               pickleProtocol=cPickle.HIGHEST_PROTOCOL,
-               pickler=cPickle.Pickler,
-               unpickler=cPickle.Unpickler,
+               pickleProtocol=pickle.DEFAULT_PROTOCOL,
+               pickler=six.moves.cPickle.Pickler,
+               unpickler=six.moves.cPickle.Unpickler,
                pload=None,
                pid=None,
                make_sync_call=None,
@@ -397,6 +417,15 @@ class Client(object):
 
 
 
+
+    cross_compatible_protocol = os.environ.get(
+        'MEMCACHE_USE_CROSS_COMPATIBLE_PROTOCOL', None)
+    if cross_compatible_protocol:
+      if cross_compatible_protocol.isdigit():
+        pickleProtocol = int(cross_compatible_protocol)
+      else:
+        pickleProtocol = 2
+
     self._pickler_factory = pickler
     self._unpickler_factory = unpickler
     self._pickle_protocol = pickleProtocol
@@ -414,17 +443,17 @@ class Client(object):
     """Internal helper to schedule an asynchronous RPC.
 
     Args:
-      rpc: None or a UserRPC object.
+      rpc: `None` or a `UserRPC` object.
       method: Method name, e.g. 'Get'.
       request: Request protobuf.
       response: Response protobuf.
       get_result_hook: None or hook function used to process results
-        (See UserRPC.make_call() for more info).
+        (See `UserRPC.make_call()` for more info).
       user_data: None or user data for hook function.
 
     Returns:
-      A UserRPC object; either the one passed in as the first argument,
-      or a new one (if the first argument was None).
+      A `UserRPC` object; either the one passed in as the first argument,
+      or a new one (if the first argument was `None`).
     """
 
     if rpc is None:
@@ -435,7 +464,7 @@ class Client(object):
 
   def _do_pickle(self, value):
     """Pickles a provided value."""
-    pickle_data = cStringIO.StringIO()
+    pickle_data = BytesIO()
     pickler = self._pickler_factory(pickle_data, protocol=self._pickle_protocol)
     if self._persistent_id is not None:
       pickler.persistent_id = self._persistent_id
@@ -444,7 +473,7 @@ class Client(object):
 
   def _do_unpickle(self, value):
     """Unpickles a provided value."""
-    pickle_data = cStringIO.StringIO(value)
+    pickle_data = BytesIO(value)
     unpickler = self._unpickler_factory(pickle_data)
     if self._persistent_load is not None:
       unpickler.persistent_load = self._persistent_load
@@ -454,11 +483,11 @@ class Client(object):
     """Populates override field in message if accessing another app's memcache.
 
     Args:
-      message: A protocol buffer supporting the mutable_override() operation.
+      message: A protocol buffer supporting the `mutable_override()` operation.
     """
     if self._app_id:
-      app_override = message.mutable_override()
-      app_override.set_app_id(self._app_id)
+      app_override = message.override
+      app_override.app_id = self._app_id
 
   def set_servers(self, servers):
     """Sets the pool of memcache servers used by the client.
@@ -510,18 +539,18 @@ class Client(object):
           _not_ the amount of time that has elapsed since the item was
           created.
 
-      On error, returns None.
+      On error, returns `None`.
     """
     rpc = self.get_stats_async()
     return rpc.get_result()
 
   def get_stats_async(self, rpc=None):
-    """Async version of get_stats().
+    """Async version of `get_stats()`.
 
     Returns:
-      A UserRPC instance whose get_result() method returns None if
-      there was a network error, otherwise a dict just like
-      get_stats() returns.
+      A `UserRPC` instance whose `get_result()` method returns `None` if
+      there was a network error, otherwise a `dict` just like
+      `get_stats()` returns.
     """
     request = MemcacheStatsRequest()
     self._add_app_id(request)
@@ -535,7 +564,7 @@ class Client(object):
     except apiproxy_errors.Error:
       return None
     response = rpc.response
-    if not response.has_stats():
+    if not response.HasField('stats'):
       return {
           STAT_HITS: 0,
           STAT_MISSES: 0,
@@ -545,31 +574,31 @@ class Client(object):
           STAT_OLDEST_ITEM_AGES: 0,
       }
 
-    stats = response.stats()
+    stats = response.stats
     return {
-        STAT_HITS: stats.hits(),
-        STAT_MISSES: stats.misses(),
-        STAT_BYTE_HITS: stats.byte_hits(),
-        STAT_ITEMS: stats.items(),
-        STAT_BYTES: stats.bytes(),
-        STAT_OLDEST_ITEM_AGES: stats.oldest_item_age(),
+        STAT_HITS: stats.hits,
+        STAT_MISSES: stats.misses,
+        STAT_BYTE_HITS: stats.byte_hits,
+        STAT_ITEMS: stats.items,
+        STAT_BYTES: stats.bytes,
+        STAT_OLDEST_ITEM_AGES: stats.oldest_item_age,
     }
 
   def flush_all(self):
     """Deletes everything in memcache.
 
     Returns:
-      True on success, False on RPC or server error.
+      `True` on success, `False` on RPC or server error.
     """
     rpc = self.flush_all_async()
     return rpc.get_result()
 
   def flush_all_async(self, rpc=None):
-    """Async version of flush_all().
+    """Async version of `flush_all()`.
 
     Returns:
-      A UserRPC instance whose get_result() method returns True on
-      success, False on RPC or server error.
+      A `UserRPC` instance whose `get_result()` method returns `True` on
+      success, `False` on RPC or server error.
     """
     request = MemcacheFlushRequest()
     self._add_app_id(request)
@@ -588,20 +617,20 @@ class Client(object):
     """Looks up a single key in memcache.
 
     If you have multiple items to load, though, it's much more efficient
-    to use get_multi() instead, which loads them in one bulk operation,
+    to use `get_multi()` instead, which loads them in one bulk operation,
     reducing the networking latency that'd otherwise be required to do
-    many serialized get() operations.
+    many serialized `get()` operations.
 
     Args:
       key: The key in memcache to look up.  See docs on Client
         for details of format.
       namespace: a string specifying an optional namespace to use in
         the request.
-      for_cas: If True, request and store CAS ids on the client (see
-        cas() operation below).
+      for_cas: If `True`, request and store CAS ids on the client (see
+        `cas()` operation below).
 
     Returns:
-      The value of the key, if found in memcache, else None.
+      The value of the key, if found in memcache, else `None`.
     """
     if _is_pair(key):
       key = key[1]
@@ -610,7 +639,7 @@ class Client(object):
     return results.get(key)
 
   def gets(self, key, namespace=None):
-    """An alias for get(..., for_cas=True)."""
+    """An alias for `get(..., for_cas=True)`."""
     return self.get(key, namespace=namespace, for_cas=True)
 
   def get_multi(self, keys, key_prefix='', namespace=None, for_cas=False):
@@ -620,7 +649,7 @@ class Client(object):
 
     Args:
       keys: List of keys to look up.  Keys may be strings or
-        tuples of (hash_value, string).  Google App Engine
+        tuples of `(hash_value, string)`.  Google App Engine
         does the sharding and hashing automatically, though, so the hash
         value is ignored.  To memcache, keys are just series of bytes,
         and not in any particular encoding.
@@ -628,7 +657,7 @@ class Client(object):
         not included in the returned dictionary.
       namespace: a string specifying an optional namespace to use in
         the request.
-      for_cas: If True, request and store CAS ids on the client.
+      for_cas: If `True`, request and store CAS ids on the client.
 
     Returns:
       A dictionary of the keys and values that were present in memcache.
@@ -644,22 +673,22 @@ class Client(object):
                       namespace=None,
                       for_cas=False,
                       rpc=None):
-    """Async version of get_multi().
+    """Async version of `get_multi()`.
 
     Returns:
-      A UserRPC instance whose get_result() method returns {} if
-      there was a network error, otherwise a dict just like
-      get_multi() returns.
+      A `UserRPC` instance whose `get_result()` method returns {} if
+      there was a network error, otherwise a `dict` just like
+      `get_multi()` returns.
     """
     request = MemcacheGetRequest()
     self._add_app_id(request)
     _add_name_space(request, namespace)
     if for_cas:
-      request.set_for_cas(True)
+      request.for_cas = True
     response = MemcacheGetResponse()
     user_key = {}
     for key in keys:
-      request.add_key(_key_string(key, key_prefix, user_key))
+      request.key.append(_key_string(key, key_prefix, user_key))
 
     return self._make_async_call(rpc, 'Get', request, response, self.__get_hook,
                                  user_key)
@@ -669,18 +698,18 @@ class Client(object):
       rpc.check_success()
     except apiproxy_errors.Error:
       return {}
-    for_cas = rpc.request.for_cas()
-    namespace = rpc.request.name_space()
+    for_cas = rpc.request.for_cas
+    namespace = rpc.request.name_space
     response = rpc.response
     user_key = rpc.user_data
     return_value = {}
-    for returned_item in response.item_list():
-      value = _decode_value(returned_item.value(),
-                            returned_item.flags(), self._do_unpickle)
-      raw_key = returned_item.key()
+    for returned_item in response.item:
+      value = _decode_value(returned_item.value,
+                            returned_item.flags, self._do_unpickle)
+      raw_key = returned_item.key
       if for_cas:
         ns = namespace if namespace else ''
-        self._cas_ids[(ns, raw_key)] = returned_item.cas_id()
+        self._cas_ids[(ns, raw_key)] = returned_item.cas_id
       return_value[user_key[raw_key]] = value
     return return_value
 
@@ -740,11 +769,11 @@ class Client(object):
     self._add_app_id(request)
     _add_name_space(request, namespace)
 
-    request.set_for_peek(True)
+    request.for_peek = True
     response = MemcacheGetResponse()
     user_key = {}
     for key in keys:
-      request.add_key(_key_string(key, key_prefix, user_key))
+      request.key.append(_key_string(key, key_prefix, user_key))
 
     return self._make_async_call(
         rpc, 'Get', request, response, self.__peek_hook, user_key
@@ -760,20 +789,20 @@ class Client(object):
     response = rpc.response
     user_key = rpc.user_data
     return_value = {}
-    for returned_item in response.item_list():
+    for returned_item in response.item:
       value = ''
-      if returned_item.value():
+      if returned_item.value:
         value = _decode_value(
-            returned_item.value(), returned_item.flags(), self._do_unpickle
+            returned_item.value, returned_item.flags, self._do_unpickle
         )
-      timestamps = returned_item.timestamps()
-      raw_key = returned_item.key()
+      timestamps = returned_item.timestamps
+      raw_key = returned_item.key
 
       return_value[user_key[raw_key]] = ItemWithTimestamps(
           value,
-          timestamps.expiration_time_sec(),
-          timestamps.last_access_time_sec(),
-          timestamps.delete_lock_time_sec(),
+          timestamps.expiration_time_sec,
+          timestamps.last_access_time_sec,
+          timestamps.delete_lock_time_sec,
       )
 
     return return_value
@@ -798,10 +827,10 @@ class Client(object):
         the request.
 
     Returns:
-      DELETE_NETWORK_FAILURE (0) on network failure,
-      DELETE_ITEM_MISSING (1) if the server tried to delete the item but
+      `DELETE_NETWORK_FAILURE (0)` on network failure,
+      `DELETE_ITEM_MISSING (1) if the server tried to delete the item but
       didn't have it, or
-      DELETE_SUCCESSFUL (2) if the item was actually deleted.
+      `DELETE_SUCCESSFUL (2)` if the item was actually deleted.
       This can be used as a boolean value, where a network failure is the
       only bad condition.
     """
@@ -823,12 +852,12 @@ class Client(object):
         a 'set' operation will always work.  Float values will be rounded up to
         the nearest whole second.
       key_prefix: Prefix to put on all keys when sending specified
-        keys to memcache.  See docs for get_multi() and set_multi().
+        keys to memcache.  See docs for `get_multi()` and `set_multi()`.
       namespace: a string specifying an optional namespace to use in
         the request.
 
     Returns:
-      True if all operations completed successfully.  False if one
+      `True` if all operations completed successfully.  `False` if one
       or more failed to complete.
     """
     rpc = self.delete_multi_async(keys, seconds, key_prefix, namespace)
@@ -841,16 +870,16 @@ class Client(object):
                          key_prefix='',
                          namespace=None,
                          rpc=None):
-    """Async version of delete_multi() -- note different return value.
+    """Async version of `delete_multi()` -- note different return value.
 
     Returns:
-      A UserRPC instance whose get_result() method returns None if
+      A `UserRPC` instance whose `get_result()` method returns `None` if
       there was a network error, or a list of status values otherwise,
       where each status corresponds to a key and is either
-      DELETE_SUCCESSFUL, DELETE_ITEM_MISSING, or DELETE_NETWORK_FAILURE
-      (see delete() docstring for details).
+      `DELETE_SUCCESSFUL`, `DELETE_ITEM_MISSING`, or `DELETE_NETWORK_FAILURE`
+      (see `delete()` docstring for details).
     """
-    if not isinstance(seconds, (int, long, float)):
+    if not isinstance(seconds, (six.integer_types, float)):
       raise TypeError('Delete timeout must be a number.')
     if seconds < 0:
       raise ValueError('Delete timeout must not be negative.')
@@ -861,9 +890,9 @@ class Client(object):
     response = MemcacheDeleteResponse()
 
     for key in keys:
-      delete_item = request.add_item()
-      delete_item.set_key(_key_string(key, key_prefix=key_prefix))
-      delete_item.set_delete_time(int(math.ceil(seconds)))
+      delete_item = request.item.add()
+      delete_item.key = _key_string(key, key_prefix=key_prefix)
+      delete_item.delete_time = int(math.ceil(seconds))
 
     return self._make_async_call(rpc, 'Delete', request, response,
                                  self.__delete_hook, None)
@@ -874,7 +903,7 @@ class Client(object):
     except apiproxy_errors.Error:
       return None
     result = []
-    for status in rpc.response.delete_status_list():
+    for status in rpc.response.delete_status:
       if status == MemcacheDeleteResponse.DELETED:
         result.append(DELETE_SUCCESSFUL)
       elif status == MemcacheDeleteResponse.NOT_FOUND:
@@ -897,7 +926,7 @@ class Client(object):
   def set(self, key, value, time=0, min_compress_len=0, namespace=None):
     """Sets a key's value, regardless of previous contents in cache.
 
-    Unlike add() and replace(), this method always sets (or
+    Unlike `add()` and `replace()`, this method always sets (or
     overwrites) the value in memcache, regardless of previous
     contents.
 
@@ -914,7 +943,7 @@ class Client(object):
         the request.
 
     Returns:
-      True if set.  False on error.
+      `True` if set.  `False` on error.
     """
     return self._set_with_policy(
         MemcacheSetRequest.SET, key, value, time=time, namespace=namespace)
@@ -935,7 +964,7 @@ class Client(object):
         the request.
 
     Returns:
-      True if added.  False on error.
+      `True` if added.  `False` on error.
     """
     return self._set_with_policy(
         MemcacheSetRequest.ADD, key, value, time=time, namespace=namespace)
@@ -956,7 +985,7 @@ class Client(object):
         the request.
 
     Returns:
-      True if replaced.  False on RPC error or cache miss.
+      `True` if replaced.  `False` on RPC error or cache miss.
     """
     return self._set_with_policy(
         MemcacheSetRequest.REPLACE, key, value, time=time, namespace=namespace)
@@ -965,28 +994,28 @@ class Client(object):
     """Compare-And-Set update.
 
     This requires that the key has previously been successfully
-    fetched with gets() or get(..., for_cas=True), and that no changes
+    fetched with `gets()` or `get(..., for_cas=True)`, and that no changes
     have been made to the key since that fetch.  Typical usage is:
 
       key = ...
       client = memcache.Client()
-      value = client.gets(key)  # OR client.get(key, for_cas=True)
+      value = client.gets(key)  # `OR` client.get(key, for_cas=True)
       <updated value>
       ok = client.cas(key, value)
 
-    If two processes run similar code, the first one calling cas()
-    will succeed (ok == True), while the second one will fail (ok ==
-    False).  This can be used to detect race conditions.
+    If two processes run similar code, the first one calling `cas()`
+    will succeed (`ok == True`), while the second one will fail (`ok ==
+    False`).  This can be used to detect race conditions.
 
-    NOTE: some state (the CAS id) is stored on the Client object for
-    each key ever used with gets().  To prevent ever-increasing memory
-    usage, you must use a Client object when using cas(), and the
-    lifetime of your Client object should be limited to that of one
+    NOTE: Some state (the CAS id) is stored on the `Client` object for
+    each key ever used with `gets()`.  To prevent ever-increasing memory
+    usage, you must use a `Client` object when using `cas()`, and the
+    lifetime of your `Client` object should be limited to that of one
     incoming HTTP request.  You cannot use the global-function-based
     API.
 
     Args:
-      key: Key to set.  See docs on Client for details.
+      key: Key to set.  See docs on `Client` for details.
       value: The new value.
       time: Optional expiration time, either relative number of seconds
         from current time (up to 1 month), or an absolute Unix epoch time.
@@ -998,7 +1027,7 @@ class Client(object):
         the request.
 
     Returns:
-      True if updated.  False on RPC error or if the CAS id didn't match.
+      `True` if updated.  `False` on RPC error or if the CAS id didn't match.
     """
     return self._set_with_policy(MemcacheSetRequest.CAS, key, value, time,
                                  namespace)
@@ -1006,18 +1035,18 @@ class Client(object):
   def _set_with_policy(self, policy, key, value, time=0, namespace=None):
     """Sets a single key with a specified policy.
 
-    Helper function for set(), add(), and replace().
+    Helper function for `set()`, `add()`, and `replace()`.
 
     Args:
-      policy:  One of MemcacheSetRequest.SET, .ADD, .REPLACE or .CAS.
-      key: Key to add, set, or replace.  See docs on Client for details.
+      policy:  One of `MemcacheSetRequest.SET`, `.ADD`, `.REPLACE` or `.CAS`.
+      key: Key to add, set, or replace.  See docs on `Client` for details.
       value: Value to set.
-      time: Expiration time, defaulting to 0 (never expiring).
+      time: Expiration time, defaulting to `0` (never expiring).
       namespace: a string specifying an optional namespace to use in
         the request.
 
     Returns:
-      True if stored, False on RPC error or policy error, e.g. a replace
+      `True` if stored, `False` on RPC error or policy error, e.g. a replace
       that failed due to the item not already existing, or an add
       failing due to the item not already existing.
     """
@@ -1041,13 +1070,13 @@ class Client(object):
                              namespace=None):
     """Set multiple keys with a specified policy.
 
-    Helper function for set_multi(), add_multi(), and replace_multi(). This
-    reduces the network latency of doing many requests in serial.
+    Helper function for `set_multi()`, `add_multi()`, and `replace_multi()`.
+    This reduces the network latency of doing many requests in serial.
 
     Args:
-      policy:  One of MemcacheSetRequest.SET, .ADD, .REPLACE or .CAS.
-      mapping: Dictionary of keys to values.  If policy == CAS, the
-        values must be (value, cas_id) tuples.
+      policy:  One of `MemcacheSetRequest.SET`, `.ADD`, `.REPLACE` or `.CAS`.
+      mapping: Dictionary of keys to values.  If `policy == CAS`, the
+        values must be `(value, cas_id)` tuples.
       time: Optional expiration time, either relative number of seconds
         from current time (up to 1 month), or an absolute Unix epoch time.
         By default, items never expire, though items may be evicted due to
@@ -1069,7 +1098,7 @@ class Client(object):
     server_keys, user_key = rpc.user_data
 
     if not status_dict:
-      return user_key.values()
+      return list(user_key.values())
 
 
     unset_list = []
@@ -1081,6 +1110,7 @@ class Client(object):
 
     return unset_list
 
+
   def _set_multi_async_with_policy(self,
                                    policy,
                                    mapping,
@@ -1088,15 +1118,15 @@ class Client(object):
                                    key_prefix='',
                                    namespace=None,
                                    rpc=None):
-    """Async version of _set_multi_with_policy() -- note different return.
+    """Async version of `_set_multi_with_policy()` -- note different return.
 
     Returns:
-      A UserRPC instance whose get_result() method returns None if
+      A `UserRPC` instance whose `get_result()` method returns None if
       there was a network error, or a dict mapping (user) keys to
-      status values otherwise, where each status is one of STORED,
-      NOT_STORED, ERROR, or EXISTS.
+      status values otherwise, where each status is one of `STORED`,
+      `NOT_STORED`, `ERROR`, or `EXISTS`.
     """
-    if not isinstance(time, (int, long, float)):
+    if not isinstance(time, (six.integer_types, float)):
       raise TypeError('Expiration must be a number.')
     if time < 0.0:
       raise ValueError('Expiration must not be negative.')
@@ -1107,27 +1137,27 @@ class Client(object):
     user_key = {}
     server_keys = []
     set_cas_id = (policy == MemcacheSetRequest.CAS)
-    for key, value in mapping.iteritems():
+    for key, value in six.iteritems(mapping):
       server_key = _key_string(key, key_prefix, user_key)
       stored_value, flags = _validate_encode_value(value, self._do_pickle)
       server_keys.append(server_key)
 
-      item = request.add_item()
-      item.set_key(server_key)
-      item.set_value(stored_value)
-      item.set_flags(flags)
-      item.set_set_policy(policy)
-      item.set_expiration_time(int(math.ceil(time)))
+      item = request.item.add()
+      item.key = server_key
+      item.value = stored_value
+      item.flags = flags
+      item.set_policy = policy
+      item.expiration_time = int(math.ceil(time))
       if set_cas_id:
 
-        ns = request.name_space() or ''
+        ns = request.name_space or ''
         cas_id = self._cas_ids.get((ns, server_key))
 
         if cas_id is not None:
-          item.set_cas_id(cas_id)
+          item.cas_id = cas_id
 
 
-          item.set_for_cas(True)
+          item.for_cas = True
 
     response = MemcacheSetResponse()
 
@@ -1144,9 +1174,9 @@ class Client(object):
 
     response = rpc.response
     server_keys, user_key = rpc.user_data
-    assert response.set_status_size() == len(server_keys)
+    assert len(response.set_status) == len(server_keys)
     status_dict = {}
-    for server_key, status in zip(server_keys, response.set_status_list()):
+    for server_key, status in zip(server_keys, response.set_status):
 
 
       if status in (MemcacheSetResponse.DEADLINE_EXCEEDED,
@@ -1194,10 +1224,10 @@ class Client(object):
                       min_compress_len=0,
                       namespace=None,
                       rpc=None):
-    """Async version of set_multi() -- note different return value.
+    """Async version of `set_multi()` -- note different return value.
 
     Returns:
-      See _set_multi_async_with_policy().
+      See `_set_multi_async_with_policy()`.
     """
     return self._set_multi_async_with_policy(
         MemcacheSetRequest.SET,
@@ -1245,10 +1275,10 @@ class Client(object):
                       min_compress_len=0,
                       namespace=None,
                       rpc=None):
-    """Async version of add_multi() -- note different return value.
+    """Async version of `add_multi()` -- note different return value.
 
     Returns:
-      See _set_multi_async_with_policy().
+      See `_set_multi_async_with_policy()`.
     """
     return self._set_multi_async_with_policy(
         MemcacheSetRequest.ADD,
@@ -1296,10 +1326,10 @@ class Client(object):
                           min_compress_len=0,
                           namespace=None,
                           rpc=None):
-    """Async version of replace_multi() -- note different return value.
+    """Async version of `replace_multi()` -- note different return value.
 
     Returns:
-      See _set_multi_async_with_policy().
+      See `_set_multi_async_with_policy()`.
     """
     return self._set_multi_async_with_policy(
         MemcacheSetRequest.REPLACE,
@@ -1317,7 +1347,7 @@ class Client(object):
                 namespace=None):
     """Compare-And-Set update for multiple keys.
 
-    See cas() docstring for an explanation.
+    See `cas()` docstring for an explanation.
 
     Args:
       mapping: Dictionary of keys to values.
@@ -1349,10 +1379,10 @@ class Client(object):
                       min_compress_len=0,
                       namespace=None,
                       rpc=None):
-    """Async version of cas_multi() -- note different return value.
+    """Async version of `cas_multi()` -- note different return value.
 
     Returns:
-      See _set_multi_async_with_policy().
+      See `_set_multi_async_with_policy()`.
     """
     return self._set_multi_async_with_policy(
         MemcacheSetRequest.CAS,
@@ -1371,8 +1401,8 @@ class Client(object):
 
     Unless an initial_value is specified, the key must already exist
     in the cache to be incremented.  To initialize a counter, either
-    specify initial_value or set() it to the initial value, as an
-    ASCII decimal integer.  Future get()s of the key, post-increment,
+    specify initial_value or `set()` it to the initial value, as an
+    ASCII decimal integer.  Future `get()`s of the key, post-increment,
     will still be an ASCII decimal value.
 
     Args:
@@ -1408,11 +1438,11 @@ class Client(object):
                  namespace=None,
                  initial_value=None,
                  rpc=None):
-    """Async version of incr().
+    """Async version of `incr()`.
 
     Returns:
-      A UserRPC instance whose get_result() method returns the same
-      kind of value as incr() returns.
+      A `UserRPC` instance whose `get_result()` method returns the same
+      kind of value as `incr()` returns.
     """
     return self._incrdecr_async(
         key,
@@ -1429,7 +1459,7 @@ class Client(object):
     caps decrementing below zero to zero.
 
     The key must already exist in the cache to be decremented.  See
-    docs on incr() for details.
+    docs on `incr()` for details.
 
     Args:
       key: Key to decrement. If an iterable collection, each one of the keys
@@ -1464,11 +1494,11 @@ class Client(object):
                  namespace=None,
                  initial_value=None,
                  rpc=None):
-    """Async version of decr().
+    """Async version of `decr()`.
 
     Returns:
-      A UserRPC instance whose get_result() method returns the same
-      kind of value as decr() returns.
+      A `UserRPC` instance whose `get_result()` method returns the same
+      kind of value as `decr()` returns.
     """
     return self._incrdecr_async(
         key,
@@ -1517,19 +1547,19 @@ class Client(object):
                       namespace=None,
                       initial_value=None,
                       rpc=None):
-    """Async version of _incrdecr().
+    """Async version of `_incrdecr()`.
 
     Returns:
-      A UserRPC instance whose get_result() method returns the same
-      kind of value as _incrdecr() returns.
+      A `UserRPC` instance whose `get_result()` method returns the same
+      kind of value as `_incrdecr()` returns.
     """
-    if not isinstance(delta, (int, long)):
+    if not isinstance(delta, six.integer_types):
       raise TypeError('Delta must be an integer or long, received %r' % delta)
     if delta < 0:
       raise ValueError('Delta must not be negative.')
 
 
-    if not isinstance(key, basestring):
+    if not isinstance(key, (six.string_types, six.binary_type)):
       try:
         it = iter(key)
       except TypeError:
@@ -1549,22 +1579,22 @@ class Client(object):
     self._add_app_id(request)
     _add_name_space(request, namespace)
     response = MemcacheIncrementResponse()
-    request.set_key(_key_string(key))
-    request.set_delta(delta)
+    request.key = _key_string(key)
+    request.delta = delta
     if is_negative:
-      request.set_direction(MemcacheIncrementRequest.DECREMENT)
+      request.direction = MemcacheIncrementRequest.DECREMENT
     else:
-      request.set_direction(MemcacheIncrementRequest.INCREMENT)
+      request.direction = MemcacheIncrementRequest.INCREMENT
     if initial_value is not None:
 
-      request.set_initial_value(long(initial_value))
+      request.initial_value = long(initial_value)
       initial_flags = None
       if isinstance(initial_value, int):
         initial_flags = TYPE_INT
-      elif isinstance(initial_value, long):
+      elif isinstance(initial_value, six.integer_types):
         initial_flags = TYPE_LONG
       if initial_flags is not None:
-        request.set_initial_flags(initial_flags)
+        request.initial_flags = initial_flags
 
     return self._make_async_call(rpc, 'Increment', request, response,
                                  self.__incrdecr_hook, None)
@@ -1576,8 +1606,8 @@ class Client(object):
       return None
 
     response = rpc.response
-    if response.has_new_value():
-      return response.new_value()
+    if response.HasField('new_value'):
+      return response.new_value
     return None
 
   def offset_multi(self,
@@ -1612,15 +1642,15 @@ class Client(object):
                          namespace=None,
                          initial_value=None,
                          rpc=None):
-    """Async version of offset_multi().
+    """Async version of `offset_multi()`.
 
     Returns:
-      A UserRPC instance whose get_result() method returns a dict just
-      like offset_multi() returns.
+      A `UserRPC` instance whose `get_result()` method returns a dict just
+      like `offset_multi()` returns.
     """
     initial_flags = None
     if initial_value is not None:
-      if not isinstance(initial_value, (int, long)):
+      if not isinstance(initial_value, six.integer_types):
         raise TypeError('initial_value must be an integer')
       if initial_value < 0:
         raise ValueError('initial_value must be >= 0')
@@ -1634,8 +1664,8 @@ class Client(object):
     response = MemcacheBatchIncrementResponse()
     _add_name_space(request, namespace)
 
-    for key, delta in mapping.iteritems():
-      if not isinstance(delta, (int, long)):
+    for key, delta in six.iteritems(mapping):
+      if not isinstance(delta, six.integer_types):
         raise TypeError('Delta must be an integer or long, received %r' % delta)
       if delta >= 0:
         direction = MemcacheIncrementRequest.INCREMENT
@@ -1645,13 +1675,13 @@ class Client(object):
 
       server_key = _key_string(key, key_prefix)
 
-      item = request.add_item()
-      item.set_key(server_key)
-      item.set_delta(delta)
-      item.set_direction(direction)
+      item = request.item.add()
+      item.key = server_key
+      item.delta = delta
+      item.direction = direction
       if initial_value is not None:
-        item.set_initial_value(initial_value)
-        item.set_initial_flags(initial_flags)
+        item.initial_value = initial_value
+        item.initial_flags = initial_flags
 
 
     return self._make_async_call(rpc, 'BatchIncrement', request, response,
@@ -1662,16 +1692,16 @@ class Client(object):
     try:
       rpc.check_success()
     except apiproxy_errors.Error:
-      return dict((k, None) for k in mapping.iterkeys())
+      return dict((k, None) for k in six.iterkeys(mapping))
 
     response = rpc.response
-    assert response.item_size() == len(mapping)
+    assert len(response.item) == len(mapping)
 
     result_dict = {}
-    for key, resp_item in zip(mapping.iterkeys(), response.item_list()):
-      if (resp_item.increment_status() == MemcacheIncrementResponse.OK and
-          resp_item.has_new_value()):
-        result_dict[key] = resp_item.new_value()
+    for key, resp_item in zip(six.iterkeys(mapping), response.item):
+      if (resp_item.increment_status == MemcacheIncrementResponse.OK and
+          resp_item.HasField('new_value')):
+        result_dict[key] = resp_item.new_value
       else:
         result_dict[key] = None
 
@@ -1687,11 +1717,11 @@ _CLIENT = None
 def setup_client(client_obj):
   """Sets the Client object instance to use for all module-level methods.
 
-  Use this method if you want to have customer persistent_id() or
-  persistent_load() functions associated with your client.
+  Use this method if you want to have customer `persistent_id()` or
+  `persistent_load()` functions associated with your client.
 
   NOTE: We don't expose the _async methods as functions; they're too
-  obscure; and we don't expose gets(), cas() and cas_multi() because
+  obscure; and we don't expose `gets()`, `cas()` and `cas_multi()` because
   they maintain state on the client object.
 
   Args:
@@ -1723,5 +1753,5 @@ def setup_client(client_obj):
   var_dict['peek'] = _CLIENT.peek
   var_dict['peek_multi'] = _CLIENT.peek_multi
 
-
+_HAS_DYNAMIC_ATTRIBUTES = True
 setup_client(Client())

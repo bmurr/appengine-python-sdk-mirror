@@ -16,8 +16,12 @@
 #
 """Wrapper for QueryParser."""
 
-from google.appengine._internal import antlr3
+import google.appengine._internal.antlr3
 from google.appengine._internal.antlr3 import tree
+import six
+from six.moves import map
+from six.moves import range
+
 from google.appengine.api.search import QueryLexer
 from google.appengine.api.search import QueryParser
 from google.appengine.api.search import unicode_util
@@ -50,7 +54,7 @@ class QueryLexerWithErrors(QueryLexer.QueryLexer):
   """An overridden Lexer that raises exceptions."""
 
   def displayRecognitionError(self, tokenNames, e):
-    msg = "WARNING: query error at line %d:%d" % (e.line, e.charPositionInLine);
+    msg = "WARNING: query error at line %d:%d" % (e.line, e.charPositionInLine)
     self.emitErrorMessage(msg)
 
   def emitErrorMessage(self, msg):
@@ -71,7 +75,7 @@ class QueryParserWithErrors(QueryParser.QueryParser):
   """An overridden Parser that raises exceptions."""
 
   def displayRecognitionError(self, tokenNames, e):
-    msg = "WARNING: query error at line %d:%d" % (e.line, e.charPositionInLine);
+    msg = "WARNING: query error at line %d:%d" % (e.line, e.charPositionInLine)
     self.emitErrorMessage(msg)
 
   def emitErrorMessage(self, msg):
@@ -89,9 +93,9 @@ class QueryParserWithErrors(QueryParser.QueryParser):
 
 def CreateParser(query):
   """Creates a Query Parser."""
-  input_string = antlr3.ANTLRStringStream(unicode_util.LimitUnicode(query))
+  input_string = google.appengine._internal.antlr3.ANTLRStringStream(unicode_util.LimitUnicode(query))
   lexer = QueryLexerWithErrors(input_string)
-  tokens = antlr3.CommonTokenStream(lexer)
+  tokens = google.appengine._internal.antlr3.CommonTokenStream(lexer)
   parser = QueryParserWithErrors(tokens)
   return parser
 
@@ -103,7 +107,7 @@ def ParseAndSimplify(query):
     node = SimplifyNode(node)
     ValidateNode(node)
   except QueryTreeException as e:
-    msg = "%s in query '%s'" % (e.message, query)
+    msg = "%s in query '%s'" % (str(e), query)
     raise QueryException(msg)
   return node
 
@@ -114,7 +118,7 @@ def Parse(query):
   try:
     return parser.query()
   except Exception as e:
-    msg = "%s in query '%s'" % (e.message, query)
+    msg = "%s in query '%s'" % (str(e), query)
     raise QueryException(msg)
 
 
@@ -125,7 +129,7 @@ def ConvertNodes(node, from_type, to_type, to_text):
   else:
     new_node = node
   convert_children = lambda c: ConvertNodes(c, from_type, to_type, to_text)
-  new_node.children = map(convert_children, node.children)
+  new_node.children = list(map(convert_children, node.children))
   return new_node
 
 
@@ -141,7 +145,7 @@ def _ColonToEquals(node):
   Returns:
     A tree with all HAS nodes replaced with EQ nodes.
   """
-  return ConvertNodes(node, QueryParser.HAS, QueryParser.EQ, '=')
+  return ConvertNodes(node, QueryParser.HAS, QueryParser.EQ, "=")
 
 
 def SequenceToConjunction(node):
@@ -157,7 +161,7 @@ def SequenceToConjunction(node):
     A tree with all SEQUENCE nodes replaced with CONJUNCTION nodes.
   """
   return ConvertNodes(
-      node, QueryParser.SEQUENCE, QueryParser.CONJUNCTION, 'CONJUNCTION')
+      node, QueryParser.SEQUENCE, QueryParser.CONJUNCTION, "CONJUNCTION")
 
 
 def Simplify(parser_return):
@@ -192,36 +196,37 @@ def SimplifyNode(node, restriction=None):
   elif node.getType() == QueryParser.DISJUNCTION and node.getChildCount() == 1:
     return SimplifyNode(node.children[0], restriction)
   elif node.getType() == QueryLexer.HAS or node.getType() == QueryLexer.EQ:
-    lhs = node.getChild(0);
+    lhs = node.getChild(0)
     if lhs.getType() == QueryLexer.VALUE:
       myField = lhs.getChild(1).getText()
       if restriction is None:
         restriction = lhs
       else:
-        otherField = restriction.getChild(1).getText();
+        otherField = restriction.getChild(1).getText()
         if myField != otherField:
           raise QueryTreeException(
               "Restriction on %s and %s" % (otherField, myField),
-              lhs.getChild(1).getCharPositionInLine());
-    rhs = node.getChild(1);
-    flattened = SimplifyNode(rhs, restriction);
+              lhs.getChild(1).getCharPositionInLine())
+    rhs = node.getChild(1)
+    flattened = SimplifyNode(rhs, restriction)
     if (flattened.getType() == QueryLexer.HAS or
         flattened.getType() == QueryLexer.EQ or
         flattened.getType() == QueryLexer.CONJUNCTION or
         flattened.getType() == QueryLexer.DISJUNCTION or
         flattened.getType() == QueryLexer.SEQUENCE):
-      return flattened;
+      return flattened
     if flattened != rhs:
-      node.setChild(1, flattened);
+      node.setChild(1, flattened)
     if restriction != lhs:
-      node.setChild(0, restriction);
-    return node;
+      node.setChild(0, restriction)
+    return node
   for i in range(node.getChildCount()):
-    original = node.getChild(i);
-    flattened = SimplifyNode(node.getChild(i), restriction);
+    original = node.getChild(i)
+    flattened = SimplifyNode(node.getChild(i), restriction)
     if original != flattened:
       node.setChild(i, flattened)
-  return node;
+  return node
+
 
 def CreateQueryNode(text, type):
   token = tree.CommonTreeAdaptor().createToken(tokenType=type, text=text)
@@ -230,13 +235,13 @@ def CreateQueryNode(text, type):
 
 def GetQueryNodeText(node):
   """Returns the text from the node, handling that it could be unicode."""
-  return GetQueryNodeTextUnicode(node).encode('utf-8')
+  return six.ensure_text(GetQueryNodeTextUnicode(node), "utf-8")
 
 
 def GetQueryNodeTextUnicode(node):
   """Returns the unicode text from node."""
   if node.getType() == QueryParser.VALUE and len(node.children) >= 2:
-    return u''.join(c.getText() for c in node.children[1:])
+    return u"".join(c.getText() for c in node.children[1:])
   elif node.getType() == QueryParser.VALUE:
     return None
   return node.getText()
@@ -263,5 +268,5 @@ def GetPhraseQueryNodeText(node):
 def IsPhrase(node):
   """Return true if node is the root of a text phrase."""
   text = GetQueryNodeText(node)
-  return (node.getType() == QueryParser.VALUE and
-          text.startswith('"') and text.endswith('"'))
+  return (node.getType() == QueryParser.VALUE and text.startswith('"') and
+          text.endswith('"'))

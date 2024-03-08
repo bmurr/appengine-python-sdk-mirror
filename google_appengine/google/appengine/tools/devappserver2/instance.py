@@ -22,6 +22,7 @@ import collections
 import datetime
 import logging
 import os
+import sys
 import threading
 import time
 
@@ -140,7 +141,7 @@ class Instance(object):
     self._expecting_shutdown_request = False
     self._healthy = True
 
-    # A deque containg (start_time, end_time) 2-tuples representing completed
+    # A deque containing (start_time, end_time) 2-tuples representing completed
     # requests. This is used to compute latency and qps statistics.
     self._request_history = collections.deque()  # Protected by self._condition.
 
@@ -516,7 +517,7 @@ class InstanceFactory(object):
     """Called when the configuration of the module has changed.
 
     Args:
-      config_changes: A set containing the changes that occured. See the
+      config_changes: A set containing the changes that occurred. See the
           *_CHANGED constants in the application_configuration module.
     """
 
@@ -574,18 +575,19 @@ class ModernInstanceFactoryMixin(object):
         'GAE_VERSION': (
             self._module_configuration.major_version or instance_start_time),  # pytype: disable=attribute-error
         'GOOGLE_CLOUD_PROJECT': self._get_google_cloud_project(),
-
         # Python will change the LC_CTYPE env var and write the result back
         # into the env in Python 3.7+ unless PYTHONCOERCELOCALE=0. See PEP 538
         'PYTHONCOERCECLOCALE': '0',
         'LC_CTYPE': 'C.UTF-8',
-
         # $HOME, $PWD and $PATH should just be same as in the shell executing
-        # dev_appsever.
+        # dev_appserver.
         'HOME': os.environ.get('HOME', ''),
         'PWD': os.environ.get('PWD', ''),
-        'PATH': os.environ.get('PATH', '')
+        'PATH': os.environ.get('PATH', ''),
     }
+    # Needed for PHP on Windows system:
+    if hasattr(sys, 'getwindowsversion'):
+      runtime_environ['SYSTEMROOT'] = os.environ.get('SYSTEMROOT', '')
 
     # User configured env vars.
     for env_var in self._runtime_config_getter().environ:  # pytype: disable=attribute-error

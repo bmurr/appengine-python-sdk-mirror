@@ -19,4 +19,4 @@
 """Logging API module."""
 
 
-from logservice import *
+from google.appengine.api.logservice.logservice import *

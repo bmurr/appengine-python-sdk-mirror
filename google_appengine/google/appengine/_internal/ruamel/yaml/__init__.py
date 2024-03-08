@@ -6,19 +6,19 @@ if False:  # MYPY
     from typing import Dict, Any  # NOQA
 
 _package_data = dict(
-    full_package_name='google.appengine._internal.ruamel.yaml',
+    full_package_name='ruamel.yaml',
     version_info=(0, 15, 93),
     __version__='0.15.93',
     author='Anthon van der Neut',
     author_email='a.van.der.neut@ruamel.eu',
-    description='google.appengine._internal.ruamel.yaml is a YAML parser/emitter that supports roundtrip preservation of comments, seq/map flow style, and map key order',  # NOQA
+    description='ruamel.yaml is a YAML parser/emitter that supports roundtrip preservation of comments, seq/map flow style, and map key order',  # NOQA
     entry_points=None,
     since=2014,
     extras_require={
         ':platform_python_implementation=="CPython" and python_version<="2.7"': [
             'ruamel.ordereddict'
         ],
-        'jinja2': ['google.appengine._internal.ruamel.yaml.jinja2>=0.2'],
+        'jinja2': ['ruamel.yaml.jinja2>=0.2'],
         'docs': ['ryd'],
     },
     ext_modules=[
@@ -82,4 +82,4 @@ try:
 except (ImportError, ValueError):  # for Jython
     __with_libyaml__ = False
 
-from google.appengine._internal.ruamel.yaml.main import *  # NOQA
+from ruamel.yaml.main import *  # NOQA

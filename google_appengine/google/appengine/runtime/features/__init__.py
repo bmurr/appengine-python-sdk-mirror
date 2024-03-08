@@ -19,8 +19,11 @@
 This module simplifies the access to the appengine feature flags.
 """
 
-import __builtin__
-from . import testonly
+import six.moves.builtins
+
+
+
+
 
 
 def IsEnabled(feature_name, default=False):
@@ -37,6 +40,6 @@ def IsEnabled(feature_name, default=False):
   """
   try:
 
-    return feature_name in __builtin__._APPENGINE_FEATURE_FLAGS
+    return feature_name in six.moves.builtins._APPENGINE_FEATURE_FLAGS
   except AttributeError:
     return default

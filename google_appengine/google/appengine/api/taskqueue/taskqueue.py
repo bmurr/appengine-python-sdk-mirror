@@ -31,6 +31,27 @@ can be used, which will translate task names into URLs relative to a queue's
 base path. A default queue is also provided for simple usage.
 """
 
+import calendar
+import datetime
+import logging
+import math
+import os
+import re
+import time
+
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import app_identity
+from google.appengine.api import modules
+from google.appengine.api import namespace_manager
+from google.appengine.api import urlfetch
+from google.appengine.api.taskqueue import taskqueue_service_bytes_pb2 as taskqueue_service_pb2
+from google.appengine.runtime import apiproxy_errors
+from google.appengine.runtime import context
+import six
+from six.moves import urllib
+import six.moves.urllib.parse
+
+
 
 
 
@@ -64,6 +85,7 @@ __all__ = [
     'TooManyTasksError',
     'TransientError',
     'UnknownQueueError',
+    'InvalidTaskRetryOptionsError',
     'InvalidLeaseTimeError',
     'InvalidMaxTasksError',
     'InvalidDeadlineError',
@@ -84,6 +106,10 @@ __all__ = [
     'MAX_TASKS_PER_ADD',
     'MAX_TASKS_PER_LEASE',
     'MAX_URL_LENGTH',
+    'MAX_DISPATCH_DEADLINE',
+    'MAX_TAG_LENGTH',
+    'MAX_TRANSACTIONAL_REQUEST_SIZE_BYTES',
+    'MIN_DISPATCH_DEADLINE',
 
     'DEFAULT_APP_VERSION',
 
@@ -94,26 +120,6 @@ __all__ = [
     'add',
     'create_rpc'
 ]
-
-
-import calendar
-import cgi
-import datetime
-import logging
-import math
-import os
-import re
-import time
-import urllib
-import urlparse
-
-from google.appengine.api import apiproxy_stub_map
-from google.appengine.api import app_identity
-from google.appengine.api import modules
-from google.appengine.api import namespace_manager
-from google.appengine.api import urlfetch
-from google.appengine.api.taskqueue import taskqueue_service_pb
-from google.appengine.runtime import apiproxy_errors
 
 
 class Error(Exception):
@@ -300,11 +306,11 @@ _DEFAULT_QUEUE_PATH = '/_ah/queue'
 _MAX_COUNTDOWN_SECONDS = 3600 * 24 * 30
 
 _METHOD_MAP = {
-    'GET': taskqueue_service_pb.TaskQueueAddRequest.GET,
-    'POST': taskqueue_service_pb.TaskQueueAddRequest.POST,
-    'HEAD': taskqueue_service_pb.TaskQueueAddRequest.HEAD,
-    'PUT': taskqueue_service_pb.TaskQueueAddRequest.PUT,
-    'DELETE': taskqueue_service_pb.TaskQueueAddRequest.DELETE,
+    'GET': taskqueue_service_pb2.TaskQueueAddRequest.GET,
+    'POST': taskqueue_service_pb2.TaskQueueAddRequest.POST,
+    'HEAD': taskqueue_service_pb2.TaskQueueAddRequest.HEAD,
+    'PUT': taskqueue_service_pb2.TaskQueueAddRequest.PUT,
+    'DELETE': taskqueue_service_pb2.TaskQueueAddRequest.DELETE,
 }
 
 _NON_POST_HTTP_METHODS = frozenset(['GET', 'HEAD', 'PUT', 'DELETE'])
@@ -320,55 +326,53 @@ _QUEUE_NAME_PATTERN = r'^[a-zA-Z0-9-]{1,%s}$' % MAX_QUEUE_NAME_LENGTH
 _QUEUE_NAME_RE = re.compile(_QUEUE_NAME_PATTERN)
 
 _ERROR_MAPPING = {
-    taskqueue_service_pb.TaskQueueServiceError.UNKNOWN_QUEUE: UnknownQueueError,
-    taskqueue_service_pb.TaskQueueServiceError.TRANSIENT_ERROR:
+    taskqueue_service_pb2.TaskQueueServiceError.UNKNOWN_QUEUE:
+        UnknownQueueError,
+    taskqueue_service_pb2.TaskQueueServiceError.TRANSIENT_ERROR:
         TransientError,
-    taskqueue_service_pb.TaskQueueServiceError.INTERNAL_ERROR: InternalError,
-    taskqueue_service_pb.TaskQueueServiceError.TASK_TOO_LARGE:
+    taskqueue_service_pb2.TaskQueueServiceError.INTERNAL_ERROR:
+        InternalError,
+    taskqueue_service_pb2.TaskQueueServiceError.TASK_TOO_LARGE:
         TaskTooLargeError,
-    taskqueue_service_pb.TaskQueueServiceError.INVALID_TASK_NAME:
-    InvalidTaskNameError,
-        taskqueue_service_pb.TaskQueueServiceError.INVALID_QUEUE_NAME:
-    InvalidQueueNameError,
-    taskqueue_service_pb.TaskQueueServiceError.INVALID_URL: InvalidUrlError,
-    taskqueue_service_pb.TaskQueueServiceError.INVALID_QUEUE_RATE:
+    taskqueue_service_pb2.TaskQueueServiceError.INVALID_TASK_NAME:
+        InvalidTaskNameError,
+    taskqueue_service_pb2.TaskQueueServiceError.INVALID_QUEUE_NAME:
+        InvalidQueueNameError,
+    taskqueue_service_pb2.TaskQueueServiceError.INVALID_URL:
+        InvalidUrlError,
+    taskqueue_service_pb2.TaskQueueServiceError.INVALID_QUEUE_RATE:
         InvalidQueueError,
-    taskqueue_service_pb.TaskQueueServiceError.PERMISSION_DENIED:
+    taskqueue_service_pb2.TaskQueueServiceError.PERMISSION_DENIED:
         PermissionDeniedError,
-    taskqueue_service_pb.TaskQueueServiceError.TASK_ALREADY_EXISTS:
+    taskqueue_service_pb2.TaskQueueServiceError.TASK_ALREADY_EXISTS:
         TaskAlreadyExistsError,
-    taskqueue_service_pb.TaskQueueServiceError.TOMBSTONED_TASK:
+    taskqueue_service_pb2.TaskQueueServiceError.TOMBSTONED_TASK:
         TombstonedTaskError,
-    taskqueue_service_pb.TaskQueueServiceError.INVALID_ETA: InvalidEtaError,
-    taskqueue_service_pb.TaskQueueServiceError.INVALID_REQUEST: Error,
-    taskqueue_service_pb.TaskQueueServiceError.UNKNOWN_TASK: Error,
-    taskqueue_service_pb.TaskQueueServiceError.TOMBSTONED_QUEUE: Error,
-    taskqueue_service_pb.TaskQueueServiceError.DUPLICATE_TASK_NAME:
+    taskqueue_service_pb2.TaskQueueServiceError.INVALID_ETA:
+        InvalidEtaError,
+    taskqueue_service_pb2.TaskQueueServiceError.INVALID_REQUEST:
+        Error,
+    taskqueue_service_pb2.TaskQueueServiceError.UNKNOWN_TASK:
+        Error,
+    taskqueue_service_pb2.TaskQueueServiceError.TOMBSTONED_QUEUE:
+        Error,
+    taskqueue_service_pb2.TaskQueueServiceError.DUPLICATE_TASK_NAME:
         DuplicateTaskNameError,
-    taskqueue_service_pb.TaskQueueServiceError.INVALID_QUEUE_MODE:
+    taskqueue_service_pb2.TaskQueueServiceError.INVALID_QUEUE_MODE:
         InvalidQueueModeError,
 
-    taskqueue_service_pb.TaskQueueServiceError.TOO_MANY_TASKS:
+    taskqueue_service_pb2.TaskQueueServiceError.TOO_MANY_TASKS:
         TooManyTasksError,
-    taskqueue_service_pb.TaskQueueServiceError.TRANSACTIONAL_REQUEST_TOO_LARGE:
+    taskqueue_service_pb2.TaskQueueServiceError.TRANSACTIONAL_REQUEST_TOO_LARGE:
         TransactionalRequestTooLargeError,
-    taskqueue_service_pb.TaskQueueServiceError.TASK_LEASE_EXPIRED:
+    taskqueue_service_pb2.TaskQueueServiceError.TASK_LEASE_EXPIRED:
         TaskLeaseExpiredError,
-    taskqueue_service_pb.TaskQueueServiceError.QUEUE_PAUSED:
+    taskqueue_service_pb2.TaskQueueServiceError.QUEUE_PAUSED:
         QueuePausedError,
-    taskqueue_service_pb.TaskQueueServiceError.INVALID_TAG:
+    taskqueue_service_pb2.TaskQueueServiceError.INVALID_TAG:
         InvalidTagError,
 
 }
-
-
-
-
-
-
-
-_PRESERVE_ENVIRONMENT_HEADERS = (
-    ('X-AppEngine-Default-Namespace', 'HTTP_X_APPENGINE_DEFAULT_NAMESPACE'),)
 
 
 
@@ -409,7 +413,8 @@ def _parse_relative_url(relative_url):
   """
   if not relative_url:
     raise _RelativeUrlError('The relative URL is empty')
-  (scheme, netloc, path, query, fragment) = urlparse.urlsplit(relative_url)
+  (scheme, netloc, path, query,
+   fragment) = six.moves.urllib.parse.urlsplit(relative_url)
   if scheme or netloc:
     raise _RelativeUrlError('Relative URL cannot have a scheme or location')
   if fragment:
@@ -435,25 +440,27 @@ def _flatten_params(params):
   """
 
   def get_string(value):
-    if isinstance(value, unicode):
-      return unicode(value).encode('utf-8')
+    if isinstance(value, six.text_type):
+      return value.encode('utf8')
+    elif isinstance(value, six.binary_type):
+      return value
     else:
 
 
 
 
-      return str(value)
+      return six.ensure_binary(str(value))
 
   param_list = []
-  for key, value in params.iteritems():
+  for key, value in six.iteritems(params):
     key = get_string(key)
-    if isinstance(value, basestring):
+    if isinstance(value, (six.text_type, six.binary_type)):
       param_list.append((key, get_string(value)))
     else:
       try:
         iterator = iter(value)
       except TypeError:
-        param_list.append((key, str(value)))
+        param_list.append((key, get_string(value)))
       else:
         param_list.extend((key, get_string(v)) for v in iterator)
 
@@ -493,11 +500,11 @@ def _TranslateError(error, detail=''):
   Returns:
       The corresponding Exception sub-class for that error code.
   """
-  if (error >= taskqueue_service_pb.TaskQueueServiceError.DATASTORE_ERROR
-      and isinstance(error, int)):
+  if (isinstance(error, int) and
+      error >= taskqueue_service_pb2.TaskQueueServiceError.DATASTORE_ERROR):
     from google.appengine.api import datastore
     datastore_exception = datastore._DatastoreExceptionFromErrorCodeAndDetail(
-        error - taskqueue_service_pb.TaskQueueServiceError.DATASTORE_ERROR,
+        error - taskqueue_service_pb2.TaskQueueServiceError.DATASTORE_ERROR,
         detail)
 
     class JointException(datastore_exception.__class__, DatastoreError):
@@ -518,7 +525,7 @@ def _TranslateError(error, detail=''):
 
 
 def _ValidateDeadline(deadline):
-  if not isinstance(deadline, (int, long, float)):
+  if not isinstance(deadline, (int, int, float)):
     raise TypeError(
         'deadline must be numeric')
 
@@ -612,7 +619,7 @@ class TaskRetryOptions(object):
     Raises:
         InvalidTaskRetryOptionsError: If any of the parameters are invalid.
     """
-    args_diff = set(kwargs.iterkeys()) - self.__CONSTRUCTOR_KWARGS
+    args_diff = set(six.iterkeys(kwargs)) - self.__CONSTRUCTOR_KWARGS
     if args_diff:
       raise TypeError('Invalid arguments: %s' % ', '.join(args_diff))
 
@@ -797,7 +804,7 @@ class Task(object):
       InvalidUrlError: If the task URL is invalid or too long.
       TaskTooLargeError: If the task with its associated payload is too large.
     """
-    args_diff = set(kwargs.iterkeys()) - self.__CONSTRUCTOR_KWARGS
+    args_diff = set(six.iterkeys(kwargs)) - self.__CONSTRUCTOR_KWARGS
     if args_diff:
       raise TypeError('Invalid arguments: %s' % ', '.join(args_diff))
 
@@ -823,10 +830,9 @@ class Task(object):
     params = kwargs.get('params', {})
 
 
-    for header_name, environ_name in _PRESERVE_ENVIRONMENT_HEADERS:
-      value = os.environ.get(environ_name)
-      if value is not None:
-        self.__headers.setdefault(header_name, value)
+    apps_namespace = namespace_manager.google_apps_namespace()
+    if apps_namespace is not None:
+      self.__headers.setdefault('X-AppEngine-Default-Namespace', apps_namespace)
 
     self.__headers.setdefault('X-AppEngine-Current-Namespace',
                               namespace_manager.get_namespace())
@@ -928,7 +934,7 @@ class Task(object):
 
 
 
-    if 'HTTP_HOST' not in os.environ:
+    if context.get('HTTP_HOST', None) is None:
       logging.warning(
           'The HTTP_HOST environment variable was not set, but is required '
           'to determine the correct value for the `Task.target\' property. '
@@ -947,8 +953,8 @@ class Task(object):
     elif 'Host' in self.__headers:
       self.__target = self.__target_from_host(self.__headers['Host'])
     else:
-      if 'HTTP_HOST' in os.environ:
-        self.__headers['Host'] = os.environ['HTTP_HOST']
+      if context.get('HTTP_HOST', None):
+        self.__headers['Host'] = context.get('HTTP_HOST')
         self.__target = self.__target_from_host(self.__headers['Host'])
       else:
 
@@ -1123,7 +1129,7 @@ class Task(object):
       URL-encoded version of the parameters, ready to be added to a query string
           or HTTP `POST` body.
     """
-    return urllib.urlencode(_flatten_params(params))
+    return urllib.parse.urlencode(_flatten_params(params))
 
   @staticmethod
   def __convert_payload(payload, headers):
@@ -1137,12 +1143,14 @@ class Task(object):
       The payload as a non-unicode string.
 
     Raises:
-      InvalidTaskError: If the payload is not a string or unicode instance.
+      InvalidTaskError: If the payload is not a bytes or unicode instance.
     """
-    if isinstance(payload, unicode):
+    if payload == u'':
+      payload = b''
+    if payload and isinstance(payload, six.text_type):
       headers.setdefault('content-type', 'text/plain; charset=utf-8')
-      payload = payload.encode('utf-8')
-    elif not isinstance(payload, str):
+      payload = payload.encode('utf8')
+    elif payload and not isinstance(payload, six.binary_type):
       raise InvalidTaskError(
           'Task payloads must be strings; invalid payload: %r' % payload)
     return payload
@@ -1151,18 +1159,20 @@ class Task(object):
   def _FromQueryAndOwnResponseTask(cls, queue_name, response_task):
     kwargs = {
         '_size_check': False,
-        'payload': response_task.body(),
-        'name': response_task.task_name(),
-        'method': 'PULL'}
-    if response_task.has_tag():
-      kwargs['tag'] = response_task.tag()
+        'payload': response_task.body,
+        'name': six.ensure_text(response_task.task_name),
+        'method': 'PULL'
+    }
+    if response_task.HasField('tag'):
+      kwargs['tag'] = six.ensure_text(response_task.tag)
     self = cls(**kwargs)
 
 
 
 
-    self.__eta_posix = response_task.eta_usec() * 1e-6
-    self.__retry_count = response_task.retry_count()
+    self.__eta_posix = response_task.eta_usec * 1e-6
+    self.__retry_count = response_task.retry_count
+
     self.__queue_name = queue_name
     self.__enqueued = True
     return self
@@ -1308,15 +1318,15 @@ class Task(object):
 
       query = self.__payload
     else:
-      query = urlparse.urlparse(self.__relative_url).query
+      query = six.moves.urllib.parse.urlparse(self.__relative_url).query
 
     p = {}
     if not query:
       return p
 
-    for key, value in cgi.parse_qsl(
+    for key, value in urllib.parse.parse_qsl(
         query, keep_blank_values=True, strict_parsing=True):
-      p.setdefault(key, []).append(value)
+      p.setdefault(key, []).append(six.ensure_binary(value))
 
     for key, value in p.items():
       if len(value) == 1:
@@ -1427,19 +1437,19 @@ class QueueStatistics(object):
     Returns:
       A new QueueStatistics instance.
     """
-    args = {'queue': queue, 'tasks': response.num_tasks()}
-    if response.oldest_eta_usec() >= 0:
-      args['oldest_eta_usec'] = response.oldest_eta_usec()
+    args = {'queue': queue, 'tasks': response.num_tasks}
+    if response.oldest_eta_usec >= 0:
+      args['oldest_eta_usec'] = response.oldest_eta_usec
     else:
       args['oldest_eta_usec'] = None
 
-    if response.has_scanner_info():
-      scanner_info = response.scanner_info()
-      args['executed_last_minute'] = scanner_info.executed_last_minute()
-      if scanner_info.has_requests_in_flight():
-        args['in_flight'] = scanner_info.requests_in_flight()
-      if scanner_info.has_enforced_rate():
-        args['enforced_rate'] = scanner_info.enforced_rate()
+    if response.HasField('scanner_info'):
+      scanner_info = response.scanner_info
+      args['executed_last_minute'] = scanner_info.executed_last_minute
+      if scanner_info.HasField('requests_in_flight'):
+        args['in_flight'] = scanner_info.requests_in_flight
+      if scanner_info.HasField('enforced_rate'):
+        args['enforced_rate'] = scanner_info.enforced_rate
     return cls(**args)
 
   @classmethod
@@ -1481,7 +1491,7 @@ class QueueStatistics(object):
     wants_list = True
 
 
-    if isinstance(queue_or_queues, basestring):
+    if isinstance(queue_or_queues, six.string_types):
       queue_or_queues = [queue_or_queues]
       wants_list = False
 
@@ -1491,7 +1501,8 @@ class QueueStatistics(object):
       queues_list = [queue_or_queues]
       wants_list = False
 
-    contains_strs = any(isinstance(queue, basestring) for queue in queues_list)
+    contains_strs = any(
+        isinstance(queue, six.string_types) for queue in queues_list)
     contains_queues = any(isinstance(queue, Queue) for queue in queues_list)
 
     if contains_strs and contains_queues:
@@ -1561,29 +1572,29 @@ class QueueStatistics(object):
       except apiproxy_errors.ApplicationError as e:
         raise _TranslateError(e.application_error, e.error_detail)
 
-      assert len(queues) == rpc.response.queuestats_size(), (
-          'Expected %d results, got %d' % (
-              len(queues), rpc.response.queuestats_size()))
+      assert len(queues) == len(rpc.response.queuestats), (
+          'Expected %d results, got %d' %
+          (len(queues), len(rpc.response.queuestats_size)))
       queue_stats = [cls._ConstructFromFetchQueueStatsResponse(queue, response)
                      for queue, response in zip(queues,
-                                                rpc.response.queuestats_list())]
+                                                rpc.response.queuestats)]
       if multiple:
         return queue_stats
       else:
         assert len(queue_stats) == 1
         return queue_stats[0]
 
-    request = taskqueue_service_pb.TaskQueueFetchQueueStatsRequest()
-    response = taskqueue_service_pb.TaskQueueFetchQueueStatsResponse()
+    request = taskqueue_service_pb2.TaskQueueFetchQueueStatsRequest()
+    response = taskqueue_service_pb2.TaskQueueFetchQueueStatsResponse()
 
     requested_app_id = queues[0]._app
 
     for queue in queues:
-      request.add_queue_name(queue.name)
+      request.queue_name.append(six.ensure_binary(queue.name))
       if queue._app != requested_app_id:
         raise InvalidQueueError('Inconsistent app ids requested.')
     if requested_app_id:
-      request.set_app_id(requested_app_id)
+      request.app_id = six.ensure_binary(requested_app_id)
 
     return _MakeAsyncCall('FetchQueueStats',
                           request,
@@ -1643,12 +1654,12 @@ class Queue(object):
     Raises:
       Error-subclass on application errors.
     """
-    request = taskqueue_service_pb.TaskQueuePurgeQueueRequest()
-    response = taskqueue_service_pb.TaskQueuePurgeQueueResponse()
+    request = taskqueue_service_pb2.TaskQueuePurgeQueueRequest()
+    response = taskqueue_service_pb2.TaskQueuePurgeQueueResponse()
 
-    request.set_queue_name(self.__name)
+    request.queue_name = six.ensure_binary(self.__name)
     if self._app:
-      request.set_app_id(self._app)
+      request.app_id = six.ensure_binary(self._app)
 
     try:
       apiproxy_stub_map.MakeSyncCall('taskqueue',
@@ -1686,7 +1697,7 @@ class Queue(object):
     Raises:
       DuplicateTaskNameError: If a task name is repeated in the request.
     """
-    if isinstance(task_name, str):
+    if isinstance(task_name, six.string_types):
       return self.delete_tasks_async(Task(name=task_name), rpc)
     else:
       tasks = [Task(name=name) for name in task_name]
@@ -1786,17 +1797,18 @@ class Queue(object):
       except apiproxy_errors.ApplicationError as e:
         raise _TranslateError(e.application_error, e.error_detail)
 
-      assert rpc.response.result_size() == len(tasks), (
-          'expected %d results from delete(), got %d' % (
-              len(tasks), rpc.response.result_size()))
+      assert len(rpc.response.result) == len(tasks), (
+          'expected %d results from delete(), got %d' %
+          (len(tasks), len(rpc.response.result)))
 
       IGNORED_STATES = [
-          taskqueue_service_pb.TaskQueueServiceError.UNKNOWN_TASK,
-          taskqueue_service_pb.TaskQueueServiceError.TOMBSTONED_TASK]
+          taskqueue_service_pb2.TaskQueueServiceError.UNKNOWN_TASK,
+          taskqueue_service_pb2.TaskQueueServiceError.TOMBSTONED_TASK
+      ]
 
       exception = None
-      for task, result in zip(tasks, rpc.response.result_list()):
-        if result == taskqueue_service_pb.TaskQueueServiceError.OK:
+      for task, result in zip(tasks, rpc.response.result):
+        if result == taskqueue_service_pb2.TaskQueueServiceError.OK:
 
           task._Task__deleted = True
         elif result in IGNORED_STATES:
@@ -1814,10 +1826,10 @@ class Queue(object):
         assert len(tasks) == 1
         return tasks[0]
 
-    request = taskqueue_service_pb.TaskQueueDeleteRequest()
-    response = taskqueue_service_pb.TaskQueueDeleteResponse()
+    request = taskqueue_service_pb2.TaskQueueDeleteRequest()
+    response = taskqueue_service_pb2.TaskQueueDeleteResponse()
 
-    request.set_queue_name(self.__name)
+    request.queue_name = six.ensure_binary(self.__name)
     task_names = set()
     for task in tasks:
       if not task.name:
@@ -1830,7 +1842,7 @@ class Queue(object):
             'The task name %r is used more than once in the request' %
             task.name)
       task_names.add(task.name)
-      request.add_task_name(task.name)
+      request.task_name.append(six.ensure_binary(task.name))
 
     return _MakeAsyncCall('Delete',
                           request,
@@ -1841,7 +1853,7 @@ class Queue(object):
   @staticmethod
   def _ValidateLeaseSeconds(lease_seconds):
 
-    if not isinstance(lease_seconds, (float, int, long)):
+    if not isinstance(lease_seconds, (float, int, int)):
       raise TypeError(
           'lease_seconds must be a float or an integer')
     lease_seconds = float(lease_seconds)
@@ -1857,7 +1869,7 @@ class Queue(object):
 
   @staticmethod
   def _ValidateMaxTasks(max_tasks):
-    if not isinstance(max_tasks, (int, long)):
+    if not isinstance(max_tasks, six.integer_types):
       raise TypeError(
           'max_tasks must be an integer')
 
@@ -1879,7 +1891,7 @@ class Queue(object):
         raise _TranslateError(e.application_error, e.error_detail)
 
       tasks = []
-      for response_task in rpc.response.task_list():
+      for response_task in rpc.response.task:
         tasks.append(
             Task._FromQueryAndOwnResponseTask(queue_name, response_task))
       return tasks
@@ -1924,12 +1936,12 @@ class Queue(object):
     lease_seconds = self._ValidateLeaseSeconds(lease_seconds)
     self._ValidateMaxTasks(max_tasks)
 
-    request = taskqueue_service_pb.TaskQueueQueryAndOwnTasksRequest()
-    response = taskqueue_service_pb.TaskQueueQueryAndOwnTasksResponse()
+    request = taskqueue_service_pb2.TaskQueueQueryAndOwnTasksRequest()
+    response = taskqueue_service_pb2.TaskQueueQueryAndOwnTasksResponse()
 
-    request.set_queue_name(self.__name)
-    request.set_lease_seconds(lease_seconds)
-    request.set_max_tasks(max_tasks)
+    request.queue_name = six.ensure_binary(self.__name)
+    request.lease_seconds = lease_seconds
+    request.max_tasks = max_tasks
 
     return self._QueryAndOwnTasks(request, response, self.__name, rpc)
 
@@ -2000,15 +2012,15 @@ class Queue(object):
     lease_seconds = self._ValidateLeaseSeconds(lease_seconds)
     self._ValidateMaxTasks(max_tasks)
 
-    request = taskqueue_service_pb.TaskQueueQueryAndOwnTasksRequest()
-    response = taskqueue_service_pb.TaskQueueQueryAndOwnTasksResponse()
+    request = taskqueue_service_pb2.TaskQueueQueryAndOwnTasksRequest()
+    response = taskqueue_service_pb2.TaskQueueQueryAndOwnTasksResponse()
 
-    request.set_queue_name(self.__name)
-    request.set_lease_seconds(lease_seconds)
-    request.set_max_tasks(max_tasks)
-    request.set_group_by_tag(True)
+    request.queue_name = six.ensure_binary(self.__name)
+    request.lease_seconds = lease_seconds
+    request.max_tasks = max_tasks
+    request.group_by_tag = True
     if tag is not None:
-      request.set_tag(tag)
+      request.tag = six.ensure_binary(tag)
 
     return self._QueryAndOwnTasks(request, response, self.__name, rpc)
 
@@ -2209,24 +2221,24 @@ class Queue(object):
       except apiproxy_errors.ApplicationError as e:
         raise _TranslateError(e.application_error, e.error_detail)
 
-      assert rpc.response.taskresult_size() == len(tasks), (
-          'expected %d results from BulkAdd(), got %d' % (
-              len(tasks), rpc.response.taskresult_size()))
+      assert len(rpc.response.taskresult) == len(tasks), (
+          'expected %d results from BulkAdd(), got %d' %
+          (len(tasks), len(rpc.response.taskresult)))
 
       exception = None
-      for task, task_result in zip(tasks, rpc.response.taskresult_list()):
-        if (task_result.result() ==
-            taskqueue_service_pb.TaskQueueServiceError.OK):
-          if task_result.has_chosen_task_name():
-            task._Task__name = task_result.chosen_task_name()
+      for task, task_result in zip(tasks, rpc.response.taskresult):
+        if (task_result.result == taskqueue_service_pb2.TaskQueueServiceError.OK
+           ):
+          if task_result.HasField('chosen_task_name'):
+            task._Task__name = task_result.chosen_task_name.decode('utf8')
           task._Task__queue_name = self.__name
           task._Task__enqueued = True
-        elif (task_result.result() ==
-              taskqueue_service_pb.TaskQueueServiceError.SKIPPED):
+        elif (task_result.result ==
+              taskqueue_service_pb2.TaskQueueServiceError.SKIPPED):
           pass
         elif (exception is None or isinstance(exception, TaskAlreadyExistsError)
               or isinstance(exception, TombstonedTaskError)):
-          exception = _TranslateError(task_result.result())
+          exception = _TranslateError(task_result.result)
 
       if exception is not None:
         raise exception
@@ -2242,8 +2254,8 @@ class Queue(object):
           'No more than %d tasks can be added in a single call' %
           MAX_TASKS_PER_ADD)
 
-    request = taskqueue_service_pb.TaskQueueBulkAddRequest()
-    response = taskqueue_service_pb.TaskQueueBulkAddResponse()
+    request = taskqueue_service_pb2.TaskQueueBulkAddRequest()
+    response = taskqueue_service_pb2.TaskQueueBulkAddResponse()
 
     task_names = set()
     for task in tasks:
@@ -2256,7 +2268,7 @@ class Queue(object):
       if task.was_enqueued:
         raise BadTaskStateError('The task has already been enqueued.')
 
-      fill_request(task, request.add_add_request(), transactional)
+      fill_request(task, request.add_request.add(), transactional)
 
     if transactional and (request.ByteSize() >
                           MAX_TRANSACTIONAL_REQUEST_SIZE_BYTES):
@@ -2277,26 +2289,24 @@ class Queue(object):
 
     Args:
       retry_options: The TaskRetryOptions instance to use as a source for the
-          data to be added to retry_retry_parameters.
-      retry_retry_parameters: A taskqueue_service_pb.TaskQueueRetryParameters
-          to populate.
+        data to be added to retry_retry_parameters.
+      retry_retry_parameters: A taskqueue_service_pb2.TaskQueueRetryParameters
+        to populate.
     """
     if retry_options.min_backoff_seconds is not None:
-      retry_retry_parameters.set_min_backoff_sec(
-          retry_options.min_backoff_seconds)
+      retry_retry_parameters.min_backoff_sec = retry_options.min_backoff_seconds
 
     if retry_options.max_backoff_seconds is not None:
-      retry_retry_parameters.set_max_backoff_sec(
-          retry_options.max_backoff_seconds)
+      retry_retry_parameters.max_backoff_sec = retry_options.max_backoff_seconds
 
     if retry_options.task_retry_limit is not None:
-      retry_retry_parameters.set_retry_limit(retry_options.task_retry_limit)
+      retry_retry_parameters.retry_limit = retry_options.task_retry_limit
 
     if retry_options.task_age_limit is not None:
-      retry_retry_parameters.set_age_limit_sec(retry_options.task_age_limit)
+      retry_retry_parameters.age_limit_sec = retry_options.task_age_limit
 
     if retry_options.max_doublings is not None:
-      retry_retry_parameters.set_max_doublings(retry_options.max_doublings)
+      retry_retry_parameters.max_doublings = retry_options.max_doublings
 
   def __FillAddPushTasksRequest(self, task, task_request, transactional):
     """Populates a TaskQueueAddRequest with the data from a push task instance.
@@ -2304,7 +2314,7 @@ class Queue(object):
     Args:
       task: The task instance to use as a source for the data to be added to
           task_request.
-      task_request: The taskqueue_service_pb.TaskQueueAddRequest to populate.
+      task_request: The taskqueue_service_pb2.TaskQueueAddRequest to populate.
       transactional: If True, the task_request.transaction message is
           populated with information from the enclosing transaction, if any.
 
@@ -2315,7 +2325,7 @@ class Queue(object):
       InvalidTaskNameError: If the transactional argument is True and the task
           is named.
     """
-    task_request.set_mode(taskqueue_service_pb.TaskQueueMode.PUSH)
+    task_request.mode = taskqueue_service_pb2.TaskQueueMode.PUSH
     self.__FillTaskCommon(task, task_request, transactional)
 
     adjusted_url = task.url
@@ -2329,22 +2339,22 @@ class Queue(object):
 
 
 
-    task_request.set_method(_METHOD_MAP.get(task.method))
-    task_request.set_url(adjusted_url)
+    task_request.method = _METHOD_MAP.get(task.method)
+    task_request.url = six.ensure_binary(adjusted_url)
 
     if task.payload:
-      task_request.set_body(task.payload)
+      task_request.body = six.ensure_binary(task.payload)
     for key, value in _flatten_params(task.headers):
-      header = task_request.add_header()
-      header.set_key(key)
-      header.set_value(value)
+      header = task_request.header.add()
+      header.key = six.ensure_binary(key)
+      header.value = six.ensure_binary(value)
 
     if task.retry_options:
-      self.__FillTaskQueueRetryParameters(
-          task.retry_options, task_request.mutable_retry_parameters())
+      self.__FillTaskQueueRetryParameters(task.retry_options,
+                                          task_request.retry_parameters)
 
     if task.dispatch_deadline_usec:
-      task_request.set_dispatch_deadline_usec(task.dispatch_deadline_usec)
+      task_request.dispatch_deadline_usec = task.dispatch_deadline_usec
 
   def __FillAddPullTasksRequest(self, task, task_request, transactional):
     """Populates a TaskQueueAddRequest with the data from a pull task instance.
@@ -2352,7 +2362,7 @@ class Queue(object):
     Args:
       task: The task instance to use as a source for the data to be added to
           task_request.
-      task_request: The taskqueue_service_pb.TaskQueueAddRequest to populate.
+      task_request: The taskqueue_service_pb2.TaskQueueAddRequest to populate.
       transactional: If True, then populates the task_request.transaction
           message with information from the enclosing transaction, if any.
 
@@ -2364,25 +2374,25 @@ class Queue(object):
       InvalidTaskNameError: If the transactional argument is True and the task
           is named.
     """
-    task_request.set_mode(taskqueue_service_pb.TaskQueueMode.PULL)
+    task_request.mode = taskqueue_service_pb2.TaskQueueMode.PULL
     self.__FillTaskCommon(task, task_request, transactional)
     if task.payload is not None:
-      task_request.set_body(task.payload)
+      task_request.body = task.payload
     else:
       raise BadTaskStateError('Pull task must have a payload')
 
   def __FillTaskCommon(self, task, task_request, transactional):
     """Fills common fields for both push tasks and pull tasks."""
     if self._app:
-      task_request.set_app_id(self._app)
-    task_request.set_queue_name(self.__name)
-    task_request.set_eta_usec(task._eta_usec)
+      task_request.app_id = self._app.encode('utf8')
+    task_request.queue_name = six.ensure_binary(self.__name)
+    task_request.eta_usec = task._eta_usec
     if task.name:
-      task_request.set_task_name(task.name)
+      task_request.task_name = six.ensure_binary(task.name)
     else:
-      task_request.set_task_name('')
+      task_request.task_name = b''
     if task.tag:
-      task_request.set_tag(task.tag)
+      task_request.tag = six.ensure_binary(task.tag)
 
 
 
@@ -2392,7 +2402,7 @@ class Queue(object):
         raise BadTransactionStateError(
             'Transactional adds are not allowed outside of transactions')
 
-    if task_request.has_transaction() and task.name:
+    if task_request.HasField('transaction') and task.name:
       raise InvalidTaskNameError(
           'A task bound to a transaction cannot be named.')
 
@@ -2418,13 +2428,13 @@ class Queue(object):
     """
     lease_seconds = self._ValidateLeaseSeconds(lease_seconds)
 
-    request = taskqueue_service_pb.TaskQueueModifyTaskLeaseRequest()
-    response = taskqueue_service_pb.TaskQueueModifyTaskLeaseResponse()
+    request = taskqueue_service_pb2.TaskQueueModifyTaskLeaseRequest()
+    response = taskqueue_service_pb2.TaskQueueModifyTaskLeaseResponse()
 
-    request.set_queue_name(self.__name)
-    request.set_task_name(task.name)
-    request.set_eta_usec(task._eta_usec)
-    request.set_lease_seconds(lease_seconds)
+    request.queue_name = six.ensure_binary(self.__name)
+    request.task_name = six.ensure_binary(task.name)
+    request.eta_usec = task._eta_usec
+    request.lease_seconds = lease_seconds
 
     try:
       apiproxy_stub_map.MakeSyncCall('taskqueue',
@@ -2434,7 +2444,7 @@ class Queue(object):
     except apiproxy_errors.ApplicationError as e:
       raise _TranslateError(e.application_error, e.error_detail)
 
-    task._Task__eta_posix = response.updated_eta_usec() * 1e-6
+    task._Task__eta_posix = response.updated_eta_usec * 1e-6
     task._Task__eta = None
 
   def fetch_statistics_async(self, rpc=None):

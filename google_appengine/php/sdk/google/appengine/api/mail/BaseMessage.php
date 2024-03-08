@@ -43,7 +43,8 @@ abstract class BaseMessage {
   // Allowlisted headers.
   protected static $allowed_headers = array(
       'auto-submitted', 'in-reply-to', 'list-id', 'list-unsubscribe',
-      'on-behalf-of', 'references', 'resent-date', 'resent-from', 'resent-to');
+      'list-unsubscribe-post', 'on-behalf-of', 'references',
+      'resent-date', 'resent-from', 'resent-to');
 
   // Denied extension types.
   protected static $extension_denylist = [

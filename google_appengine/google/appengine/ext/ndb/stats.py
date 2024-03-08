@@ -1,5 +1,6 @@
+#!/usr/bin/env python
 #
-# Copyright 2008 The ndb Authors. All Rights Reserved.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +13,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 """Models to be used when accessing app specific datastore usage statistics.
 
@@ -19,10 +34,10 @@ These entities cannot be created by users, but are populated in the
 application's datastore by offline processes run by the Google App Engine team.
 """
 
-# NOTE: All constant strings in this file should be kept in sync with
-# those in google/appengine/ext/db/stats.py.
 
-from . import model
+
+
+from google.appengine.ext.ndb import model
 
 __all__ = ['BaseKindStatistic',
            'BaseStatistic',
@@ -58,16 +73,16 @@ class BaseStatistic(model.Model):
       in Cloud Datastore.
     timestamp: the time the statistic instance was written to Cloud Datastore.
   """
-  # This is necessary for the _get_kind() classmethod override.
+
   STORED_KIND_NAME = '__BaseStatistic__'
 
-  # The number of bytes that is taken up.
+
   bytes = model.IntegerProperty()
 
-  # The number of entity records.
+
   count = model.IntegerProperty()
 
-  # When this statistic was inserted into Cloud Datastore.
+
   timestamp = model.DateTimeProperty()
 
   @classmethod
@@ -84,16 +99,16 @@ class BaseKindStatistic(BaseStatistic):
     entity_bytes: the number of bytes taken up to store the statistic
       in Cloud Datastore minus the cost of storing indices.
   """
-  # This is necessary for the _get_kind() classmethod override.
+
   STORED_KIND_NAME = '__BaseKindStatistic__'
 
-  # The name of the kind.
+
   kind_name = model.StringProperty()
 
-  # The number of bytes that is taken up in entity table. entity_bytes does not
-  # reflect the storage allocated for indexes, either built-in or composite
-  # indexes.
-  entity_bytes = model.IntegerProperty(default=0L)
+
+
+
+  entity_bytes = model.IntegerProperty(default=0)
 
 
 class GlobalStat(BaseStatistic):
@@ -114,20 +129,20 @@ class GlobalStat(BaseStatistic):
   """
   STORED_KIND_NAME = '__Stat_Total__'
 
-  # The number of bytes that is taken up in entity storage.
-  entity_bytes = model.IntegerProperty(default=0L)
 
-  # The number of bytes taken up for built-in index entries.
-  builtin_index_bytes = model.IntegerProperty(default=0L)
+  entity_bytes = model.IntegerProperty(default=0)
 
-  # The number of built-in index entries.
-  builtin_index_count = model.IntegerProperty(default=0L)
 
-  # The number of bytes taken up for composite index entries.
-  composite_index_bytes = model.IntegerProperty(default=0L)
+  builtin_index_bytes = model.IntegerProperty(default=0)
 
-  # The number of composite indexes entries.
-  composite_index_count = model.IntegerProperty(default=0L)
+
+  builtin_index_count = model.IntegerProperty(default=0)
+
+
+  composite_index_bytes = model.IntegerProperty(default=0)
+
+
+  composite_index_count = model.IntegerProperty(default=0)
 
 
 class NamespaceStat(BaseStatistic):
@@ -151,23 +166,23 @@ class NamespaceStat(BaseStatistic):
   """
   STORED_KIND_NAME = '__Stat_Namespace__'
 
-  # The namespace name this NamespaceStat refers to.
+
   subject_namespace = model.StringProperty()
 
-  # The number of bytes that is taken up in entity storage.
-  entity_bytes = model.IntegerProperty(default=0L)
 
-  # The number of bytes taken up for built-in index entries.
-  builtin_index_bytes = model.IntegerProperty(default=0L)
+  entity_bytes = model.IntegerProperty(default=0)
 
-  # The number of built-in index entries.
-  builtin_index_count = model.IntegerProperty(default=0L)
 
-  # The number of bytes taken up for composite index entries.
-  composite_index_bytes = model.IntegerProperty(default=0L)
+  builtin_index_bytes = model.IntegerProperty(default=0)
 
-  # The number of composite indexes entries.
-  composite_index_count = model.IntegerProperty(default=0L)
+
+  builtin_index_count = model.IntegerProperty(default=0)
+
+
+  composite_index_bytes = model.IntegerProperty(default=0)
+
+
+  composite_index_count = model.IntegerProperty(default=0)
 
 
 class KindStat(BaseKindStatistic):
@@ -186,17 +201,17 @@ class KindStat(BaseKindStatistic):
   """
   STORED_KIND_NAME = '__Stat_Kind__'
 
-  # The number of bytes taken up for built-in index entries.
-  builtin_index_bytes = model.IntegerProperty(default=0L)
 
-  # The number of built-in index entries.
-  builtin_index_count = model.IntegerProperty(default=0L)
+  builtin_index_bytes = model.IntegerProperty(default=0)
 
-  # The number of bytes taken up for composite index entries.
-  composite_index_bytes = model.IntegerProperty(default=0L)
 
-  # The number of composite indexes entries.
-  composite_index_count = model.IntegerProperty(default=0L)
+  builtin_index_count = model.IntegerProperty(default=0)
+
+
+  composite_index_bytes = model.IntegerProperty(default=0)
+
+
+  composite_index_count = model.IntegerProperty(default=0)
 
 
 class KindRootEntityStat(BaseKindStatistic):
@@ -236,17 +251,17 @@ class PropertyTypeStat(BaseStatistic):
   """
   STORED_KIND_NAME = '__Stat_PropertyType__'
 
-  # The name of the property_type.
+
   property_type = model.StringProperty()
 
-  # The number of bytes that is taken up in entity storage.
-  entity_bytes = model.IntegerProperty(default=0L)
 
-  # The number of bytes taken up for built-in index entries.
-  builtin_index_bytes = model.IntegerProperty(default=0L)
+  entity_bytes = model.IntegerProperty(default=0)
 
-  # The number of built-in index entries.
-  builtin_index_count = model.IntegerProperty(default=0L)
+
+  builtin_index_bytes = model.IntegerProperty(default=0)
+
+
+  builtin_index_count = model.IntegerProperty(default=0)
 
 
 class KindPropertyTypeStat(BaseKindStatistic):
@@ -263,14 +278,14 @@ class KindPropertyTypeStat(BaseKindStatistic):
   """
   STORED_KIND_NAME = '__Stat_PropertyType_Kind__'
 
-  # The name of the property_type.
+
   property_type = model.StringProperty()
 
-  # The number of bytes taken up for built-in index entries.
-  builtin_index_bytes = model.IntegerProperty(default=0L)
 
-  # The number of built-in index entries.
-  builtin_index_count = model.IntegerProperty(default=0L)
+  builtin_index_bytes = model.IntegerProperty(default=0)
+
+
+  builtin_index_count = model.IntegerProperty(default=0)
 
 
 class KindPropertyNameStat(BaseKindStatistic):
@@ -288,14 +303,14 @@ class KindPropertyNameStat(BaseKindStatistic):
   """
   STORED_KIND_NAME = '__Stat_PropertyName_Kind__'
 
-  # The name of the property.
+
   property_name = model.StringProperty()
 
-  # The number of bytes taken up for built-in index entries.
-  builtin_index_bytes = model.IntegerProperty(default=0L)
 
-  # The number of built-in index entries.
-  builtin_index_count = model.IntegerProperty(default=0L)
+  builtin_index_bytes = model.IntegerProperty(default=0)
+
+
+  builtin_index_count = model.IntegerProperty(default=0)
 
 
 class KindPropertyNamePropertyTypeStat(BaseKindStatistic):
@@ -315,17 +330,17 @@ class KindPropertyNamePropertyTypeStat(BaseKindStatistic):
   """
   STORED_KIND_NAME = '__Stat_PropertyType_PropertyName_Kind__'
 
-  # The name of the property type.
+
   property_type = model.StringProperty()
 
-  # The name of the property.
+
   property_name = model.StringProperty()
 
-  # The number of bytes taken up for built-in index entries.
-  builtin_index_bytes = model.IntegerProperty(default=0L)
 
-  # The number of built-in index entries.
-  builtin_index_count = model.IntegerProperty(default=0L)
+  builtin_index_bytes = model.IntegerProperty(default=0)
+
+
+  builtin_index_count = model.IntegerProperty(default=0)
 
 
 class KindCompositeIndexStat(BaseStatistic):
@@ -341,17 +356,17 @@ class KindCompositeIndexStat(BaseStatistic):
   """
   STORED_KIND_NAME = '__Stat_Kind_CompositeIndex__'
 
-  # The id of the composite index
+
   index_id = model.IntegerProperty()
 
-  # The name of the kind.
+
   kind_name = model.StringProperty()
 
 
-# The following specify namespace-specific stats.
-# These types are specific to Cloud Datastore namespace they are located
-# within. These will only be produced if datastore entities exist
-# in a namespace other than the empty namespace (i.e. namespace="").
+
+
+
+
 
 
 class NamespaceGlobalStat(GlobalStat):
@@ -436,8 +451,8 @@ class NamespaceKindCompositeIndexStat(KindCompositeIndexStat):
   STORED_KIND_NAME = '__Stat_Ns_Kind_CompositeIndex__'
 
 
-# Maps a datastore stat entity kind name to its respective model class.
-# NOTE: Any new stats added to this module should also be added here.
+
+
 _DATASTORE_STATS_CLASSES_BY_KIND = {
     GlobalStat.STORED_KIND_NAME: GlobalStat,
     NamespaceStat.STORED_KIND_NAME: NamespaceStat,

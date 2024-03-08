@@ -25,10 +25,14 @@
 
 
 
+import abc
+import cgi
 import collections
 import os
 import sys
 import threading
+
+import six
 
 _sys_stderr = sys.stderr
 
@@ -58,7 +62,10 @@ class RequestEnvironment(threading.local):
 
   def Init(self, errors, environ, runtime_stats=None):
     self.errors = errors
-    self.environ = environ
+
+    if environ is not None:
+      self.environ = environ
+
     if runtime_stats is None:
       self.runtime_stats = {}
     else:
@@ -110,7 +117,7 @@ class RequestLocalStream(object):
     return False
 
 
-class RequestLocalEnviron(collections.MutableMapping):
+class RequestLocalEnviron(collections.abc.MutableMapping):
   """A MutableMapping that delegates to a RequestEnvironment environ."""
 
   def __init__(self, request):
@@ -157,6 +164,7 @@ current_request = RequestEnvironment()
 
 
 
+
 def PatchOsEnviron(os_module=os):
   """Replace os.environ by a RequestLocalEnviron instance.
 
@@ -167,3 +175,17 @@ def PatchOsEnviron(os_module=os):
     os_module: An optional module to patch. Defaults to os.
   """
   os_module.environ = RequestLocalEnviron(current_request)
+
+
+  cached_class = cgi.FieldStorage
+  six.moves.reload_module(cgi)
+
+
+
+
+  class FieldStorage(six.with_metaclass(abc.ABCMeta, cgi.FieldStorage, object)):
+    pass
+
+  FieldStorage.register(cached_class)
+
+  cgi.FieldStorage = FieldStorage

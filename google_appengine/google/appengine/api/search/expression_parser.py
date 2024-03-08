@@ -20,7 +20,7 @@
 
 
 
-from google.appengine._internal import antlr3
+import google.appengine._internal.antlr3
 from google.appengine.api.search import ExpressionLexer
 from google.appengine.api.search import ExpressionParser
 from google.appengine.api.search import unicode_util
@@ -66,9 +66,9 @@ class ExpressionParserWithErrors(ExpressionParser.ExpressionParser):
 
 def CreateParser(expression):
   """Creates a Expression Parser."""
-  input_string = antlr3.ANTLRStringStream(unicode_util.LimitUnicode(expression))
+  input_string = google.appengine._internal.antlr3.ANTLRStringStream(unicode_util.LimitUnicode(expression))
   lexer = ExpressionLexerWithErrors(input_string)
-  tokens = antlr3.CommonTokenStream(lexer)
+  tokens = google.appengine._internal.antlr3.CommonTokenStream(lexer)
   parser = ExpressionParserWithErrors(tokens)
   return parser
 
@@ -79,4 +79,4 @@ def Parse(expression):
   try:
     return parser.expression()
   except Exception as e:
-    raise ExpressionException(e.message)
+    raise ExpressionException(str(e))

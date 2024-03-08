@@ -28,10 +28,6 @@
 
 
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
-
 import logging
 import os
 
@@ -40,30 +36,30 @@ from google.appengine.api import appinfo_errors
 from google.appengine.ext import builtins
 
 
+
+
 class IncludeFileNotFound(Exception):
   """Raised if a specified include file cannot be found on disk."""
 
 
-def Parse(appinfo_file, open_fn=open):
+def Parse(appinfo_file):
   """Parse an AppYaml file and merge referenced includes and builtins.
 
   Args:
     appinfo_file: an opened file, for example the result of open('app.yaml').
-    open_fn: a function to open included files.
 
   Returns:
     The parsed appinfo.AppInfoExternal object.
   """
-  appyaml, _ = ParseAndReturnIncludePaths(appinfo_file, open_fn)
+  appyaml, _ = ParseAndReturnIncludePaths(appinfo_file)
   return appyaml
 
 
-def ParseAndReturnIncludePaths(appinfo_file, open_fn=open):
+def ParseAndReturnIncludePaths(appinfo_file):
   """Parse an AppYaml file and merge referenced includes and builtins.
 
   Args:
     appinfo_file: an opened file, for example the result of open('app.yaml').
-    open_fn: a function to open included files.
 
   Returns:
     A tuple where the first element is the parsed appinfo.AppInfoExternal
@@ -80,8 +76,7 @@ def ParseAndReturnIncludePaths(appinfo_file, open_fn=open):
                     'attribute "name" as as full file path.')
 
   appyaml = appinfo.LoadSingleAppInfo(appinfo_file)
-  appyaml, include_paths = _MergeBuiltinsIncludes(appinfo_path, appyaml,
-                                                  open_fn)
+  appyaml, include_paths = _MergeBuiltinsIncludes(appinfo_path, appyaml)
 
 
   if not appyaml.handlers:
@@ -95,7 +90,15 @@ def ParseAndReturnIncludePaths(appinfo_file, open_fn=open):
     raise appinfo_errors.TooManyURLMappings(
         'Found more than %d URLMap entries in application configuration' %
         appinfo.MAX_URL_MAPS)
-  if appyaml.runtime == 'python27' and appyaml.threadsafe:
+
+  try:
+    max_concurrent_requests = appyaml.automatic_scaling.max_concurrent_requests
+  except AttributeError:
+    max_concurrent_requests = None
+
+  threadsafe_mode_enabled = appyaml.threadsafe or (
+      max_concurrent_requests and max_concurrent_requests != '1')
+  if appyaml.runtime == 'python27' and threadsafe_mode_enabled:
     for handler in appyaml.handlers:
       if (handler.script and (handler.script.endswith('.py') or
                               '/' in handler.script)):
@@ -106,14 +109,12 @@ def ParseAndReturnIncludePaths(appinfo_file, open_fn=open):
   return appyaml, include_paths
 
 
-def _MergeBuiltinsIncludes(appinfo_path, appyaml, open_fn=open):
+def _MergeBuiltinsIncludes(appinfo_path, appyaml):
   """Merges app.yaml files from builtins and includes directives in appyaml.
 
   Args:
     appinfo_path: the application directory.
     appyaml: the yaml file to obtain builtins and includes directives from.
-    open_fn: file opening function to pass to _ResolveIncludes, used when
-             reading yaml files.
 
   Returns:
     A tuple where the first element is the modified appyaml object
@@ -122,13 +123,8 @@ def _MergeBuiltinsIncludes(appinfo_path, appyaml, open_fn=open):
   """
 
 
-
   if not appyaml.builtins:
-    appyaml.builtins = [appinfo.BuiltinHandler(default='on')]
-
-  else:
-    if not appinfo.BuiltinHandler.IsDefined(appyaml.builtins, 'default'):
-      appyaml.builtins.append(appinfo.BuiltinHandler(default='on'))
+    appyaml.builtins = []
 
 
 
@@ -140,8 +136,7 @@ def _MergeBuiltinsIncludes(appinfo_path, appyaml, open_fn=open):
                        appinfo.AppInclude(builtins=appyaml.builtins,
                                           includes=appyaml.includes),
                        os.path.dirname(appinfo_path),
-                       runtime_for_including,
-                       open_fn=open_fn))
+                       runtime_for_including))
 
   return (
       appinfo.AppInclude.MergeAppYamlAppInclude(appyaml,
@@ -149,8 +144,7 @@ def _MergeBuiltinsIncludes(appinfo_path, appyaml, open_fn=open):
       include_paths)
 
 
-def _ResolveIncludes(included_from, app_include, basepath, runtime, state=None,
-                     open_fn=open):
+def _ResolveIncludes(included_from, app_include, basepath, runtime, state=None):
   """Recursively includes all encountered builtins/includes directives.
 
   This function takes an initial AppInclude object specified as a parameter
@@ -166,7 +160,6 @@ def _ResolveIncludes(included_from, app_include, basepath, runtime, state=None,
     runtime: name of the runtime.
     state: contains the list of included and excluded files as well as the
            directives of all encountered AppInclude objects.
-    open_fn: file opening function udes, used when reading yaml files.
 
   Returns:
     A two-element tuple where the first element is the AppInclude object merged
@@ -216,11 +209,10 @@ def _ResolveIncludes(included_from, app_include, basepath, runtime, state=None,
                       inc_path, state.excludes[inc_path], included_from)
     elif not inc_path in state.includes:
       state.includes[inc_path] = included_from
-      yaml_file = open_fn(inc_path, 'r')
+      yaml_file = open(inc_path, 'r')
       try:
         inc_yaml = appinfo.LoadAppInclude(yaml_file)
-        _ResolveIncludes(inc_path, inc_yaml, basepath, runtime, state=state,
-                         open_fn=open_fn)
+        _ResolveIncludes(inc_path, inc_yaml, basepath, runtime, state=state)
       except appinfo_errors.EmptyConfigurationFile:
 
         if not os.path.basename(os.path.dirname(inc_path)) == 'default':

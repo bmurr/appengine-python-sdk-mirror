@@ -11,25 +11,25 @@ import types
 import warnings
 
 # fmt: off
-from google.appengine._internal.ruamel.yaml.error import (MarkedYAMLError, MarkedYAMLFutureWarning,
+from ruamel.yaml.error import (MarkedYAMLError, MarkedYAMLFutureWarning,
                                MantissaNoDotYAML1_1Warning)
-from google.appengine._internal.ruamel.yaml.nodes import *                               # NOQA
-from google.appengine._internal.ruamel.yaml.nodes import (SequenceNode, MappingNode, ScalarNode)
-from google.appengine._internal.ruamel.yaml.compat import (utf8, builtins_module, to_str, PY2, PY3,  # NOQA
+from ruamel.yaml.nodes import *                               # NOQA
+from ruamel.yaml.nodes import (SequenceNode, MappingNode, ScalarNode)
+from ruamel.yaml.compat import (utf8, builtins_module, to_str, PY2, PY3,  # NOQA
                                 ordereddict, text_type, nprint, nprintf, version_tnf,
                                 Hashable, MutableSequence, MutableMapping)
-from google.appengine._internal.ruamel.yaml.comments import *                               # NOQA
-from google.appengine._internal.ruamel.yaml.comments import (CommentedMap, CommentedOrderedMap, CommentedSet,
+from ruamel.yaml.comments import *                               # NOQA
+from ruamel.yaml.comments import (CommentedMap, CommentedOrderedMap, CommentedSet,
                                   CommentedKeySeq, CommentedSeq, TaggedScalar,
                                   CommentedKeyMap)
-from google.appengine._internal.ruamel.yaml.scalarstring import (SingleQuotedScalarString, DoubleQuotedScalarString,
+from ruamel.yaml.scalarstring import (SingleQuotedScalarString, DoubleQuotedScalarString,
                                       LiteralScalarString, FoldedScalarString,
                                       PlainScalarString, ScalarString,)
-from google.appengine._internal.ruamel.yaml.scalarint import ScalarInt, BinaryInt, OctalInt, HexInt, HexCapsInt
-from google.appengine._internal.ruamel.yaml.scalarfloat import ScalarFloat
-from google.appengine._internal.ruamel.yaml.scalarbool import ScalarBoolean
-from google.appengine._internal.ruamel.yaml.timestamp import TimeStamp
-from google.appengine._internal.ruamel.yaml.util import RegExp
+from ruamel.yaml.scalarint import ScalarInt, BinaryInt, OctalInt, HexInt, HexCapsInt
+from ruamel.yaml.scalarfloat import ScalarFloat
+from ruamel.yaml.scalarbool import ScalarBoolean
+from ruamel.yaml.timestamp import TimeStamp
+from ruamel.yaml.util import RegExp
 
 if False:  # MYPY
     from typing import Any, Dict, List, Set, Generator, Union, Optional  # NOQA
@@ -1296,7 +1296,7 @@ class RoundTripConstructor(SafeConstructor):
             if len(node.comment) > 2:
                 seqtyp.yaml_end_comment_extend(node.comment[2], clear=True)
         if node.anchor:
-            from google.appengine._internal.ruamel.yaml.serializer import templated_id
+            from ruamel.yaml.serializer import templated_id
 
             if not templated_id(node.anchor):
                 seqtyp.yaml_set_anchor(node.anchor)
@@ -1413,7 +1413,7 @@ class RoundTripConstructor(SafeConstructor):
             if len(node.comment) > 2:
                 maptyp.yaml_end_comment_extend(node.comment[2], clear=True)
         if node.anchor:
-            from google.appengine._internal.ruamel.yaml.serializer import templated_id
+            from ruamel.yaml.serializer import templated_id
 
             if not templated_id(node.anchor):
                 maptyp.yaml_set_anchor(node.anchor)
@@ -1497,7 +1497,7 @@ class RoundTripConstructor(SafeConstructor):
             if len(node.comment) > 2:
                 typ.yaml_end_comment_extend(node.comment[2], clear=True)
         if node.anchor:
-            from google.appengine._internal.ruamel.yaml.serializer import templated_id
+            from ruamel.yaml.serializer import templated_id
 
             if not templated_id(node.anchor):
                 typ.yaml_set_anchor(node.anchor)

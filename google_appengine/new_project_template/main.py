@@ -14,12 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import webapp2
+"""Simple HelloWorld app."""
 
-class MainHandler(webapp2.RequestHandler):
-    def get(self):
-        self.response.write('Hello world!')
+from flask import Flask
 
-app = webapp2.WSGIApplication([
-    ('/', MainHandler)
-], debug=True)
+
+app = Flask(__name__)
+
+
+@app.route('/', methods=['GET'])
+def get():
+  return 'Hello World!\n'

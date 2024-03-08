@@ -15,8 +15,6 @@
 # limitations under the License.
 #
 
-
-
 """Implementation of the Cloud Datastore V1 API.
 
 This implementation forwards directly to the v3 service."""
@@ -35,23 +33,22 @@ This implementation forwards directly to the v3 service."""
 
 import collections
 
-from google.appengine.datastore import entity_pb
-
-from google.appengine.api import api_base_pb
+from google.appengine.api import api_base_pb2
 from google.appengine.api import apiproxy_rpc
 from google.appengine.api import apiproxy_stub
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import datastore_types
+from google.appengine.datastore import cloud_datastore_validator
 from google.appengine.datastore import datastore_pb
 from google.appengine.datastore import datastore_pbs
 from google.appengine.datastore import datastore_query
 from google.appengine.datastore import datastore_stub_util
-from google.appengine.datastore import cloud_datastore_validator
 from google.appengine.runtime import apiproxy_errors
+from google.appengine.datastore import entity_bytes_pb2 as entity_pb2
 
 _CLOUD_DATASTORE_ENABLED = datastore_pbs._CLOUD_DATASTORE_ENABLED
 if _CLOUD_DATASTORE_ENABLED:
-  from datastore_pbs import googledatastore
+  from google.appengine.datastore.datastore_pbs import googledatastore
 
 SERVICE_NAME = 'cloud_datastore_v1'
 V3_SERVICE_NAME = 'datastore_v3'
@@ -143,7 +140,7 @@ class CloudDatastoreV1Stub(apiproxy_stub.APIProxyStub):
       raise apiproxy_errors.ApplicationError(datastore_pb.Error.BAD_REQUEST,
                                              str(e))
 
-    self.__make_v3_call('Rollback', v3_req, api_base_pb.VoidProto())
+    self.__make_v3_call('Rollback', v3_req, api_base_pb2.VoidProto())
 
   def _Dynamic_Commit(self, req, resp):
 
@@ -163,7 +160,7 @@ class CloudDatastoreV1Stub(apiproxy_stub.APIProxyStub):
           self.__commit(req.mutations, req.transaction or single_use_txn, resp)
         else:
           v3_txn_req = datastore_pb.BeginTransactionRequest()
-          v3_txn_req.set_app(self.__app_id)
+          v3_txn_req.app = self.__app_id
 
           for mutation in req.mutations:
             v3_txn = datastore_pb.Transaction()
@@ -212,13 +209,13 @@ class CloudDatastoreV1Stub(apiproxy_stub.APIProxyStub):
           txn_to_cleanup = new_txn
         elif req.read_options.transaction:
           txn = req.read_options.transaction
-        elif (v3_req.has_ancestor() and
+        elif (v3_req.HasField('ancestor') and
               req.read_options.read_consistency
               != googledatastore.ReadOptions.EVENTUAL and
               v3_req.kind != '__property__'):
           txn = self.__begin_adhoc_txn(req)
           txn_to_cleanup = txn
-          v3_req.mutable_transaction().ParseFromString(txn)
+          v3_req.transaction.FromString(txn)
 
       except datastore_pbs.InvalidConversionError as e:
         raise apiproxy_errors.ApplicationError(datastore_pb.Error.BAD_REQUEST,
@@ -358,7 +355,7 @@ class CloudDatastoreV1Stub(apiproxy_stub.APIProxyStub):
       v1_rollback_req.transaction = v1_transaction
       self._Dynamic_Rollback(v1_rollback_req,
                              googledatastore.RollbackResponse())
-    except apiproxy_errors.ApplicationError as e:
+    except apiproxy_errors.ApplicationError:
       pass
 
   def __commit(self, v1_mutations, v1_txn, resp):
@@ -412,14 +409,14 @@ class CloudDatastoreV1Stub(apiproxy_stub.APIProxyStub):
     self.__service_converter.v1_to_v3_txn(v1_txn, v3_txn)
     v3_resp = datastore_pb.CommitResponse()
     self.__make_v3_call('Commit', v3_txn, v3_resp)
-    resp.index_updates = v3_resp.cost().index_writes()
+    resp.index_updates = v3_resp.cost.index_writes
 
 
 
     mutation_versions = {}
-    for version in v3_resp.version_list():
-      key = datastore_types.ReferenceToKeyValue(version.root_entity_key())
-      mutation_versions[key] = version.version()
+    for version in v3_resp.version:
+      key = datastore_types.ReferenceToKeyValue(version.root_entity_key)
+      mutation_versions[key] = version.version
 
     for key in mutation_keys:
       mutation_result = resp.mutation_results.add()
@@ -430,7 +427,6 @@ class CloudDatastoreV1Stub(apiproxy_stub.APIProxyStub):
         mutation_result.version = conflict_cache[key]
       else:
         mutation_result.version = mutation_versions[key]
-
 
   def __apply_v1_mutation(self, v1_mutation, base_version, v1_txn,
                           version_cache):
@@ -502,18 +498,18 @@ class CloudDatastoreV1Stub(apiproxy_stub.APIProxyStub):
       the version number of the entity if it was found, or _NO_VERSION
       otherwise.
     """
-    v3_key = entity_pb.Reference()
+    v3_key = entity_pb2.Reference()
     self.__entity_converter.v1_to_v3_reference(v1_key, v3_key)
     v3_txn = datastore_pb.Transaction()
     self.__service_converter.v1_to_v3_txn(v1_txn, v3_txn)
 
     v3_get_req = datastore_pb.GetRequest()
-    v3_get_req.mutable_transaction().CopyFrom(v3_txn)
-    v3_get_req.key_list().append(v3_key)
+    v3_get_req.transaction.CopyFrom(v3_txn)
+    v3_get_req.key.append(v3_key)
     v3_get_resp = datastore_pb.GetResponse()
     self.__make_v3_call('Get', v3_get_req, v3_get_resp)
-    if v3_get_resp.entity(0).has_entity():
-      return v3_get_resp.entity(0).version()
+    if v3_get_resp.entity[0].HasField('entity'):
+      return v3_get_resp.entity[0].version
     return _NO_VERSION
 
   def __put_v1_entity(self, v1_entity, v1_txn):
@@ -526,17 +522,17 @@ class CloudDatastoreV1Stub(apiproxy_stub.APIProxyStub):
     Returns:
       the key of the entity, which may have been allocated.
     """
-    v3_entity = entity_pb.EntityProto()
+    v3_entity = entity_pb2.EntityProto()
     self.__entity_converter.v1_to_v3_entity(v1_entity, v3_entity)
     v3_txn = datastore_pb.Transaction()
     self.__service_converter.v1_to_v3_txn(v1_txn, v3_txn)
 
     v3_put_req = datastore_pb.PutRequest()
-    v3_put_req.mutable_transaction().CopyFrom(v3_txn)
-    v3_put_req.entity_list().append(v3_entity)
+    v3_put_req.transaction.CopyFrom(v3_txn)
+    v3_put_req.entity.append(v3_entity)
     v3_put_resp = datastore_pb.PutResponse()
     self.__make_v3_call('Put', v3_put_req, v3_put_resp)
-    v3_key = v3_put_resp.key(0)
+    v3_key = v3_put_resp.key[0]
 
     v1_key = googledatastore.Key()
     self.__entity_converter.v3_to_v1_key(v3_key, v1_key)
@@ -544,14 +540,14 @@ class CloudDatastoreV1Stub(apiproxy_stub.APIProxyStub):
 
   def __delete_v1_key(self, v1_key, v1_txn):
     """Deletes an entity from a v1 key in a transaction."""
-    v3_key = entity_pb.Reference()
+    v3_key = entity_pb2.Reference()
     self.__entity_converter.v1_to_v3_reference(v1_key, v3_key)
     v3_txn = datastore_pb.Transaction()
     self.__service_converter.v1_to_v3_txn(v1_txn, v3_txn)
 
     v3_delete_req = datastore_pb.DeleteRequest()
-    v3_delete_req.mutable_transaction().CopyFrom(v3_txn)
-    v3_delete_req.add_key().CopyFrom(v3_key)
+    v3_delete_req.transaction.CopyFrom(v3_txn)
+    v3_delete_req.key.add().CopyFrom(v3_key)
     v3_delete_resp = datastore_pb.DeleteResponse()
     self.__make_v3_call('Delete', v3_delete_req, v3_delete_resp)
 

@@ -32,8 +32,22 @@ only and should not be used by developers!
 
 
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
+import base64
+import collections
+import functools
+import pickle
+
+import six
+
+from google.appengine.api import cmp_compat
+from google.appengine.api import datastore_errors
+from google.appengine.api import datastore_types
+from google.appengine.datastore import datastore_index
+from google.appengine.datastore import datastore_pb
+from google.appengine.datastore import datastore_pbs
+from google.appengine.datastore import datastore_rpc
+from google.protobuf import message
+from google.appengine.datastore import entity_bytes_pb2 as entity_pb2
 
 
 
@@ -54,21 +68,6 @@ __all__ = ['Batch',
            'make_filter',
            'apply_query',
            'inject_results']
-
-import base64
-import collections
-import pickle
-
-from google.net.proto import ProtocolBuffer
-from google.appengine.datastore import entity_pb
-from google.appengine._internal import six_subset
-
-from google.appengine.api import datastore_errors
-from google.appengine.api import datastore_types
-from google.appengine.datastore import datastore_index
-from google.appengine.datastore import datastore_pb
-from google.appengine.datastore import datastore_pbs
-from google.appengine.datastore import datastore_rpc
 
 if datastore_pbs._CLOUD_DATASTORE_ENABLED:
   from google.appengine.datastore.datastore_pbs import googledatastore
@@ -123,24 +122,30 @@ def _make_key_value_map(entity, property_names):
   """Extracts key values from the given entity.
 
   Args:
-    entity: The entity_pb.EntityProto to extract values from.
+    entity: The entity_pb2.EntityProto to extract values from.
     property_names: The names of the properties from which to extract values.
 
   Returns:
     A dict mapping property names to a lists of key values.
   """
-  value_map = dict((name, []) for name in property_names)
 
 
-  for prop in entity.property_list():
-    if prop.name() in value_map:
-      value_map[prop.name()].append(
-          datastore_types.PropertyValueToKeyValue(prop.value()))
 
 
-  if datastore_types.KEY_SPECIAL_PROPERTY in value_map:
-    value_map[datastore_types.KEY_SPECIAL_PROPERTY] = [
-        datastore_types.ReferenceToKeyValue(entity.key())]
+
+  value_map = dict((six.ensure_text(name), []) for name in property_names)
+
+
+  for prop in entity.property:
+    prop_name = six.ensure_text(prop.name)
+    if prop_name in value_map:
+      value_map[prop_name].append(
+          datastore_types.PropertyValueToKeyValue(prop.value))
+
+
+  key_prop = six.ensure_text(datastore_types.KEY_SPECIAL_PROPERTY)
+  if key_prop in value_map:
+    value_map[key_prop] = [datastore_types.ReferenceToKeyValue(entity.key)]
 
   return value_map
 
@@ -273,31 +278,31 @@ class PropertyFilter(_SinglePropertyFilter):
   """An immutable filter predicate that constrains a single property."""
 
   _OPERATORS = {
-      '<': datastore_pb.Query_Filter.LESS_THAN,
-      '<=': datastore_pb.Query_Filter.LESS_THAN_OR_EQUAL,
-      '>': datastore_pb.Query_Filter.GREATER_THAN,
-      '>=': datastore_pb.Query_Filter.GREATER_THAN_OR_EQUAL,
-      '=': datastore_pb.Query_Filter.EQUAL,
+      '<': datastore_pb.Query.Filter.LESS_THAN,
+      '<=': datastore_pb.Query.Filter.LESS_THAN_OR_EQUAL,
+      '>': datastore_pb.Query.Filter.GREATER_THAN,
+      '>=': datastore_pb.Query.Filter.GREATER_THAN_OR_EQUAL,
+      '=': datastore_pb.Query.Filter.EQUAL,
   }
 
   _OPERATORS_INVERSE = dict((value, key)
                             for key, value in _OPERATORS.items())
 
   _OPERATORS_TO_PYTHON_OPERATOR = {
-      datastore_pb.Query_Filter.LESS_THAN: '<',
-      datastore_pb.Query_Filter.LESS_THAN_OR_EQUAL: '<=',
-      datastore_pb.Query_Filter.GREATER_THAN: '>',
-      datastore_pb.Query_Filter.GREATER_THAN_OR_EQUAL: '>=',
-      datastore_pb.Query_Filter.EQUAL: '==',
+      datastore_pb.Query.Filter.LESS_THAN: '<',
+      datastore_pb.Query.Filter.LESS_THAN_OR_EQUAL: '<=',
+      datastore_pb.Query.Filter.GREATER_THAN: '>',
+      datastore_pb.Query.Filter.GREATER_THAN_OR_EQUAL: '>=',
+      datastore_pb.Query.Filter.EQUAL: '==',
   }
 
   _INEQUALITY_OPERATORS = frozenset(['<', '<=', '>', '>='])
 
   _INEQUALITY_OPERATORS_ENUM = frozenset([
-      datastore_pb.Query_Filter.LESS_THAN,
-      datastore_pb.Query_Filter.LESS_THAN_OR_EQUAL,
-      datastore_pb.Query_Filter.GREATER_THAN,
-      datastore_pb.Query_Filter.GREATER_THAN_OR_EQUAL,
+      datastore_pb.Query.Filter.LESS_THAN,
+      datastore_pb.Query.Filter.LESS_THAN_OR_EQUAL,
+      datastore_pb.Query.Filter.GREATER_THAN,
+      datastore_pb.Query.Filter.GREATER_THAN_OR_EQUAL,
   ])
 
   _UPPERBOUND_INEQUALITY_OPERATORS = frozenset(['<', '<='])
@@ -307,56 +312,59 @@ class PropertyFilter(_SinglePropertyFilter):
 
     Args:
       op: A string representing the operator to use.
-      value: A entity_pb.Property, the property and value to compare against.
+      value: A entity_pb2.Property, the property and value to compare against.
 
     Raises:
       datastore_errors.BadArgumentError if op has an unsupported value or value
-      is not an entity_pb.Property.
+      is not an entity_pb2.Property.
     """
     if op not in self._OPERATORS:
       raise datastore_errors.BadArgumentError('unknown operator: %r' % (op,))
-    if not isinstance(value, entity_pb.Property):
+    if not isinstance(value, entity_pb2.Property):
       raise datastore_errors.BadArgumentError(
-          'value argument should be entity_pb.Property (%r)' % (value,))
+          'value argument should be entity_pb2.Property (%r)' % (value,))
 
     super(PropertyFilter, self).__init__()
-    self._filter = datastore_pb.Query_Filter()
-    self._filter.set_op(self._OPERATORS[op])
-    self._filter.add_property().CopyFrom(value)
+    self._filter = datastore_pb.Query.Filter()
+    self._filter.op = self._OPERATORS[op]
+    self._filter.property.add().CopyFrom(value)
 
   @property
   def op(self):
-    raw_op = self._filter.op()
+    raw_op = self._filter.op
     return self._OPERATORS_INVERSE.get(raw_op, str(raw_op))
 
   @property
   def value(self):
 
-    return self._filter.property(0)
+    return self._filter.property[0]
 
   def __repr__(self):
     prop = self.value
-    name = prop.name()
+    name = prop.name
     value = datastore_types.FromPropertyPb(prop)
-    return '%s(%r, <%r, %r>)' % (self.__class__.__name__, self.op, name, value)
+    if six.PY2 and isinstance(value, long):
+      value = int(value)
+    return '%s(%r, <%r, %r>)' % (self.__class__.__name__, six.ensure_str(
+        self.op), six.ensure_str(name), value)
 
   def _get_prop_name(self):
-    return self._filter.property(0).name()
+    return self._filter.property[0].name
 
   def _apply_to_value(self, value):
     if not hasattr(self, '_cmp_value'):
-      if self._filter.op() == datastore_pb.Query_Filter.EXISTS:
+      if self._filter.op == datastore_pb.Query.Filter.EXISTS:
 
         return True
       self._cmp_value = datastore_types.PropertyValueToKeyValue(
-          self._filter.property(0).value())
+          self._filter.property[0].value)
       self._condition = ('value %s self._cmp_value' %
-                         self._OPERATORS_TO_PYTHON_OPERATOR[self._filter.op()])
+                         self._OPERATORS_TO_PYTHON_OPERATOR[self._filter.op])
     return eval(self._condition)
 
   def _has_inequality(self):
     """Returns True if the filter predicate contains inequalities filters."""
-    return self._filter.op() in self._INEQUALITY_OPERATORS_ENUM
+    return self._filter.op in self._INEQUALITY_OPERATORS_ENUM
 
   @classmethod
   def _from_pb(cls, filter_pb):
@@ -416,23 +424,23 @@ class _PropertyRangeFilter(_SinglePropertyFilter):
     """Constructs a range filter using start and end properties.
 
     Args:
-      start: A entity_pb.Property to use as a lower bound or None to indicate
+      start: A entity_pb2.Property to use as a lower bound or None to indicate
         no lower bound.
       start_incl: A boolean that indicates if the lower bound is inclusive.
-      end: A entity_pb.Property to use as an upper bound or None to indicate
+      end: A entity_pb2.Property to use as an upper bound or None to indicate
         no upper bound.
       end_incl: A boolean that indicates if the upper bound is inclusive.
     """
-    if start is not None and not isinstance(start, entity_pb.Property):
+    if start is not None and not isinstance(start, entity_pb2.Property):
       raise datastore_errors.BadArgumentError(
-          'start argument should be entity_pb.Property (%r)' % (start,))
-    if end is not None and not isinstance(end, entity_pb.Property):
+          'start argument should be entity_pb2.Property (%r)' % (start,))
+    if end is not None and not isinstance(end, entity_pb2.Property):
       raise datastore_errors.BadArgumentError(
-          'start argument should be entity_pb.Property (%r)' % (end,))
-    if start and end and start.name() != end.name():
+          'start argument should be entity_pb2.Property (%r)' % (end,))
+    if start and end and start.name != end.name:
       raise datastore_errors.BadArgumentError(
           'start and end arguments must be on the same property (%s != %s)' %
-          (start.name(), end.name()))
+          (start.name, end.name))
     if not start and not end:
       raise datastore_errors.BadArgumentError(
           'Unbounded ranges are not supported.')
@@ -445,15 +453,15 @@ class _PropertyRangeFilter(_SinglePropertyFilter):
 
   @classmethod
   def from_property_filter(cls, prop_filter):
-    op = prop_filter._filter.op()
-    if op == datastore_pb.Query_Filter.GREATER_THAN:
-      return cls(start=prop_filter._filter.property(0), start_incl=False)
-    elif op == datastore_pb.Query_Filter.GREATER_THAN_OR_EQUAL:
-      return cls(start=prop_filter._filter.property(0))
-    elif op == datastore_pb.Query_Filter.LESS_THAN:
-      return cls(end=prop_filter._filter.property(0), end_incl=False)
-    elif op == datastore_pb.Query_Filter.LESS_THAN_OR_EQUAL:
-      return cls(end=prop_filter._filter.property(0))
+    op = prop_filter._filter.op
+    if op == datastore_pb.Query.Filter.GREATER_THAN:
+      return cls(start=prop_filter._filter.property[0], start_incl=False)
+    elif op == datastore_pb.Query.Filter.GREATER_THAN_OR_EQUAL:
+      return cls(start=prop_filter._filter.property[0])
+    elif op == datastore_pb.Query.Filter.LESS_THAN:
+      return cls(end=prop_filter._filter.property[0], end_incl=False)
+    elif op == datastore_pb.Query.Filter.LESS_THAN_OR_EQUAL:
+      return cls(end=prop_filter._filter.property[0])
     else:
       raise datastore_errors.BadArgumentError(
           'Unsupported operator (%s)' % (op,))
@@ -474,9 +482,10 @@ class _PropertyRangeFilter(_SinglePropertyFilter):
     start_source = None
     if other._start:
       if self._start:
-        result = cmp(self._get_start_key_value(), other._get_start_key_value())
+        result = cmp_compat.cmp(
+            self._get_start_key_value(), other._get_start_key_value())
         if result == 0:
-          result = cmp(other._start_incl, self._start_incl)
+          result = cmp_compat.cmp(other._start_incl, self._start_incl)
         if result > 0:
           start_source = self
         elif result < 0:
@@ -489,9 +498,10 @@ class _PropertyRangeFilter(_SinglePropertyFilter):
     end_source = None
     if other._end:
       if self._end:
-        result = cmp(self._get_end_key_value(), other._get_end_key_value())
+        result = cmp_compat.cmp(
+            self._get_end_key_value(), other._get_end_key_value())
         if result == 0:
-          result = cmp(self._end_incl, other._end_incl)
+          result = cmp_compat.cmp(self._end_incl, other._end_incl)
         if result < 0:
           end_source = self
         elif result > 0:
@@ -519,13 +529,13 @@ class _PropertyRangeFilter(_SinglePropertyFilter):
   def _get_start_key_value(self):
     if self._start_key_value is None:
       self._start_key_value = datastore_types.PropertyValueToKeyValue(
-          self._start.value())
+          self._start.value)
     return self._start_key_value
 
   def _get_end_key_value(self):
     if self._end_key_value is None:
       self._end_key_value = datastore_types.PropertyValueToKeyValue(
-          self._end.value())
+          self._end.value)
     return self._end_key_value
 
   def _apply_to_value(self, value):
@@ -538,12 +548,12 @@ class _PropertyRangeFilter(_SinglePropertyFilter):
       A boolean indicating if the given value matches the filter.
     """
     if self._start:
-      result = cmp(self._get_start_key_value(), value)
+      result = cmp_compat.cmp(self._get_start_key_value(), value)
       if result > 0 or (result == 0 and not self._start_incl):
         return False
 
     if self._end:
-      result = cmp(self._get_end_key_value(), value)
+      result = cmp_compat.cmp(self._get_end_key_value(), value)
       if result < 0 or (result == 0 and not self._end_incl):
         return False
 
@@ -551,31 +561,31 @@ class _PropertyRangeFilter(_SinglePropertyFilter):
 
   def _get_prop_name(self):
     if self._start:
-      return self._start.name()
+      return self._start.name
     if self._end:
-      return self._end.name()
+      return self._end.name
     assert False
 
   def _to_pbs(self):
     pbs = []
     if self._start:
       if self._start_incl:
-        op = datastore_pb.Query_Filter.GREATER_THAN_OR_EQUAL
+        op = datastore_pb.Query.Filter.GREATER_THAN_OR_EQUAL
       else:
-        op = datastore_pb.Query_Filter.GREATER_THAN
-      pb = datastore_pb.Query_Filter()
-      pb.set_op(op)
-      pb.add_property().CopyFrom(self._start)
+        op = datastore_pb.Query.Filter.GREATER_THAN
+      pb = datastore_pb.Query.Filter()
+      pb.op = op
+      pb.property.add().CopyFrom(self._start)
       pbs.append(pb)
 
     if self._end:
       if self._end_incl:
-        op = datastore_pb.Query_Filter.LESS_THAN_OR_EQUAL
+        op = datastore_pb.Query.Filter.LESS_THAN_OR_EQUAL
       else:
-        op = datastore_pb.Query_Filter.LESS_THAN
-      pb = datastore_pb.Query_Filter()
-      pb.set_op(op)
-      pb.add_property().CopyFrom(self._end)
+        op = datastore_pb.Query.Filter.LESS_THAN
+      pb = datastore_pb.Query.Filter()
+      pb.op = op
+      pb.property.add().CopyFrom(self._end)
       pbs.append(pb)
 
     return pbs
@@ -597,7 +607,7 @@ class _PropertyRangeFilter(_SinglePropertyFilter):
         op = googledatastore.PropertyFilter.GREATER_THAN
       pb = composite_filter.filters.add().property_filter
       pb.op = op
-      pb.property.name = self._start.name()
+      pb.property.name = self._start.name
       adapter.get_entity_converter().v3_property_to_v1_value(
           self._start, True, pb.value)
 
@@ -608,7 +618,7 @@ class _PropertyRangeFilter(_SinglePropertyFilter):
         op = googledatastore.PropertyFilter.LESS_THAN
       pb = composite_filter.filters.add().property_filter
       pb.op = op
-      pb.property.name = self._end.name()
+      pb.property.name = self._end.name
       adapter.get_entity_converter().v3_property_to_v1_value(
           self._end, True, pb.value)
     return filter_pb
@@ -716,7 +726,7 @@ class CorrelationFilter(FilterPredicate):
       while len(value_maps) < len(grouped):
         value_maps.append(base_map.copy())
 
-      for value, m in zip(grouped, value_maps):
+      for value, m in six.moves.zip(grouped, value_maps):
         m[prop] = value
 
     return self._apply_correlated(value_maps)
@@ -1037,7 +1047,7 @@ class Order(_PropertyComponent):
     This function can be used as the key argument for list.sort() and sorted().
 
     Args:
-      entity: The entity_pb.EntityProto to convert
+      entity: The entity_pb2.EntityProto to convert
       filter_predicate: A FilterPredicate used to prune values before comparing
         entities or None.
 
@@ -1065,8 +1075,8 @@ class Order(_PropertyComponent):
     entities, however it is much less efficient when sorting a list of entities.
 
     Args:
-      lhs: An entity_pb.EntityProto
-      rhs: An entity_pb.EntityProto
+      lhs: An entity_pb2.EntityProto
+      rhs: An entity_pb2.EntityProto
       filter_predicate: A FilterPredicate used to prune values before comparing
         entities or None.
 
@@ -1088,19 +1098,20 @@ class Order(_PropertyComponent):
     if result:
       return result
 
-    if not lhs.has_key() and not rhs.has_key():
+    if not lhs.HasField('key') and not rhs.HasField('key'):
       return 0
 
 
 
     lhs_key = (lhs_value_map.get(datastore_types.KEY_SPECIAL_PROPERTY) or
-               datastore_types.ReferenceToKeyValue(lhs.key()))
+               datastore_types.ReferenceToKeyValue(lhs.key))
     rhs_key = (rhs_value_map.get(datastore_types.KEY_SPECIAL_PROPERTY) or
-               datastore_types.ReferenceToKeyValue(rhs.key()))
+               datastore_types.ReferenceToKeyValue(rhs.key))
 
-    return cmp(lhs_key, rhs_key)
+    return cmp_compat.cmp(lhs_key, rhs_key)
 
 
+@cmp_compat.total_ordering_from_cmp
 class _ReverseOrder(_BaseComponent):
   """Reverses the comparison for the given object."""
 
@@ -1120,14 +1131,14 @@ class _ReverseOrder(_BaseComponent):
     assert self.__class__ == other.__class__, (
         'A datastore_query._ReverseOrder object can only be compared to '
         'an object of the same type.')
-    return -cmp(self._obj, other._obj)
+    return -cmp_compat.cmp(self._obj, other._obj)
 
 
 class PropertyOrder(Order):
   """An immutable class that represents a sort order for a single property."""
 
-  ASCENDING = datastore_pb.Query_Order.ASCENDING
-  DESCENDING = datastore_pb.Query_Order.DESCENDING
+  ASCENDING = datastore_pb.Query.Order.ASCENDING
+  DESCENDING = datastore_pb.Query.Order.DESCENDING
   _DIRECTIONS = frozenset([ASCENDING, DESCENDING])
 
   def __init__(self, prop, direction=ASCENDING):
@@ -1148,72 +1159,70 @@ class PropertyOrder(Order):
       raise datastore_errors.BadArgumentError('unknown direction: %r' %
                                               (direction,))
     super(PropertyOrder, self).__init__()
-    self.__order = datastore_pb.Query_Order()
-    self.__order.set_property(prop.encode('utf-8'))
-    self.__order.set_direction(direction)
+    self.__order = datastore_pb.Query.Order()
+    self.__order.property = six.ensure_binary(prop, 'utf-8')
+    self.__order.direction = direction
 
   @property
   def prop(self):
-    return self.__order.property()
+    return self.__order.property
 
   @property
   def direction(self):
-    return self.__order.direction()
+    return self.__order.direction
 
   def __repr__(self):
-    name = self.prop
-    direction = self.direction
     extra = ''
-    if direction == self.DESCENDING:
+    if self.direction == self.DESCENDING:
       extra = ', DESCENDING'
-    name = repr(name).encode('utf-8')[1:-1]
+    name = repr(six.ensure_str(self.prop))[1:-1]
     return '%s(<%s>%s)' % (self.__class__.__name__, name, extra)
 
   @datastore_rpc._positional(1)
   def reversed(self, group_by=None):
-    if group_by and self.__order.property() not in group_by:
+    if group_by and self.__order.property not in group_by:
       return self
 
-    if self.__order.direction() == self.ASCENDING:
-      return PropertyOrder(self.__order.property().decode('utf-8'),
-                           self.DESCENDING)
+    if self.__order.direction == self.ASCENDING:
+      return PropertyOrder(
+          six.ensure_text(self.__order.property), self.DESCENDING)
     else:
-      return PropertyOrder(self.__order.property().decode('utf-8'),
-                           self.ASCENDING)
+      return PropertyOrder(
+          six.ensure_text(self.__order.property), self.ASCENDING)
 
   def _get_prop_names(self):
-    return set([self.__order.property()])
+    return set([self.__order.property])
 
   def _key(self, lhs_value_map):
-    lhs_values = lhs_value_map[self.__order.property()]
+    lhs_values = lhs_value_map[self.__order.property]
     if not lhs_values:
       raise datastore_errors.BadArgumentError(
-          'Missing value for property (%s)' % self.__order.property())
+          'Missing value for property (%s)' % self.__order.property)
 
-    if self.__order.direction() == self.ASCENDING:
+    if self.__order.direction == self.ASCENDING:
       return min(lhs_values)
     else:
       return _ReverseOrder(max(lhs_values))
 
   def _cmp(self, lhs_value_map, rhs_value_map):
-    lhs_values = lhs_value_map[self.__order.property()]
-    rhs_values = rhs_value_map[self.__order.property()]
+    lhs_values = lhs_value_map[self.__order.property]
+    rhs_values = rhs_value_map[self.__order.property]
 
     if not lhs_values and not rhs_values:
       return 0
 
     if not lhs_values:
       raise datastore_errors.BadArgumentError(
-          'LHS missing value for property (%s)' % self.__order.property())
+          'LHS missing value for property (%s)' % self.__order.property)
 
     if not rhs_values:
       raise datastore_errors.BadArgumentError(
-          'RHS missing value for property (%s)' % self.__order.property())
+          'RHS missing value for property (%s)' % self.__order.property)
 
-    if self.__order.direction() == self.ASCENDING:
-      return cmp(min(lhs_values), min(rhs_values))
+    if self.__order.direction == self.ASCENDING:
+      return cmp_compat.cmp(min(lhs_values), min(rhs_values))
     else:
-      return cmp(max(rhs_values), max(lhs_values))
+      return cmp_compat.cmp(max(rhs_values), max(lhs_values))
 
   @classmethod
   def _from_pb(cls, order_pb):
@@ -1465,8 +1474,7 @@ class QueryOptions(FetchOptions):
       raise datastore_errors.BadArgumentError(
           'projection argument cannot be empty')
     for prop in value:
-      if not isinstance(prop, six_subset.string_types +
-                        (six_subset.binary_type,)):
+      if not isinstance(prop, six.string_types + (six.binary_type,)):
         raise datastore_errors.BadArgumentError(
             'projection argument should contain only strings (%r)' % (prop,))
 
@@ -1571,10 +1579,10 @@ class Cursor(_BaseComponent):
     if _cursor_bytes is not None:
       self.__cursor_bytes = _cursor_bytes
     else:
-      self.__cursor_bytes = six_subset.binary_type()
+      self.__cursor_bytes = six.binary_type()
 
   def __repr__(self):
-    arg = self.to_websafe_string()
+    arg = six.ensure_str(self.to_websafe_string())
     if arg:
       arg = '<%s>' % arg
     return '%s(%s)' % (self.__class__.__name__, arg)
@@ -1642,14 +1650,13 @@ class Cursor(_BaseComponent):
   @staticmethod
   def _urlsafe_to_bytes(cursor):
 
-    if not isinstance(cursor, six_subset.string_types +
-                      (six_subset.binary_type,)):
+    if not isinstance(cursor, six.string_types + (six.binary_type,)):
       raise datastore_errors.BadValueError(
           'cursor argument should be str or unicode (%r)' % (cursor,))
 
     try:
       decoded_bytes = base64.urlsafe_b64decode(
-          six_subset.ensure_binary(cursor, 'ascii'))
+          six.ensure_binary(cursor, 'ascii'))
     except (ValueError, TypeError) as e:
       raise datastore_errors.BadValueError(
           'Invalid cursor %s. Details: %s' % (cursor, e))
@@ -1681,7 +1688,7 @@ class Cursor(_BaseComponent):
   def __setstate__(self, state):
     if '_Cursor__compiled_cursor' in state:
 
-      self.__cursor_bytes = state['_Cursor__compiled_cursor'].Encode()
+      self.__cursor_bytes = state['_Cursor__compiled_cursor'].SerializeToString()
     else:
       self.__dict__ = state
 
@@ -1700,7 +1707,7 @@ class _QueryKeyFilter(_BaseComponent):
       app: a string representing the required app id or None.
       namespace: a string representing the required namespace or None.
       kind: a string representing the required kind or None.
-      ancestor: a entity_pb.Reference representing the required ancestor or
+      ancestor: a entity_pb2.Reference representing the required ancestor or
         None.
 
     Raises:
@@ -1712,38 +1719,46 @@ class _QueryKeyFilter(_BaseComponent):
           kind, 'kind', datastore_errors.BadArgumentError)
 
     if ancestor is not None:
-      if not isinstance(ancestor, entity_pb.Reference):
+
+      if not isinstance(ancestor, entity_pb2.Reference):
         raise datastore_errors.BadArgumentError(
-            'ancestor argument should be entity_pb.Reference (%r)' %
+            'ancestor argument should be entity_pb2.Reference (%r)' %
             (ancestor,))
+
+      ancestor_app = six.ensure_binary(ancestor.app)
+
       if app is None:
-        app = ancestor.app()
-      elif app != ancestor.app():
+        app = ancestor_app
+      elif six.ensure_binary(app) != ancestor_app:
         raise datastore_errors.BadArgumentError(
             'ancestor argument should match app ("%r" != "%r")' %
-            (ancestor.app(), app))
+            (ancestor.app, app))
+
+      ancestor_namespace = six.ensure_text(ancestor.name_space)
 
       if namespace is None:
-        namespace = ancestor.name_space()
-      elif namespace != ancestor.name_space():
+        namespace = ancestor_namespace
+      else:
+        namespace = six.ensure_text(namespace)
+      if namespace != ancestor_namespace:
         raise datastore_errors.BadArgumentError(
             'ancestor argument should match namespace ("%r" != "%r")' %
-            (ancestor.name_space(), namespace))
+            (namespace, ancestor_namespace))
 
-      pb = entity_pb.Reference()
+
+      pb = entity_pb2.Reference()
       pb.CopyFrom(ancestor)
       ancestor = pb
       self.__ancestor = ancestor
-      self.__path = ancestor.path().element_list()
+      self.__path = list(ancestor.path.element)
     else:
       self.__ancestor = None
       self.__path = None
 
     super(_QueryKeyFilter, self).__init__()
-    self.__app = datastore_types.ResolveAppId(app).encode('utf-8')
-    self.__namespace = (
-        datastore_types.ResolveNamespace(namespace).encode('utf-8'))
-    self.__kind = kind and kind.encode('utf-8')
+    self.__app = six.ensure_text(datastore_types.ResolveAppId(app), 'utf-8')
+    self.__namespace = datastore_types.ResolveNamespace(namespace)
+    self.__kind = kind
 
   @property
   def app(self):
@@ -1769,34 +1784,35 @@ class _QueryKeyFilter(_BaseComponent):
     from entities when we have a list of entities (which is a common case).
 
     Args:
-      entity_or_reference: Either an entity_pb.EntityProto or
-        entity_pb.Reference.
+      entity_or_reference: Either an entity_pb2.EntityProto or
+        entity_pb2.Reference.
     """
-    if isinstance(entity_or_reference, entity_pb.Reference):
+    if isinstance(entity_or_reference, entity_pb2.Reference):
       key = entity_or_reference
-    elif isinstance(entity_or_reference, entity_pb.EntityProto):
-      key = entity_or_reference.key()
+    elif isinstance(entity_or_reference, entity_pb2.EntityProto):
+      key = entity_or_reference.key
     else:
       raise datastore_errors.BadArgumentError(
-          'entity_or_reference argument must be an entity_pb.EntityProto ' +
-          'or entity_pb.Reference (%r)' % (entity_or_reference))
-    return (key.app() == self.__app and
-            key.name_space() == self.__namespace and
-            (not self.__kind or
-             key.path().element_list()[-1].type() == self.__kind) and
+          'entity_or_reference argument must be an entity_pb2.EntityProto ' +
+          six.ensure_str('or entity_pb2.Reference (%r)' %
+                         (entity_or_reference), 'utf-8'))
+
+    return (six.ensure_text(key.app, 'utf-8') == self.__app and
+            six.ensure_text(key.name_space, 'utf-8') == self.__namespace and
+            (not self.__kind or key.path.element[-1].type == self.__kind) and
             (not self.__path or
-             key.path().element_list()[0:len(self.__path)] == self.__path))
+             key.path.element[0:len(self.__path)] == self.__path))
 
   def _to_pb(self):
     """Returns an internal pb representation."""
     pb = datastore_pb.Query()
 
-    pb.set_app(self.__app)
+    pb.app = self.__app
     datastore_types.SetNamespace(pb, self.__namespace)
     if self.__kind is not None:
-      pb.set_kind(self.__kind)
+      pb.kind = self.__kind
     if self.__ancestor:
-      ancestor = pb.mutable_ancestor()
+      ancestor = pb.ancestor
       ancestor.CopyFrom(self.__ancestor)
     return pb
 
@@ -1891,7 +1907,7 @@ class Query(_BaseQuery):
       namespace: Optional namespace to query, derived from the environment if
         not specified.
       kind: Optional kind to query.
-      ancestor: Optional ancestor to query, an entity_pb.Reference.
+      ancestor: Optional ancestor to query, an entity_pb2.Reference.
       filter_predicate: Optional FilterPredicate by which to restrict the query.
       group_by: Optional list of properties to group the results by.
       order: Optional Order in which to return results.
@@ -1931,8 +1947,7 @@ class Query(_BaseQuery):
         raise datastore_errors.BadArgumentError(
             'group_by argument cannot be empty')
       for prop in group_by:
-        if not isinstance(prop, six_subset.string_types +
-                          (six_subset.binary_type,)):
+        if not isinstance(prop, six.string_types + (six.binary_type,)):
           raise datastore_errors.BadArgumentError(
               'group_by argument should contain only strings (%r)' % (prop,))
 
@@ -1977,17 +1992,17 @@ class Query(_BaseQuery):
 
   def __repr__(self):
     args = []
-    args.append('app=%r' % self.app)
+    args.append('app=%r' % six.ensure_str(self.app))
     ns = self.namespace
     if ns:
-      args.append('namespace=%r' % ns)
+      args.append('namespace=%r' % six.ensure_str(ns))
     kind = self.kind
     if kind is not None:
-      args.append('kind=%r' % kind)
+      args.append('kind=%r' % six.ensure_str(kind))
     ancestor = self.ancestor
     if ancestor is not None:
-      websafe = base64.urlsafe_b64encode(ancestor.Encode())
-      args.append('ancestor=<%s>' % websafe)
+      websafe = base64.urlsafe_b64encode(ancestor.SerializeToString())
+      args.append('ancestor=<%s>' % six.ensure_str(websafe))
     filter_predicate = self.filter_predicate
     if filter_predicate is not None:
       args.append('filter_predicate=%r' % filter_predicate)
@@ -1996,7 +2011,7 @@ class Query(_BaseQuery):
       args.append('order=%r' % order)
     group_by = self.group_by
     if group_by is not None:
-      args.append('group_by=%r' % (group_by,))
+      args.append('group_by=%r' % (tuple(six.ensure_str(x) for x in group_by),))
     read_time_us = self.read_time_us
     if read_time_us is not None:
       args.append('read_time_us=%r' % (read_time_us,))
@@ -2026,33 +2041,32 @@ class Query(_BaseQuery):
 
   @classmethod
   def _from_pb(cls, query_pb):
-    kind = query_pb.has_kind() and query_pb.kind().decode('utf-8') or None
-    ancestor = query_pb.has_ancestor() and query_pb.ancestor() or None
+    kind = query_pb.HasField('kind') and query_pb.kind or None
+    ancestor = query_pb.HasField('ancestor') and query_pb.ancestor or None
 
     filter_predicate = None
-    if query_pb.filter_size() > 0:
+    if query_pb.filter:
       filter_predicate = CompositeFilter(
           CompositeFilter.AND,
-          [PropertyFilter._from_pb(filter_pb)
-           for filter_pb in query_pb.filter_list()])
+          [PropertyFilter._from_pb(filter_pb) for filter_pb in query_pb.filter])
 
     order = None
-    if query_pb.order_size() > 0:
-      order = CompositeOrder([PropertyOrder._from_pb(order_pb)
-                              for order_pb in query_pb.order_list()])
+    if query_pb.order:
+      order = CompositeOrder(
+          [PropertyOrder._from_pb(order_pb) for order_pb in query_pb.order])
 
     group_by = None
-    if query_pb.group_by_property_name_size() > 0:
-      group_by = tuple(name.decode('utf-8')
-                       for name in query_pb.group_by_property_name_list())
+    if query_pb.group_by_property_name:
+      group_by = tuple(
+          six.ensure_text(name) for name in query_pb.group_by_property_name)
 
     read_time_us = None
-    if query_pb.has_read_time_us():
-      read_time_us = query_pb.read_time_us()
+    if query_pb.HasField('read_time_us'):
+      read_time_us = query_pb.read_time_us
 
     return Query(
-        app=query_pb.app().decode('utf-8'),
-        namespace=query_pb.name_space().decode('utf-8'),
+        app=query_pb.app,
+        namespace=query_pb.name_space,
         kind=kind,
         ancestor=ancestor,
         filter_predicate=filter_predicate,
@@ -2143,70 +2157,69 @@ class Query(_BaseQuery):
 
     if self._filter_predicate:
       for f in self._filter_predicate._to_pbs():
-        pb.add_filter().CopyFrom(f)
+        pb.filter.add().CopyFrom(f)
 
 
     if self._order:
       for order in self._order._to_pbs():
-        pb.add_order().CopyFrom(order)
+        pb.order.add().CopyFrom(order)
 
 
     if QueryOptions.keys_only(query_options, conn.config):
-      pb.set_keys_only(True)
+      pb.keys_only = True
 
     projection = QueryOptions.projection(query_options, conn.config)
     self._validate_projection_and_group_by(projection, self._group_by)
 
     if projection:
-      pb.property_name_list().extend(projection)
+      pb.property_name.extend(projection)
 
 
     if self._group_by:
-      pb.group_by_property_name_list().extend(self._group_by)
+      pb.group_by_property_name.extend(self._group_by)
 
     if QueryOptions.produce_cursors(query_options, conn.config):
-      pb.set_compile(True)
+      pb.compile = True
 
     limit = QueryOptions.limit(query_options, conn.config)
     if limit is not None:
-      pb.set_limit(limit)
+      pb.limit = limit
 
     count = QueryOptions.prefetch_size(query_options, conn.config)
     if count is None:
       count = QueryOptions.batch_size(query_options, conn.config)
     if count is not None:
-      pb.set_count(count)
+      pb.count = count
 
 
     if query_options.offset:
-      pb.set_offset(query_options.offset)
+      pb.offset = query_options.offset
 
 
     if query_options.start_cursor is not None:
       try:
-        pb.mutable_compiled_cursor().ParseFromString(
+        pb.compiled_cursor.ParseFromString(
             query_options.start_cursor.to_bytes())
-      except ProtocolBuffer.ProtocolBufferDecodeError:
+      except message.DecodeError:
         raise datastore_errors.BadValueError('invalid cursor')
 
 
     if query_options.end_cursor is not None:
       try:
-        pb.mutable_end_compiled_cursor().ParseFromString(
+        pb.end_compiled_cursor.ParseFromString(
             query_options.end_cursor.to_bytes())
-      except ProtocolBuffer.ProtocolBufferDecodeError:
+      except message.DecodeError:
         raise datastore_errors.BadValueError('invalid cursor')
 
 
-    if ((query_options.hint == QueryOptions.ORDER_FIRST and pb.order_size()) or
+    if ((query_options.hint == QueryOptions.ORDER_FIRST and len(pb.order)) or
         (query_options.hint == QueryOptions.ANCESTOR_FIRST and
-         pb.has_ancestor()) or
-        (query_options.hint == QueryOptions.FILTER_FIRST and
-         pb.filter_size() > 0)):
-      pb.set_hint(query_options.hint)
+         pb.HasField('ancestor')) or
+        (query_options.hint == QueryOptions.FILTER_FIRST and pb.filter)):
+      pb.hint = query_options.hint
 
     if self.read_time_us is not None:
-      pb.set_read_time_us(self.read_time_us)
+      pb.read_time_us = self.read_time_us
 
 
     conn._set_request_read_policy(pb, query_options)
@@ -2252,8 +2265,9 @@ def apply_query(query, entities, _key=None):
     query: a datastore_query.Query to apply
     entities: a list of results, of arbitrary type, on which to apply the query.
     _key: a function that takes an element of the result array as an argument
-        and must return an entity_pb.EntityProto. If not specified, the identity
-        function is used (and entities must be a list of entity_pb.EntityProto).
+        and must return an entity_pb2.EntityProto. If not specified, the
+        identity function is used (and entities must be a list of
+        entity_pb2.EntityProto).
 
   Returns:
     A subset of entities, filtered and ordered according to the query.
@@ -2302,7 +2316,7 @@ def apply_query(query, entities, _key=None):
       value_map['__result__'] = result
       value_maps.append(value_map)
 
-  value_maps.sort(query._order._cmp)
+  value_maps.sort(key=functools.cmp_to_key(query._order._cmp))
   return [value_map['__result__'] for value_map in value_maps]
 
 
@@ -2332,13 +2346,15 @@ class _AugmentedQuery(_BaseQuery):
     if (in_memory_filter is not None and
         not isinstance(in_memory_filter, FilterPredicate)):
       raise datastore_errors.BadArgumentError(
-          'in_memory_filter argument should be ' +
-          'datastore_query.FilterPredicate (%r)' % (in_memory_filter,))
+          'in_memory_filter argument should be ' + six.ensure_str(
+              'datastore_query.FilterPredicate (%r)' %
+              (in_memory_filter,), 'utf-8'))
     if (in_memory_results is not None and
         not isinstance(in_memory_results, list)):
       raise datastore_errors.BadArgumentError(
           'in_memory_results argument should be a list of' +
-          'datastore_pv.EntityProto (%r)' % (in_memory_results,))
+          six.ensure_str('datastore_pv.EntityProto (%r)' %
+                         (in_memory_results,), 'utf-8'))
     datastore_types.ValidateInteger(max_filtered_count,
                                     'max_filtered_count',
                                     empty_ok=True,
@@ -2445,9 +2461,9 @@ def inject_results(query, updated_entities=None, deleted_keys=None):
 
   Args:
     query: The datastore_query.Query to augment
-    updated_entities: A list of entity_pb.EntityProto's that have been updated
+    updated_entities: A list of entity_pb2.EntityProto's that have been updated
       and should take priority over any values returned by query.
-    deleted_keys: A list of entity_pb.Reference's for entities that have been
+    deleted_keys: A list of entity_pb2.Reference's for entities that have been
       deleted and should be removed from query results.
 
   Returns:
@@ -2464,7 +2480,7 @@ def inject_results(query, updated_entities=None, deleted_keys=None):
     if not isinstance(deleted_keys, list):
       raise datastore_errors.BadArgumentError(
           'deleted_keys argument must be a list (%r)' % (deleted_keys,))
-    deleted_keys = list(filter(query._key_filter, deleted_keys))
+    deleted_keys = list(six.moves.filter(query._key_filter, deleted_keys))
     for key in deleted_keys:
       overridden_keys.add(datastore_types.ReferenceToKeyValue(key))
 
@@ -2474,9 +2490,10 @@ def inject_results(query, updated_entities=None, deleted_keys=None):
           'updated_entities argument must be a list (%r)' % (updated_entities,))
 
 
-    updated_entities = list(filter(query._key_filter, updated_entities))
+    updated_entities = list(
+        six.moves.filter(query._key_filter, updated_entities))
     for entity in updated_entities:
-      overridden_keys.add(datastore_types.ReferenceToKeyValue(entity.key()))
+      overridden_keys.add(datastore_types.ReferenceToKeyValue(entity.key))
 
     updated_entities = apply_query(query, updated_entities)
   else:
@@ -2550,8 +2567,8 @@ class _BatchShared(object):
       skipped_results = batch.skipped_results
       num_results = len(batch.entity_results)
     else:
-      skipped_results = batch.skipped_results()
-      num_results = batch.result_size()
+      skipped_results = batch.skipped_results
+      num_results = len(batch.result)
     self.__expected_offset -= skipped_results
     if self.__remaining_limit is not None:
       self.__remaining_limit -= num_results
@@ -2566,14 +2583,16 @@ class _BatchShared(object):
 
         self.__index_list = None
       else:
-        self.__keys_only = batch.keys_only()
-        if batch.has_compiled_query():
+        self.__keys_only = batch.keys_only
+        if batch.HasField('compiled_query'):
           self.__compiled_query = batch.compiled_query
         else:
           self.__compiled_query = None
         try:
-          self.__index_list = [self.__conn.adapter.pb_to_index(index_pb)
-                               for index_pb in batch.index_list()]
+          self.__index_list = [
+              self.__conn.adapter.pb_to_index(index_pb)
+              for index_pb in batch.index
+          ]
         except NotImplementedError:
 
           self.__index_list = None
@@ -2742,9 +2761,9 @@ class Batch(object):
       which if used as a start_cursor will cause the first result to be
       batch.result[index].
     """
-    if not isinstance(index, six_subset.integer_types):
+    if not isinstance(index, six.integer_types):
       raise datastore_errors.BadArgumentError(
-          'index argument should be entity_pb.Reference (%r)' % (index,))
+          'index argument should be an integer (%r)' % (index,))
     if not -self._skipped_results <= index <= len(self.__results):
       raise datastore_errors.BadArgumentError(
           'index argument must be in the inclusive range [%d, %d]' %
@@ -2825,19 +2844,19 @@ class Batch(object):
     if FetchOptions.produce_cursors(fetch_options,
                                     self._batch_shared.query_options,
                                     self._batch_shared.conn.config):
-      req.set_compile(True)
+      req.compile = True
 
     count = FetchOptions.batch_size(fetch_options,
                                     self._batch_shared.query_options,
                                     self._batch_shared.conn.config)
     if count is not None:
-      req.set_count(count)
+      req.count = count
 
 
     if fetch_options is not None and fetch_options.offset:
-      req.set_offset(fetch_options.offset)
+      req.offset = fetch_options.offset
 
-    req.mutable_cursor().CopyFrom(self.__datastore_cursor)
+    req.cursor.CopyFrom(self.__datastore_cursor)
     return req
 
   def _extend(self, next_batch):
@@ -2948,27 +2967,29 @@ class Batch(object):
 
     self._batch_shared.process_batch(query_result)
 
-    if query_result.has_skipped_results_compiled_cursor():
+    if query_result.HasField('skipped_results_compiled_cursor'):
       self.__skipped_cursor = Cursor(
-          _cursor_bytes=query_result.skipped_results_compiled_cursor().Encode())
+          _cursor_bytes=query_result.skipped_results_compiled_cursor
+          .SerializeToString())
 
-    self.__result_cursors = [Cursor(_cursor_bytes=result.Encode())
-                             for result in
-                             query_result.result_compiled_cursor_list()]
+    self.__result_cursors = [
+        Cursor(_cursor_bytes=result.SerializeToString())
+        for result in query_result.result_compiled_cursor
+    ]
 
-    if query_result.has_compiled_cursor():
+    if query_result.HasField('compiled_cursor'):
       self.__end_cursor = Cursor(
-          _cursor_bytes=query_result.compiled_cursor().Encode())
+          _cursor_bytes=query_result.compiled_cursor.SerializeToString())
 
-    self._skipped_results = query_result.skipped_results()
+    self._skipped_results = query_result.skipped_results
 
-    if query_result.more_results():
-      self.__datastore_cursor = query_result.cursor()
+    if query_result.more_results:
+      self.__datastore_cursor = query_result.cursor
       self.__more_results = True
     else:
       self._end()
 
-    self.__results = self._process_results(query_result.result_list())
+    self.__results = self._process_results(query_result.result)
     return self
 
   def _end(self):
@@ -2994,7 +3015,7 @@ class Batch(object):
     """Converts the datastore results into results returned to the user.
 
     Args:
-      results: A list of entity_pb.EntityProto's returned by the datastore
+      results: A list of entity_pb2.EntityProto's returned by the datastore
 
     Returns:
       A list of results that should be returned to the user.
@@ -3077,7 +3098,7 @@ class _AugmentedBatch(Batch):
     v3_results = []
     is_projection = bool(self.query_options.projection)
     for v1_result in results:
-      v3_entity = entity_pb.EntityProto()
+      v3_entity = entity_pb2.EntityProto()
       self._batch_shared.conn.adapter.get_entity_converter().v1_to_v3_entity(
           v1_result.entity, v3_entity, is_projection)
       v3_results.append(v3_entity)
@@ -3193,6 +3214,9 @@ class Batcher(object):
     """Get the next batch. See .next_batch()."""
     return self.next_batch(self.AT_LEAST_ONE)
 
+  def __next__(self):
+    return self.next()
+
   def next_batch(self, min_batch_size):
     """Get the next batch.
 
@@ -3273,7 +3297,7 @@ class Batcher(object):
     return self
 
 
-class ResultsIterator(object):
+class ResultsIterator(six.Iterator):
   """An iterator over the results from Batches obtained from a Batcher.
 
   ResultsIterator implements Python's iterator protocol, so results can be
@@ -3333,7 +3357,7 @@ class ResultsIterator(object):
     return self._ensure_current_batch()._compiled_query()
 
 
-  def next(self):
+  def __next__(self):
     """Returns the next query result."""
     while (not self.__current_batch or
            self.__current_pos >= len(self.__current_batch.results)):
@@ -3357,3 +3381,6 @@ class ResultsIterator(object):
 
   def __iter__(self):
     return self
+
+  def next(self):
+    return self.__next__()

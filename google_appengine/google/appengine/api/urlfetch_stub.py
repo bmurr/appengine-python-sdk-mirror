@@ -17,39 +17,30 @@
 
 
 
-
 """Stub version of the urlfetch API, based on httplib."""
 
-
-
-
-_successfully_imported_fancy_urllib = False
-_fancy_urllib_InvalidCertException = None
-_fancy_urllib_SSLError = None
-try:
-  import fancy_urllib
-  _successfully_imported_fancy_urllib = True
-  _fancy_urllib_InvalidCertException = fancy_urllib.InvalidCertificateException
-  _fancy_urllib_SSLError = fancy_urllib.SSLError
-except ImportError:
-  pass
-
 import gzip
-import httplib
 import logging
 import os
 import socket
-import StringIO
+import ssl
 import sys
-import urllib
-import urlparse
 
 from google.appengine.api import apiproxy_stub
+from google.appengine.api import full_app_id
 from google.appengine.api import urlfetch
-from google.appengine.api import urlfetch_errors
-from google.appengine.api import urlfetch_service_pb
-from google.appengine.api import urlfetch_stub_cert_path
+from google.appengine.api import urlfetch_service_pb2
+
+
+
 from google.appengine.runtime import apiproxy_errors
+import six
+from six.moves import http_client
+from six.moves import range
+from six.moves import urllib
+
+
+
 
 
 
@@ -60,25 +51,18 @@ MAX_RESPONSE_SIZE = 2 ** 25
 MAX_REDIRECTS = urlfetch.MAX_REDIRECTS
 
 REDIRECT_STATUSES = frozenset([
-  httplib.MOVED_PERMANENTLY,
-  httplib.FOUND,
-  httplib.SEE_OTHER,
-  httplib.TEMPORARY_REDIRECT,
+    http_client.MOVED_PERMANENTLY,
+    http_client.FOUND,
+    http_client.SEE_OTHER,
+    http_client.TEMPORARY_REDIRECT,
 ])
 
 PRESERVE_ON_REDIRECT = frozenset(['GET', 'HEAD'])
 
+_API_CALL_DEADLINE = 900
 
 
-
-
-_API_CALL_DEADLINE = 5.0
-
-
-
-
-
-_API_CALL_VALIDATE_CERTIFICATE_DEFAULT = False
+_API_CALL_VALIDATE_CERTIFICATE_DEFAULT = True
 
 
 
@@ -104,12 +88,7 @@ _UNTRUSTED_REQUEST_HEADERS = frozenset([
 _MAX_URL_LENGTH = 10240
 
 
-def _CanValidateCerts():
-  return (_successfully_imported_fancy_urllib and
-          fancy_urllib.can_validate_certs())
-
-
-def _SetupSSL(path):
+def SetupSSL(path):
   global CERT_PATH
   if os.path.exists(path):
     CERT_PATH = path
@@ -118,14 +97,11 @@ def _SetupSSL(path):
     logging.warning('%s missing; without this urlfetch will not be able to '
                     'validate SSL certificates.', path)
 
-  if not _CanValidateCerts():
-    logging.warning('No ssl package found. urlfetch will not be able to '
-                    'validate SSL certificates.')
 
 
 
 
-_SetupSSL(os.path.normpath(urlfetch_stub_cert_path.CERT_PATH))
+
 
 def _IsAllowedPort(port):
 
@@ -133,7 +109,7 @@ def _IsAllowedPort(port):
     return True
   try:
     port = int(port)
-  except ValueError as e:
+  except ValueError:
     return False
 
 
@@ -149,6 +125,13 @@ def _IsAllowedPort(port):
 def _IsLocalhost(host):
   """Determines whether 'host' points to localhost."""
   return host.startswith('localhost') or host.startswith('127.0.0.1')
+
+
+def GetHeaders(msg, key):
+  """Helper to get headers between python versions."""
+  if six.PY2:
+    return msg.getheaders(key)
+  return msg.get_all(key)
 
 
 class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
@@ -176,7 +159,7 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
     self.http_proxy = None
 
   def _Dynamic_SetHttpProxy(self, request, response):
-    self.http_proxy = (request.http_proxy_host(), request.http_proxy_port())
+    self.http_proxy = (request.http_proxy_host, request.http_proxy_port)
 
   def _Dynamic_Fetch(self, request, response):
     """Trivial implementation of URLFetchService::Fetch().
@@ -185,68 +168,68 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
       request: the fetch to perform, a URLFetchRequest
       response: the fetch response, a URLFetchResponse
     """
-    if len(request.url()) > _MAX_URL_LENGTH:
-      logging.error('URL is too long: %s...' % request.url()[:50])
+    if len(request.Url) > _MAX_URL_LENGTH:
+      logging.error('URL is too long: %s...', request.Url[:50])
       raise apiproxy_errors.ApplicationError(
-          urlfetch_service_pb.URLFetchServiceError.INVALID_URL)
+          urlfetch_service_pb2.URLFetchServiceError.INVALID_URL)
 
-    (protocol, host, path, query, fragment) = urlparse.urlsplit(request.url())
+    (protocol, host, _, _, _) = urllib.parse.urlsplit(request.Url)
 
     payload = None
-    if request.method() == urlfetch_service_pb.URLFetchRequest.GET:
+    if request.Method == urlfetch_service_pb2.URLFetchRequest.GET:
       method = 'GET'
-    elif request.method() == urlfetch_service_pb.URLFetchRequest.POST:
+    elif request.Method == urlfetch_service_pb2.URLFetchRequest.POST:
       method = 'POST'
-      payload = request.payload()
-    elif request.method() == urlfetch_service_pb.URLFetchRequest.HEAD:
+      payload = request.Payload
+    elif request.Method == urlfetch_service_pb2.URLFetchRequest.HEAD:
       method = 'HEAD'
-    elif request.method() == urlfetch_service_pb.URLFetchRequest.PUT:
+    elif request.Method == urlfetch_service_pb2.URLFetchRequest.PUT:
       method = 'PUT'
-      payload = request.payload()
-    elif request.method() == urlfetch_service_pb.URLFetchRequest.DELETE:
+      payload = request.Payload
+    elif request.Method == urlfetch_service_pb2.URLFetchRequest.DELETE:
       method = 'DELETE'
-    elif request.method() == urlfetch_service_pb.URLFetchRequest.PATCH:
+    elif request.Method == urlfetch_service_pb2.URLFetchRequest.PATCH:
       method = 'PATCH'
-      payload = request.payload()
+      payload = request.Payload
     else:
-      logging.error('Invalid method: %s', request.method())
+      logging.error('Invalid method: %s', request.Method)
       raise apiproxy_errors.ApplicationError(
-        urlfetch_service_pb.URLFetchServiceError.INVALID_URL)
+          urlfetch_service_pb2.URLFetchServiceError.INVALID_URL)
 
     if payload is not None and len(payload) > _MAX_REQUEST_SIZE:
       raise apiproxy_errors.ApplicationError(
-          urlfetch_service_pb.URLFetchServiceError.PAYLOAD_TOO_LARGE)
+          urlfetch_service_pb2.URLFetchServiceError.PAYLOAD_TOO_LARGE)
 
     if not (protocol == 'http' or protocol == 'https'):
       logging.error('Invalid protocol: %s', protocol)
       raise apiproxy_errors.ApplicationError(
-        urlfetch_service_pb.URLFetchServiceError.INVALID_URL)
+          urlfetch_service_pb2.URLFetchServiceError.INVALID_URL)
 
     if not host:
       logging.error('Missing host.')
       raise apiproxy_errors.ApplicationError(
-          urlfetch_service_pb.URLFetchServiceError.INVALID_URL)
+          urlfetch_service_pb2.URLFetchServiceError.INVALID_URL)
 
     self._SanitizeHttpHeaders(_UNTRUSTED_REQUEST_HEADERS,
-                              request.header_list())
+                              request.header)
     deadline = _API_CALL_DEADLINE
-    if request.has_deadline():
-      deadline = request.deadline()
+    if request.HasField('Deadline'):
+      deadline = request.Deadline
     validate_certificate = _API_CALL_VALIDATE_CERTIFICATE_DEFAULT
-    if request.has_mustvalidateservercertificate():
-      validate_certificate = request.mustvalidateservercertificate()
+    if request.HasField('MustValidateServerCertificate'):
+      validate_certificate = request.MustValidateServerCertificate
 
-    custom_fetch_function = self._GetCustomFetchFunction(request.url())
+    custom_fetch_function = self._GetCustomFetchFunction(request.Url)
     if custom_fetch_function:
-      custom_fetch_function(request.url(), payload, method,
-                            request.header_list(), request, response,
-                            follow_redirects=request.followredirects(),
+      custom_fetch_function(request.Url, payload, method,
+                            request.header, request, response,
+                            follow_redirects=request.FollowRedirects,
                             deadline=deadline,
                             validate_certificate=validate_certificate)
     else:
-      self._RetrieveURL(request.url(), payload, method,
-                        request.header_list(), request, response,
-                        follow_redirects=request.followredirects(),
+      self._RetrieveURL(request.Url, payload, method,
+                        request.header, request, response,
+                        follow_redirects=request.FollowRedirects,
                         deadline=deadline,
                         validate_certificate=validate_certificate,
                         http_proxy=self.http_proxy)
@@ -279,9 +262,9 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
         If the payload is unicode, we assume it is utf-8.
       method: HTTP method to use (e.g., 'GET')
       headers: List of additional header objects to use for the request.
-      request: A urlfetch_service_pb.URLFetchRequest proto object from
+      request: A urlfetch_service_pb2.URLFetchRequest proto object from
           original request.
-      response: A urlfetch_service_pb.URLFetchResponse proto object to
+      response: A urlfetch_service_pb2.URLFetchResponse proto object to
           populate with the response data.
       follow_redirects: optional setting (defaulting to True) for whether or not
         we should transparently follow redirects (up to MAX_REDIRECTS)
@@ -302,38 +285,35 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
     """
     last_protocol = ''
     last_host = ''
-    if isinstance(payload, unicode):
-      payload = payload.encode('utf-8')
 
-    for redirect_number in xrange(MAX_REDIRECTS + 1):
-      parsed = urlparse.urlsplit(url)
-      protocol, host, path, query, fragment = parsed
+    url = six.ensure_str(url, 'utf-8')
 
+    if isinstance(payload, six.text_type):
+      payload = six.ensure_str(payload, 'utf-8')
 
+    for _ in range(MAX_REDIRECTS + 1):
+      parsed = urllib.parse.urlsplit(url)
+      protocol, host, path, query, _ = parsed
 
-
-
-
-
-      port = urllib.splitport(urllib.splituser(host)[1])[1]
+      port = parsed.port
 
       if not _IsAllowedPort(port):
         logging.error(
-          'urlfetch received %s ; port %s is not allowed in production!' %
-          (url, port))
+            'urlfetch received %s ; port %s is not allowed in production!',
+            url, port)
 
 
 
 
 
         raise apiproxy_errors.ApplicationError(
-          urlfetch_service_pb.URLFetchServiceError.INVALID_URL)
+            urlfetch_service_pb2.URLFetchServiceError.INVALID_URL)
 
       if protocol and not host:
 
-        logging.error('Missing host on redirect; target url is %s' % url)
+        logging.error('Missing host on redirect; target url is %s', url)
         raise apiproxy_errors.ApplicationError(
-          urlfetch_service_pb.URLFetchServiceError.INVALID_URL)
+            urlfetch_service_pb2.URLFetchServiceError.INVALID_URL)
 
 
 
@@ -343,7 +323,7 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
         protocol = last_protocol
 
 
-      if port == '0':
+      if port == 0:
         host = host.replace(':0', '')
 
 
@@ -355,51 +335,56 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
 
 
       adjusted_headers = {
-          'User-Agent':
-          [('AppEngine-Google; (+http://code.google.com/appengine; appid: %s)'
-            % os.getenv('APPLICATION_ID'))],
-          'Host': [host],
-          'Accept-Encoding': ['gzip'],
+          b'User-Agent': [(
+              b'AppEngine-Google; (+http://code.google.com/appengine; appid: %s)'
+              % full_app_id.get().encode())],
+          b'Host': [six.ensure_binary(host)],
+          b'Accept-Encoding': [b'gzip'],
       }
       if payload is not None:
 
 
-        adjusted_headers['Content-Length'] = [str(len(payload))]
+        adjusted_headers[b'Content-Length'] = [
+            six.ensure_binary(str(len(payload)))
+        ]
 
 
       if method == 'POST' and payload:
-        adjusted_headers['Content-Type'] = [
-            'application/x-www-form-urlencoded']
+        adjusted_headers[b'Content-Type'] = [
+            b'application/x-www-form-urlencoded'
+        ]
 
       passthrough_content_encoding = False
       for header in headers:
 
 
 
-        header_key = header.key()
-        if header_key.lower() == 'user-agent':
-          adjusted_headers[header_key.title()] = [(
-              '%s %s' % (header.value(), adjusted_headers['User-Agent'][0]))]
-        elif header_key.lower() == 'accept-encoding':
-          passthrough_content_encoding = True
-          adjusted_headers[header_key.title()] = [header.value()]
-        elif header_key.lower() == 'content-type':
-          adjusted_headers[header_key.title()] = [header.value()]
-        else:
-          adjusted_headers.setdefault(header_key, []).append(header.value())
 
-      if payload is not None:
-        escaped_payload = payload.encode('string_escape')
-      else:
-        escaped_payload = ''
-      logging.debug('Making HTTP request: host = %r, '
-                    'url = %r, payload = %.1000r, headers = %r',
-                    host, url, escaped_payload, adjusted_headers)
+
+        header_key = six.ensure_binary(header.Key)
+        header_value = six.ensure_binary(header.Value)
+        if header_key.lower() == b'user-agent':
+          adjusted_headers[header_key.title()] = [
+              (b'%s %s' % (six.ensure_binary(header_value),
+                           adjusted_headers[b'User-Agent'][0]))
+          ]
+        elif header_key.lower() == b'accept-encoding':
+          passthrough_content_encoding = True
+          adjusted_headers[header_key.title()] = [header_value]
+        elif header_key.lower() == b'content-type':
+          adjusted_headers[header_key.title()] = [header_value]
+        else:
+          adjusted_headers.setdefault(header_key, []).append(header_value)
+
+      logging.debug(
+          'Making HTTP request: host = %r, url = %r, payload = %.1000r, '
+          'headers = %r', host, url, payload, adjusted_headers)
       try:
         proxy_host = None
+        connection_kwargs = {'timeout': deadline}
 
         if protocol == 'http':
-          connection_class = httplib.HTTPConnection
+          connection_class = http_client.HTTPConnection
           default_port = 80
 
           if http_proxy and not _IsLocalhost(host):
@@ -407,44 +392,33 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
                                     http_proxy[1])
           elif os.environ.get('HTTP_PROXY') and not _IsLocalhost(host):
             _, proxy_host, _, _, _ = (
-                urlparse.urlsplit(os.environ.get('HTTP_PROXY')))
+                urllib.parse.urlsplit(os.environ.get('HTTP_PROXY')))
         elif protocol == 'https':
-          if (validate_certificate and _CanValidateCerts() and
-              CERT_PATH):
-
-            connection_class = fancy_urllib.create_fancy_connection(
-                ca_certs=CERT_PATH)
-          else:
-            connection_class = httplib.HTTPSConnection
+          connection_class = http_client.HTTPSConnection
+          if (validate_certificate and CERT_PATH):
+            context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+            context.verify_mode = ssl.CERT_REQUIRED
+            context.load_verify_locations(CERT_PATH)
+            context.check_hostname = True
+            connection_kwargs['context'] = context
 
           default_port = 443
 
           if os.environ.get('HTTPS_PROXY') and not _IsLocalhost(host):
             _, proxy_host, _, _, _ = (
-                urlparse.urlsplit(os.environ.get('HTTPS_PROXY')))
+                urllib.parse.urlsplit(os.environ.get('HTTPS_PROXY')))
         else:
 
           error_msg = 'Redirect specified invalid protocol: "%s"' % protocol
           logging.error(error_msg)
           raise apiproxy_errors.ApplicationError(
-              urlfetch_service_pb.URLFetchServiceError.INVALID_URL, error_msg)
-
-
-
-
-
-
-        connection_kwargs = {'timeout': deadline}
+              urlfetch_service_pb2.URLFetchServiceError.INVALID_URL, error_msg)
 
 
 
 
         if (not validate_certificate and sys.version_info >= (2, 7, 9)
             and protocol == 'https'):
-
-
-
-          import ssl
           connection_kwargs['context'] = ssl._create_unverified_context()
 
         if proxy_host:
@@ -452,13 +426,13 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
           connection = connection_class(
               proxy_address, proxy_port if proxy_port else default_port,
               **connection_kwargs)
-          full_path = urlparse.urlunsplit((protocol, host, path, query, ''))
+          full_path = urllib.parse.urlunsplit((protocol, host, path, query, ''))
 
           if protocol == 'https':
             connection.set_tunnel(host)
         else:
           connection = connection_class(host, **connection_kwargs)
-          full_path = urlparse.urlunsplit(('', '', path, query, ''))
+          full_path = urllib.parse.urlunsplit(('', '', path, query, ''))
 
 
 
@@ -474,31 +448,31 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
             http_response_data = http_response.read()
         finally:
           connection.close()
-      except _fancy_urllib_InvalidCertException as e:
+      except ssl.CertificateError as e:
         raise apiproxy_errors.ApplicationError(
-          urlfetch_service_pb.URLFetchServiceError.SSL_CERTIFICATE_ERROR,
-          str(e))
-      except _fancy_urllib_SSLError as e:
+            urlfetch_service_pb2.URLFetchServiceError.SSL_CERTIFICATE_ERROR,
+            str(e))
+      except ssl.SSLError as e:
 
 
 
 
 
         app_error = (
-            urlfetch_service_pb.URLFetchServiceError.DEADLINE_EXCEEDED
-            if 'timed out' in e.message else
-            urlfetch_service_pb.URLFetchServiceError.SSL_CERTIFICATE_ERROR)
+            urlfetch_service_pb2.URLFetchServiceError.DEADLINE_EXCEEDED
+            if 'timed out' in str(e) else
+            urlfetch_service_pb2.URLFetchServiceError.SSL_CERTIFICATE_ERROR)
         raise apiproxy_errors.ApplicationError(app_error, str(e))
       except socket.timeout as e:
         raise apiproxy_errors.ApplicationError(
-          urlfetch_service_pb.URLFetchServiceError.DEADLINE_EXCEEDED, str(e))
-      except (httplib.error, socket.error, IOError) as e:
+            urlfetch_service_pb2.URLFetchServiceError.DEADLINE_EXCEEDED, str(e))
+      except (http_client.error, socket.error, IOError) as e:
         raise apiproxy_errors.ApplicationError(
-          urlfetch_service_pb.URLFetchServiceError.FETCH_ERROR, str(e))
+            urlfetch_service_pb2.URLFetchServiceError.FETCH_ERROR, str(e))
 
       if http_response.status >= 600:
         raise apiproxy_errors.ApplicationError(
-            urlfetch_service_pb.URLFetchServiceError.FETCH_ERROR,
+            urlfetch_service_pb2.URLFetchServiceError.FETCH_ERROR,
             'Status %s unknown' % http_response.status)
 
 
@@ -511,46 +485,49 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
           error_msg = 'Missing "Location" header for redirect.'
           logging.error(error_msg)
           raise apiproxy_errors.ApplicationError(
-              urlfetch_service_pb.URLFetchServiceError.MALFORMED_REPLY,
+              urlfetch_service_pb2.URLFetchServiceError.MALFORMED_REPLY,
               error_msg)
 
 
 
-        if (http_response.status != httplib.TEMPORARY_REDIRECT and
+        if (http_response.status != http_client.TEMPORARY_REDIRECT and
             method not in PRESERVE_ON_REDIRECT):
-          logging.warn('Received a %s to a %s. Redirecting with a GET',
-                       http_response.status, method)
+          logging.warning('Received a %s to a %s. Redirecting with a GET',
+                          http_response.status, method)
           method = 'GET'
           payload = None
       else:
-        response.set_statuscode(http_response.status)
+        response.StatusCode = http_response.status
         if (http_response.getheader('content-encoding') == 'gzip' and
             not passthrough_content_encoding):
-          gzip_stream = StringIO.StringIO(http_response_data)
+          gzip_stream = six.BytesIO(http_response_data)
           gzip_file = gzip.GzipFile(fileobj=gzip_stream)
           http_response_data = gzip_file.read()
-        response.set_content(http_response_data[:MAX_RESPONSE_SIZE])
+        response.Content = six.ensure_binary(
+            http_response_data[:MAX_RESPONSE_SIZE])
 
 
-        for header_key in http_response.msg.keys():
-          for header_value in http_response.msg.getheaders(header_key):
-            if (header_key.lower() == 'content-encoding' and
-                header_value == 'gzip' and
-                not passthrough_content_encoding):
-              continue
-            if header_key.lower() == 'content-length' and method != 'HEAD':
-              header_value = str(len(response.content()))
-            header_proto = response.add_header()
-            header_proto.set_key(header_key)
-            header_proto.set_value(header_value)
+
+
+        key_set = set([key.lower() for key in http_response.msg.keys()])
+        for header_key in key_set:
+          header_values = GetHeaders(http_response.msg, header_key)
+          if (header_key.lower() == 'content-encoding' and
+              'gzip' in header_values and not passthrough_content_encoding):
+            continue
+          if header_key.lower() == 'content-length' and method != 'HEAD':
+            header_values = [str(len(response.Content))]
+
+          for header_value in header_values:
+            response.header.add(Key=header_key, Value=header_value)
 
         if len(http_response_data) > MAX_RESPONSE_SIZE:
-          response.set_contentwastruncated(True)
+          response.ContentWasTruncated = True
 
 
 
-        if request.url() != url:
-          response.set_finalurl(url)
+        if request.Url != url:
+          response.FinalUrl = url
 
 
         break
@@ -558,7 +535,7 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
       error_msg = 'Too many repeated redirects'
       logging.error(error_msg)
       raise apiproxy_errors.ApplicationError(
-          urlfetch_service_pb.URLFetchServiceError.TOO_MANY_REDIRECTS,
+          urlfetch_service_pb2.URLFetchServiceError.TOO_MANY_REDIRECTS,
           error_msg)
 
   def _SanitizeHttpHeaders(self, untrusted_headers, headers):
@@ -568,14 +545,14 @@ class URLFetchServiceStub(apiproxy_stub.APIProxyStub):
       untrusted_headers: Set of untrusted headers names (all lowercase).
       headers: List of Header objects. The list is modified in place.
     """
-    prohibited_headers = [h.key() for h in headers
-                          if h.key().lower() in untrusted_headers]
+    prohibited_headers = [h.Key for h in headers
+                          if h.Key.lower() in untrusted_headers]
     if prohibited_headers:
-      logging.warn('Stripped prohibited headers from URLFetch request: %s',
-                   prohibited_headers)
+      logging.warning('Stripped prohibited headers from URLFetch request: %s',
+                      prohibited_headers)
 
-      for index in reversed(xrange(len(headers))):
-        if headers[index].key().lower() in untrusted_headers:
+      for index in reversed(range(len(headers))):
+        if headers[index].Key.lower() in untrusted_headers:
           del headers[index]
 
 
@@ -596,11 +573,13 @@ def _SendRequest(connection, method, full_path, payload, headers):
   connection.connect()
   header_names = [name.lower() for name in headers]
   connection.putrequest(
-      method, full_path, skip_host='host' in header_names,
-      skip_accept_encoding='accept-encoding' in header_names)
-  for header, values in headers.iteritems():
+      method,
+      full_path,
+      skip_host=b'host' in header_names,
+      skip_accept_encoding=b'accept-encoding' in header_names)
+  for header, values in six.iteritems(headers):
     for value in values:
       connection.putheader(header, value)
-  if payload is not None and 'content-length' not in header_names:
+  if payload is not None and b'content-length' not in header_names:
     connection._set_content_length(payload)
   connection.endheaders(payload)

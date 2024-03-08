@@ -1,55 +1,39 @@
-#!/usr/bin/env python
-#
-# Copyright 2007 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
+# $ANTLR 3.1.1 Groc.g
 
 import sys
 from antlr3 import *
 from antlr3.compat import set, frozenset
 
+# Copyright 2005-2009 Google, Inc.  All rights reserved.
+# @author arb@google.com (Anthony Baxter)
+# Based on original C++ version by
+# @author estlin@google.com (Brian Estlin)
+
+# Groc (Googley runner of commands) is a microlanguage that provides an
+# alternative to traditional cron syntax/semantics for specifying
+# recurrent events.  Syntactically, it is designed to be more readable
+# (more easily 'grokked') than crontab language.  Groc forfeits certain
+# semantics found in crontab, in favor of readability; however,
+# certain timespecs which are awkward in crontab are much easier
+# to express in Groc (for example, the 3rd tuesday of the month).
+# It is these constructs to which Groc is best suited.
+#
+# Examples of valid Groc include:
+# '1st,3rd monday of month 15:30'
+# 'every wed,fri of jan,jun 13:15'
+# 'first sunday of quarter 00:00'
+# 'every 2 hours'
+#
+# FEATURES NOT YET IMPLEMENTED (in approx. order of priority):
+# - some way to specify multiple values for minutes/hours (definitely)
+# - 'am/pm' (probably)
+# - other range/interval functionality (maybe)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# WARNING: This file is externally viewable by our users.  All comments from
+# this file will be stripped.  The docstrings will NOT.  Do not put sensitive
+# information in docstrings.  If you must communicate internal information in
+# this source file, please place them in comments only.
 
 
 allOrdinals = set([1, 2, 3, 4, 5])
@@ -58,10 +42,10 @@ numOrdinals = len(allOrdinals)
 
 
 
-
+# for convenience in actions
 HIDDEN = BaseRecognizer.HIDDEN
 
-
+# token types
 MONTH=27
 THURSDAY=23
 FOURTH_OR_FIFTH=16
@@ -106,7 +90,7 @@ MINUTES=18
 TO=42
 DAY=19
 
-
+# token names
 tokenNames = [
     "<invalid>", "<EOR>", "<DOWN>", "<UP>",
     "OF", "TIME", "EVERY", "DIGIT", "DIGITS", "SYNCHRONIZED", "COMMA", "FIRST",
@@ -194,23 +178,23 @@ class GrocParser(Parser):
         DECEMBER: 12,
       }
 
-
+    # Convert date tokens to int representations of properties.
     def ValueOf(self, token_type):
       return self.valuesDict.get(token_type, -1)
 
 
 
 
-
-
+    # $ANTLR start "timespec"
+    # Groc.g:92:1: timespec : ( specifictime | interval ) EOF ;
     def timespec(self, ):
 
         try:
             try:
-
-
+                # Groc.g:93:3: ( ( specifictime | interval ) EOF )
+                # Groc.g:93:5: ( specifictime | interval ) EOF
                 pass
-
+                # Groc.g:93:5: ( specifictime | interval )
                 alt1 = 2
                 LA1_0 = self.input.LA(1)
 
@@ -234,7 +218,7 @@ class GrocParser(Parser):
                     raise nvae
 
                 if alt1 == 1:
-
+                    # Groc.g:93:7: specifictime
                     pass
                     self._state.following.append(self.FOLLOW_specifictime_in_timespec44)
                     self.specifictime()
@@ -243,7 +227,7 @@ class GrocParser(Parser):
 
 
                 elif alt1 == 2:
-
+                    # Groc.g:93:22: interval
                     pass
                     self._state.following.append(self.FOLLOW_interval_in_timespec48)
                     self.interval()
@@ -266,33 +250,33 @@ class GrocParser(Parser):
 
         return
 
+    # $ANTLR end "timespec"
 
 
-
-
-
+    # $ANTLR start "specifictime"
+    # Groc.g:96:1: specifictime : ( ( ( ( ( ordinals weekdays ) | monthdays ) OF ( monthspec | quarterspec ) ) | ( ordinals weekdays ) ) TIME ) ;
     def specifictime(self, ):
 
         TIME1 = None
 
         try:
             try:
-
-
+                # Groc.g:97:3: ( ( ( ( ( ( ordinals weekdays ) | monthdays ) OF ( monthspec | quarterspec ) ) | ( ordinals weekdays ) ) TIME ) )
+                # Groc.g:97:5: ( ( ( ( ( ordinals weekdays ) | monthdays ) OF ( monthspec | quarterspec ) ) | ( ordinals weekdays ) ) TIME )
                 pass
-
-
+                # Groc.g:97:5: ( ( ( ( ( ordinals weekdays ) | monthdays ) OF ( monthspec | quarterspec ) ) | ( ordinals weekdays ) ) TIME )
+                # Groc.g:97:7: ( ( ( ( ordinals weekdays ) | monthdays ) OF ( monthspec | quarterspec ) ) | ( ordinals weekdays ) ) TIME
                 pass
-
+                # Groc.g:97:7: ( ( ( ( ordinals weekdays ) | monthdays ) OF ( monthspec | quarterspec ) ) | ( ordinals weekdays ) )
                 alt4 = 2
                 alt4 = self.dfa4.predict(self.input)
                 if alt4 == 1:
-
+                    # Groc.g:97:8: ( ( ( ordinals weekdays ) | monthdays ) OF ( monthspec | quarterspec ) )
                     pass
-
-
+                    # Groc.g:97:8: ( ( ( ordinals weekdays ) | monthdays ) OF ( monthspec | quarterspec ) )
+                    # Groc.g:97:10: ( ( ordinals weekdays ) | monthdays ) OF ( monthspec | quarterspec )
                     pass
-
+                    # Groc.g:97:10: ( ( ordinals weekdays ) | monthdays )
                     alt2 = 2
                     LA2_0 = self.input.LA(1)
 
@@ -306,10 +290,10 @@ class GrocParser(Parser):
                         raise nvae
 
                     if alt2 == 1:
-
+                        # Groc.g:97:11: ( ordinals weekdays )
                         pass
-
-
+                        # Groc.g:97:11: ( ordinals weekdays )
+                        # Groc.g:97:12: ordinals weekdays
                         pass
                         self._state.following.append(self.FOLLOW_ordinals_in_specifictime72)
                         self.ordinals()
@@ -325,7 +309,7 @@ class GrocParser(Parser):
 
 
                     elif alt2 == 2:
-
+                        # Groc.g:97:31: monthdays
                         pass
                         self._state.following.append(self.FOLLOW_monthdays_in_specifictime77)
                         self.monthdays()
@@ -335,7 +319,7 @@ class GrocParser(Parser):
 
 
                     self.match(self.input, OF, self.FOLLOW_OF_in_specifictime80)
-
+                    # Groc.g:97:45: ( monthspec | quarterspec )
                     alt3 = 2
                     LA3_0 = self.input.LA(1)
 
@@ -349,7 +333,7 @@ class GrocParser(Parser):
                         raise nvae
 
                     if alt3 == 1:
-
+                        # Groc.g:97:46: monthspec
                         pass
                         self._state.following.append(self.FOLLOW_monthspec_in_specifictime83)
                         self.monthspec()
@@ -358,7 +342,7 @@ class GrocParser(Parser):
 
 
                     elif alt3 == 2:
-
+                        # Groc.g:97:56: quarterspec
                         pass
                         self._state.following.append(self.FOLLOW_quarterspec_in_specifictime85)
                         self.quarterspec()
@@ -373,10 +357,10 @@ class GrocParser(Parser):
 
 
                 elif alt4 == 2:
-
+                    # Groc.g:98:11: ( ordinals weekdays )
                     pass
-
-
+                    # Groc.g:98:11: ( ordinals weekdays )
+                    # Groc.g:98:12: ordinals weekdays
                     pass
                     self._state.following.append(self.FOLLOW_ordinals_in_specifictime101)
                     self.ordinals()
@@ -386,9 +370,9 @@ class GrocParser(Parser):
                     self.weekdays()
 
                     self._state.following.pop()
-
+                    #action start
                     self.month_set = set(range(1,13))
-
+                    #action end
 
 
 
@@ -396,9 +380,9 @@ class GrocParser(Parser):
 
 
                 TIME1=self.match(self.input, TIME, self.FOLLOW_TIME_in_specifictime117)
-
+                #action start
                 self.time_string = TIME1.text
-
+                #action end
 
 
 
@@ -415,11 +399,11 @@ class GrocParser(Parser):
 
         return
 
+    # $ANTLR end "specifictime"
 
 
-
-
-
+    # $ANTLR start "interval"
+    # Groc.g:102:1: interval : ( EVERY intervalnum= ( DIGIT | DIGITS ) period ( time_range | ( SYNCHRONIZED ) )? ) ;
     def interval(self, ):
 
         intervalnum = None
@@ -428,11 +412,11 @@ class GrocParser(Parser):
 
         try:
             try:
-
-
+                # Groc.g:103:3: ( ( EVERY intervalnum= ( DIGIT | DIGITS ) period ( time_range | ( SYNCHRONIZED ) )? ) )
+                # Groc.g:103:5: ( EVERY intervalnum= ( DIGIT | DIGITS ) period ( time_range | ( SYNCHRONIZED ) )? )
                 pass
-
-
+                # Groc.g:103:5: ( EVERY intervalnum= ( DIGIT | DIGITS ) period ( time_range | ( SYNCHRONIZED ) )? )
+                # Groc.g:103:7: EVERY intervalnum= ( DIGIT | DIGITS ) period ( time_range | ( SYNCHRONIZED ) )?
                 pass
                 self.match(self.input, EVERY, self.FOLLOW_EVERY_in_interval136)
                 intervalnum = self.input.LT(1)
@@ -445,24 +429,24 @@ class GrocParser(Parser):
                     raise mse
 
 
-
+                #action start
 
                 self.interval_mins = int(intervalnum.text)
 
-
+                #action end
                 self._state.following.append(self.FOLLOW_period_in_interval164)
                 period2 = self.period()
 
                 self._state.following.pop()
-
+                #action start
 
                 if ((period2 is not None) and [self.input.toString(period2.start,period2.stop)] or [None])[0] == "hours":
                   self.period_string = "hours"
                 else:
                   self.period_string = "minutes"
 
-
-
+                #action end
+                # Groc.g:113:7: ( time_range | ( SYNCHRONIZED ) )?
                 alt5 = 3
                 LA5_0 = self.input.LA(1)
 
@@ -471,7 +455,7 @@ class GrocParser(Parser):
                 elif (LA5_0 == SYNCHRONIZED) :
                     alt5 = 2
                 if alt5 == 1:
-
+                    # Groc.g:113:9: time_range
                     pass
                     self._state.following.append(self.FOLLOW_time_range_in_interval176)
                     self.time_range()
@@ -480,15 +464,15 @@ class GrocParser(Parser):
 
 
                 elif alt5 == 2:
-
+                    # Groc.g:114:9: ( SYNCHRONIZED )
                     pass
-
-
+                    # Groc.g:114:9: ( SYNCHRONIZED )
+                    # Groc.g:114:10: SYNCHRONIZED
                     pass
                     self.match(self.input, SYNCHRONIZED, self.FOLLOW_SYNCHRONIZED_in_interval189)
-
+                    #action start
                     self.synchronized = True
-
+                    #action end
 
 
 
@@ -511,19 +495,19 @@ class GrocParser(Parser):
 
         return
 
+    # $ANTLR end "interval"
 
 
-
-
-
+    # $ANTLR start "ordinals"
+    # Groc.g:118:1: ordinals : ( EVERY | ( ordinal ( COMMA ordinal )* ) ) ;
     def ordinals(self, ):
 
         try:
             try:
-
-
+                # Groc.g:119:3: ( ( EVERY | ( ordinal ( COMMA ordinal )* ) ) )
+                # Groc.g:119:5: ( EVERY | ( ordinal ( COMMA ordinal )* ) )
                 pass
-
+                # Groc.g:119:5: ( EVERY | ( ordinal ( COMMA ordinal )* ) )
                 alt7 = 2
                 LA7_0 = self.input.LA(1)
 
@@ -537,23 +521,23 @@ class GrocParser(Parser):
                     raise nvae
 
                 if alt7 == 1:
-
+                    # Groc.g:119:7: EVERY
                     pass
                     self.match(self.input, EVERY, self.FOLLOW_EVERY_in_ordinals218)
 
 
                 elif alt7 == 2:
-
+                    # Groc.g:120:5: ( ordinal ( COMMA ordinal )* )
                     pass
-
-
+                    # Groc.g:120:5: ( ordinal ( COMMA ordinal )* )
+                    # Groc.g:120:7: ordinal ( COMMA ordinal )*
                     pass
                     self._state.following.append(self.FOLLOW_ordinal_in_ordinals226)
                     self.ordinal()
 
                     self._state.following.pop()
-
-                    while True:
+                    # Groc.g:120:15: ( COMMA ordinal )*
+                    while True: #loop6
                         alt6 = 2
                         LA6_0 = self.input.LA(1)
 
@@ -562,7 +546,7 @@ class GrocParser(Parser):
 
 
                         if alt6 == 1:
-
+                            # Groc.g:120:16: COMMA ordinal
                             pass
                             self.match(self.input, COMMA, self.FOLLOW_COMMA_in_ordinals229)
                             self._state.following.append(self.FOLLOW_ordinal_in_ordinals231)
@@ -572,7 +556,7 @@ class GrocParser(Parser):
 
 
                         else:
-                            break
+                            break #loop6
 
 
 
@@ -594,19 +578,19 @@ class GrocParser(Parser):
 
         return
 
+    # $ANTLR end "ordinals"
 
 
-
-
-
+    # $ANTLR start "ordinal"
+    # Groc.g:123:1: ordinal : ord= ( FIRST | SECOND | THIRD | FOURTH | FIFTH | FOURTH_OR_FIFTH ) ;
     def ordinal(self, ):
 
         ord = None
 
         try:
             try:
-
-
+                # Groc.g:124:3: (ord= ( FIRST | SECOND | THIRD | FOURTH | FIFTH | FOURTH_OR_FIFTH ) )
+                # Groc.g:124:5: ord= ( FIRST | SECOND | THIRD | FOURTH | FIFTH | FOURTH_OR_FIFTH )
                 pass
                 ord = self.input.LT(1)
                 if (FIRST <= self.input.LA(1) <= FOURTH_OR_FIFTH):
@@ -618,11 +602,11 @@ class GrocParser(Parser):
                     raise mse
 
 
-
+                #action start
 
                 self.ordinal_set.add(self.ValueOf(ord.type));
 
-
+                #action end
 
 
 
@@ -636,7 +620,7 @@ class GrocParser(Parser):
 
         return
 
-
+    # $ANTLR end "ordinal"
 
     class period_return(ParserRuleReturnScope):
         def __init__(self):
@@ -646,8 +630,8 @@ class GrocParser(Parser):
 
 
 
-
-
+    # $ANTLR start "period"
+    # Groc.g:129:1: period : ( HOURS | MINUTES ) ;
     def period(self, ):
 
         retval = self.period_return()
@@ -655,8 +639,8 @@ class GrocParser(Parser):
 
         try:
             try:
-
-
+                # Groc.g:130:3: ( ( HOURS | MINUTES ) )
+                # Groc.g:130:5: ( HOURS | MINUTES )
                 pass
                 if (HOURS <= self.input.LA(1) <= MINUTES):
                     self.input.consume()
@@ -682,27 +666,27 @@ class GrocParser(Parser):
 
         return retval
 
+    # $ANTLR end "period"
 
 
-
-
-
+    # $ANTLR start "monthdays"
+    # Groc.g:133:1: monthdays : ( monthday ( COMMA monthday )* ) ;
     def monthdays(self, ):
 
         try:
             try:
-
-
+                # Groc.g:134:3: ( ( monthday ( COMMA monthday )* ) )
+                # Groc.g:134:5: ( monthday ( COMMA monthday )* )
                 pass
-
-
+                # Groc.g:134:5: ( monthday ( COMMA monthday )* )
+                # Groc.g:134:7: monthday ( COMMA monthday )*
                 pass
                 self._state.following.append(self.FOLLOW_monthday_in_monthdays314)
                 self.monthday()
 
                 self._state.following.pop()
-
-                while True:
+                # Groc.g:134:16: ( COMMA monthday )*
+                while True: #loop8
                     alt8 = 2
                     LA8_0 = self.input.LA(1)
 
@@ -711,7 +695,7 @@ class GrocParser(Parser):
 
 
                     if alt8 == 1:
-
+                        # Groc.g:134:18: COMMA monthday
                         pass
                         self.match(self.input, COMMA, self.FOLLOW_COMMA_in_monthdays318)
                         self._state.following.append(self.FOLLOW_monthday_in_monthdays320)
@@ -721,7 +705,7 @@ class GrocParser(Parser):
 
 
                     else:
-                        break
+                        break #loop8
 
 
 
@@ -740,19 +724,19 @@ class GrocParser(Parser):
 
         return
 
+    # $ANTLR end "monthdays"
 
 
-
-
-
+    # $ANTLR start "monthday"
+    # Groc.g:137:1: monthday : day= ( DIGIT | DIGITS ) ;
     def monthday(self, ):
 
         day = None
 
         try:
             try:
-
-
+                # Groc.g:138:3: (day= ( DIGIT | DIGITS ) )
+                # Groc.g:138:5: day= ( DIGIT | DIGITS )
                 pass
                 day = self.input.LT(1)
                 if (DIGIT <= self.input.LA(1) <= DIGITS):
@@ -764,10 +748,10 @@ class GrocParser(Parser):
                     raise mse
 
 
-
+                #action start
 
                 self.monthday_set.add(int(day.text));
-
+                #action end
 
 
 
@@ -781,19 +765,19 @@ class GrocParser(Parser):
 
         return
 
+    # $ANTLR end "monthday"
 
 
-
-
-
+    # $ANTLR start "weekdays"
+    # Groc.g:142:1: weekdays : ( DAY | ( weekday ( COMMA weekday )* ) ) ;
     def weekdays(self, ):
 
         try:
             try:
-
-
+                # Groc.g:143:3: ( ( DAY | ( weekday ( COMMA weekday )* ) ) )
+                # Groc.g:143:5: ( DAY | ( weekday ( COMMA weekday )* ) )
                 pass
-
+                # Groc.g:143:5: ( DAY | ( weekday ( COMMA weekday )* ) )
                 alt10 = 2
                 LA10_0 = self.input.LA(1)
 
@@ -807,14 +791,14 @@ class GrocParser(Parser):
                     raise nvae
 
                 if alt10 == 1:
-
+                    # Groc.g:143:7: DAY
                     pass
                     self.match(self.input, DAY, self.FOLLOW_DAY_in_weekdays365)
-
+                    #action start
 
                     if self.ordinal_set:
-
-
+                      # <ordinal> day means <ordinal> day of the month,
+                      # not every day of the <ordinal> week.
                       self.monthday_set = self.ordinal_set
                       self.ordinal_set = set()
                     else:
@@ -824,21 +808,21 @@ class GrocParser(Parser):
                               self.ValueOf(THURSDAY), self.ValueOf(FRIDAY),
                               self.ValueOf(SATURDAY), self.ValueOf(SUNDAY)])
 
-
+                    #action end
 
 
                 elif alt10 == 2:
-
+                    # Groc.g:155:11: ( weekday ( COMMA weekday )* )
                     pass
-
-
+                    # Groc.g:155:11: ( weekday ( COMMA weekday )* )
+                    # Groc.g:155:13: weekday ( COMMA weekday )*
                     pass
                     self._state.following.append(self.FOLLOW_weekday_in_weekdays373)
                     self.weekday()
 
                     self._state.following.pop()
-
-                    while True:
+                    # Groc.g:155:21: ( COMMA weekday )*
+                    while True: #loop9
                         alt9 = 2
                         LA9_0 = self.input.LA(1)
 
@@ -847,7 +831,7 @@ class GrocParser(Parser):
 
 
                         if alt9 == 1:
-
+                            # Groc.g:155:22: COMMA weekday
                             pass
                             self.match(self.input, COMMA, self.FOLLOW_COMMA_in_weekdays376)
                             self._state.following.append(self.FOLLOW_weekday_in_weekdays378)
@@ -857,15 +841,15 @@ class GrocParser(Parser):
 
 
                         else:
-                            break
+                            break #loop9
 
 
-
+                    #action start
 
                     if not self.ordinal_set:
                       self.ordinal_set = self.ordinal_set.union(allOrdinals)
 
-
+                    #action end
 
 
 
@@ -885,19 +869,19 @@ class GrocParser(Parser):
 
         return
 
+    # $ANTLR end "weekdays"
 
 
-
-
-
+    # $ANTLR start "weekday"
+    # Groc.g:161:1: weekday : dayname= ( MONDAY | TUESDAY | WEDNESDAY | THURSDAY | FRIDAY | SATURDAY | SUNDAY ) ;
     def weekday(self, ):
 
         dayname = None
 
         try:
             try:
-
-
+                # Groc.g:162:3: (dayname= ( MONDAY | TUESDAY | WEDNESDAY | THURSDAY | FRIDAY | SATURDAY | SUNDAY ) )
+                # Groc.g:162:5: dayname= ( MONDAY | TUESDAY | WEDNESDAY | THURSDAY | FRIDAY | SATURDAY | SUNDAY )
                 pass
                 dayname = self.input.LT(1)
                 if (MONDAY <= self.input.LA(1) <= SUNDAY):
@@ -909,11 +893,11 @@ class GrocParser(Parser):
                     raise mse
 
 
-
+                #action start
 
                 self.weekday_set.add(self.ValueOf(dayname.type))
 
-
+                #action end
 
 
 
@@ -927,19 +911,19 @@ class GrocParser(Parser):
 
         return
 
+    # $ANTLR end "weekday"
 
 
-
-
-
+    # $ANTLR start "monthspec"
+    # Groc.g:168:1: monthspec : ( MONTH | months ) ;
     def monthspec(self, ):
 
         try:
             try:
-
-
+                # Groc.g:169:3: ( ( MONTH | months ) )
+                # Groc.g:169:5: ( MONTH | months )
                 pass
-
+                # Groc.g:169:5: ( MONTH | months )
                 alt11 = 2
                 LA11_0 = self.input.LA(1)
 
@@ -953,10 +937,10 @@ class GrocParser(Parser):
                     raise nvae
 
                 if alt11 == 1:
-
+                    # Groc.g:169:7: MONTH
                     pass
                     self.match(self.input, MONTH, self.FOLLOW_MONTH_in_monthspec459)
-
+                    #action start
 
                     self.month_set = self.month_set.union(set([
                         self.ValueOf(JANUARY), self.ValueOf(FEBRUARY), self.ValueOf(MARCH),
@@ -965,11 +949,11 @@ class GrocParser(Parser):
                         self.ValueOf(OCTOBER), self.ValueOf(NOVEMBER),
                         self.ValueOf(DECEMBER)]))
 
-
+                    #action end
 
 
                 elif alt11 == 2:
-
+                    # Groc.g:177:7: months
                     pass
                     self._state.following.append(self.FOLLOW_months_in_monthspec469)
                     self.months()
@@ -991,27 +975,27 @@ class GrocParser(Parser):
 
         return
 
+    # $ANTLR end "monthspec"
 
 
-
-
-
+    # $ANTLR start "months"
+    # Groc.g:180:1: months : ( month ( COMMA month )* ) ;
     def months(self, ):
 
         try:
             try:
-
-
+                # Groc.g:181:3: ( ( month ( COMMA month )* ) )
+                # Groc.g:181:5: ( month ( COMMA month )* )
                 pass
-
-
+                # Groc.g:181:5: ( month ( COMMA month )* )
+                # Groc.g:181:7: month ( COMMA month )*
                 pass
                 self._state.following.append(self.FOLLOW_month_in_months486)
                 self.month()
 
                 self._state.following.pop()
-
-                while True:
+                # Groc.g:181:13: ( COMMA month )*
+                while True: #loop12
                     alt12 = 2
                     LA12_0 = self.input.LA(1)
 
@@ -1020,7 +1004,7 @@ class GrocParser(Parser):
 
 
                     if alt12 == 1:
-
+                        # Groc.g:181:14: COMMA month
                         pass
                         self.match(self.input, COMMA, self.FOLLOW_COMMA_in_months489)
                         self._state.following.append(self.FOLLOW_month_in_months491)
@@ -1030,7 +1014,7 @@ class GrocParser(Parser):
 
 
                     else:
-                        break
+                        break #loop12
 
 
 
@@ -1049,19 +1033,19 @@ class GrocParser(Parser):
 
         return
 
+    # $ANTLR end "months"
 
 
-
-
-
+    # $ANTLR start "month"
+    # Groc.g:184:1: month : monthname= ( JANUARY | FEBRUARY | MARCH | APRIL | MAY | JUNE | JULY | AUGUST | SEPTEMBER | OCTOBER | NOVEMBER | DECEMBER ) ;
     def month(self, ):
 
         monthname = None
 
         try:
             try:
-
-
+                # Groc.g:185:3: (monthname= ( JANUARY | FEBRUARY | MARCH | APRIL | MAY | JUNE | JULY | AUGUST | SEPTEMBER | OCTOBER | NOVEMBER | DECEMBER ) )
+                # Groc.g:185:5: monthname= ( JANUARY | FEBRUARY | MARCH | APRIL | MAY | JUNE | JULY | AUGUST | SEPTEMBER | OCTOBER | NOVEMBER | DECEMBER )
                 pass
                 monthname = self.input.LT(1)
                 if (JANUARY <= self.input.LA(1) <= DECEMBER):
@@ -1073,9 +1057,9 @@ class GrocParser(Parser):
                     raise mse
 
 
-
+                #action start
                 self.month_set.add(self.ValueOf(monthname.type));
-
+                #action end
 
 
 
@@ -1089,19 +1073,19 @@ class GrocParser(Parser):
 
         return
 
+    # $ANTLR end "month"
 
 
-
-
-
+    # $ANTLR start "quarterspec"
+    # Groc.g:190:1: quarterspec : ( QUARTER | ( quarter_ordinals MONTH OF QUARTER ) ) ;
     def quarterspec(self, ):
 
         try:
             try:
-
-
+                # Groc.g:191:3: ( ( QUARTER | ( quarter_ordinals MONTH OF QUARTER ) ) )
+                # Groc.g:191:5: ( QUARTER | ( quarter_ordinals MONTH OF QUARTER ) )
                 pass
-
+                # Groc.g:191:5: ( QUARTER | ( quarter_ordinals MONTH OF QUARTER ) )
                 alt13 = 2
                 LA13_0 = self.input.LA(1)
 
@@ -1115,22 +1099,22 @@ class GrocParser(Parser):
                     raise nvae
 
                 if alt13 == 1:
-
+                    # Groc.g:191:7: QUARTER
                     pass
                     self.match(self.input, QUARTER, self.FOLLOW_QUARTER_in_quarterspec583)
-
+                    #action start
 
                     self.month_set = self.month_set.union(set([
                         self.ValueOf(JANUARY), self.ValueOf(APRIL), self.ValueOf(JULY),
                         self.ValueOf(OCTOBER)]))
-
+                    #action end
 
 
                 elif alt13 == 2:
-
+                    # Groc.g:195:7: ( quarter_ordinals MONTH OF QUARTER )
                     pass
-
-
+                    # Groc.g:195:7: ( quarter_ordinals MONTH OF QUARTER )
+                    # Groc.g:195:9: quarter_ordinals MONTH OF QUARTER
                     pass
                     self._state.following.append(self.FOLLOW_quarter_ordinals_in_quarterspec595)
                     self.quarter_ordinals()
@@ -1158,27 +1142,27 @@ class GrocParser(Parser):
 
         return
 
+    # $ANTLR end "quarterspec"
 
 
-
-
-
+    # $ANTLR start "quarter_ordinals"
+    # Groc.g:198:1: quarter_ordinals : ( month_of_quarter_ordinal ( COMMA month_of_quarter_ordinal )* ) ;
     def quarter_ordinals(self, ):
 
         try:
             try:
-
-
+                # Groc.g:199:3: ( ( month_of_quarter_ordinal ( COMMA month_of_quarter_ordinal )* ) )
+                # Groc.g:199:5: ( month_of_quarter_ordinal ( COMMA month_of_quarter_ordinal )* )
                 pass
-
-
+                # Groc.g:199:5: ( month_of_quarter_ordinal ( COMMA month_of_quarter_ordinal )* )
+                # Groc.g:199:7: month_of_quarter_ordinal ( COMMA month_of_quarter_ordinal )*
                 pass
                 self._state.following.append(self.FOLLOW_month_of_quarter_ordinal_in_quarter_ordinals620)
                 self.month_of_quarter_ordinal()
 
                 self._state.following.pop()
-
-                while True:
+                # Groc.g:199:32: ( COMMA month_of_quarter_ordinal )*
+                while True: #loop14
                     alt14 = 2
                     LA14_0 = self.input.LA(1)
 
@@ -1187,7 +1171,7 @@ class GrocParser(Parser):
 
 
                     if alt14 == 1:
-
+                        # Groc.g:199:33: COMMA month_of_quarter_ordinal
                         pass
                         self.match(self.input, COMMA, self.FOLLOW_COMMA_in_quarter_ordinals623)
                         self._state.following.append(self.FOLLOW_month_of_quarter_ordinal_in_quarter_ordinals625)
@@ -1197,7 +1181,7 @@ class GrocParser(Parser):
 
 
                     else:
-                        break
+                        break #loop14
 
 
 
@@ -1216,19 +1200,19 @@ class GrocParser(Parser):
 
         return
 
+    # $ANTLR end "quarter_ordinals"
 
 
-
-
-
+    # $ANTLR start "month_of_quarter_ordinal"
+    # Groc.g:202:1: month_of_quarter_ordinal : offset= ( FIRST | SECOND | THIRD ) ;
     def month_of_quarter_ordinal(self, ):
 
         offset = None
 
         try:
             try:
-
-
+                # Groc.g:203:3: (offset= ( FIRST | SECOND | THIRD ) )
+                # Groc.g:203:5: offset= ( FIRST | SECOND | THIRD )
                 pass
                 offset = self.input.LT(1)
                 if (FIRST <= self.input.LA(1) <= THIRD):
@@ -1240,13 +1224,13 @@ class GrocParser(Parser):
                     raise mse
 
 
-
+                #action start
 
                 jOffset = self.ValueOf(offset.type) - 1
                 self.month_set = self.month_set.union(set([
                     jOffset + self.ValueOf(JANUARY), jOffset + self.ValueOf(APRIL),
                     jOffset + self.ValueOf(JULY), jOffset + self.ValueOf(OCTOBER)]))
-
+                #action end
 
 
 
@@ -1260,11 +1244,11 @@ class GrocParser(Parser):
 
         return
 
+    # $ANTLR end "month_of_quarter_ordinal"
 
 
-
-
-
+    # $ANTLR start "time_range"
+    # Groc.g:210:1: time_range : ( FROM (start_time= TIME ) TO (end_time= TIME ) ) ;
     def time_range(self, ):
 
         start_time = None
@@ -1272,31 +1256,31 @@ class GrocParser(Parser):
 
         try:
             try:
-
-
+                # Groc.g:211:3: ( ( FROM (start_time= TIME ) TO (end_time= TIME ) ) )
+                # Groc.g:211:5: ( FROM (start_time= TIME ) TO (end_time= TIME ) )
                 pass
-
-
+                # Groc.g:211:5: ( FROM (start_time= TIME ) TO (end_time= TIME ) )
+                # Groc.g:211:7: FROM (start_time= TIME ) TO (end_time= TIME )
                 pass
                 self.match(self.input, FROM, self.FOLLOW_FROM_in_time_range673)
-
-
+                # Groc.g:211:12: (start_time= TIME )
+                # Groc.g:211:13: start_time= TIME
                 pass
                 start_time=self.match(self.input, TIME, self.FOLLOW_TIME_in_time_range680)
-
+                #action start
                 self.start_time_string = start_time.text
-
+                #action end
 
 
 
                 self.match(self.input, TO, self.FOLLOW_TO_in_time_range691)
-
-
+                # Groc.g:212:10: (end_time= TIME )
+                # Groc.g:212:11: end_time= TIME
                 pass
                 end_time=self.match(self.input, TIME, self.FOLLOW_TIME_in_time_range698)
-
+                #action start
                 self.end_time_string = end_time.text
-
+                #action end
 
 
 
@@ -1316,13 +1300,13 @@ class GrocParser(Parser):
 
         return
 
+    # $ANTLR end "time_range"
 
 
+    # Delegated rules
 
 
-
-
-
+    # lookup tables for DFA #4
 
     DFA4_eot = DFA.unpack(
         u"\13\uffff"
@@ -1363,7 +1347,7 @@ class GrocParser(Parser):
         DFA.unpack(u"\1\3\1\7\4\uffff\1\10")
     ]
 
-
+    # class definition for DFA #4
 
     DFA4 = DFA
 

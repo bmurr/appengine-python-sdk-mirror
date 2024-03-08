@@ -81,13 +81,6 @@ START_PROCESS_REVERSE_NO_FILE = -4
 # User application has an entrypoint defined in app.yaml.
 START_PROCESS_WITH_ENTRYPOINT = -5
 
-# Runtimes which need
-_RUNTIMES_NEED_VM_ENV_VARS = [
-    'go111',
-    'go114',
-    'go115',
-]
-
 
 def _sleep_between_retries(attempt, max_attempts, sleep_base):
   """Sleep between retry attempts.
@@ -145,15 +138,25 @@ def _remove_retry_sharing_violation(path, max_attempts=10, sleep_base=0.125):
     os.remove(path)
 
 
-def get_vm_environment_variables(module_configuration, runtime_config):
-  """Returns VM-specific environment variables."""
+def get_clone_environment_variables(module_configuration, runtime_config):
+  """Returns clone specific environment variables."""
   keys_values = [
       ('API_HOST', runtime_config.api_host),
       ('API_PORT', runtime_config.api_port),
-      ('GAE_LONG_APP_ID', module_configuration.application_external_name),
+      (
+          'GAE_LONG_APP_ID',
+          module_configuration.application_external_name
+          if module_configuration.application_external_name
+          else 'defaultappid"',
+      ),
       ('GAE_PARTITION', module_configuration.partition),
       ('GAE_MODULE_NAME', module_configuration.module_name),
-      ('GAE_MODULE_VERSION', module_configuration.major_version),
+      (
+          'GAE_MODULE_VERSION',
+          module_configuration.major_version
+          if module_configuration.major_version
+          else '1',
+      ),
       ('GAE_MINOR_VERSION', module_configuration.minor_version),
       ('GAE_MODULE_INSTANCE', runtime_config.instance_id),
       ('GAE_SERVER_PORT', runtime_config.server_port),
@@ -161,7 +164,7 @@ def get_vm_environment_variables(module_configuration, runtime_config):
       ('SERVER_SOFTWARE', http_runtime_constants.SERVER_SOFTWARE),
   ]
   for entry in runtime_config.environ:
-    keys_values.append((entry.key, entry.value))
+    keys_values.append((str(entry.key), str(entry.value)))
 
   return {key: str(value) for key, value in keys_values}
 
@@ -241,19 +244,14 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
     self._args = args
     self._module_configuration = module_configuration
     self._env = env
-    # This sets environment variables at the process level and works for
-    # Java and Go. Python hacks os.environ to not really return the environment
-    # variables, so Python needs to set these elsewhere.
+    # This sets environment variables at the process level and works for gen2
+    # runtimes.
     runtime_config = self._runtime_config_getter()
-    if (
-        runtime_config.vm
-        or self._module_configuration.runtime in _RUNTIMES_NEED_VM_ENV_VARS
-    ):
-      self._env.update(
-          get_vm_environment_variables(
-              self._module_configuration, runtime_config
-          )
-      )
+    self._env.update(
+        get_clone_environment_variables(
+            self._module_configuration, runtime_config
+        )
+    )
 
     if start_process_flavor not in self._VALID_START_PROCESS_FLAVORS:
       raise ValueError('Invalid start_process_flavor.')
@@ -402,9 +400,12 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
         assert not self._process, 'start() can only be called once'
         port = portpicker.pick_unused_port()
         self._env['PORT'] = str(port)
-
+        # For windows, replace ${PORT} used in PHP and not escaped.
+        args = []
+        for arg in self._args:
+          args.append(arg.replace('${PORT}', str(port)))
         self._process = safe_subprocess.start_process(
-            args=self._args,
+            args=args,
             input_string=serialized_config,
             env=self._env,
             cwd=self._module_configuration.application_root,

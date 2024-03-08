@@ -217,8 +217,7 @@ class PHPRuntimeInstanceFactory(instance.InstanceFactory,
       raise _PHPEnvironmentError(check_process_stdout)
 
   @classmethod
-  def _check_binaries(cls, php_executable_path, php_library_path,
-                      gae_extension_path):
+  def _check_php_executable_path(cls, php_executable_path):
     """Perform sanity check on php-cgi & gae extension."""
     if not php_executable_path:
       raise _PHPBinaryError('The development server must be started with the '
@@ -233,6 +232,11 @@ class PHPRuntimeInstanceFactory(instance.InstanceFactory,
       raise _PHPBinaryError('The path specified with the --php_executable_path '
                             'flag (%s) is not executable' % php_executable_path)
 
+  @classmethod
+  def _check_binaries(cls, php_executable_path, php_library_path,
+                      gae_extension_path):
+    """Perform sanity check on php-cgi & gae extension."""
+    cls._check_php_executable_path(php_executable_path)
     env = {}
     # On Windows, in order to run a side-by-side assembly the specified env
     # must include a valid SystemRoot.
@@ -304,6 +308,7 @@ class PHPRuntimeInstanceFactory(instance.InstanceFactory,
     php_config = self._GenerateConfigForRuntime().php_config
     php_executable_path = php_config.php_executable_path
     if self._is_modern():
+      self._check_php_executable_path(php_executable_path)
       if self._module_configuration.entrypoint:
         runtime_args = six.ensure_str(
             self._module_configuration.entrypoint.split())
@@ -316,9 +321,9 @@ class PHPRuntimeInstanceFactory(instance.InstanceFactory,
 
       my_runtime_config = self._runtime_config_getter()
       env = self.get_modern_env_vars(instance_id)
-      env['API_HOST'] = my_runtime_config.api_host
+      env['API_HOST'] = six.ensure_str(my_runtime_config.api_host)
       env['API_PORT'] = str(my_runtime_config.api_port)
-      env['GAE_APPLICATION'] = my_runtime_config.app_id
+      env['GAE_APPLICATION'] = six.ensure_str(my_runtime_config.app_id)
       for kv in my_runtime_config.environ:
         env[kv.key] = kv.value
     else:
@@ -360,8 +365,10 @@ class PHPRuntimeInstanceFactory(instance.InstanceFactory,
       return True
     return False
 
+  # TODO: Find a way to avoid listing modern modules.
   def _is_modern(self):
-    return self._module_configuration.runtime.startswith('php7')
+    runtime = self._module_configuration.runtime
+    return runtime.startswith('php7') or runtime.startswith('php8')
 
   def _run_composer(self):
     composer_file_path = self._composer_file_path

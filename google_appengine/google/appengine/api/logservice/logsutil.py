@@ -20,9 +20,8 @@
 
 
 
-import os
 import time
-
+from google.appengine.runtime import context
 
 
 REQUEST_LOG_ID = 'REQUEST_LOG_ID'
@@ -61,7 +60,7 @@ _DEFAULT_LEVEL = LOG_LEVEL_ERROR
 
 
 def _CurrentTimeMicro():
-  return long(time.time() * _U_SEC)
+  return int(time.time() * _U_SEC)
 
 
 def _Clean(e):
@@ -76,12 +75,12 @@ def Stripnl(message):
 
 def RequestID():
   """Returns the ID of the current request assigned by App Engine."""
-  return os.environ.get(REQUEST_LOG_ID, None)
+  return context.get(REQUEST_LOG_ID, None)
 
 
 def TraceID():
   """Returns the trace ID of the current request assigned by App Engine."""
-  trace_context = os.environ.get(TRACE_CONTEXT, None)
+  trace_context = context.get(TRACE_CONTEXT, None)
   if trace_context is None:
     return ''
   return trace_context.split('/')[0]
@@ -114,7 +113,7 @@ def _StrictParseLogEntry(entry, clean_message=True):
   if magic != 'LOG':
     raise ValueError()
 
-  timestamp, level = long(timestamp), int(level)
+  timestamp, level = int(timestamp), int(level)
   if level not in LOG_LEVELS:
     raise ValueError()
 

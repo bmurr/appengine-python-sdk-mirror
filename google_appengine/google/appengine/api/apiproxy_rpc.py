@@ -25,20 +25,29 @@
 
 
 
-from __future__ import absolute_import
-
-
+from concurrent import futures
 import sys
+import contextvars
 
-from google.appengine._internal import six_subset
+
+
+
+
+
+
+
+_MAX_CONCURRENT_API_CALLS = 100
+
+_THREAD_POOL = futures.ThreadPoolExecutor(_MAX_CONCURRENT_API_CALLS)
 
 
 class RPC(object):
   """Base class for implementing RPC of API proxy stubs.
 
-  To implement a RPC to make real asynchronous API call:
-    - Extend this class.
-    - Override _MakeCallImpl and/or _WaitImpl to do a real asynchronous call.
+  Constructor for the RPC object.
+
+  All arguments are optional, and simply set members on the class.
+  These data members will be overriden by values passed to `MakeCall`.
   """
 
   IDLE = 0
@@ -47,28 +56,26 @@ class RPC(object):
 
   def __init__(self, package=None, call=None, request=None, response=None,
                callback=None, deadline=None, stub=None):
-    """Constructor for the RPC object.
-
-    All arguments are optional, and simply set members on the class.
-    These data members will be overriden by values passed to MakeCall.
+    """Constructor.
 
     Args:
-      package: string, the package for the call
-      call: string, the call within the package
-      request: ProtocolMessage instance, appropriate for the arguments
-      response: ProtocolMessage instance, appropriate for the response
-      callback: callable, called when call is complete
-      deadline: A double specifying the deadline for this call as the number of
-                seconds from the current time. Ignored if non-positive.
-      stub: APIProxyStub instance, used in default _WaitImpl to do real call
+      package: `string`. The package for the call.
+      call: `string`. The call within the package.
+      request: `ProtocolMessage` instance. Appropriate for the arguments.
+      response: `ProtocolMessage` instance. Appropriate for the response.
+      callback: `callable`. Called when call is complete.
+      deadline: `double`. Specifies the deadline for this call as the number
+        of seconds from the current time. Ignored if non-positive.
+      stub: `APIProxyStub` instance. Used in default `_WaitImpl` to do real
+        call.
     """
     self._exception = None
     self._state = RPC.IDLE
-    self._traceback = None
 
     self.package = package
     self.call = call
     self.request = request
+    self.future = None
     self.response = response
     self.callback = callback
     self.deadline = deadline
@@ -81,6 +88,9 @@ class RPC(object):
     This is usually used when an RPC has been specified with some configuration
     options and is being used as a template for multiple RPCs outside of a
     developer's easy control.
+
+    Returns:
+      A clone of this RPC.
     """
     if self.state != RPC.IDLE:
       raise AssertionError('Cannot clone a call already in progress')
@@ -92,17 +102,22 @@ class RPC(object):
 
   def MakeCall(self, package=None, call=None, request=None, response=None,
                callback=None, deadline=None):
-    """Makes an asynchronous (i.e. non-blocking) API call within the
-    specified package for the specified call method.
+    """Makes an asynchronous (i.e., non-blocking) API call within the specified package for the specified call method.
 
-    It will call the _MakeRealCall to do the real job.
+    It will call the `_MakeRealCall` to do the real job.
 
     Args:
-      Same as constructor; see __init__.
+      package: `string`. The package for the call.
+      call: `string`. The call within the package.
+      request: `ProtocolMessage` instance. Appropriate for the arguments.
+      response: `ProtocolMessage` instance. Appropriate for the response.
+      callback: `callable`. Called when call is complete.
+      deadline: `double`. Specifies the deadline for this call as the number
+        of seconds from the current time. Ignored if non-positive.
 
     Raises:
-      TypeError or AssertionError if an argument is of an invalid type.
-      AssertionError or RuntimeError is an RPC is already in use.
+      `TypeError` or `AssertionError` if an argument is of an invalid type.
+      `AssertionError` or `RuntimeError` is an RPC is already in use.
     """
     self.callback = callback or self.callback
     self.package = package or self.package
@@ -110,9 +125,10 @@ class RPC(object):
     self.request = request or self.request
     self.response = response or self.response
     self.deadline = deadline or self.deadline
+    self.future = None
 
-    assert self._state is RPC.IDLE, ('RPC for %s.%s has already been started' %
-                                      (self.package, self.call))
+    assert self._state == RPC.IDLE, ('RPC for %s.%s has already been started' %
+                                     (self.package, self.call))
     assert self.callback is None or callable(self.callback)
     self._MakeCallImpl()
 
@@ -127,12 +143,9 @@ class RPC(object):
     """If there was an exception, raise it now.
 
     Raises:
-      Exception of the API call or the callback, if any.
+      Exception of the API call or the `callback`, if any.
     """
-    if self.exception and self._traceback:
-      six_subset.reraise(self.exception.__class__, self.exception,
-                         self._traceback)
-    elif self.exception:
+    if self.exception:
       raise self.exception
 
   @property
@@ -144,32 +157,83 @@ class RPC(object):
     return self._state
 
   def _MakeCallImpl(self):
-    """Override this method to implement a real asynchronous call rpc."""
+    """Makes an asynchronous API call.
+
+    For this to work the following must be set:
+      `self.package`: the API package name;
+      `self.call`: the name of the API call/method to invoke;
+      `self.request`: the API request body as a serialized protocol buffer.
+
+    The actual API call is made via a thread pool. The thread pool restricts the
+    number of concurrent requests to `MAX_CONCURRENT_API_CALLS`, so this method
+    will block if that limit is exceeded, until other asynchronous calls
+    resolve.
+
+    If the main thread holds the import lock, waiting on thread work can cause
+    a deadlock:
+    https://docs.python.org/2/library/threading.html#importing-in-threaded-code
+
+    Therefore, we try to detect this error case and fall back to sync calls.
+    """
+    assert self._state == RPC.IDLE, self._state
+
     self._state = RPC.RUNNING
 
+
+    run_async = getattr(self.stub.__class__, 'THREADSAFE', False)
+
+    ctx = contextvars.copy_context()
+
+    def ExecInContext():
+      ctx.run(self._SendRequestAndFinish)
+
+    if run_async:
+      self.future = _THREAD_POOL.submit(ExecInContext)
+    else:
+      self.future = None
+
   def _WaitImpl(self):
-    """Override this method to implement a real asynchronous call rpc.
+    """Waits for this and only this RPC to complete."""
 
-    Returns:
-      True if the async call was completed successfully.
-    """
-    try:
-      try:
-        self.stub.MakeSyncCall(self.package, self.call,
-                               self.request, self.response)
-      except Exception:
-        _, self._exception, self._traceback = sys.exc_info()
-    finally:
-      self._state = RPC.FINISHING
-      self._Callback()
+    if self.future:
+      futures.wait([self.future])
+      return True
 
+
+    self._SendRequestAndFinish(reraise_callback_exception=True)
     return True
 
-  def _Callback(self):
-    if self.callback:
-      try:
-        self.callback()
-      except:
-        _, self._exception, self._traceback = sys.exc_info()
-        self._exception._appengine_apiproxy_rpc = self
-        raise
+  def _SendRequest(self):
+    self.stub.MakeSyncCall(self.package, self.call, self.request, self.response)
+
+  def _CaptureTrace(self, f):
+    """Runs `f()` and captures exception information if raised."""
+    try:
+      f()
+    except Exception as exc:
+
+
+      self._exception = exc
+
+  def _CaptureTraceAndReraise(self, f):
+    """A variant of `_CaptureTrace()` used in the synchronous fallback path."""
+    try:
+      f()
+    except:
+      _, exc, _ = sys.exc_info()
+      self._exception = exc
+
+
+      self._exception._appengine_apiproxy_rpc = self
+      raise
+
+  def _SendRequestAndFinish(self, reraise_callback_exception=False):
+    try:
+      self._CaptureTrace(self._SendRequest)
+    finally:
+      self._state = RPC.FINISHING
+      if self.callback:
+        if reraise_callback_exception:
+          self._CaptureTraceAndReraise(self.callback)
+        else:
+          self._CaptureTrace(self.callback)

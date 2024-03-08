@@ -1,0 +1,10 @@
+application: hello-world
+version: auto
+threadsafe: true
+module: default-php82
+
+runtime: php82
+
+handlers:
+- url: /.*
+  script: auto

@@ -24,39 +24,33 @@
 
 
 
-from __future__ import with_statement
 
 
 
-
-import os
+import logging
 import random
 import threading
 
-
-if os.environ.get('APPENGINE_RUNTIME') == 'python27':
-  from google.appengine.api import apiproxy_rpc
-  from google.appengine.api import request_info
-  from google.appengine.runtime import apiproxy_errors
-else:
-  from google.appengine.api import apiproxy_rpc
-  from google.appengine.api import request_info
-  from google.appengine.runtime import apiproxy_errors
-
+from google.appengine.api import apiproxy_rpc
+from google.appengine.api import request_info
+from google.appengine.runtime import apiproxy_errors
 
 MAX_REQUEST_SIZE = 1 << 20
 
 REQ_SIZE_EXCEEDS_LIMIT_MSG_TEMPLATE = ('The request to API call %s.%s() was too'
                                        ' large.')
 
+logging.getLogger('google.appengine.api.stubs').setLevel(logging.INFO)
+
 
 class APIProxyStub(object):
   """Base class for implementing API proxy stub classes.
 
   To implement an API proxy stub:
+
     - Extend this class.
-    - Override __init__ to pass in appropriate default service name.
-    - Implement service methods as _Dynamic_<method>(request, response).
+    - Override `__init__` to pass in appropriate default service name.
+    - Implement service methods as `_Dynamic_<method>(request, response)`.
   """
 
 
@@ -74,11 +68,11 @@ class APIProxyStub(object):
 
     Args:
       service_name: Service name expected for all calls.
-      max_request_size: int, maximum allowable size of the incoming request. An
-        apiproxy_errors.RequestTooLargeError will be raised if the inbound
+      max_request_size: `int`. Maximum allowable size of the incoming request.
+        An `apiproxy_errors.RequestTooLargeError` will be raised if the inbound
         request exceeds this size.  Default is 1 MB. Subclasses can override it.
-      request_data: A request_info.RequestInfo instance used to look up state
-        associated with the request that generated an API call.
+      request_data: A `request_info.RequestInfo` instance used to look up
+        state associated with the request that generated an API call.
     """
     self.__service_name = service_name
     self.__max_request_size = max_request_size
@@ -94,7 +88,7 @@ class APIProxyStub(object):
     """Creates RPC object instance.
 
     Returns:
-      a instance of RPC.
+      An instance of RPC.
     """
     return apiproxy_rpc.RPC(stub=self)
 
@@ -102,9 +96,9 @@ class APIProxyStub(object):
     """Check if a request meet some common restrictions.
 
     Args:
-      service: Must be name as provided to service_name of constructor.
+      service: Must be name as provided to `service_name` of constructor.
       call: A string representing the rpc to make.
-      request: A protocol buffer of the type corresponding to 'call'.
+      request: A protocol buffer of the type corresponding to `call`.
     """
     assert service == self.__service_name, ('Expected "%s" service name, '
                                             'was "%s"' % (self.__service_name,
@@ -119,11 +113,11 @@ class APIProxyStub(object):
     """The main RPC entry point.
 
     Args:
-      service: Must be name as provided to service_name of constructor.
+      service: Must be name as provided to `service_name` of constructor.
       call: A string representing the rpc to make.  Must be part of
-        the underlying services methods and impemented by _Dynamic_<call>.
-      request: A protocol buffer of the type corresponding to 'call'.
-      response: A protocol buffer of the type corresponding to 'call'.
+        the underlying services methods and impemented by `_Dynamic_<call>`.
+      request: A protocol buffer of the type corresponding to `call`.
+      response: A protocol buffer of the type corresponding to `call`.
       request_id: A unique string identifying the request associated with the
           API call.
     """
@@ -156,10 +150,10 @@ class APIProxyStub(object):
     method is not set.
 
     Args:
-      error: An instance of apiproxy_errors.Error or None for no error.
+      error: An instance of `apiproxy_errors.Error` or `None` for no error.
       method: A string representing the method that the error will affect.
-      error_rate: a number from [0, 1] that sets the chance of the error,
-        defaults to 1.
+      error_rate: a number from `[0, 1]` that sets the chance of the error,
+        defaults to `1`.
     """
     assert error is None or isinstance(error, apiproxy_errors.Error)
     if method and error:
@@ -170,13 +164,14 @@ class APIProxyStub(object):
 
 
 def Synchronized(method):
-  """Decorator to acquire a mutex around an APIProxyStub method.
+  """Decorator to acquire a mutex around an `APIProxyStub` method.
 
   Args:
-    method: An unbound method of APIProxyStub or a subclass.
+    method: An unbound method of `APIProxyStub` or a subclass.
 
   Returns:
-    The method, altered such it acquires self._mutex throughout its execution.
+    The `method`, altered such it acquires `self._mutex` throughout its
+    execution.
   """
 
   def WrappedMethod(self, *args, **kwargs):

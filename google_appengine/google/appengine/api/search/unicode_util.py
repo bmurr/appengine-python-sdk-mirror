@@ -16,7 +16,8 @@
 #
 """Utility methods related to Unicode."""
 
-from google.appengine._internal import six_subset
+import six
+from six import unichr
 
 
 def _Unicode32(s):
@@ -27,7 +28,7 @@ def _Unicode32(s):
   Returns:
     True if there are 32-bit characters, False otherwise.
   """
-  if isinstance(s, six_subset.text_type):
+  if isinstance(s, six.text_type):
     return any(ord(ch) >= 0x10000 for ch in s)
   else:
     return False
@@ -53,8 +54,8 @@ def _SplitUnicode(s):
       yield ch
     else:
       twentybit = ord(ch) - 0x10000
-      yield six_subset.unichr(0xD800 + (twentybit >> 10))
-      yield six_subset.unichr(0xDC00 + (twentybit & 0x3FF))
+      yield unichr(0xD800 + (twentybit >> 10))
+      yield unichr(0xDC00 + (twentybit & 0x3FF))
 
 
 def LimitUnicode(s):

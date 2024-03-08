@@ -18,11 +18,10 @@
 
 """Token classes for the Full Text Search API stub."""
 
-
-
-
-
+import six
 from google.appengine.api.search import search_util
+
+
 
 
 class Token(object):
@@ -35,13 +34,14 @@ class Token(object):
       chars: The string representation of the token.
       position: The position of the token in the sequence from the document
         field.
-      field_name: The name of the field the token occured in.
+      field_name: The name of the field the token occurred in.
 
     Raises:
       TypeError: If an unknown argument is passed.
     """
-    if isinstance(chars, basestring) and not isinstance(chars, unicode):
-      chars = unicode(chars, 'utf-8')
+    if isinstance(chars,
+                  six.string_types) and not isinstance(chars, six.text_type):
+      chars = six.text_type(chars, 'utf-8')
     self._chars = chars
     self._position = position
     self._field_name = field_name
@@ -50,7 +50,7 @@ class Token(object):
   def chars(self):
     """Returns a list of fields of the document."""
     value = self._chars
-    if not isinstance(value, basestring):
+    if not isinstance(value, six.string_types):
       value = str(self._chars)
     if self._field_name:
       return self._field_name + ':' + value
@@ -67,9 +67,9 @@ class Token(object):
                  field_name=field_name)
 
   def __repr__(self):
-    return search_util.Repr(
-        self, [('chars', self.chars.encode('utf-8')),
-               ('position', self.position)])
+    return search_util.Repr(self,
+                            [('chars', six.ensure_text(self.chars, 'utf-8')),
+                             ('position', self.position)])
 
   def __eq__(self, other):
     return (isinstance(other, Token) and

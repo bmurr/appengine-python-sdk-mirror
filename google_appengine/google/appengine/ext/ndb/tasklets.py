@@ -1,5 +1,6 @@
+#!/usr/bin/env python
 #
-# Copyright 2008 The ndb Authors. All Rights Reserved.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +13,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 """A tasklet decorator.
 
@@ -76,23 +91,29 @@ the tasklet into a generator.
 """
 
 import collections
+import contextvars
+import functools
 import logging
 import os
 import sys
+import threading
 import types
 import weakref
 
-from .google_imports import apiproxy_stub_map
-from .google_imports import apiproxy_rpc
-from .google_imports import datastore
-from .google_imports import datastore_errors
-from .google_imports import datastore_pbs
-from .google_imports import datastore_rpc
-from .google_imports import namespace_manager
-from .google_imports import callback as _request_callback
-
-from . import eventloop
-from . import utils
+from google.appengine.api import apiproxy_rpc
+from google.appengine.api import apiproxy_stub
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import datastore
+from google.appengine.api import datastore_errors
+from google.appengine.api import full_app_id
+from google.appengine.api import namespace_manager
+from google.appengine.datastore import datastore_pbs
+from google.appengine.datastore import datastore_rpc
+from google.appengine.ext.ndb import eventloop
+from google.appengine.ext.ndb import utils
+from google.appengine.runtime import apiproxy
+import six
+from six.moves import map
 
 __all__ = ['Return', 'tasklet', 'synctasklet', 'toplevel', 'sleep',
            'add_flow_exception', 'get_return_value',
@@ -104,13 +125,9 @@ __all__ = ['Return', 'tasklet', 'synctasklet', 'toplevel', 'sleep',
 
 _logging_debug = utils.logging_debug
 
-_CALLBACK_KEY = '__CALLBACK__'
-
-# Python 2.5 compatability.
-if hasattr(weakref, 'WeakSet'):
-  _set = weakref.WeakSet
-else:
-  _set = set
+_TESTBED_RESET_TOKENS = {}
+_CALLBACK_IS_SET = contextvars.ContextVar('ndb.cleanup_callback', default=False)
+_CONTEXT_IS_SET = contextvars.ContextVar('ndb.context', default=False)
 
 
 def _is_generator(obj):
@@ -122,31 +139,25 @@ def _is_generator(obj):
   return isinstance(obj, types.GeneratorType)
 
 
-class _State(utils.threading_local):
+class _State(threading.local):
   """Hold thread-local state."""
 
   def __init__(self):
     super(_State, self).__init__()
     self.current_context = None
-    self.all_generators = _set()
+    self.all_generators = weakref.WeakSet()
     self.all_pending = set()
 
   def set_context(self, ctx):
     self.current_context = ctx
 
   def add_generator(self, gen):
-    if _request_callback and _CALLBACK_KEY not in os.environ:
-      _request_callback.SetRequestEndCallback(self.reset)
-      os.environ[_CALLBACK_KEY] = '1'
-
+    self._set_cleanup()
     _logging_debug('all_generators: add %s', gen)
     self.all_generators.add(gen)
 
   def add_pending(self, fut):
-    if _request_callback and _CALLBACK_KEY not in os.environ:
-      _request_callback.SetRequestEndCallback(self.reset)
-      os.environ[_CALLBACK_KEY] = '1'
-
+    self._set_cleanup()
     _logging_debug('all_pending: add %s', fut)
     self.all_pending.add(fut)
 
@@ -183,6 +194,13 @@ class _State(utils.threading_local):
       pending.append(line)
     return '\n'.join(pending)
 
+  def _set_cleanup(self):
+    if not _CALLBACK_IS_SET.get():
+      apiproxy.SetRequestEndCallback(self.reset)
+      token = _CALLBACK_IS_SET.set(True)
+      if _CALLBACK_IS_SET not in _TESTBED_RESET_TOKENS:
+        _TESTBED_RESET_TOKENS[_CALLBACK_IS_SET] = token
+
   def reset(self, unused_req_id):
     self.current_context = None
     ev = eventloop.get_event_loop()
@@ -194,7 +212,7 @@ class _State(utils.threading_local):
 _state = _State()
 
 
-# Tuple of exceptions that should not be logged (except in debug mode).
+
 _flow_exceptions = ()
 
 
@@ -239,23 +257,23 @@ class Future(object):
   defined by PEP 3148.  It is also inspired (and tries to be somewhat
   compatible with) the App Engine specific UserRPC and MultiRpc classes.
   """
-  # TODO: Trim the API; there are too many ways to do the same thing.
-  # TODO: Compare to Monocle's much simpler Callback class.
 
-  # Constants for state property.
-  IDLE = apiproxy_rpc.RPC.IDLE  # Not yet running (unused)
-  RUNNING = apiproxy_rpc.RPC.RUNNING  # Not yet completed.
-  FINISHING = apiproxy_rpc.RPC.FINISHING  # Completed.
 
-  # XXX Add docstrings to all methods.  Separate PEP 3148 API from RPC API.
 
-  _geninfo = None  # Extra info about suspended generator.
+
+  IDLE = apiproxy_rpc.RPC.IDLE
+  RUNNING = apiproxy_rpc.RPC.RUNNING
+  FINISHING = apiproxy_rpc.RPC.FINISHING
+
+
+
+  _geninfo = None
 
   def __init__(self, info=None):
-    # TODO: Make done a method, to match PEP 3148?
-    # pylint: disable=invalid-name
-    __ndb_debug__ = 'SKIP'  # Hide this frame from self._where
-    self._info = info  # Info from the caller about this Future's purpose.
+
+
+    __ndb_debug__ = 'SKIP'
+    self._info = info
     self._where = utils.get_stack()
     self._context = None
     self._reset()
@@ -268,10 +286,10 @@ class Future(object):
     self._callbacks = []
     self._immediate_callbacks = []
     _state.add_pending(self)
-    self._next = None  # Links suspended Futures together in a stack.
+    self._next = None
 
-  # TODO: Add a __del__ that complains if neither get_exception() nor
-  # check_success() was ever called?  What if it's not even done?
+
+
 
   def __repr__(self):
     if self._done:
@@ -347,8 +365,8 @@ class Future(object):
 
   @property
   def state(self):
-    # This is just for compatibility with UserRPC and MultiRpc.
-    # A Future is considered running as soon as it is created.
+
+
     if self._done:
       return self.FINISHING
     else:
@@ -377,16 +395,16 @@ class Future(object):
   def check_success(self):
     self.wait()
     if self._exception is not None:
-      raise self._exception.__class__, self._exception, self._traceback
+      six.reraise(self._exception.__class__, self._exception, self._traceback)
 
   def get_result(self):
     self.check_success()
     return self._result
 
-  # TODO: Have a tasklet that does this
+
   @classmethod
   def wait_any(cls, futures):
-    # TODO: Flatten MultiRpcs.
+
     waiting_on = set(futures)
     ev = eventloop.get_event_loop()
     while waiting_on:
@@ -396,10 +414,10 @@ class Future(object):
       ev.run1()
     return None
 
-  # TODO: Have a tasklet that does this
+
   @classmethod
   def wait_all(cls, futures):
-    # TODO: Flatten MultiRpcs.
+
     waiting_on = set(futures)
     ev = eventloop.get_event_loop()
     while waiting_on:
@@ -407,9 +425,9 @@ class Future(object):
       ev.run1()
 
   def _help_tasklet_along(self, ns, ds_conn, gen, val=None, exc=None, tb=None):
-    # XXX Docstring
+
     info = utils.gen_info(gen)
-    # pylint: disable=invalid-name
+
     __ndb_debug__ = info
     try:
       save_context = get_context()
@@ -438,33 +456,33 @@ class Future(object):
         if save_ds_connection is not ds_conn:
           datastore._SetConnection(save_ds_connection)
 
-    except StopIteration, err:
+    except (StopIteration, Return) as err:
       result = get_return_value(err)
       _logging_debug('%s returned %r', info, result)
       self.set_result(result)
       return
 
     except GeneratorExit:
-      # In Python 2.5, this derives from Exception, but we don't want
-      # to handle it like other Exception instances.  So we catch and
-      # re-raise it immediately.  See issue 127.  http://goo.gl/2p5Pn
-      # TODO: Remove when Python 2.5 is no longer supported.
+
+
+
+
       raise
 
-    except Exception, err:
+    except Exception as err:
       _, _, tb = sys.exc_info()
       if isinstance(err, _flow_exceptions):
-        # Flow exceptions aren't logged except in "heavy debug" mode,
-        # and then only at DEBUG level, without a traceback.
+
+
         _logging_debug('%s raised %s(%s)',
                        info, err.__class__.__name__, err)
       elif utils.DEBUG and logging.getLogger().level < logging.DEBUG:
-        # In "heavy debug" mode, log a warning with traceback.
-        # (This is the same condition as used in utils.logging_debug().)
+
+
         logging.warning('%s raised %s(%s)',
                         info, err.__class__.__name__, err, exc_info=True)
       else:
-        # Otherwise, log a warning without a traceback.
+
         logging.warning('%s raised %s(%s)', info, err.__class__.__name__, err)
       self.set_exception(err, tb)
       return
@@ -473,12 +491,12 @@ class Future(object):
       _logging_debug('%s yielded %r', info, value)
       if isinstance(value, (apiproxy_stub_map.UserRPC,
                             datastore_rpc.MultiRpc)):
-        # TODO: Tail recursion if the RPC is already complete.
+
         eventloop.queue_rpc(value, self._on_rpc_completion,
                             value, ns, ds_conn, gen)
         return
       if isinstance(value, Future):
-        # TODO: Tail recursion if the Future is already done.
+
         if self._next:
           raise RuntimeError('Future has already completed yet next is %r' %
                              self._next)
@@ -488,7 +506,7 @@ class Future(object):
         value.add_callback(self._on_future_completion, value, ns, ds_conn, gen)
         return
       if isinstance(value, (tuple, list)):
-        # Arrange for yield to return a list of results (not Futures).
+
         info = 'multi-yield from %s' % utils.gen_info(gen)
         mfut = MultiFuture(info)
         try:
@@ -497,13 +515,13 @@ class Future(object):
           mfut.complete()
         except GeneratorExit:
           raise
-        except Exception, err:
+        except Exception as err:
           _, _, tb = sys.exc_info()
           mfut.set_exception(err, tb)
         mfut.add_callback(self._on_future_completion, mfut, ns, ds_conn, gen)
         return
       if _is_generator(value):
-        # TODO: emulate PEP 380 here?
+
         raise NotImplementedError('Cannot defer to another generator.')
       raise RuntimeError('A tasklet should not yield a plain value: '
                          '%.200s yielded %.200r' % (info, value))
@@ -513,7 +531,7 @@ class Future(object):
       result = rpc.get_result()
     except GeneratorExit:
       raise
-    except Exception, err:
+    except Exception as err:
       _, _, tb = sys.exc_info()
       self._help_tasklet_along(ns, ds_conn, gen, exc=err, tb=tb)
     else:
@@ -529,7 +547,7 @@ class Future(object):
       self._help_tasklet_along(ns, ds_conn, gen,
                                exc=exc, tb=future.get_traceback())
     else:
-      val = future.get_result()  # This won't raise an exception.
+      val = future.get_result()
       self._help_tasklet_along(ns, ds_conn, gen, val)
 
 
@@ -582,24 +600,24 @@ class MultiFuture(Future):
   """
 
   def __init__(self, info=None):
-    # pylint: disable=invalid-name
-    __ndb_debug__ = 'SKIP'  # Hide this frame from self._where
+
+    __ndb_debug__ = 'SKIP'
     self._full = False
     self._dependents = set()
     self._results = []
     super(MultiFuture, self).__init__(info=info)
 
   def __repr__(self):
-    # TODO: This may be invoked before __init__() returns,
-    # from Future.__init__().  Beware.
+
+
     line = super(MultiFuture, self).__repr__()
     lines = [line]
     for fut in self._results:
       lines.append(fut.dump_stack().replace('\n', '\n  '))
     return '\n waiting for '.join(lines)
 
-  # TODO: Maybe rename this method, since completion of a Future/RPC
-  # already means something else.  But to what?
+
+
   def complete(self):
     if self._full:
       raise RuntimeError('MultiFuture cannot complete twice.')
@@ -607,7 +625,7 @@ class MultiFuture(Future):
     if not self._dependents:
       self._finish()
 
-  # TODO: Maybe don't overload set_exception() with this?
+
   def set_exception(self, exc, tb=None):
     self._full = True
     super(MultiFuture, self).set_exception(exc, tb)
@@ -624,7 +642,7 @@ class MultiFuture(Future):
       result = [r.get_result() for r in self._results]
     except GeneratorExit:
       raise
-    except Exception, err:
+    except Exception as err:
       _, _, tb = sys.exc_info()
       self.set_exception(err, tb)
     else:
@@ -641,7 +659,7 @@ class MultiFuture(Future):
   def add_dependent(self, fut):
     if isinstance(fut, list):
       mfut = MultiFuture()
-      map(mfut.add_dependent, fut)
+      list(map(mfut.add_dependent, fut))
       mfut.complete()
       fut = mfut
     elif not isinstance(fut, Future):
@@ -678,18 +696,18 @@ class QueueFuture(Future):
   there is no flow control -- if the producer is faster than the
   consumer, the queue will grow unbounded.
   """
-  # TODO: Refactor to share code with MultiFuture.
+
 
   def __init__(self, info=None):
     self._full = False
     self._dependents = set()
     self._completed = collections.deque()
     self._waiting = collections.deque()
-    # Invariant: at least one of _completed and _waiting is empty.
-    # Also: _full and not _dependents <==> _done.
+
+
     super(QueueFuture, self).__init__(info=info)
 
-  # TODO: __repr__
+
 
   def complete(self):
     if self._full:
@@ -835,15 +853,15 @@ class SerialQueueFuture(Future):
     self._waiting = collections.deque()
     super(SerialQueueFuture, self).__init__(info=info)
 
-  # TODO: __repr__
+
 
   def complete(self):
     while self._waiting:
       waiter = self._waiting.popleft()
       waiter.set_exception(EOFError('Queue is empty'))
-    # When the writer is complete the future will also complete. If there are
-    # still pending queued futures, these futures are themselves in the pending
-    # list, so they will eventually be executed.
+
+
+
     self.set_result(None)
 
   def set_exception(self, exc, tb=None):
@@ -917,7 +935,7 @@ class ReducingFuture(Future):
   NOTE: The reducer input values may be reordered compared to the
   order in which they were added to the queue.
   """
-  # TODO: Refactor to reuse some code with MultiFuture.
+
 
   def __init__(self, reducer, info=None, batch_size=20):
     self._reducer = reducer
@@ -928,7 +946,7 @@ class ReducingFuture(Future):
     self._queue = collections.deque()
     super(ReducingFuture, self).__init__(info=info)
 
-  # TODO: __repr__
+
 
   def complete(self):
     if self._full:
@@ -967,12 +985,12 @@ class ReducingFuture(Future):
       raise RuntimeError('Future not done before signalling dependant done.')
     self._dependents.remove(fut)
     if self._done:
-      return  # Already done.
+      return
     try:
       val = fut.get_result()
     except GeneratorExit:
       raise
-    except Exception, err:
+    except Exception as err:
       _, _, tb = sys.exc_info()
       self.set_exception(err, tb)
       return
@@ -984,7 +1002,7 @@ class ReducingFuture(Future):
         nval = self._reducer(todo)
       except GeneratorExit:
         raise
-      except Exception, err:
+      except Exception as err:
         _, _, tb = sys.exc_info()
         self.set_exception(err, tb)
         return
@@ -1007,7 +1025,7 @@ class ReducingFuture(Future):
         nval = self._reducer(todo)
       except GeneratorExit:
         raise
-      except Exception, err:
+      except Exception as err:
         _, _, tb = sys.exc_info()
         self.set_exception(err, tb)
         return
@@ -1017,19 +1035,35 @@ class ReducingFuture(Future):
         self.set_result(nval)
 
 
-# Alias for StopIteration used to mark return values.
-# To use this, raise Return(<your return value>).  The semantics
-# are exactly the same as raise StopIteration(<your return value>)
-# but using Return clarifies that you are intending this to be the
-# return value of a tasklet.
-# TODO: According to Monocle authors Steve and Greg Hazel, Twisted
-# used an exception to signal a return value from a generator early
-# on, and they found out it was error-prone.  Should I worry?
-Return = StopIteration
+class Return(Exception):
+  """Return from a tasklet in Python 2.
+
+  In Python 2, generators may not return a value. In order to return a value
+  from a tasklet, then, it is necessary to raise an instance of this
+  exception with the return value:
+
+      @ndb.tasklet
+      def get_some_stuff():
+        future1 = get_something_async()
+        future2 = get_something_else_async()
+        thing1, thing2 = yield future1, future2
+        result = compute_result(thing1, thing2)
+        raise ndb.Return(result)
+
+  In Python 3, you can simply return the result:
+
+      @ndb.tasklet
+      def get_some_stuff():
+        future1 = get_something_async()
+        future2 = get_something_else_async()
+        thing1, thing2 = yield future1, future2
+        result = compute_result(thing1, thing2)
+        return result
+  """
 
 
 def get_return_value(err):
-  # XXX Docstring
+
   if not err.args:
     result = None
   elif len(err.args) == 1:
@@ -1040,24 +1074,24 @@ def get_return_value(err):
 
 
 def tasklet(func):
-  # XXX Docstring
 
-  @utils.wrapping(func)
+
+  @functools.wraps(func)
   def tasklet_wrapper(*args, **kwds):
-    # XXX Docstring
 
-    # TODO: make most of this a public function so you can take a bare
-    # generator and turn it into a tasklet dynamically.  (Monocle has
-    # this I believe.)
-    # pylint: disable=invalid-name
+
+
+
+
+
     __ndb_debug__ = utils.func_info(func)
     fut = Future('tasklet %s' % utils.func_info(func))
     fut._context = get_context()
     try:
       result = func(*args, **kwds)
-    except StopIteration, err:
-      # Just in case the function is not a generator but still uses
-      # the "raise Return(...)" idiom, we'll extract the return value.
+    except (StopIteration, Return) as err:
+
+
       result = get_return_value(err)
     if _is_generator(result):
       ns = namespace_manager.get_namespace()
@@ -1078,11 +1112,11 @@ def synctasklet(func):
   some web application framework (e.g. a Django view function or a
   webapp.RequestHandler.get method).
   """
-  taskletfunc = tasklet(func)  # wrap at declaration time.
+  taskletfunc = tasklet(func)
 
-  @utils.wrapping(func)
+  @functools.wraps(func)
   def synctasklet_wrapper(*args, **kwds):
-    # pylint: disable=invalid-name
+
     __ndb_debug__ = utils.func_info(func)
     return taskletfunc(*args, **kwds).get_result()
   return synctasklet_wrapper
@@ -1094,14 +1128,14 @@ def toplevel(func):
   Use this for toplevel view functions such as
   webapp.RequestHandler.get() or Django view functions.
   """
-  synctaskletfunc = synctasklet(func)  # wrap at declaration time.
+  synctaskletfunc = synctasklet(func)
 
-  @utils.wrapping(func)
+  @functools.wraps(func)
   def add_context_wrapper(*args, **kwds):
-    # pylint: disable=invalid-name
+
     __ndb_debug__ = utils.func_info(func)
     _state.clear_all_pending()
-    # Create and install a new context.
+
     ctx = make_default_context()
     try:
       set_context(ctx)
@@ -1109,11 +1143,9 @@ def toplevel(func):
     finally:
       set_context(None)
       ctx.flush().check_success()
-      eventloop.run()  # Ensure writes are flushed, etc.
+      eventloop.run()
   return add_context_wrapper
 
-
-_CONTEXT_KEY = '__CONTEXT__'
 
 _DATASTORE_APP_ID_ENV = 'DATASTORE_APP_ID'
 _DATASTORE_PROJECT_ID_ENV = 'DATASTORE_PROJECT_ID'
@@ -1122,9 +1154,9 @@ _DATASTORE_USE_PROJECT_ID_AS_APP_ID_ENV = 'DATASTORE_USE_PROJECT_ID_AS_APP_ID'
 
 
 def get_context():
-  # XXX Docstring
+
   ctx = None
-  if os.getenv(_CONTEXT_KEY):
+  if _CONTEXT_IS_SET.get():
     ctx = _state.current_context
   if ctx is None:
     ctx = make_default_context()
@@ -1133,11 +1165,11 @@ def get_context():
 
 
 def make_default_context():
-  # XXX Docstring
+
   datastore_app_id = os.environ.get(_DATASTORE_APP_ID_ENV, None)
   datastore_project_id = os.environ.get(_DATASTORE_PROJECT_ID_ENV, None)
   if datastore_app_id or datastore_project_id:
-    # We will create a Cloud Datastore context.
+
     app_id_override = bool(os.environ.get(
         _DATASTORE_USE_PROJECT_ID_AS_APP_ID_ENV, False))
     if not datastore_app_id and not app_id_override:
@@ -1159,7 +1191,7 @@ def make_default_context():
                           _DATASTORE_APP_ID_ENV,
                           _DATASTORE_USE_PROJECT_ID_AS_APP_ID_ENV))
       elif datastore_project_id:
-        # Project id and app id provided, make sure they are the same.
+
         id_resolver = datastore_pbs.IdResolver([datastore_app_id])
         if (datastore_project_id !=
             id_resolver.resolve_project_id(datastore_app_id)):
@@ -1175,8 +1207,8 @@ def make_default_context():
 
 @utils.positional(0)
 def make_context(conn=None, config=None):
-  # XXX Docstring
-  from . import context  # Late import to deal with circular imports.
+
+  from google.appengine.ext.ndb import context
   return context.Context(conn=conn, config=config)
 
 
@@ -1196,25 +1228,22 @@ def _make_cloud_datastore_context(app_id, external_app_ids=()):
     An ndb.Context that can connect to a Remote Cloud Datastore. You can use
     this context by passing it to ndb.set_context.
   """
-  from . import model  # Late import to deal with circular imports.
-  # Late import since it might not exist.
+  from google.appengine.ext.ndb import model
+
   if not datastore_pbs._CLOUD_DATASTORE_ENABLED:
     raise datastore_errors.BadArgumentError(
         datastore_pbs.MISSING_CLOUD_DATASTORE_MESSAGE)
   import googledatastore
-  try:
-    from google.appengine.datastore import cloud_datastore_v1_remote_stub
-  except ImportError:
-    from google3.apphosting.datastore import cloud_datastore_v1_remote_stub
+  from google.appengine.datastore import cloud_datastore_v1_remote_stub
 
-  current_app_id = os.environ.get('APPLICATION_ID', None)
+  current_app_id = full_app_id.get()
   if current_app_id and current_app_id != app_id:
-    # TODO(pcostello): We should support this so users can connect to different
-    # applications.
+
+
     raise ValueError('Cannot create a Cloud Datastore context that connects '
                      'to an application (%s) that differs from the application '
                      'already connected to (%s).' % (app_id, current_app_id))
-  os.environ['APPLICATION_ID'] = app_id
+  full_app_id.put(app_id)
 
   id_resolver = datastore_pbs.IdResolver((app_id,) + tuple(external_app_ids))
   project_id = id_resolver.resolve_project_id(app_id)
@@ -1226,104 +1255,110 @@ def _make_cloud_datastore_context(app_id, external_app_ids=()):
   conn = model.make_connection(_api_version=datastore_rpc._CLOUD_DATASTORE_V1,
                                _id_resolver=id_resolver)
 
-  # If necessary, install the stubs
+
   try:
     stub = cloud_datastore_v1_remote_stub.CloudDatastoreV1RemoteStub(datastore)
     apiproxy_stub_map.apiproxy.RegisterStub(datastore_rpc._CLOUD_DATASTORE_V1,
                                             stub)
   except:
-    pass  # The stub is already installed.
-  # TODO(pcostello): Ensure the current stub is connected to the right project.
+    pass
 
-  # Install a memcache and taskqueue stub which throws on everything.
+
+
   try:
     apiproxy_stub_map.apiproxy.RegisterStub('memcache', _ThrowingStub())
   except:
-    pass  # The stub is already installed.
+    pass
   try:
     apiproxy_stub_map.apiproxy.RegisterStub('taskqueue', _ThrowingStub())
   except:
-    pass  # The stub is already installed.
+    pass
 
 
   return make_context(conn=conn)
 
 
 def set_context(new_context):
-  # XXX Docstring
-  os.environ[_CONTEXT_KEY] = '1'
+
+  token = _CONTEXT_IS_SET.set(True)
+  if _CONTEXT_IS_SET not in _TESTBED_RESET_TOKENS:
+    _TESTBED_RESET_TOKENS[_CONTEXT_IS_SET] = token
   _state.set_context(new_context)
 
-class _ThrowingStub(object):
+
+class _ThrowingStub(apiproxy_stub.APIProxyStub):
   """A Stub implementation which always throws a NotImplementedError."""
 
-  # pylint: disable=invalid-name
+  def __init__(self):
+    pass
+
+
   def MakeSyncCall(self, service, call, request, response):
     raise NotImplementedError('In order to use %s.%s you must '
                               'install the Remote API.' % (service, call))
 
-  # pylint: disable=invalid-name
+
   def CreateRPC(self):
     return apiproxy_rpc.RPC(stub=self)
 
-# TODO: Rework the following into documentation.
 
-# A tasklet/coroutine/generator can yield the following things:
-# - Another tasklet/coroutine/generator; this is entirely equivalent to
-#   "for x in g: yield x"; this is handled entirely by the @tasklet wrapper.
-#   (Actually, not.  @tasklet returns a function that when called returns
-#   a Future.  You can use the pep380 module's @gwrap decorator to support
-#   yielding bare generators though.)
-# - An RPC (or MultiRpc); the tasklet will be resumed when this completes.
-#   This does not use the RPC's callback mechanism.
-# - A Future; the tasklet will be resumed when the Future is done.
-#   This uses the Future's callback mechanism.
 
-# A Future can be used in several ways:
-# - Yield it from a tasklet; see above.
-# - Check (poll) its status via f.done.
-# - Call its wait() method, perhaps indirectly via check_success()
-#   or get_result().  This invokes the event loop.
-# - Call the Future.wait_any() or Future.wait_all() method.
-#   This is waits for any or all Futures and RPCs in the argument list.
 
-# XXX HIRO XXX
 
-# - A tasklet is a (generator) function decorated with @tasklet.
 
-# - Calling a tasklet schedules the function for execution and returns a Future.
 
-# - A function implementing a tasklet may:
-#   = yield a Future; this waits for the Future which returns f.get_result();
-#   = yield an RPC; this waits for the RPC and then returns rpc.get_result();
-#   = raise Return(result); this sets the outer Future's result;
-#   = raise StopIteration or return; this sets the outer Future's result;
-#   = raise another exception: this sets the outer Future's exception.
 
-# - If a function implementing a tasklet is not a generator it will be
-#   immediately executed to completion and the tasklet wrapper will
-#   return a Future that is already done.  (XXX Alternative behavior:
-#   it schedules the call to be run by the event loop.)
 
-# - Code not running in a tasklet can call f.get_result() or f.wait() on
-#   a future.  This is implemented by a simple loop like the following::
 
-#     while not self._done:
-#       eventloop.run1()
 
-# - Here eventloop.run1() runs one "atomic" part of the event loop:
-#   = either it calls one immediately ready callback;
-#   = or it waits for the first RPC to complete;
-#   = or it sleeps until the first callback should be ready;
-#   = or it raises an exception indicating all queues are empty.
 
-# - It is possible but suboptimal to call rpc.get_result() or
-#   rpc.wait() directly on an RPC object since this will not allow
-#   other callbacks to run as they become ready.  Wrapping an RPC in a
-#   Future will take care of this issue.
 
-# - The important insight is that when a generator function
-#   implementing a tasklet yields, raises or returns, there is always a
-#   wrapper that catches this event and either turns it into a
-#   callback sent to the event loop, or sets the result or exception
-#   for the tasklet's Future.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

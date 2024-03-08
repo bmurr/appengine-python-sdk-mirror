@@ -31,9 +31,11 @@ This module allows applications to specify class hierarchies that support
 polymorphic queries.
 """
 
-
+import six
 
 from google.appengine.ext import db
+
+
 
 
 _class_map = {}
@@ -154,7 +156,7 @@ class PolymorphicClass(db.PropertiedClass):
     _class_map[cls.class_key()] = cls
 
 
-class PolyModel(db.Model):
+class PolyModel(six.with_metaclass(PolymorphicClass, db.Model)):
   """Base-class for models that supports polymorphic queries.
 
   Use this class to build hierarchies that can be queried based
@@ -224,8 +226,6 @@ class PolyModel(db.Model):
 
       Animal.kind() == Feline.kind() == Panther.kind() == 'Animal'
   """
-
-  __metaclass__ = PolymorphicClass
 
 
 
@@ -357,7 +357,7 @@ class PolyModel(db.Model):
     """
     query = super(PolyModel, cls).all(**kwds)
     if cls != cls.__root_class__:
-      query.filter(_CLASS_KEY_PROPERTY + ' =', cls.class_name())
+      query.filter(six.ensure_str(_CLASS_KEY_PROPERTY) + ' =', cls.class_name())
     return query
 
   @classmethod

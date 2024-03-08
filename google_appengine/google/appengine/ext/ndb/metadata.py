@@ -1,5 +1,6 @@
+#!/usr/bin/env python
 #
-# Copyright 2008 The ndb Authors. All Rights Reserved.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +13,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 """Models and helper functions for access to app's datastore metadata.
 
@@ -38,7 +55,7 @@ get_representations_of_kind() have optional start and end arguments to limit the
 query to a range of names, such that start <= name < end.
 """
 
-from . import model
+from google.appengine.ext.ndb import model
 
 __all__ = ['Namespace', 'Kind', 'Property', 'EntityGroup',
            'get_namespaces', 'get_kinds',
@@ -53,7 +70,7 @@ class _BaseMetadata(model.Model):
   _use_cache = False
   _use_memcache = False
 
-  KIND_NAME = ''  # Don't instantiate this class; always use a subclass.
+  KIND_NAME = ''
 
   @classmethod
   def _get_kind(cls):
@@ -65,7 +82,7 @@ class Namespace(_BaseMetadata):
   """Model for __namespace__ metadata query results."""
 
   KIND_NAME = '__namespace__'
-  EMPTY_NAMESPACE_ID = 1  # == datastore_types._EMPTY_NAMESPACE_ID
+  EMPTY_NAMESPACE_ID = 1
 
   @property
   def namespace_name(self):

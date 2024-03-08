@@ -19,7 +19,7 @@
 """OAuth API module."""
 
 
-from oauth_api import *
+from google.appengine.api.oauth.oauth_api import *
 
 
 __all__ = ['Error',

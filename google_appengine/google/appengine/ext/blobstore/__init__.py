@@ -18,4 +18,4 @@
 
 """Blobstore API module."""
 
-from blobstore import *
+from google.appengine.ext.blobstore.blobstore import *

@@ -1,5 +1,6 @@
+#!/usr/bin/env python
 #
-# Copyright 2008 The ndb Authors. All Rights Reserved.
+# Copyright 2007 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +13,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 """Higher-level Query wrapper.
 
@@ -138,26 +155,27 @@ in a tasklet, properly yielding when appropriate::
 
 """
 
-from __future__ import with_statement
-del with_statement  # No need to export this.
-
-__author__ = 'guido@google.com (Guido van Rossum)'
-
 import datetime
+import functools
 import heapq
-import itertools
 import sys
 
-from .google_imports import datastore_errors
-from .google_imports import datastore_rpc
-from .google_imports import datastore_types
-from .google_imports import datastore_query
-from .google_imports import namespace_manager
 
-from . import model
-from . import context
-from . import tasklets
-from . import utils
+from google.appengine.ext.ndb import context
+from google.appengine.ext.ndb import model
+from google.appengine.ext.ndb import tasklets
+from google.appengine.ext.ndb import utils
+import six
+from six.moves import map
+from six.moves import range
+from six.moves import zip
+
+from google.appengine.api import cmp_compat
+from google.appengine.api import datastore_errors
+from google.appengine.api import datastore_types
+from google.appengine.api import namespace_manager
+from google.appengine.datastore import datastore_query
+from google.appengine.datastore import datastore_rpc
 
 __all__ = ['Query', 'QueryOptions', 'Cursor', 'QueryIterator',
            'RepeatedStructuredPropertyPredicate',
@@ -167,19 +185,19 @@ __all__ = ['Query', 'QueryOptions', 'Cursor', 'QueryIterator',
            'ParameterizedFunction', 'gql',
           ]
 
-# Re-export some useful classes from the lower-level module.
+
 Cursor = datastore_query.Cursor
 
-# Some local renamings.
+
 _ASC = datastore_query.PropertyOrder.ASCENDING
 _DESC = datastore_query.PropertyOrder.DESCENDING
 _AND = datastore_query.CompositeFilter.AND
 _KEY = datastore_types._KEY_SPECIAL_PROPERTY
 
-# Table of supported comparison operators.
+
 _OPS = frozenset(['=', '!=', '<', '<=', '>', '>=', 'in'])
 
-# Default limit value.
+
 _MAX_LIMIT = 2 ** 31 - 1
 
 
@@ -188,7 +206,7 @@ class QueryOptions(context.ContextOptions, datastore_query.QueryOptions):
 
 
 class RepeatedStructuredPropertyPredicate(datastore_query.FilterPredicate):
-  # Used by model.py.
+
 
   def __init__(self, match_keys, pb, key_prefix):
     super(RepeatedStructuredPropertyPredicate, self).__init__()
@@ -198,7 +216,8 @@ class RepeatedStructuredPropertyPredicate(datastore_query.FilterPredicate):
       if not key.startswith(key_prefix):
         raise ValueError('key %r does not begin with the specified prefix of %s'
                          % (key, key_prefix))
-      stripped_keys.append(key[len(key_prefix):])
+      stripped_key = six.ensure_text(key[len(key_prefix):])
+      stripped_keys.append(stripped_key)
     value_map = datastore_query._make_key_value_map(pb, stripped_keys)
     self.match_values = tuple(value_map[key][0] for key in stripped_keys)
 
@@ -249,15 +268,15 @@ class RepeatedStructuredPropertyPredicate(datastore_query.FilterPredicate):
     """
     columns = []
     for key in self.match_keys:
-      column = key_value_map.get(key)
-      if not column:  # None, or an empty list.
-        return False  # If any column is empty there can be no match.
+      column = key_value_map.get(six.ensure_text(key))
+      if not column:
+        return False
       columns.append(column)
-    # Use izip to transpose the columns into rows.
-    return self.match_values in itertools.izip(*columns)
 
-  # Don't implement _prune()!  It would mess up the row correspondence
-  # within columns.
+    return self.match_values in zip(*columns)
+
+
+
 
 
 class ParameterizedThing(object):
@@ -291,7 +310,7 @@ class Parameter(ParameterizedThing):
     Args:
       key: The Parameter key, must be either an integer or a string.
     """
-    if not isinstance(key, (int, long, basestring)):
+    if not isinstance(key, six.integer_types + six.string_types):
       raise TypeError('Parameter key must be an integer or string, not %s' %
                       (key,))
     self.__key = key
@@ -327,11 +346,14 @@ class ParameterizedFunction(ParameterizedThing):
   """
 
   def __init__(self, func, values):
-    from .google_imports import gql  # Late import, to avoid name conflict.
+
+
+    from google.appengine.ext import gql
+
     self.__func = func
     self.__values = values
-    # NOTE: A horrible hack using GQL private variables so we can
-    # reuse GQL's implementations of its built-in functions.
+
+
     gqli = gql.GQL('SELECT * FROM Dummy')
     gql_method = gqli._GQL__cast_operators[func]
     self.__method = getattr(gqli, '_GQL' + gql_method.__name__)
@@ -366,7 +388,7 @@ class ParameterizedFunction(ParameterizedThing):
         val = val.resolve(bindings, used)
       values.append(val)
     result = self.__method(values)
-    # The gql module returns slightly different types in some cases.
+
     if self.__func == 'key' and isinstance(result, datastore_types.Key):
       result = model.Key.from_old_key(result)
     elif self.__func == 'time' and isinstance(result, datetime.datetime):
@@ -436,8 +458,8 @@ class FalseNode(Node):
   def _to_filter(self, post=False):
     if post:
       return None
-    # Because there's no point submitting a query that will never
-    # return anything.
+
+
     raise datastore_errors.BadQueryError(
         'Cannot convert FalseNode to predicate')
 
@@ -519,11 +541,14 @@ class FilterNode(Node):
   def __eq__(self, other):
     if not isinstance(other, FilterNode):
       return NotImplemented
-    # TODO: Should nodes with values that compare equal but have
-    # different types really be considered equal?
+
+
     return (self.__name == other.__name and
             self.__opsymbol == other.__opsymbol and
             self.__value == other.__value)
+
+  def __hash__(self):
+    return hash((self.__name, self.__opsymbol, self.__value))
 
   def _to_filter(self, post=False):
     if post:
@@ -533,7 +558,7 @@ class FilterNode(Node):
                                 'expressions and therefore cannot be converted '
                                 'to a single filter (%r)' % self.__opsymbol)
     value = self.__value
-    return datastore_query.make_filter(self.__name.decode('utf-8'),
+    return datastore_query.make_filter(six.ensure_text(self.__name),
                                        self.__opsymbol, value)
 
 
@@ -568,22 +593,22 @@ class PostFilterNode(Node):
 
 
 class ConjunctionNode(Node):
-  """Tree node representing a Boolean AND operator on two or more nodes."""
+  """Tree node representing a Boolean `AND` operator on two or more nodes."""
 
   def __new__(cls, *nodes):
     if not nodes:
       raise TypeError('ConjunctionNode() requires at least one node.')
     elif len(nodes) == 1:
       return nodes[0]
-    clauses = [[]]  # Outer: Disjunction; inner: Conjunction.
-    # TODO: Remove duplicates?
+    clauses = [[]]
+
     for node in nodes:
       if not isinstance(node, Node):
         raise TypeError('ConjunctionNode() expects Node instances as arguments;'
                         ' received a non-Node instance %r' % node)
       if isinstance(node, DisjunctionNode):
-        # Apply the distributive law: (X or Y) and (A or B) becomes
-        # (X and A) or (X and B) or (Y and A) or (Y and B).
+
+
         new_clauses = []
         for clause in clauses:
           for subnode in node:
@@ -591,12 +616,12 @@ class ConjunctionNode(Node):
             new_clauses.append(new_clause)
         clauses = new_clauses
       elif isinstance(node, ConjunctionNode):
-        # Apply half of the distributive law: (X or Y) and A becomes
-        # (X and A) or (Y and A).
+
+
         for clause in clauses:
           clause.extend(node.__nodes)
       else:
-        # Ditto.
+
         for clause in clauses:
           clause.append(node)
     if not clauses:
@@ -622,10 +647,14 @@ class ConjunctionNode(Node):
     return self.__nodes == other.__nodes
 
   def _to_filter(self, post=False):
-    filters = filter(None,
-                     (node._to_filter(post=post)
-                      for node in self.__nodes
-                      if isinstance(node, PostFilterNode) == post))
+
+    filters = [
+        node._to_filter(post=post)
+        for node in self.__nodes
+        if isinstance(node, PostFilterNode) == post
+    ]
+
+    filters = [f for f in filters if f]
     if not filters:
       return None
     if len(filters) == 1:
@@ -660,7 +689,7 @@ class DisjunctionNode(Node):
       return nodes[0]
     self = super(DisjunctionNode, cls).__new__(cls)
     self.__nodes = []
-    # TODO: Remove duplicates?
+
     for node in nodes:
       if not isinstance(node, Node):
         raise TypeError('DisjunctionNode() expects Node instances as arguments;'
@@ -692,7 +721,7 @@ class DisjunctionNode(Node):
     return DisjunctionNode(*nodes)
 
 
-# AND and OR are preferred aliases for these.
+
 AND = ConjunctionNode
 OR = DisjunctionNode
 
@@ -708,10 +737,13 @@ def _args_to_val(func, args):
     func: A string indicating what kind of thing this is.
     args: One or more GQL values, each integer, string, or GQL literal.
   """
-  from .google_imports import gql  # Late import, to avoid name conflict.
+
+
+  from google.appengine.ext import gql
+
   vals = []
   for arg in args:
-    if isinstance(arg, (int, long, basestring)):
+    if isinstance(arg, six.integer_types + six.string_types):
       val = Parameter(arg)
     elif isinstance(arg, gql.Literal):
       val = arg.Get()
@@ -721,7 +753,7 @@ def _args_to_val(func, args):
   if func == 'nop':
     if len(vals) != 1:
       raise TypeError('"nop" requires exactly one value')
-    return vals[0]  # May be a Parameter
+    return vals[0]
   pfunc = ParameterizedFunction(func, vals)
   if pfunc.is_parameterized():
     return pfunc
@@ -768,13 +800,13 @@ def _get_prop_from_modelclass(modelclass, name):
     else:
       maybe = prop._modelclass._properties.get(part)
       if maybe is not None:
-        # Must get it this way to get the copy with the long name.
-        # (See StructuredProperty.__getattr__() for details.)
+
+
         prop = getattr(prop, maybe._code_name)
       else:
         if issubclass(prop._modelclass, model.Expando) and not more:
           prop = model.GenericProperty()
-          prop._name = name  # Bypass the restriction on dots.
+          prop._name = name
         else:
           raise KeyError('Model %s has no property named %r' %
                          (prop._modelclass._get_kind(), part))
@@ -810,11 +842,11 @@ class Query(object):
       projection: Optional list or tuple of properties to project.
       group_by: Optional list or tuple of properties to group by.
     """
-    # TODO(arfuller): Accept projection=Model.key to mean keys_only.
-    # TODO(arfuller): Consider adding incremental function
-    # group_by_property(*args) and project(*args, distinct=False).
 
-    # Validating input.
+
+
+
+
     if ancestor is not None:
       if isinstance(ancestor, ParameterizedThing):
         if isinstance(ancestor, ParameterizedFunction):
@@ -827,12 +859,15 @@ class Query(object):
           raise ValueError('ancestor cannot be an incomplete key')
         if app is not None:
           if app != ancestor.app():
-            raise TypeError('app/ancestor mismatch')
+            raise TypeError(
+                'app/ancestor mismatch: %r != %r' % (app, ancestor.app()))
         if namespace is None:
           namespace = ancestor.namespace()
         else:
           if namespace != ancestor.namespace():
-            raise TypeError('namespace/ancestor mismatch')
+            raise TypeError(
+                'namespace/ancestor mismatch: %r != %r' % (
+                    namespace, ancestor.namespace()))
     if filters is not None:
       if not isinstance(filters, Node):
         raise TypeError('filters must be a query Node or None; received %r' %
@@ -853,15 +888,15 @@ class Query(object):
           raise TypeError('cannot use projection= and '
                           'default_options.keys_only at the same time')
 
-    self.__kind = kind  # String.
-    self.__ancestor = ancestor  # Key.
-    self.__filters = filters  # None or Node subclass.
-    self.__orders = orders  # None or datastore_query.Order instance.
+    self.__kind = kind
+    self.__ancestor = ancestor
+    self.__filters = filters
+    self.__orders = orders
     self.__app = app
     self.__namespace = namespace
     self.__default_options = default_options
 
-    # Checked late as _check_properties depends on local state.
+
     self.__projection = None
     if projection is not None:
       if not projection:
@@ -871,7 +906,12 @@ class Query(object):
             'projection must be a tuple, list or None; received %r' %
             (projection,))
       self._check_properties(self._to_property_names(projection))
-      self.__projection = tuple(projection)
+
+
+
+      self.__projection = tuple(
+          six.ensure_binary(p) if isinstance(p, six.text_type) else p
+          for p in projection)
 
     self.__group_by = None
     if group_by is not None:
@@ -881,7 +921,12 @@ class Query(object):
         raise TypeError(
             'group_by must be a tuple, list or None; received %r' % (group_by,))
       self._check_properties(self._to_property_names(group_by))
-      self.__group_by = tuple(group_by)
+
+
+
+      self.__group_by = tuple(
+          six.ensure_binary(g) if isinstance(g, six.text_type) else g
+          for g in group_by)
 
   def __repr__(self):
     args = []
@@ -889,8 +934,8 @@ class Query(object):
       args.append('app=%r' % self.app)
     if (self.namespace is not None and
         self.namespace != namespace_manager.get_namespace()):
-      # Only show the namespace if set and not the current namespace.
-      # (This is similar to what Key.__repr__() does.)
+
+
       args.append('namespace=%r' % self.namespace)
     if self.kind is not None:
       args.append('kind=%r' % self.kind)
@@ -899,8 +944,8 @@ class Query(object):
     if self.filters is not None:
       args.append('filters=%r' % self.filters)
     if self.orders is not None:
-      # TODO: Format orders better.
-      args.append('orders=...')  # PropertyOrder doesn't have a good repr().
+
+      args.append('orders=...')
     if self.projection:
       args.append('projection=%r' % (self._to_property_names(self.projection)))
     if self.group_by:
@@ -927,7 +972,7 @@ class Query(object):
                           projection=self.projection, group_by=self.group_by)
 
   def _get_query(self, connection):
-    self.bind()  # Raises an exception if there are unbound parameters.
+    self.bind()
     kind = self.kind
     ancestor = self.ancestor
     if ancestor is not None:
@@ -940,13 +985,14 @@ class Query(object):
     group_by = None
     if self.group_by:
       group_by = self._to_property_names(self.group_by)
-    dsquery = datastore_query.Query(app=self.app,
-                                    namespace=self.namespace,
-                                    kind=kind.decode('utf-8') if kind else None,
-                                    ancestor=ancestor,
-                                    filter_predicate=filters,
-                                    order=self.orders,
-                                    group_by=group_by)
+    dsquery = datastore_query.Query(
+        app=self.app,
+        namespace=self.namespace,
+        kind=six.ensure_text(kind) if kind else None,
+        ancestor=ancestor,
+        filter_predicate=filters,
+        order=self.orders,
+        group_by=group_by)
     if post_filters is not None:
       dsquery = datastore_query._AugmentedQuery(
           dsquery,
@@ -986,7 +1032,7 @@ class Query(object):
 
   @tasklets.tasklet
   def _run_to_list(self, results, options=None):
-    # Internal version of run_to_queue(), without a queue.
+
     ctx = tasklets.get_context()
     conn = ctx._conn
     dsquery = self._get_query(conn)
@@ -1012,7 +1058,7 @@ class Query(object):
   def _maybe_multi_query(self):
     if not self._needs_multi_query():
       return None
-    # Switch to a _MultiQuery.
+
     filters = self.filters
     subqueries = []
     for subfilter in filters:
@@ -1107,7 +1153,7 @@ class Query(object):
 
   def order(self, *args):
     """Return a new Query with additional sort order(s) applied."""
-    # q.order(Employee.name, -Employee.age)
+
     if not args:
       return self
     orders = []
@@ -1134,7 +1180,7 @@ class Query(object):
                           default_options=self.default_options,
                           projection=self.projection, group_by=self.group_by)
 
-  # Datastore API using the default context.
+
 
   def iter(self, **q_options):
     """Construct an iterator over the query.
@@ -1145,7 +1191,7 @@ class Query(object):
     Returns:
       A QueryIterator object.
     """
-    self.bind()  # Raises an exception if there are unbound parameters.
+    self.bind()
     return QueryIterator(self, **q_options)
 
   __iter__ = iter
@@ -1233,7 +1279,7 @@ class Query(object):
     q_options.setdefault('batch_size', limit)
     if self._needs_multi_query():
       return self.map_async(None, **q_options)
-    # Optimization using direct batches.
+
     options = self._make_options(q_options)
     qry = self._fix_namespace()
     return qry._run_to_list([], options=options)
@@ -1298,7 +1344,7 @@ class Query(object):
   @tasklets.tasklet
   def _count_async(self, limit=None, **q_options):
     """Internal version of count_async()."""
-    # TODO: Support offset by incorporating it to the limit.
+
     if 'offset' in q_options:
       raise NotImplementedError('.count() and .count_async() do not support '
                                 'offsets at present.')
@@ -1308,17 +1354,17 @@ class Query(object):
     elif limit is None:
       limit = _MAX_LIMIT
     if self._needs_multi_query():
-      # _MultiQuery does not support iterating over result batches,
-      # so just fetch results and count them.
-      # TODO: Use QueryIterator to avoid materializing the results list.
+
+
+
       q_options.setdefault('batch_size', limit)
       q_options.setdefault('keys_only', True)
       results = yield self.fetch_async(limit, **q_options)
       raise tasklets.Return(len(results))
 
-    # Issue a special query requesting 0 results at a given offset.
-    # The skipped_results count will tell us how many hits there were
-    # before that offset without fetching the items.
+
+
+
     q_options['offset'] = limit
     q_options['limit'] = 0
     options = self._make_options(q_options)
@@ -1358,7 +1404,7 @@ class Query(object):
       returned, and more is a bool indicating whether there are
       (likely) more results after that.
     """
-    # NOTE: page_size can't be passed as a keyword.
+
     return self.fetch_page_async(page_size, **q_options).get_result()
 
   @utils.positional(2)
@@ -1378,7 +1424,7 @@ class Query(object):
     it = self.iter(limit=page_size + 1, **q_options)
     results = []
     while (yield it.has_next_async()):
-      results.append(it.next())
+      results.append(next(it))
       if len(results) >= page_size:
         break
     try:
@@ -1406,7 +1452,7 @@ class Query(object):
     if not (q_options or self.__projection):
       return self.default_options
     if 'options' in q_options:
-      # Move 'options' to 'config' since that is what QueryOptions() uses.
+
       if 'config' in q_options:
         raise TypeError('You cannot use config= and options= at the same time')
       q_options['config'] = q_options.pop('options')
@@ -1414,18 +1460,18 @@ class Query(object):
       try:
         q_options['projection'] = self._to_property_names(
             q_options['projection'])
-      except TypeError, e:
+      except TypeError as e:
         raise datastore_errors.BadArgumentError(e)
       self._check_properties(q_options['projection'])
     options = QueryOptions(**q_options)
 
-    # Populate projection if it hasn't been overridden.
+
     if (options.keys_only is None and
         options.projection is None and
         self.__projection):
       options = QueryOptions(
           projection=self._to_property_names(self.__projection), config=options)
-    # Populate default options
+
     if self.default_options is not None:
       options = self.default_options.merge(options)
 
@@ -1433,10 +1479,10 @@ class Query(object):
 
   def _to_property_names(self, properties):
     if not isinstance(properties, (list, tuple)):
-      properties = [properties]  # It will be type-checked below.
+      properties = [properties]
     fixed = []
     for proj in properties:
-      if isinstance(proj, basestring):
+      if isinstance(proj, (six.text_type, six.binary_type)):
         fixed.append(proj)
       elif isinstance(proj, model.Property):
         fixed.append(proj._name)
@@ -1465,7 +1511,13 @@ class Query(object):
     filters = self.filters
     if filters is not None:
       filters = filters.resolve(bindings, used)
-    return sorted(used)  # Returns only the keys.
+
+
+
+    if six.PY2:
+      return sorted(used)
+    else:
+      return sorted(used, key=functools.cmp_to_key(cmp_compat.cmp))
 
   def bind(self, *args, **kwds):
     """Bind parameter values.  Returns a new Query object."""
@@ -1484,7 +1536,7 @@ class Query(object):
     if filters is not None:
       filters = filters.resolve(bindings, used)
     unused = []
-    for i in xrange(1, 1 + len(args)):
+    for i in range(1, 1 + len(args)):
       if i not in used:
         unused.append(i)
     if unused:
@@ -1525,24 +1577,27 @@ def _gql(query_string, query_class=Query):
   Returns:
     An instance of query_class.
   """
-  from .google_imports import gql  # Late import, to avoid name conflict.
+
+
+  from google.appengine.ext import gql
+
   gql_qry = gql.GQL(query_string)
   kind = gql_qry.kind()
   if kind is None:
-    # The query must be lacking a "FROM <kind>" class.  Let Expando
-    # stand in for the model class (it won't actually be used to
-    # construct the results).
+
+
+
     modelclass = model.Expando
   else:
     modelclass = model.Model._lookup_model(
         kind,
         tasklets.get_context()._conn.adapter.default_model)
-    # Adjust kind to the kind of the model class.
+
     kind = modelclass._get_kind()
   ancestor = None
   flt = gql_qry.filters()
   filters = list(modelclass._default_filters())
-  for name_op in sorted(flt):
+  for name_op in sorted(flt, key=functools.cmp_to_key(cmp_compat.cmp)):
     name, op = name_op
     values = flt[name_op]
     op = op.lower()
@@ -1557,7 +1612,7 @@ def _gql(query_string, query_class=Query):
     for (func, args) in values:
       val = _args_to_val(func, args)
       prop = _get_prop_from_modelclass(modelclass, name)
-      if prop._name != name:
+      if six.ensure_text(prop._name) != name:
         raise RuntimeError('Whoa! _get_prop_from_modelclass(%s, %r) '
                            'returned a property whose name is %r?!' %
                            (modelclass.__name__, name, prop._name))
@@ -1596,7 +1651,7 @@ def _gql(query_string, query_class=Query):
   return qry
 
 
-class QueryIterator(object):
+class QueryIterator(six.Iterator):
   """This iterator works both for synchronous and async callers!
 
   For synchronous callers, just use:
@@ -1633,18 +1688,18 @@ class QueryIterator(object):
   options.
   """
 
-  # Information from the current result.
+
   _cursor_before = _cursor_after = (
       datastore_errors.BadArgumentError('There is no cursor currently'))
 
-  # Information from the current batch.
+
   _index_list = None
-  # More results is true if the current batch has more results. A query result
-  # may be made of multiple batches from multiple queries, so this field may
-  # be false even if there are more results.
+
+
+
   _more_results = None
 
-  # Indicate the loop is exhausted.
+
   _exhausted = False
 
   @utils.positional(2)
@@ -1666,27 +1721,27 @@ class QueryIterator(object):
     if self._exhausted:
       raise RuntimeError('QueryIterator is already exhausted')
 
-    # If the batch is None we cannot get any extra information.
-    # This is the case for _MultiQuery.
+
+
     if batch is None:
       return (ent, None, None, None)
 
     if self._index_list is None:
       self._index_list = getattr(batch, 'index_list', None)
 
-    # more_results is True if we are mid-batch or at the end of a batch and
-    # the batch reports that there are more batches.
+
+
     more_results = index + 1 < len(batch.results) or batch.more_results
 
     before_cursor = None
     after_cursor = None
     try:
       before_cursor = batch.cursor(index)
-    except BaseException, e:
+    except BaseException as e:
       before_cursor = e
     try:
       after_cursor = batch.cursor(index + 1)
-    except BaseException, e:
+    except BaseException as e:
       after_cursor = e
     return (ent, before_cursor, after_cursor, more_results)
 
@@ -1747,15 +1802,17 @@ class QueryIterator(object):
     - Forcing produce_cursors=False makes this always return None.
     - This always returns None for a multi-query.
     """
-    # TODO: Technically it is possible to implement this for
-    # multi-query by merging all the index lists from each subquery.
-    # Return None if the batch has no attribute index_list.
-    # This also applies when the batch itself is None.
+
+
+
+
     return self._index_list
+
 
   def __iter__(self):
     """Iterator protocol: get the iterator for this iterator, i.e. self."""
     return self
+
 
   def probably_has_next(self):
     """Return whether a next item is (probably) available.
@@ -1765,10 +1822,10 @@ class QueryIterator(object):
     some cases (e.g. when the query has a post_filter) we can get a
     false positive (returns True but next() will raise StopIteration).
     There are no false negatives."""
-    # Due to the fact that _MultiQuery batches incorrectly report more_results,
-    # _more_results may be False even if there are more results. Likewise due
-    # to post filtering, _more_results may be True even if next() would throw
-    # an exception.
+
+
+
+
     if self._more_results:
       return True
     return self.has_next()
@@ -1795,15 +1852,15 @@ class QueryIterator(object):
       flag = False
     raise tasklets.Return(flag)
 
-  def next(self):
+  def __next__(self):
     """Iterator protocol: get next item or raise StopIteration."""
     if self._fut is None:
       self._fut = self._iter.getq()
     try:
       try:
-        # The future result is set by this class's _extended_callback
-        # method.
-        # pylint: disable=unpacking-non-sequence
+
+
+
         (ent,
          self._cursor_before,
          self._cursor_after,
@@ -1816,6 +1873,7 @@ class QueryIterator(object):
       self._fut = None
 
 
+@cmp_compat.total_ordering_from_cmp
 class _SubQueryIteratorState(object):
   """Helper class for _MultiQuery."""
 
@@ -1842,8 +1900,8 @@ class _SubQueryIteratorState(object):
     lhs_filter = self.dsquery.filter_predicate
     rhs_filter = other.dsquery.filter_predicate
     names = self.orders._get_prop_names()
-    # TODO: In some future version, there won't be a need to add the
-    # filters' names.
+
+
     if lhs_filter is not None:
       names |= lhs_filter._get_prop_names()
     if rhs_filter is not None:
@@ -1860,16 +1918,16 @@ class _SubQueryIteratorState(object):
 class _MultiQuery(object):
   """Helper class to run queries involving !=, IN or OR operators."""
 
-  # This is not instantiated by the user directly, but implicitly when
-  # iterating over a query with at least one filter using an IN, OR or
-  # != operator.  Note that some options must be interpreted by
-  # _MultiQuery instead of passed to the underlying Queries' methods,
-  # e.g. offset (though not necessarily limit, and I'm not sure about
-  # cursors).
 
-  # TODO: Need a way to specify the unification of two queries that
-  # are identical except one has an ancestor and the other doesn't.
-  # Cloud Datastore makes that a useful special case.
+
+
+
+
+
+
+
+
+
 
   def __init__(self, subqueries):
     if not isinstance(subqueries, list):
@@ -1890,10 +1948,10 @@ class _MultiQuery(object):
       elif subq.orders != orders:
         raise ValueError('Subqueries must have the same order(s) (%s != %s)' %
                          (subq.orders, orders))
-    # TODO: Ensure that app and namespace match, when we support them.
+
     self.__subqueries = subqueries
     self.__orders = orders
-    self.ancestor = None  # Hack for map_query().
+    self.ancestor = None
 
   def _make_options(self, q_options):
     return self.__subqueries[0].default_options
@@ -1910,17 +1968,17 @@ class _MultiQuery(object):
   def run_to_queue(self, queue, conn, options=None):
     """Run this query, putting entities into the given queue."""
     if options is None:
-      # Default options.
+
       offset = None
       limit = None
       keys_only = None
     else:
-      # Capture options we need to simulate.
+
       offset = options.offset
       limit = options.limit
       keys_only = options.keys_only
 
-      # Cursors are supported for certain orders only.
+
       if (options.start_cursor or options.end_cursor or
           options.produce_cursors):
         names = set()
@@ -1930,13 +1988,13 @@ class _MultiQuery(object):
           raise datastore_errors.BadArgumentError(
               '_MultiQuery with cursors requires __key__ order')
 
-    # Decide if we need to modify the options passed to subqueries.
-    # NOTE: It would seem we can sometimes let Cloud Datastore handle
-    # the offset natively, but this would thwart the duplicate key
-    # detection, so we always have to emulate the offset here.
-    # We can set the limit we pass along to offset + limit though,
-    # since that is the maximum number of results from a single
-    # subquery we will ever have to consider.
+
+
+
+
+
+
+
     modifiers = {}
     if offset:
       modifiers['offset'] = None
@@ -1954,7 +2012,7 @@ class _MultiQuery(object):
       limit = _MAX_LIMIT
 
     if self.__orders is None:
-      # Run the subqueries sequentially; there is no order to keep.
+
       keys_seen = set()
       for subq in self.__subqueries:
         if limit <= 0:
@@ -1980,20 +2038,20 @@ class _MultiQuery(object):
       queue.complete()
       return
 
-    # This with-statement causes the adapter to set _orig_pb on all
-    # entities it converts from protobuf.
-    # TODO: Does this interact properly with the cache?
+
+
+
     with conn.adapter:
-      # Start running all the sub-queries.
-      todo = []  # List of (subit, dsquery) tuples.
+
+      todo = []
       for subq in self.__subqueries:
         dsquery = subq._get_query(conn)
         subit = tasklets.SerialQueueFuture('_MultiQuery.run_to_queue[par]')
         subq.run_to_queue(subit, conn, options=options, dsquery=dsquery)
         todo.append((subit, dsquery))
 
-      # Create a list of (first-entity, subquery-iterator) tuples.
-      state = []  # List of _SubQueryIteratorState instances.
+
+      state = []
       for subit, dsquery in todo:
         try:
           thing = yield subit.getq()
@@ -2003,20 +2061,20 @@ class _MultiQuery(object):
           state.append(_SubQueryIteratorState(thing, subit, dsquery,
                                               self.__orders))
 
-      # Now turn it into a sorted heap.  The heapq module claims that
-      # calling heapify() is more efficient than calling heappush() for
-      # each item.
+
+
+
       heapq.heapify(state)
 
-      # Repeatedly yield the lowest entity from the state vector,
-      # filtering duplicates.  This is essentially a multi-way merge
-      # sort.  One would think it should be possible to filter
-      # duplicates simply by dropping other entities already in the
-      # state vector that are equal to the lowest entity, but because of
-      # the weird sorting of repeated properties, we have to explicitly
-      # keep a set of all keys, so we can remove later occurrences.
-      # Note that entities will still be sorted correctly, within the
-      # constraints given by the sort order.
+
+
+
+
+
+
+
+
+
       keys_seen = set()
       while state and limit > 0:
         item = heapq.heappop(state)
@@ -2046,23 +2104,23 @@ class _MultiQuery(object):
           heapq.heappush(state, item)
       queue.complete()
 
-  # Datastore API using the default context.
+
 
   def iter(self, **q_options):
     return QueryIterator(self, **q_options)
 
   __iter__ = iter
 
-  # TODO: Add fetch() etc.?
 
 
-# Helper functions to convert between orders and orderings.  An order
-# is a datastore_query.Order instance.  An ordering is a
-# (property_name, direction) tuple.
+
+
+
+
 
 def _order_to_ordering(order):
   pb = order._to_pb()
-  return pb.property(), pb.direction()  # TODO: What about UTF-8?
+  return pb.property, pb.direction
 
 
 def _orders_to_orderings(orders):
@@ -2071,15 +2129,15 @@ def _orders_to_orderings(orders):
   if isinstance(orders, datastore_query.PropertyOrder):
     return [_order_to_ordering(orders)]
   if isinstance(orders, datastore_query.CompositeOrder):
-    # TODO: What about UTF-8?
-    return [(pb.property(), pb.direction()) for pb in orders._to_pbs()]
+
+    return [(pb.property, pb.direction) for pb in orders._to_pbs()]
   raise ValueError('Bad order: %r' % (orders,))
 
 
 def _ordering_to_order(ordering, modelclass):
   name, direction = ordering
   prop = _get_prop_from_modelclass(modelclass, name)
-  if prop._name != name:
+  if six.ensure_text(prop._name) != name:
     raise RuntimeError('Whoa! _get_prop_from_modelclass(%s, %r) '
                        'returned a property whose name is %r?!' %
                        (modelclass.__name__, name, prop._name))

@@ -21,14 +21,10 @@
 QueueInfo is a library for working with QueueInfo records, describing task queue
 entries for an application. QueueInfo loads the records from `queue.yaml`. To
 learn more about the parameters you can specify in `queue.yaml`, review the
-`queue.yaml reference guide`_.
-
-.. _queue.yaml reference guide:
+`queue.yaml` reference guide:
    https://cloud.google.com/appengine/docs/python/config/queueref
 """
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
 
 
 
@@ -36,24 +32,12 @@ from __future__ import unicode_literals
 
 
 
-import os
-
-
-if os.environ.get('APPENGINE_RUNTIME') == 'python27':
-  from google.appengine.api import appinfo
-  from google.appengine.api import validation
-  from google.appengine.api import yaml_builder
-  from google.appengine.api import yaml_listener
-  from google.appengine.api import yaml_object
-  from google.appengine.api.taskqueue import taskqueue_service_pb
-else:
-  from google.appengine.api import appinfo
-  from google.appengine.api import validation
-  from google.appengine.api import yaml_builder
-  from google.appengine.api import yaml_listener
-  from google.appengine.api import yaml_object
-  from google.appengine.api.taskqueue import taskqueue_service_pb
-
+from google.appengine.api import appinfo
+from google.appengine.api import validation
+from google.appengine.api import yaml_builder
+from google.appengine.api import yaml_listener
+from google.appengine.api import yaml_object
+from google.appengine.api.taskqueue import taskqueue_service_bytes_pb2 as taskqueue_service_pb2
 
 
 _NAME_REGEX = r'^[A-Za-z0-9-]{0,499}$'
@@ -158,6 +142,7 @@ def LoadSingleQueue(queue_info, open_fn=None):
   Returns:
     A `QueueInfoExternal` object.
   """
+  del open_fn
   builder = yaml_object.ObjectBuilder(QueueInfoExternal)
   handler = yaml_builder.BuilderHandler(builder)
   listener = yaml_listener.EventListener(handler)
@@ -186,7 +171,7 @@ def ParseRate(rate):
   Raises:
     MalformedQueueConfiguration: If the rate is invalid.
   """
-  if rate == "0":
+  if rate == '0':
     return 0.0
   elements = rate.split('/')
   if len(elements) != 2:
@@ -216,6 +201,7 @@ def ParseTotalStorageLimit(limit):
   """Parses a string representing the storage bytes limit.
 
   Optional limit suffixes are:
+
       - `B` (bytes)
       - `K` (kilobytes)
       - `M` (megabytes)
@@ -255,8 +241,9 @@ def ParseTotalStorageLimit(limit):
 def ParseTaskAgeLimit(age_limit):
   """Parses a string representing the task's age limit (maximum allowed age).
 
-  The string must be a non-negative integer or floating point number followed by
-  one of `s`, `m`, `h`, or `d` (seconds, minutes, hours, or days, respectively).
+  The string must be a non-negative integer or floating point number followed
+  by one of `s`, `m`, `h`, or `d` (seconds, minutes, hours, or days,
+  respectively).
 
   Args:
     age_limit: The string that contains the task age limit.
@@ -267,12 +254,12 @@ def ParseTaskAgeLimit(age_limit):
   Raises:
     MalformedQueueConfiguration: If the limit argument isn't a valid Python
         double followed by a required suffix.
- """
+  """
   age_limit = age_limit.strip()
   if not age_limit:
     raise MalformedQueueConfiguration('Task Age Limit must not be empty.')
   unit = age_limit[-1]
-  if unit not in "smhd":
+  if unit not in 'smhd':
     raise MalformedQueueConfiguration('Task Age_Limit must be in s (seconds), '
                                       'm (minutes), h (hours), or d (days)')
   try:
@@ -299,60 +286,62 @@ def TranslateRetryParameters(retry):
         describes the queue's retry parameters.
 
   Returns:
-    A `taskqueue_service_pb.TaskQueueRetryParameters` proto populated with the
+    A `taskqueue_service_pb2.TaskQueueRetryParameters` proto populated with the
     data from `retry`.
 
   Raises:
     MalformedQueueConfiguration: If the retry parameters are invalid.
   """
-  params = taskqueue_service_pb.TaskQueueRetryParameters()
+  params = taskqueue_service_pb2.TaskQueueRetryParameters()
   if retry.task_retry_limit is not None:
-    params.set_retry_limit(int(retry.task_retry_limit))
+    params.retry_limit = int(retry.task_retry_limit)
   if retry.task_age_limit is not None:
 
-    params.set_age_limit_sec(ParseTaskAgeLimit(retry.task_age_limit))
+    params.age_limit_sec = ParseTaskAgeLimit(retry.task_age_limit)
   if retry.min_backoff_seconds is not None:
-    params.set_min_backoff_sec(float(retry.min_backoff_seconds))
+    params.min_backoff_sec = float(retry.min_backoff_seconds)
   if retry.max_backoff_seconds is not None:
-    params.set_max_backoff_sec(float(retry.max_backoff_seconds))
+    params.max_backoff_sec = float(retry.max_backoff_seconds)
   if retry.max_doublings is not None:
-    params.set_max_doublings(int(retry.max_doublings))
+    params.max_doublings = int(retry.max_doublings)
 
 
 
 
 
-  if params.has_min_backoff_sec() and not params.has_max_backoff_sec():
-    if params.min_backoff_sec() > params.max_backoff_sec():
-      params.set_max_backoff_sec(params.min_backoff_sec())
+  if params.HasField(
+      'min_backoff_sec') and not params.HasField('max_backoff_sec'):
+    if params.min_backoff_sec > params.max_backoff_sec:
+      params.max_backoff_sec = params.min_backoff_sec
 
-  if not params.has_min_backoff_sec() and params.has_max_backoff_sec():
-    if params.min_backoff_sec() > params.max_backoff_sec():
-      params.set_min_backoff_sec(params.max_backoff_sec())
+  if not params.HasField('min_backoff_sec') and params.HasField(
+      'max_backoff_sec'):
+    if params.min_backoff_sec > params.max_backoff_sec:
+      params.min_backoff_sec = params.max_backoff_sec
 
 
-  if params.has_retry_limit() and params.retry_limit() < 0:
+  if params.HasField('retry_limit') and params.retry_limit < 0:
     raise MalformedQueueConfiguration(
         'Task retry limit must not be less than zero.')
 
-  if params.has_age_limit_sec() and not params.age_limit_sec() > 0:
+  if params.HasField('age_limit_sec') and not params.age_limit_sec > 0:
     raise MalformedQueueConfiguration(
         'Task age limit must be greater than zero.')
 
-  if params.has_min_backoff_sec() and params.min_backoff_sec() < 0:
+  if params.HasField('min_backoff_sec') and params.min_backoff_sec < 0:
     raise MalformedQueueConfiguration(
         'Min backoff seconds must not be less than zero.')
 
-  if params.has_max_backoff_sec() and params.max_backoff_sec() < 0:
+  if params.HasField('max_backoff_sec') and params.max_backoff_sec < 0:
     raise MalformedQueueConfiguration(
         'Max backoff seconds must not be less than zero.')
 
-  if params.has_max_doublings() and params.max_doublings() < 0:
+  if params.HasField('max_doublings') and params.max_doublings < 0:
     raise MalformedQueueConfiguration(
         'Max doublings must not be less than zero.')
 
-  if (params.has_min_backoff_sec() and params.has_max_backoff_sec() and
-      params.min_backoff_sec() > params.max_backoff_sec()):
+  if params.HasField('min_backoff_sec') and params.HasField(
+      'max_backoff_sec') and params.min_backoff_sec > params.max_backoff_sec:
     raise MalformedQueueConfiguration(
         'Min backoff sec must not be greater than than max backoff sec.')
 

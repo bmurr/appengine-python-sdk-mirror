@@ -34,11 +34,11 @@ __all__ = ['start_new_background_thread',
           ]
 
 import collections
-import sys
 import threading
+import six
 
 from google.appengine.api import apiproxy_stub_map
-from google.appengine.api.system import system_service_pb
+from google.appengine.api.system import system_service_pb2
 from google.appengine.runtime import apiproxy_errors
 from google.appengine.runtime import background
 
@@ -55,9 +55,9 @@ class BackgroundThreadLimitReachedError(Error):
   """Error raised when no further active background threads can be created."""
 
 ERROR_MAP = collections.defaultdict(lambda: Error, {
-    system_service_pb.SystemServiceError.BACKEND_REQUIRED:
+    system_service_pb2.SystemServiceError.BACKEND_REQUIRED:
     FrontendsNotSupported,
-    system_service_pb.SystemServiceError.LIMIT_REACHED:
+    system_service_pb2.SystemServiceError.LIMIT_REACHED:
     BackgroundThreadLimitReachedError,
 })
 
@@ -78,8 +78,8 @@ def start_new_background_thread(target, args, kwargs=None):
 
   if kwargs is None:
     kwargs = {}
-  request = system_service_pb.StartBackgroundRequestRequest()
-  response = system_service_pb.StartBackgroundRequestResponse()
+  request = system_service_pb2.StartBackgroundRequestRequest()
+  response = system_service_pb2.StartBackgroundRequestResponse()
   try:
     apiproxy_stub_map.MakeSyncCall('system', 'StartBackgroundRequest', request,
                                    response)
@@ -87,7 +87,7 @@ def start_new_background_thread(target, args, kwargs=None):
     raise ERROR_MAP[error.application_error](error.error_detail)
   else:
     return background.EnqueueBackgroundThread(
-        response.request_id(),
+        response.request_id,
         target,
         args,
         kwargs)
@@ -96,44 +96,56 @@ def start_new_background_thread(target, args, kwargs=None):
 class BackgroundThread(threading.Thread):
   """A threading.Thread-like interface for background threads."""
 
+  if six.PY2:
+
+    def _bootstrap(self):
+      self._Thread__bootstrap()
+
+    @property
+    def _initialized(self):
+      return self._Thread__initialized
+
+    @property
+    def _started(self):
+      return self._Thread__started
+
+  else:
+
+    def _bootstrap(self):
+      try:
+        super(BackgroundThread, self)._bootstrap()
+      finally:
+
+
+        if self._tstate_lock:
+          self._tstate_lock.release()
+
+    def _set_tstate_lock(self):
+      """Use threading.Lock instead of calling _set_sentinel().
+
+      Because it's not a real thread, _set_sentinel() will create a lock that
+      will never be released automatically and moreover it will break such lock
+      for real thread that executing this one.
+      """
+      self._tstate_lock = threading.Lock()
+      self._tstate_lock.acquire()
+
+
+
+
   def start(self):
     """Starts this background thread."""
-    if not self._Thread__initialized:
+    if not self._initialized:
       raise RuntimeError('thread.__init__() not called')
-    if self._Thread__started.is_set():
+
+    if self._started.is_set():
       raise RuntimeError('threads can only be started once')
     with threading._active_limbo_lock:
       threading._limbo[self] = self
     try:
-      start_new_background_thread(self.__bootstrap, ())
+      start_new_background_thread(self._bootstrap, ())
     except Exception:
       with threading._active_limbo_lock:
         del threading._limbo[self]
       raise
-    self._Thread__started.wait()
-
-  def __bootstrap(self):
-    try:
-      self._set_ident()
-      self._Thread__started.set()
-      threading._active_limbo_lock.acquire()
-      threading._active[self._Thread__ident] = self
-      del threading._limbo[self]
-      threading._active_limbo_lock.release()
-
-      if threading._trace_hook:
-        sys.settrace(threading._trace_hook)
-      if threading._profile_hook:
-        sys.setprofile(threading._profile_hook)
-
-      try:
-        self.run()
-      finally:
-        self._Thread__exc_clear()
-    finally:
-      with threading._active_limbo_lock:
-        self._Thread__stop()
-        try:
-          del threading._active[threading._get_ident()]
-        except:
-          pass
+    self._started.wait()
