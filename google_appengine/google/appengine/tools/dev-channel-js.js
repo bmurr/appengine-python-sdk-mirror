@@ -1313,7 +1313,6 @@ goog.LOAD_MODULE_USING_EVAL = !0;
 goog.SEAL_MODULE_EXPORTS = goog.DEBUG;
 goog.loadedModules_ = {};
 goog.DEPENDENCIES_ENABLED = !1;
-goog.TRANSPILE = "detect";
 goog.ASSUME_ES_MODULES_TRANSPILED = !1;
 goog.TRUSTED_TYPES_POLICY_NAME = "goog";
 goog.hasBadLetScoping = null;
@@ -4612,13 +4611,7 @@ goog.html.SafeHtml = module$contents$goog$html$SafeHtml_SafeHtml;
 function module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(valueOf) {
   return {valueOf:valueOf}.valueOf();
 }
-;var module$exports$goog$html$internals = {};
-module$exports$goog$html$internals.createSafeHtml = module$contents$goog$html$SafeHtml_SafeHtml.createSafeHtmlSecurityPrivateDoNotAccessOrElse;
-module$exports$goog$html$internals.createSafeStyle = module$contents$goog$html$SafeStyle_SafeStyle.createSafeStyleSecurityPrivateDoNotAccessOrElse;
-module$exports$goog$html$internals.createSafeStyleSheet = module$contents$goog$html$SafeStyleSheet_SafeStyleSheet.createSafeStyleSheetSecurityPrivateDoNotAccessOrElse;
-module$exports$goog$html$internals.createSafeUrl = goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse;
-module$exports$goog$html$internals.createTrustedResourceUrl = goog.html.TrustedResourceUrl.createTrustedResourceUrlSecurityPrivateDoNotAccessOrElse;
-function module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(value) {
+;function module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(value) {
   return goog.html.TrustedResourceUrl.unwrapTrustedScriptURL(value);
 }
 ;var $jscomp$templatelit$m425881384$5 = $jscomp.createTemplateTagFirstArg([""]), $jscomp$templatelit$m425881384$6 = $jscomp.createTemplateTagFirstArgWithRaw(["\x00"], ["\\0"]), $jscomp$templatelit$m425881384$7 = $jscomp.createTemplateTagFirstArgWithRaw(["\n"], ["\\n"]), $jscomp$templatelit$m425881384$8 = $jscomp.createTemplateTagFirstArgWithRaw(["\x00"], ["\\u0000"]), $jscomp$templatelit$m425881384$9 = $jscomp.createTemplateTagFirstArg([""]), $jscomp$templatelit$m425881384$10 = $jscomp.createTemplateTagFirstArgWithRaw(["\x00"], 
@@ -4836,10 +4829,12 @@ function module$contents$google3$third_party$javascript$safevalues$internals$sec
   }
 }
 module$exports$google3$third_party$javascript$safevalues$internals$secrets.ensureTokenIsValid = module$contents$google3$third_party$javascript$safevalues$internals$secrets_ensureTokenIsValid;
+var module$exports$goog$html$safehtml_internals_for_safevalues = {};
+module$exports$goog$html$safehtml_internals_for_safevalues.createSafeHtml = module$contents$goog$html$SafeHtml_SafeHtml.createSafeHtmlSecurityPrivateDoNotAccessOrElse;
 var module$exports$google3$third_party$javascript$safevalues$internals$html_impl = {};
 module$exports$google3$third_party$javascript$safevalues$internals$html_impl.SafeHtml = module$contents$goog$html$SafeHtml_SafeHtml;
 function module$contents$google3$third_party$javascript$safevalues$internals$html_impl_createHtmlInternal(html) {
-  return (0,module$exports$goog$html$internals.createSafeHtml)(html);
+  return (0,module$exports$goog$html$safehtml_internals_for_safevalues.createSafeHtml)(html);
 }
 module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal = module$contents$google3$third_party$javascript$safevalues$internals$html_impl_createHtmlInternal;
 module$exports$google3$third_party$javascript$safevalues$internals$html_impl.EMPTY_HTML = module$contents$goog$html$SafeHtml_SafeHtml.EMPTY;
@@ -4851,6 +4846,8 @@ function module$contents$google3$third_party$javascript$safevalues$internals$htm
   return module$contents$goog$html$SafeHtml_SafeHtml.unwrapTrustedHTML(value);
 }
 module$exports$google3$third_party$javascript$safevalues$internals$html_impl.unwrapHtml = module$contents$google3$third_party$javascript$safevalues$internals$html_impl_unwrapHtml;
+var module$exports$goog$html$safestylesheet_internals_for_safevalues = {};
+module$exports$goog$html$safestylesheet_internals_for_safevalues.createSafeStyleSheet = module$contents$goog$html$SafeStyleSheet_SafeStyleSheet.createSafeStyleSheetSecurityPrivateDoNotAccessOrElse;
 function module$contents$google3$third_party$javascript$safevalues$internals$style_sheet_impl_unwrapStyleSheet(value) {
   return module$contents$goog$html$SafeStyleSheet_SafeStyleSheet.unwrap(value);
 }
@@ -4873,7 +4870,7 @@ function module$contents$google3$third_party$javascript$safevalues$builders$styl
     var styleSheetRule = styleSheet.cssRules[0];
     if (styleSheetRule instanceof CSSStyleRule) {
       var styleSheetValue = styleSheetRule.cssText;
-      return (0,module$exports$goog$html$internals.createSafeStyleSheet)(styleSheetValue.replace(/</g, "\\3C "));
+      return (0,module$exports$goog$html$safestylesheet_internals_for_safevalues.createSafeStyleSheet)(styleSheetValue.replace(/</g, "\\3C "));
     }
     if (goog.DEBUG) {
       throw Error("safeStyleRule can be used to construct a CSSStyleRule. @-rules should be constructed with the safeStyleSheet builder. Tried to parse: " + stringifiedRule);
@@ -4887,11 +4884,11 @@ function module$contents$google3$third_party$javascript$safevalues$builders$styl
   if (goog.DEBUG && /</.test(styleSheet)) {
     throw Error("'<' character is forbidden in styleSheet string: " + styleSheet);
   }
-  return (0,module$exports$goog$html$internals.createSafeStyleSheet)(styleSheet);
+  return (0,module$exports$goog$html$safestylesheet_internals_for_safevalues.createSafeStyleSheet)(styleSheet);
 }
 module$exports$google3$third_party$javascript$safevalues$builders$style_sheet_builders.safeStyleSheet = module$contents$google3$third_party$javascript$safevalues$builders$style_sheet_builders_safeStyleSheet;
 function module$contents$google3$third_party$javascript$safevalues$builders$style_sheet_builders_concatStyleSheets(sheets) {
-  return (0,module$exports$goog$html$internals.createSafeStyleSheet)(sheets.map(module$contents$google3$third_party$javascript$safevalues$internals$style_sheet_impl_unwrapStyleSheet).join(""));
+  return (0,module$exports$goog$html$safestylesheet_internals_for_safevalues.createSafeStyleSheet)(sheets.map(module$contents$google3$third_party$javascript$safevalues$internals$style_sheet_impl_unwrapStyleSheet).join(""));
 }
 module$exports$google3$third_party$javascript$safevalues$builders$style_sheet_builders.concatStyleSheets = module$contents$google3$third_party$javascript$safevalues$builders$style_sheet_builders_concatStyleSheets;
 var module$exports$google3$third_party$javascript$safevalues$internals$script_impl = {}, module$contents$google3$third_party$javascript$safevalues$internals$script_impl_trustedTypes = goog.global.trustedTypes;
@@ -4928,6 +4925,8 @@ function module$contents$google3$third_party$javascript$safevalues$internals$scr
   throw Error(message);
 }
 module$exports$google3$third_party$javascript$safevalues$internals$script_impl.unwrapScript = module$contents$google3$third_party$javascript$safevalues$internals$script_impl_unwrapScript;
+var module$exports$goog$html$safestyle_internals_for_safevalues = {};
+module$exports$goog$html$safestyle_internals_for_safevalues.createSafeStyle = module$contents$goog$html$SafeStyle_SafeStyle.createSafeStyleSecurityPrivateDoNotAccessOrElse;
 var module$exports$google3$third_party$javascript$safevalues$builders$html_builders = {};
 function module$contents$google3$third_party$javascript$safevalues$builders$html_builders_htmlEscape(value, options) {
   options = void 0 === options ? {} : options;
@@ -5398,7 +5397,7 @@ function module$contents$google3$third_party$javascript$safevalues$restricted$re
 }
 function module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_styleSheetSafeByReview(stylesheet, options) {
   goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_assertValidJustification(options.justification);
-  return (0,module$exports$goog$html$internals.createSafeStyleSheet)(stylesheet);
+  return (0,module$exports$goog$html$safestylesheet_internals_for_safevalues.createSafeStyleSheet)(stylesheet);
 }
 function module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_urlSafeByReview(url, options) {
   goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_assertValidJustification(options.justification);
@@ -5406,7 +5405,7 @@ function module$contents$google3$third_party$javascript$safevalues$restricted$re
 }
 function module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_styleSafeByReview(style, options) {
   goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_assertValidJustification(options.justification);
-  return (0,module$exports$goog$html$internals.createSafeStyle)(style);
+  return (0,module$exports$goog$html$safestyle_internals_for_safevalues.createSafeStyle)(style);
 }
 ;safevalues.restricted = {};
 safevalues.restricted.reviewed = {};
@@ -6418,7 +6417,7 @@ function module$contents$google3$third_party$javascript$safevalues$dom$globals$f
           return $jscomp$generator$context$1153895636$5.yield(response.text(), 2);
         }
         text = $jscomp$generator$context$1153895636$5.yieldResult;
-        return $jscomp$generator$context$1153895636$5.return((0,module$exports$goog$html$internals.createSafeStyleSheet)(text));
+        return $jscomp$generator$context$1153895636$5.return((0,module$exports$goog$html$safestylesheet_internals_for_safevalues.createSafeStyleSheet)(text));
       });
     }});
   });
