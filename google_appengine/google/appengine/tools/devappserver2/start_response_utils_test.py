@@ -16,8 +16,6 @@
 #
 """Tests for google.apphosting.tools.devappserver2.start_response_utils."""
 
-
-
 import unittest
 
 import google

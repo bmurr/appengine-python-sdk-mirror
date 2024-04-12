@@ -39,8 +39,6 @@ port number created in http_runtime.py as an environment variable to the runtime
 process.
 """
 
-
-
 import base64
 import logging
 import os
@@ -444,9 +442,7 @@ class HttpRuntimeProxy(instance.RuntimeProxy):
     # _stderr_tee may be pre-set by unit tests.
     if self._stderr_tee is None:
       assert self._process is not None
-      self._stderr_tee = tee.Tee(
-          self._process.stderr, sys.stderr if six.PY2 else sys.stderr.buffer
-      )
+      self._stderr_tee = tee.Tee(self._process.stderr, sys.stderr.buffer)
       self._stderr_tee.start()
 
     error = None

@@ -16,26 +16,19 @@
 #
 """Tests for devappserver2.admin.taskqueue_queues_handler."""
 
-
-
 import unittest
 
 import google
-import mox
-from google.appengine._internal import six
-import webapp2
 
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api.taskqueue import taskqueue_service_pb
-  tasks_service_proto = taskqueue_service_pb
-else:
-  from google.appengine.api.taskqueue import taskqueue_service_bytes_pb2
-  tasks_service_proto = taskqueue_service_bytes_pb2
+from google.appengine.api.taskqueue import taskqueue_service_bytes_pb2
+import mox
+import webapp2
 
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 from google.appengine.tools.devappserver2.admin import taskqueue_queues_handler
 from google.appengine.tools.devappserver2.admin import taskqueue_utils
+
+tasks_service_proto = taskqueue_service_bytes_pb2
 
 
 class TestTaskQueueQueuesHandler(unittest.TestCase):

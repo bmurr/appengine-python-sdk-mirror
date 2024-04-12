@@ -16,8 +16,6 @@
 #
 """Serves content for "script" handlers using the PHP runtime."""
 
-
-
 import os
 import os.path
 import re

@@ -16,8 +16,6 @@
 #
 """Tests for google.appengine.tools.devappserver2.static_files_handler."""
 
-
-
 import datetime
 import errno
 import os.path
@@ -25,13 +23,9 @@ import unittest
 from unittest import mock
 
 import google
-from google.appengine._internal import six
 
 # pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import appinfo
-else:
-  from google.appengine.api import appinfo
+from google.appengine.api import appinfo
 
 from google.appengine.tools.devappserver2 import errors
 from google.appengine.tools.devappserver2 import static_files_handler

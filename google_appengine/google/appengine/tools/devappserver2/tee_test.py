@@ -16,8 +16,6 @@
 #
 """Tests for google.appengine.tools.devappserver2.tee."""
 
-
-
 import google
 import unittest
 from google.appengine._internal import six

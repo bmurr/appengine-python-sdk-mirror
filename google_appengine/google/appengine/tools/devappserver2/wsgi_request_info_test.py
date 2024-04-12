@@ -16,8 +16,6 @@
 #
 """Tests for google.apphosting.tools.devappserver2.wsgi_request_info."""
 
-
-
 import re
 import unittest
 import wsgiref.util

@@ -20,8 +20,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
-
 import contextlib
 import random
 import string
@@ -29,13 +27,9 @@ import threading
 import wsgiref.util
 
 import google
-from google.appengine._internal import six
 
 # pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import request_info
-else:
-  from google.appengine.api import request_info
+from google.appengine.api import request_info
 
 
 def _choose_request_id():

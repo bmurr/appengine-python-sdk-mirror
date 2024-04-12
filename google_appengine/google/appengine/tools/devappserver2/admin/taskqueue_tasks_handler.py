@@ -18,10 +18,8 @@
 import os.path
 import sys
 import google
-from google.appengine._internal import six
 
-filename = ('taskqueue_tasks_handler_py2.py'
-            if six.PY2 else 'taskqueue_tasks_handler_py3.py')
+filename = 'taskqueue_tasks_handler_py3.py'
 
 api_server_src = os.path.join(os.path.dirname(__file__), filename)
 if not os.path.exists(api_server_src):

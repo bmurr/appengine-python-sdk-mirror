@@ -28,13 +28,12 @@ in the same way as dev_appserver.py:
   api_server.py [flags] <module> [<module>...]
 
 When launching without the context of an application, a default application id
-is provided, which can be overidden with the --application flag. Either of the
+is provided, which can be overridden with the --application flag. Either of the
 following are acceptable:
 
   api_server.py [flags]
   api_server.py --application=my-app-id [flags]
 """
-
 
 import errno
 import getpass

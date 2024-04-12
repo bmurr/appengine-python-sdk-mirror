@@ -24,15 +24,10 @@ import logging
 
 import google
 
+from cloudstorage import stub_dispatcher
 from google.appengine._internal import six
 import six.moves.http_client
 import webob
-
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.ext.cloudstorage import stub_dispatcher
-else:
-  from cloudstorage import stub_dispatcher
 
 from google.appengine.tools.devappserver2 import wsgi_server
 

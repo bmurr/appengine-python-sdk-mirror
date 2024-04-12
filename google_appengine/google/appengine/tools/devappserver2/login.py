@@ -32,8 +32,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import cgi
 import hashlib
+import html
 import logging
 
 import google
@@ -42,11 +42,6 @@ from google.appengine._internal import six
 from google.appengine._internal.six.moves import urllib
 import six.moves.http_cookies
 import webapp2
-
-if six.PY3:
-  import html  # pylint: disable=g-import-not-at-top
-
-
 
 
 # URL of the login/logout pages within the dev appserver.
@@ -68,10 +63,7 @@ _COOKIE_NAME = 'dev_appserver_login'
 
 
 def _escape_with_quote(s):
-  if six.PY2:
-    return cgi.escape(s, quote=True)  # pylint: disable=deprecated-method
-  else:
-    return html.escape(s, quote=False).replace('"', '&quot;')
+  return html.escape(s, quote=False).replace('"', '&quot;')
 
 
 def get_user_info(http_cookie, cookie_name=_COOKIE_NAME):

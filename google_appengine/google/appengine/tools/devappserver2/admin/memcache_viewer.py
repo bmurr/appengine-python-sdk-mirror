@@ -26,22 +26,14 @@ information. Java, PHP and Python map types in inconsistent ways, see:
 """
 
 
-
 import datetime
 import logging
-import urllib
-from google.appengine._internal import six
+import urllib.parse
 
 # pylint: disable=g-import-not-at-top
-
-if six.PY2:
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import memcache
-  from google.appengine.api.memcache import memcache_service_pb
-else:
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import memcache
-  from google.appengine.api.memcache import memcache_service_pb2
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import memcache
+from google.appengine.api.memcache import memcache_service_pb2
 
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 
@@ -73,11 +65,7 @@ class StringValueConverter(object):
     # As we don't know what encoding the bytes are, we string escape so any
     # byte sequence is legal ASCII. Once we have a legal ASCII byte sequence
     # we can safely convert to a unicode/text string.
-    if six.PY2:
-      return cache_value.encode('string-escape').decode('ascii')
-    else:
-      return cache_value.decode('latin1').encode('unicode-escape').decode(
-          'ascii')
+    return cache_value.decode('latin1').encode('unicode-escape').decode('ascii')
 
   @staticmethod
   def to_cache(display_value):
@@ -103,10 +91,7 @@ class StringValueConverter(object):
 
     # Since we don't know how they want their Unicode encoded, this will raise
     # an exception (which will be displayed nicely) if they include non-ASCII.
-    if six.PY2:
-      return display_value.encode('ascii').decode('string-escape')
-    else:
-      return display_value.encode('ascii').decode('unicode-escape')
+    return display_value.encode('ascii').decode('unicode-escape')
 
 
 class UnicodeValueConverter(object):
@@ -193,16 +178,11 @@ class MemcacheViewerRequestHandler(admin_request_handler.AdminRequestHandler):
 
   def _get_memcache_value_and_flags(self, key):
     """Return a 2-tuple containing a memcache value and its flags."""
-    if six.PY2:
-      request = memcache_service_pb.MemcacheGetRequest()
-      response = memcache_service_pb.MemcacheGetResponse()
 
-      request.add_key(key)
-    else:
-      request = memcache_service_pb2.MemcacheGetRequest()
-      response = memcache_service_pb2.MemcacheGetResponse()
+    request = memcache_service_pb2.MemcacheGetRequest()
+    response = memcache_service_pb2.MemcacheGetResponse()
 
-      request.key.add(key)
+    request.key.add(key)
 
     apiproxy_stub_map.MakeSyncCall('memcache', 'Get', request, response)
     assert response.item_size() < 2
@@ -213,36 +193,25 @@ class MemcacheViewerRequestHandler(admin_request_handler.AdminRequestHandler):
 
   def _set_memcache_value(self, key, value, flags):
     """Store a value in memcache."""
-    if six.PY2:
-      request = memcache_service_pb.MemcacheSetRequest()
-      response = memcache_service_pb.MemcacheSetResponse()
 
-      item = request.add_item()
-      item.set_key(key)
-      item.set_value(value)
-      item.set_flags(flags)
+    request = memcache_service_pb2.MemcacheSetRequest()
+    response = memcache_service_pb2.MemcacheSetResponse()
 
-      apiproxy_stub_map.MakeSyncCall('memcache', 'Set', request, response)
-      return (response.set_status(0) ==
-              memcache_service_pb.MemcacheSetResponse.STORED)
-    else:
-      request = memcache_service_pb2.MemcacheSetRequest()
-      response = memcache_service_pb2.MemcacheSetResponse()
+    item = request.item.add()
+    item.key = key
+    item.value = value
+    item.flags = flags
 
-      item = request.item.add()
-      item.key = key
-      item.value = value
-      item.flags = flags
-
-      apiproxy_stub_map.MakeSyncCall('memcache', 'Set', request, response)
-      return (response.set_status[0] ==
-              memcache_service_pb.MemcacheSetResponse.STORED)
+    apiproxy_stub_map.MakeSyncCall('memcache', 'Set', request, response)
+    return (
+        response.set_status[0]
+        == memcache_service_pb2.MemcacheSetResponse.STORED
+    )
 
   def get(self):
     """Show template and prepare stats and/or key+value to display/edit."""
     super(MemcacheViewerRequestHandler, self).post()
-    values = {'request': self.request,
-              'message': self.request.get('message')}
+    values = {'request': self.request, 'message': self.request.get('message')}
 
     edit = self.request.get('edit')
     key = self.request.get('key')
@@ -321,9 +290,14 @@ class MemcacheViewerRequestHandler(admin_request_handler.AdminRequestHandler):
     Returns:
       String.
     """
-    return '&'.join('%s=%s' % (urllib.quote_plus(k.encode('utf8')),
-                               urllib.quote_plus(v.encode('utf8')))
-                    for k, v in query.items())
+    return '&'.join(
+        '%s=%s'
+        % (
+            urllib.parse.quote_plus(k.encode('utf8')),
+            urllib.parse.quote_plus(v.encode('utf8')),
+        )
+        for k, v in query.items()
+    )
 
   def post(self):
     """Handle modifying actions and/or redirect to GET page."""

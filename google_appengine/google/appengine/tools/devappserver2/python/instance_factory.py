@@ -20,8 +20,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
-
 import logging
 import os
 import shutil
@@ -31,13 +29,9 @@ import tempfile
 import time
 
 import google
-from google.appengine._internal import six
 
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import appinfo
-else:
-  from google.appengine.api import appinfo
+from google.appengine.api import appinfo
+from google.appengine._internal import six
 
 from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import errors

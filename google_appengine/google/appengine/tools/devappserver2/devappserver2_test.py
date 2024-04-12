@@ -16,21 +16,13 @@
 #
 """Tests for google.apphosting.tools.devappserver2.devappserver2."""
 
-
-
 import argparse
+import builtins
 import os
 import unittest
 from unittest import mock
 
 import google
-from google.appengine._internal import six
-
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  builtins = __builtins__
-else:
-  import builtins
 
 from google.appengine.tools.devappserver2 import devappserver2
 

@@ -16,8 +16,6 @@
 #
 """Run a server displaying the administrative UI for the application."""
 
-
-
 import logging
 
 import google

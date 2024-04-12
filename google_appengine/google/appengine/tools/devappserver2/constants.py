@@ -16,8 +16,6 @@
 #
 """Constants used by the devappserver2."""
 
-
-
 import logging
 
 # These statuses must not include a response body (RFC 2616).

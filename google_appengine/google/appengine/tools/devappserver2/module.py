@@ -20,10 +20,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import cgi
 import collections
 from concurrent import futures
 import functools
+import html
 import logging
 import math
 import os.path
@@ -35,23 +35,14 @@ import time
 import wsgiref.headers
 
 import google
+
+from google.appengine.api import api_base_pb2
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import appinfo
+from google.appengine.api import request_info
+from google.appengine.api.logservice import log_service_pb2
 import py27_urlquote
 from google.appengine._internal import six
-
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import api_base_pb
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import appinfo
-  from google.appengine.api import request_info
-  from google.appengine.api.logservice import log_service_pb
-else:
-  import html
-  from google.appengine.api import api_base_pb2
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import appinfo
-  from google.appengine.api import request_info
-  from google.appengine.api.logservice import log_service_pb2
 
 from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import blob_image
@@ -75,6 +66,7 @@ from google.appengine.tools.devappserver2 import url_handler
 from google.appengine.tools.devappserver2 import util
 from google.appengine.tools.devappserver2 import wsgi_handler
 from google.appengine.tools.devappserver2 import wsgi_server
+
 
 _LOWER_HEX_DIGITS = string.hexdigits.lower()
 _UPPER_HEX_DIGITS = string.hexdigits.upper()
@@ -154,10 +146,7 @@ def _static_files_regex_from_handlers(handlers):
 
 
 def _escape(s):
-  if six.PY2:
-    return cgi.escape(s)  # pylint: disable=deprecated-method
-  else:
-    return html.escape(s, quote=False)
+  return html.escape(s, quote=False)
 
 
 class _ScriptHandler(url_handler.UserConfiguredURLHandler):
@@ -1070,28 +1059,16 @@ class Module(object):
 
   def _insert_log_message(self, message, level, request_id):
     # pylint: disable=protected-access
-    if six.PY2:
-      logs_group = log_service_pb.UserAppLogGroup()
-      log_line = logs_group.add_log_line()
-      log_line.set_timestamp_usec(int(time.time() * 1e6))
-      log_line.set_level(level)
-      log_line.set_message(message)
-      request = log_service_pb.FlushRequest()
-      request.set_logs(logs_group.Encode())
-      response = api_base_pb.VoidProto()
-      logservice = apiproxy_stub_map.apiproxy.GetStub('logservice')
-      logservice._Dynamic_Flush(request, response, request_id)
-    else:
-      logs_group = log_service_pb2.UserAppLogGroup()
-      log_line = logs_group.log_line.add()
-      log_line.timestamp_usec = int(time.time() * 1e6)
-      log_line.level = level
-      log_line.message = message
-      request = log_service_pb2.FlushRequest()
-      request.logs = logs_group.SerializeToString()
-      response = api_base_pb2.VoidProto()
-      logservice = apiproxy_stub_map.apiproxy.GetStub('logservice')
-      logservice._Dynamic_Flush(request, response, request_id)
+    logs_group = log_service_pb2.UserAppLogGroup()
+    log_line = logs_group.log_line.add()
+    log_line.timestamp_usec = int(time.time() * 1e6)
+    log_line.level = level
+    log_line.message = message
+    request = log_service_pb2.FlushRequest()
+    request.logs = logs_group.SerializeToString()
+    response = api_base_pb2.VoidProto()
+    logservice = apiproxy_stub_map.apiproxy.GetStub('logservice')
+    logservice._Dynamic_Flush(request, response, request_id)
 
   @staticmethod
   def generate_request_log_id():

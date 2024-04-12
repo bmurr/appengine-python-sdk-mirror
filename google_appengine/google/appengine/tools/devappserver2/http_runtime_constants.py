@@ -16,8 +16,6 @@
 #
 """Constants used for communicating with the Python devappserver2 runtime."""
 
-
-
 SERVER_SOFTWARE = 'Development/2.0'
 
 # Internal AppEngine prefix for Headers (Environment variables)

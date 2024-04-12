@@ -18,8 +18,6 @@
 
 from __future__ import division
 
-
-
 import logging
 import os
 import os.path

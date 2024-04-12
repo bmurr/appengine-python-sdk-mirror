@@ -16,8 +16,6 @@
 #
 """Base functionality for handling HTTP requests for built-in pages."""
 
-
-
 import re
 
 from google.appengine.tools.devappserver2 import url_handler

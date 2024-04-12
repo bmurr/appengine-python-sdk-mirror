@@ -16,8 +16,6 @@
 #
 """Tests for google.appengine.tools.devappserver2.http_runtime."""
 
-
-
 import base64
 import os
 import re
@@ -29,15 +27,10 @@ import unittest
 
 import google
 
+from google.appengine.api import appinfo
 import mox
 from portpicker import portpicker_py2 as portpicker
 from google.appengine._internal import six
-
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import appinfo
-else:
-  from google.appengine.api import appinfo
 
 from google.appengine.tools.devappserver2 import http_proxy
 from google.appengine.tools.devappserver2 import http_runtime

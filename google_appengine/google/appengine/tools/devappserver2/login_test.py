@@ -16,8 +16,6 @@
 #
 """Tests for devappserver2.login."""
 
-
-
 # pylint: disable=g-import-not-at-top
 import unittest
 import wsgiref.util

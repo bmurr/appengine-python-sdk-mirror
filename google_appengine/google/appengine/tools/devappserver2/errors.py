@@ -17,8 +17,6 @@
 """Exceptions common to the entire package."""
 
 
-
-
 class Error(Exception):
   """Base class for exceptions in this package."""
 

@@ -19,8 +19,6 @@
 See http://linux.die.net/man/7/inotify.
 """
 
-
-
 import ctypes
 import ctypes.util
 import errno

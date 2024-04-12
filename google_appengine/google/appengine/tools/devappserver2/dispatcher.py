@@ -23,24 +23,15 @@ from __future__ import print_function
 import collections
 import logging
 import socket
-import sys
 import threading
 import wsgiref.headers
 
+from google.appengine.api import appinfo
+from google.appengine.api import request_info
 from google.appengine._internal import six
-from google.appengine._internal.six.moves import map
-
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import appinfo
-  from google.appengine.api import request_info
-else:
-  from google.appengine.api import appinfo
-  from google.appengine.api import request_info
 
 from google.appengine.tools.devappserver2 import instance
 from google.appengine.tools.devappserver2 import module
-from google.appengine.tools.devappserver2 import runtime_factories
 from google.appengine.tools.devappserver2 import scheduled_executor
 from google.appengine.tools.devappserver2 import start_response_utils
 from google.appengine.tools.devappserver2 import thread_executor
@@ -345,20 +336,7 @@ class Dispatcher(request_info.Dispatcher):
     for _module in self._module_name_to_module.values():
       _module.quit()
 
-  def check_python_version(self, runtime):
-    """Check the python version and give proper warnings if necessary."""
-    if runtime == 'python27':
-      if sys.version_info[1] < 7:
-        logging.warning('You are creating a python27 module, but your python '
-                        'minor version is below 2.7.')
-      elif sys.version_info[2] < runtime_factories.PYTHON27_PROD_VERSION[2]:
-        logging.warning(
-            'Your python27 micro version is below %s, our '
-            'current production version.',
-            '.'.join(map(str, runtime_factories.PYTHON27_PROD_VERSION)))
-
   def _create_module(self, module_configuration, port, ssl_port=None):
-    self.check_python_version(module_configuration.runtime)
     max_instances = self._module_to_max_instances.get(
         module_configuration.module_name)
     threadsafe_override = self._module_to_threadsafe_override.get(
@@ -442,9 +420,9 @@ class Dispatcher(request_info.Dispatcher):
     # TODO: handle IPv6 bind-all address (::).
     try:
       # pylint: disable=g-socket-inet-aton
-      if ((six.PY3 and socket.inet_pton(socket.AF_INET, parts[0])
-           == six.ensure_binary('\0\0\0\0')) or
-          (six.PY2 and socket.inet_aton(parts[0]) == '\0\0\0\0')):
+      if six.PY3 and socket.inet_pton(
+          socket.AF_INET, parts[0]
+      ) == six.ensure_binary('\0\0\0\0'):
         hostname = ':'.join([socket.gethostname()] + parts[1:])
     except socket.error:
       # socket.inet_aton raised an exception so parts[0] is not an IP address.

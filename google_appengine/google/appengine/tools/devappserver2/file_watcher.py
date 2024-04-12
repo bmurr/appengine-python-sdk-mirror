@@ -16,8 +16,6 @@
 #
 """Monitors a directory tree for changes."""
 
-
-
 import logging
 import sys
 import types

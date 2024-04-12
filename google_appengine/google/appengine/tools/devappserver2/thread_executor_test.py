@@ -16,8 +16,6 @@
 #
 """Tests for google.apphosting.tools.devappserver2.threadexecutor."""
 
-
-
 import unittest
 
 from google.appengine.tools.devappserver2 import thread_executor

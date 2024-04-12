@@ -22,17 +22,11 @@ import unittest
 
 import google
 
+from google.appengine.api import croninfo
+from google.appengine.api import yaml_errors
 import mox
 from google.appengine._internal import six
 import webapp2
-
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import croninfo
-  from google.appengine.api import yaml_errors
-else:
-  from google.appengine.api import croninfo
-  from google.appengine.api import yaml_errors
 
 from google.appengine.tools.devappserver2 import dispatcher
 from google.appengine.tools.devappserver2.admin import admin_request_handler

@@ -16,8 +16,6 @@
 #
 """Manage the lifecycle of runtime processes and dispatch requests to them."""
 
-
-
 import collections
 import datetime
 import logging

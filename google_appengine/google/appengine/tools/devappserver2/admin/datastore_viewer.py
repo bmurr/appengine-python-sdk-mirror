@@ -16,49 +16,31 @@
 #
 """A handler that displays information about datastore entities."""
 
-
-
-import cgi
 import datetime
+import html
 import math
 import time
-import types
 
 import google
+
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import datastore
+from google.appengine.api import datastore_types
+from google.appengine.api import memcache
+from google.appengine.api import users
+from google.appengine.ext import db
+from google.appengine.ext.db import metadata
 from google.appengine._internal import six
-
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_types
-  from google.appengine.api import memcache
-  from google.appengine.api import users
-  from google.appengine.ext import db
-  from google.appengine.ext.db import metadata
-else:
-  import html
-
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_types
-  from google.appengine.api import memcache
-  from google.appengine.api import users
-  from google.appengine.ext import db
-  from google.appengine.ext.db import metadata
 
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 
 
 def _escape(s, quote=False):
-  if six.PY2:
-    return cgi.escape(s, quote)  # pylint: disable=deprecated-method
+  escaped = html.escape(s, quote=False)
+  if quote:
+    return escaped.replace('"', '&quot;')
   else:
-    escaped = html.escape(s, quote=False)
-    if quote:
-      return escaped.replace('"', '&quot;')
-    else:
-      return escaped
+    return escaped
 
 
 def _format_datastore_key(key):
@@ -408,7 +390,7 @@ class UserType(DataType):
     return 15
 
 
-_ESCAPE_FUNC = cgi.escape if six.PY2 else html.escape
+_ESCAPE_FUNC = html.escape
 
 
 # This is incomplete, but enough to make the system still work.
@@ -537,21 +519,21 @@ class BlobKeyType(StringType):
 
 # Maps Pyathon/datatstore types to DataType instances
 _DATA_TYPES = {
-    types.NoneType if six.PY2 else type(None): NoneType(),
-    types.StringType if six.PY2 else bytes: StringType(),
-    types.UnicodeType if six.PY2 else str: StringType(),
+    type(None): NoneType(),
+    bytes: StringType(),
+    str: StringType(),
     datastore_types.Text: TextType(),
     datastore_types.Blob: BlobType(),
     datastore_types.EmbeddedEntity: EmbeddedEntityType(),
-    types.BooleanType if six.PY2 else bool: BoolType(),
-    types.IntType if six.PY2 else int: IntType(),
-    types.LongType if six.PY2 else int: IntType(),
-    types.FloatType if six.PY2 else float: FloatType(),
+    bool: BoolType(),
+    int: IntType(),
+    int: IntType(),
+    float: FloatType(),
     datetime.datetime: TimeType(),
     datastore_types._OverflowDateTime: OverflowTimeType(),
     users.User: UserType(),
     datastore_types.Key: ReferenceType(),
-    types.ListType if six.PY2 else list: ListType(),
+    list: ListType(),
     datastore_types.Email: EmailType(),
     datastore_types.Category: CategoryType(),
     datastore_types.Link: LinkType(),

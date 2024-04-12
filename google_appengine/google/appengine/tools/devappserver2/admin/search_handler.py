@@ -18,13 +18,8 @@
 
 import google
 
+from google.appengine.api import search
 from google.appengine._internal import six
-
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import search
-else:
-  from google.appengine.api import search
 
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 

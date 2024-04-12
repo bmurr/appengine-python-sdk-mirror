@@ -4082,43 +4082,6 @@ goog.dom.tags.VOID_TAGS_ = {area:!0, base:!0, br:!0, col:!0, command:!0, embed:!
 goog.dom.tags.isVoidTag = function(tagName) {
   return !0 === goog.dom.tags.VOID_TAGS_[tagName];
 };
-goog.fs = {};
-goog.fs.url = {};
-goog.fs.url.createObjectUrl = function(obj) {
-  return goog.fs.url.getUrlObject_().createObjectURL(obj);
-};
-goog.fs.url.revokeObjectUrl = function(url) {
-  goog.fs.url.getUrlObject_().revokeObjectURL(url);
-};
-goog.fs.url.UrlObject_ = function() {
-};
-goog.fs.url.UrlObject_.prototype.createObjectURL = function() {
-};
-goog.fs.url.UrlObject_.prototype.revokeObjectURL = function() {
-};
-goog.fs.url.getUrlObject_ = function() {
-  var urlObject = goog.fs.url.findUrlObject_();
-  if (null != urlObject) {
-    return urlObject;
-  }
-  throw Error("This browser doesn't seem to support blob URLs");
-};
-goog.fs.url.findUrlObject_ = function() {
-  return void 0 !== goog.global.URL && void 0 !== goog.global.URL.createObjectURL ? goog.global.URL : void 0 !== goog.global.createObjectURL ? goog.global : null;
-};
-goog.fs.url.browserSupportsObjectUrls = function() {
-  return null != goog.fs.url.findUrlObject_();
-};
-goog.html = {};
-goog.html.trustedtypes = {};
-goog.html.trustedtypes.POLICY_NAME = goog.TRUSTED_TYPES_POLICY_NAME ? goog.TRUSTED_TYPES_POLICY_NAME + "#html" : "";
-goog.html.trustedtypes.getPolicyPrivateDoNotAccessOrElse = function() {
-  if (!goog.html.trustedtypes.POLICY_NAME) {
-    return null;
-  }
-  void 0 === goog.html.trustedtypes.cachedPolicy_ && (goog.html.trustedtypes.cachedPolicy_ = goog.createTrustedTypesPolicy(goog.html.trustedtypes.POLICY_NAME));
-  return goog.html.trustedtypes.cachedPolicy_;
-};
 goog.string.Const = function(opt_token, opt_content) {
   this.stringConstValueWithSecurityContract__googStringSecurityPrivate_ = opt_token === goog.string.Const.GOOG_STRING_CONSTRUCTOR_TOKEN_PRIVATE_ && opt_content || "";
   this.STRING_CONST_TYPE_MARKER__GOOG_STRING_SECURITY_PRIVATE_ = goog.string.Const.TYPE_MARKER_;
@@ -4139,6 +4102,16 @@ goog.string.Const.from = function(s) {
 goog.string.Const.TYPE_MARKER_ = {};
 goog.string.Const.GOOG_STRING_CONSTRUCTOR_TOKEN_PRIVATE_ = {};
 goog.string.Const.EMPTY = goog.string.Const.from("");
+goog.html = {};
+goog.html.trustedtypes = {};
+goog.html.trustedtypes.POLICY_NAME = goog.TRUSTED_TYPES_POLICY_NAME ? goog.TRUSTED_TYPES_POLICY_NAME + "#html" : "";
+goog.html.trustedtypes.getPolicyPrivateDoNotAccessOrElse = function() {
+  if (!goog.html.trustedtypes.POLICY_NAME) {
+    return null;
+  }
+  void 0 === goog.html.trustedtypes.cachedPolicy_ && (goog.html.trustedtypes.cachedPolicy_ = goog.createTrustedTypesPolicy(goog.html.trustedtypes.POLICY_NAME));
+  return goog.html.trustedtypes.cachedPolicy_;
+};
 goog.html.TrustedResourceUrl = function(value, token) {
   if (goog.DEBUG && token !== goog.html.TrustedResourceUrl.CONSTRUCTOR_TOKEN_PRIVATE_) {
     throw Error("TrustedResourceUrl is not meant to be built directly");
@@ -4214,99 +4187,186 @@ goog.html.TrustedResourceUrl.stringifyParams_ = function(prefix, currentString, 
   }
   return currentString;
 };
-goog.html.SafeUrl = function(value, token) {
-  if (goog.DEBUG && token !== goog.html.SafeUrl.CONSTRUCTOR_TOKEN_PRIVATE_) {
-    throw Error("SafeUrl is not meant to be built directly");
+/*
+
+ SPDX-License-Identifier: Apache-2.0
+*/
+function module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(value) {
+  return goog.html.TrustedResourceUrl.unwrapTrustedScriptURL(value);
+}
+;var $jscomp$templatelit$m425881384$5 = $jscomp.createTemplateTagFirstArg([""]), $jscomp$templatelit$m425881384$6 = $jscomp.createTemplateTagFirstArgWithRaw(["\x00"], ["\\0"]), $jscomp$templatelit$m425881384$7 = $jscomp.createTemplateTagFirstArgWithRaw(["\n"], ["\\n"]), $jscomp$templatelit$m425881384$8 = $jscomp.createTemplateTagFirstArgWithRaw(["\x00"], ["\\u0000"]), $jscomp$templatelit$m425881384$9 = $jscomp.createTemplateTagFirstArg([""]), $jscomp$templatelit$m425881384$10 = $jscomp.createTemplateTagFirstArgWithRaw(["\x00"], 
+["\\0"]), $jscomp$templatelit$m425881384$11 = $jscomp.createTemplateTagFirstArgWithRaw(["\n"], ["\\n"]), $jscomp$templatelit$m425881384$12 = $jscomp.createTemplateTagFirstArgWithRaw(["\x00"], ["\\u0000"]);
+function module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen(templateObj) {
+  return Object.isFrozen(templateObj) && Object.isFrozen(templateObj.raw);
+}
+function module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkTranspiled(fn) {
+  return -1 === fn.toString().indexOf("`");
+}
+var module$contents$google3$third_party$javascript$safevalues$internals$string_literal_isTranspiled = module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkTranspiled(function(tag) {
+  return tag($jscomp$templatelit$m425881384$5);
+}) || module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkTranspiled(function(tag) {
+  return tag($jscomp$templatelit$m425881384$6);
+}) || module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkTranspiled(function(tag) {
+  return tag($jscomp$templatelit$m425881384$7);
+}) || module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkTranspiled(function(tag) {
+  return tag($jscomp$templatelit$m425881384$8);
+}), module$contents$google3$third_party$javascript$safevalues$internals$string_literal_frozenTSA = module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen($jscomp$templatelit$m425881384$9) && module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen($jscomp$templatelit$m425881384$10) && module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen($jscomp$templatelit$m425881384$11) && module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen($jscomp$templatelit$m425881384$12);
+var module$exports$google3$third_party$javascript$safevalues$internals$secrets = {secretToken:{}};
+function module$contents$google3$third_party$javascript$safevalues$internals$secrets_ensureTokenIsValid(token) {
+  if (goog.DEBUG && token !== module$exports$google3$third_party$javascript$safevalues$internals$secrets.secretToken) {
+    throw Error("Bad secret");
   }
-  this.privateDoNotAccessOrElseSafeUrlWrappedValue_ = value;
+}
+module$exports$google3$third_party$javascript$safevalues$internals$secrets.ensureTokenIsValid = module$contents$google3$third_party$javascript$safevalues$internals$secrets_ensureTokenIsValid;
+var module$exports$google3$third_party$javascript$safevalues$internals$url_impl = {SafeUrl:function(token) {
+  goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$internals$secrets_ensureTokenIsValid(token);
+}};
+module$exports$google3$third_party$javascript$safevalues$internals$url_impl.SafeUrl.prototype.toString = function() {
+  var url = this;
+  return url.privateDoNotAccessOrElseWrappedUrl;
 };
-goog.html.SafeUrl.prototype.toString = function() {
-  return this.privateDoNotAccessOrElseSafeUrlWrappedValue_.toString();
-};
-goog.html.SafeUrl.INNOCUOUS_STRING = "about:invalid#zClosurez";
-goog.html.SafeUrl.unwrap = function(safeUrl) {
-  if (safeUrl instanceof goog.html.SafeUrl && safeUrl.constructor === goog.html.SafeUrl) {
-    return safeUrl.privateDoNotAccessOrElseSafeUrlWrappedValue_;
+function module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(urlValue) {
+  var url = new module$exports$google3$third_party$javascript$safevalues$internals$url_impl.SafeUrl(module$exports$google3$third_party$javascript$safevalues$internals$secrets.secretToken);
+  url.privateDoNotAccessOrElseWrappedUrl = urlValue;
+  return url;
+}
+module$exports$google3$third_party$javascript$safevalues$internals$url_impl.createUrlInternal = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal;
+module$exports$google3$third_party$javascript$safevalues$internals$url_impl.ABOUT_BLANK = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal("about:blank");
+module$exports$google3$third_party$javascript$safevalues$internals$url_impl.INNOCUOUS_URL = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal("about:invalid#zClosurez");
+function module$contents$google3$third_party$javascript$safevalues$internals$url_impl_isUrl(value) {
+  return value instanceof module$exports$google3$third_party$javascript$safevalues$internals$url_impl.SafeUrl;
+}
+module$exports$google3$third_party$javascript$safevalues$internals$url_impl.isUrl = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_isUrl;
+function module$contents$google3$third_party$javascript$safevalues$internals$url_impl_unwrapUrl(value) {
+  if (module$contents$google3$third_party$javascript$safevalues$internals$url_impl_isUrl(value)) {
+    return value.privateDoNotAccessOrElseWrappedUrl;
   }
-  goog.asserts.fail("expected object of type SafeUrl, got '" + safeUrl + "' of type " + goog.typeOf(safeUrl));
-  return "type_error:SafeUrl";
+  var message = "";
+  goog.DEBUG && (message = "Unexpected type when unwrapping SafeUrl, got '" + value + "' of type '" + typeof value + "'");
+  throw Error(message);
+}
+module$exports$google3$third_party$javascript$safevalues$internals$url_impl.unwrapUrl = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_unwrapUrl;
+var module$exports$google3$third_party$javascript$safevalues$builders$url_builders = {};
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_Scheme() {
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.Scheme = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_Scheme;
+var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl = function(isValid) {
+  this.isValid = isValid;
 };
-goog.html.SafeUrl.fromConstant = function(url) {
-  var str = goog.string.Const.unwrap(url);
-  if (goog.DEBUG && "javascript:" === goog.html.SafeUrl.extractScheme(str)) {
-    throw Error("Building a SafeUrl with a javascript scheme is not supported");
-  }
-  return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(str);
-};
-goog.html.SAFE_MIME_TYPE_PATTERN_ = RegExp('^(?:audio/(?:3gpp2|3gpp|aac|L16|midi|mp3|mp4|mpeg|oga|ogg|opus|x-m4a|x-matroska|x-wav|wav|webm)|font/\\w+|image/(?:bmp|gif|jpeg|jpg|png|tiff|webp|x-icon|heic|heif)|video/(?:mpeg|mp4|ogg|webm|quicktime|x-matroska))(?:;\\w+=(?:\\w+|"[\\w;,= ]+"))*$', "i");
-goog.html.SafeUrl.isSafeMimeType = function(mimeType) {
-  return goog.html.SAFE_MIME_TYPE_PATTERN_.test(mimeType);
-};
-goog.html.SafeUrl.fromBlob = function(blob) {
-  var url = goog.html.SafeUrl.isSafeMimeType(blob.type) ? goog.fs.url.createObjectUrl(blob) : goog.html.SafeUrl.INNOCUOUS_STRING;
-  return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(url);
-};
-goog.html.DATA_URL_PATTERN_ = /^data:(.*);base64,[a-z0-9+\/]+=*$/i;
-goog.html.SafeUrl.tryFromDataUrl = function(dataUrl) {
-  dataUrl = String(dataUrl);
-  var filteredDataUrl = dataUrl.replace(/(%0A|%0D)/g, ""), match = filteredDataUrl.match(goog.html.DATA_URL_PATTERN_);
-  return match ? goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(filteredDataUrl) : null;
-};
-goog.html.SafeUrl.fromDataUrl = function(dataUrl) {
-  return goog.html.SafeUrl.tryFromDataUrl(dataUrl) || goog.html.SafeUrl.INNOCUOUS_URL;
-};
-goog.html.SafeUrl.fromTrustedResourceUrl = function(trustedResourceUrl) {
-  return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(goog.html.TrustedResourceUrl.unwrap(trustedResourceUrl));
-};
-goog.html.SAFE_URL_PATTERN_ = /^(?:(?:https?|mailto|ftp):|[^:/?#]*(?:[/?#]|$))/i;
-goog.html.SafeUrl.trySanitize = function(url) {
-  if (url instanceof goog.html.SafeUrl) {
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme(scheme) {
+  return new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
+    return url.substr(0, scheme.length + 1).toLowerCase() === scheme + ":";
+  });
+}
+var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_RELATIVE_SCHEME = new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
+  return /^[^:]*([/?#]|$)/.test(url);
+}), module$contents$google3$third_party$javascript$safevalues$builders$url_builders_CALLTO_SCHEME = new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
+  return /^callto:\+?\d*$/i.test(url);
+}), module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SSH_SCHEME = new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
+  return 0 === url.indexOf("ssh://");
+}), module$contents$google3$third_party$javascript$safevalues$builders$url_builders_EXTENSION_SCHEME = new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
+  return 0 === url.indexOf("chrome-extension://") || 0 === url.indexOf("moz-extension://") || 0 === url.indexOf("ms-browser-extension://");
+}), module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SIP_SCHEME = new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
+  return 0 === url.indexOf("sip:") || 0 === url.indexOf("sips:");
+});
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme = {TEL:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("tel"), CALLTO:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_CALLTO_SCHEME, SSH:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SSH_SCHEME, RTSP:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("rtsp"), 
+DATA:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("data"), HTTP:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("http"), HTTPS:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("https"), EXTENSION:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_EXTENSION_SCHEME, FTP:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("ftp"), 
+RELATIVE:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_RELATIVE_SCHEME, MAILTO:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("mailto"), INTENT:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("intent"), MARKET:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("market"), ITMS:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("itms"), 
+ITMS_APPSS:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("itms-appss"), ITMS_SERVICES:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("itms-services"), FACEBOOK_MESSENGER:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("fb-messenger"), WHATSAPP:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("whatsapp"), SIP:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SIP_SCHEME, 
+SMS:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("sms"), VND_YOUTUBE:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("vnd.youtube")};
+var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_DEFAULT_SCHEMES = [module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.DATA, module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.HTTP, module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.HTTPS, module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.MAILTO, 
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.FTP, module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.RELATIVE];
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_trySanitizeUrl(url, allowedSchemes) {
+  allowedSchemes = void 0 === allowedSchemes ? module$contents$google3$third_party$javascript$safevalues$builders$url_builders_DEFAULT_SCHEMES : allowedSchemes;
+  if (module$contents$google3$third_party$javascript$safevalues$internals$url_impl_isUrl(url)) {
     return url;
   }
-  url = String(url);
-  return goog.html.SAFE_URL_PATTERN_.test(url) ? goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(url) : goog.html.SafeUrl.tryFromDataUrl(url);
-};
-goog.html.SafeUrl.sanitize = function(url) {
-  return goog.html.SafeUrl.trySanitize(url) || goog.html.SafeUrl.INNOCUOUS_URL;
-};
-goog.html.SafeUrl.sanitizeAssertUnchanged = function(url, opt_allowDataUrl) {
-  if (url instanceof goog.html.SafeUrl) {
-    return url;
-  }
-  url = String(url);
-  if (opt_allowDataUrl && /^data:/i.test(url)) {
-    var safeUrl = goog.html.SafeUrl.fromDataUrl(url);
-    if (safeUrl.toString() == url) {
-      return safeUrl;
+  for (var i = 0; i < allowedSchemes.length; ++i) {
+    var scheme = allowedSchemes[i];
+    if (scheme instanceof module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl && scheme.isValid(url)) {
+      return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(url);
     }
   }
-  goog.asserts.assert(goog.html.SAFE_URL_PATTERN_.test(url), "%s does not match the safe URL pattern", url) || (url = goog.html.SafeUrl.INNOCUOUS_STRING);
-  return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(url);
-};
-goog.html.SafeUrl.ASSUME_IMPLEMENTS_URL_API_GOOG = 2020 <= goog.FEATURESET_YEAR;
-goog.html.SafeUrl.supportsURLAPI = function() {
-  if (goog.html.SafeUrl.ASSUME_IMPLEMENTS_URL_API_GOOG) {
-    return !0;
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.trySanitizeUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_trySanitizeUrl;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeUrl(url, allowedSchemes) {
+  allowedSchemes = void 0 === allowedSchemes ? module$contents$google3$third_party$javascript$safevalues$builders$url_builders_DEFAULT_SCHEMES : allowedSchemes;
+  var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_trySanitizeUrl(url, allowedSchemes);
+  void 0 === sanitizedUrl && module$contents$google3$third_party$javascript$safevalues$builders$url_builders_triggerCallbacks(url.toString());
+  return sanitizedUrl || module$exports$google3$third_party$javascript$safevalues$internals$url_impl.INNOCUOUS_URL;
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.sanitizeUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeUrl;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_objectUrlFromSafeSource(source) {
+  if ("undefined" !== typeof MediaSource && source instanceof MediaSource) {
+    return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(URL.createObjectURL(source));
   }
-  try {
-    return new URL("s://g"), !0;
-  } catch (e) {
-    return !1;
+  var blob = source, match = blob.type.match(/^([^;]+)(?:;\w+=(?:\w+|"[\w;,= ]+"))*$/i), $jscomp$inline_62;
+  var JSCompiler_inline_result = 2 === (null == ($jscomp$inline_62 = match) ? void 0 : $jscomp$inline_62.length) && (/^image\/(?:bmp|gif|jpeg|jpg|png|tiff|webp|x-icon|heic|heif|avif|x-ms-bmp)$/i.test(match[1]) || /^video\/(?:mpeg|mp4|ogg|webm|x-matroska|quicktime|x-ms-wmv)$/i.test(match[1]) || /^audio\/(?:3gpp2|3gpp|aac|amr|L16|midi|mp3|mp4|mpeg|oga|ogg|opus|x-m4a|x-matroska|x-wav|wav|webm)$/i.test(match[1]) || /^font\/\w+/i.test(match[1]));
+  if (!JSCompiler_inline_result) {
+    var message = "";
+    goog.DEBUG && (message = "unsafe blob MIME type: " + blob.type);
+    throw Error(message);
   }
-}();
-goog.html.SafeUrl.legacyExtractScheme = function(url) {
-  var aTag = document.createElement("a");
-  try {
-    aTag.href = url;
-  } catch (e) {
-    return;
+  return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(URL.createObjectURL(blob));
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.objectUrlFromSafeSource = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_objectUrlFromSafeSource;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_fromMediaSource(media) {
+  if ("undefined" !== typeof MediaSource && media instanceof MediaSource) {
+    return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(URL.createObjectURL(media));
   }
-  var protocol = aTag.protocol;
-  return ":" === protocol || "" === protocol ? "https:" : protocol;
-};
-goog.html.SafeUrl.extractScheme = function(url) {
-  if (!goog.html.SafeUrl.supportsURLAPI) {
-    return goog.html.SafeUrl.legacyExtractScheme(url);
+  var message = "";
+  goog.DEBUG && (message = "fromMediaSource only accepts MediaSource instances, but was called with " + media + ".");
+  throw Error(message);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.fromMediaSource = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_fromMediaSource;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_fromTrustedResourceUrl(url) {
+  return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(url).toString());
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.fromTrustedResourceUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_fromTrustedResourceUrl;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_safeUrl(templateObj) {
+  var rest = $jscomp.getRestArguments.apply(1, arguments);
+  if (goog.DEBUG && (!Array.isArray(templateObj) || !Array.isArray(templateObj.raw) || templateObj.length !== templateObj.raw.length || !module$contents$google3$third_party$javascript$safevalues$internals$string_literal_isTranspiled && templateObj === templateObj.raw || !(module$contents$google3$third_party$javascript$safevalues$internals$string_literal_isTranspiled && !module$contents$google3$third_party$javascript$safevalues$internals$string_literal_frozenTSA || module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen(templateObj)) || 
+  rest.length + 1 !== templateObj.length)) {
+    throw new TypeError("\n    ############################## ERROR ##############################\n\n    It looks like you are trying to call a template tag function (fn`...`)\n    using the normal function syntax (fn(...)), which is not supported.\n\n    The functions in the safevalues library are not designed to be called\n    like normal functions, and doing so invalidates the security guarantees\n    that safevalues provides.\n\n    If you are stuck and not sure how to proceed, please reach out to us\n    instead through:\n     - go/ise-hardening-yaqs (preferred) // LINE-INTERNAL\n     - g/ise-hardening // LINE-INTERNAL\n     - https://github.com/google/safevalues/issues\n\n    ############################## ERROR ##############################");
+  }
+  var prefix = templateObj[0];
+  if (goog.DEBUG) {
+    var prefix$jscomp$0 = prefix, isWholeUrl = 0 === rest.length, markerIdx = prefix$jscomp$0.search(/[:/?#]/);
+    if (0 > markerIdx) {
+      var JSCompiler_inline_result = isWholeUrl;
+    } else {
+      if (":" !== prefix$jscomp$0.charAt(markerIdx)) {
+        JSCompiler_inline_result = !0;
+      } else {
+        var scheme = prefix$jscomp$0.substring(0, markerIdx).toLowerCase();
+        JSCompiler_inline_result = /^[a-z][a-z\d+.-]*$/.test(scheme) && "javascript" !== scheme;
+      }
+    }
+    if (!JSCompiler_inline_result) {
+      throw Error("Trying to interpolate with unsupported prefix: " + prefix);
+    }
+  }
+  for (var urlParts = [prefix], i = 0; i < rest.length; i++) {
+    urlParts.push(String(rest[i])), urlParts.push(templateObj[i + 1]);
+  }
+  return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(urlParts.join(""));
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.safeUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_safeUrl;
+var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_ASSUME_IMPLEMENTS_URL_API = 2020 <= goog.FEATURESET_YEAR, module$contents$google3$third_party$javascript$safevalues$builders$url_builders_supportsURLAPI = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_ASSUME_IMPLEMENTS_URL_API ? !0 : "function" === typeof URL;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_extractScheme(url) {
+  if (!module$contents$google3$third_party$javascript$safevalues$builders$url_builders_supportsURLAPI) {
+    a: {
+      var aTag = document.createElement("a");
+      try {
+        aTag.href = url;
+      } catch (e) {
+        var JSCompiler_inline_result = void 0;
+        break a;
+      }
+      var protocol = aTag.protocol;
+      JSCompiler_inline_result = ":" === protocol || "" === protocol ? "https:" : protocol;
+    }
+    return JSCompiler_inline_result;
   }
   try {
     var parsedUrl = new URL(url);
@@ -4314,22 +4374,50 @@ goog.html.SafeUrl.extractScheme = function(url) {
     return "https:";
   }
   return parsedUrl.protocol;
-};
-goog.html.SafeUrl.sanitizeJavascriptUrlAssertUnchanged = function(url) {
-  if (url instanceof goog.html.SafeUrl) {
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.extractScheme = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_extractScheme;
+var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_ALLOWED_SCHEMES = ["data:", "http:", "https:", "mailto:", "ftp:"];
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.IS_NOT_JAVASCRIPT_URL_PATTERN = /^\s*(?!javascript:)(?:[\w+.-]+:|[^:/?#]*(?:[/?#]|$))/i;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_reportJavaScriptUrl(url) {
+  var hasJavascriptUrlScheme = !module$exports$google3$third_party$javascript$safevalues$builders$url_builders.IS_NOT_JAVASCRIPT_URL_PATTERN.test(url);
+  hasJavascriptUrlScheme && module$contents$google3$third_party$javascript$safevalues$builders$url_builders_triggerCallbacks(url);
+  return hasJavascriptUrlScheme;
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.reportJavaScriptUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_reportJavaScriptUrl;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeJavaScriptUrl(url) {
+  if (!module$contents$google3$third_party$javascript$safevalues$builders$url_builders_reportJavaScriptUrl(url)) {
     return url;
   }
-  url = String(url);
-  var parsedScheme = goog.html.SafeUrl.extractScheme(url);
-  goog.asserts.assert("javascript:" !== parsedScheme, "%s is a javascript: URL", url) || (url = goog.html.SafeUrl.INNOCUOUS_STRING);
-  return goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(url);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.sanitizeJavaScriptUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeJavaScriptUrl;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(url) {
+  return url instanceof module$exports$google3$third_party$javascript$safevalues$internals$url_impl.SafeUrl ? module$contents$google3$third_party$javascript$safevalues$internals$url_impl_unwrapUrl(url) : module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeJavaScriptUrl(url);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.unwrapUrlOrSanitize = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_restrictivelySanitizeUrl(url) {
+  var parsedScheme = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_extractScheme(url);
+  return void 0 !== parsedScheme && -1 !== module$contents$google3$third_party$javascript$safevalues$builders$url_builders_ALLOWED_SCHEMES.indexOf(parsedScheme.toLowerCase()) ? url : "about:invalid#zClosurez";
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.restrictivelySanitizeUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_restrictivelySanitizeUrl;
+var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks = [], module$contents$google3$third_party$javascript$safevalues$builders$url_builders_triggerCallbacks = function() {
 };
-goog.html.SafeUrl.CONSTRUCTOR_TOKEN_PRIVATE_ = {};
-goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse = function(url) {
-  return new goog.html.SafeUrl(url, goog.html.SafeUrl.CONSTRUCTOR_TOKEN_PRIVATE_);
-};
-goog.html.SafeUrl.INNOCUOUS_URL = goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse(goog.html.SafeUrl.INNOCUOUS_STRING);
-goog.html.SafeUrl.ABOUT_BLANK = goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse("about:blank");
+goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$builders$url_builders_addJavaScriptUrlSanitizationCallback(function(url) {
+  console.warn("A URL with content '" + url + "' was sanitized away.");
+});
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_addJavaScriptUrlSanitizationCallback(callback) {
+  -1 === module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks.indexOf(callback) && module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks.push(callback);
+  module$contents$google3$third_party$javascript$safevalues$builders$url_builders_triggerCallbacks = function(url) {
+    module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks.forEach(function(callback) {
+      callback(url);
+    });
+  };
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.addJavaScriptUrlSanitizationCallback = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_addJavaScriptUrlSanitizationCallback;
+function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_removeJavaScriptUrlSanitizationCallback(callback) {
+  var callbackIndex = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks.indexOf(callback);
+  -1 !== callbackIndex && module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks.splice(callbackIndex, 1);
+}
+module$exports$google3$third_party$javascript$safevalues$builders$url_builders.removeJavaScriptUrlSanitizationCallback = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_removeJavaScriptUrlSanitizationCallback;
 var module$contents$goog$html$SafeStyle_CONSTRUCTOR_TOKEN_PRIVATE = {}, module$contents$goog$html$SafeStyle_SafeStyle = function(value, token) {
   if (goog.DEBUG && token !== module$contents$goog$html$SafeStyle_CONSTRUCTOR_TOKEN_PRIVATE) {
     throw Error("SafeStyle is not meant to be built directly");
@@ -4381,8 +4469,8 @@ module$contents$goog$html$SafeStyle_SafeStyle.concat = function(var_args) {
 module$contents$goog$html$SafeStyle_SafeStyle.EMPTY = module$contents$goog$html$SafeStyle_SafeStyle.createSafeStyleSecurityPrivateDoNotAccessOrElse("");
 module$contents$goog$html$SafeStyle_SafeStyle.INNOCUOUS_STRING = "zClosurez";
 function module$contents$goog$html$SafeStyle_sanitizePropertyValue(value) {
-  if (value instanceof goog.html.SafeUrl) {
-    var url = goog.html.SafeUrl.unwrap(value);
+  if (value instanceof module$exports$google3$third_party$javascript$safevalues$internals$url_impl.SafeUrl) {
+    var url = value.toString();
     return 'url("' + url.replace(/</g, "%3c").replace(/[\\"]/g, "\\$&") + '")';
   }
   var result = value instanceof goog.string.Const ? goog.string.Const.unwrap(value) : module$contents$goog$html$SafeStyle_sanitizePropertyValueString(String(value));
@@ -4441,7 +4529,7 @@ function module$contents$goog$html$SafeStyle_sanitizeUrl(value) {
       quote = start;
       return inside;
     });
-    var sanitized = goog.html.SafeUrl.sanitize(url).toString();
+    var sanitized = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeUrl(url).toString();
     return before + quote + sanitized + quote + after;
   });
 }
@@ -4578,16 +4666,17 @@ module$contents$goog$html$SafeHtml_SafeHtml.stringifyAttributes = function(tagNa
             if (name$jscomp$0.toLowerCase() in module$contents$goog$html$SafeHtml_URL_ATTRIBUTES) {
               if (value$jscomp$0 instanceof goog.html.TrustedResourceUrl) {
                 value$jscomp$0 = goog.html.TrustedResourceUrl.unwrap(value$jscomp$0);
-              } else if (value$jscomp$0 instanceof goog.html.SafeUrl) {
-                value$jscomp$0 = goog.html.SafeUrl.unwrap(value$jscomp$0);
+              } else if (value$jscomp$0 instanceof module$exports$google3$third_party$javascript$safevalues$internals$url_impl.SafeUrl) {
+                value$jscomp$0 = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_unwrapUrl(value$jscomp$0);
               } else if ("string" === typeof value$jscomp$0) {
-                value$jscomp$0 = goog.html.SafeUrl.sanitize(value$jscomp$0).toString();
+                value$jscomp$0 = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeUrl(value$jscomp$0).toString();
               } else {
-                throw Error(module$contents$goog$html$SafeHtml_SafeHtml.ENABLE_ERROR_MESSAGES ? 'Attribute "' + name$jscomp$0 + '" on tag "' + tagName + '" requires goog.html.SafeUrl, goog.string.Const, or string, value "' + value$jscomp$0 + '" given.' : "");
+                throw Error(module$contents$goog$html$SafeHtml_SafeHtml.ENABLE_ERROR_MESSAGES ? 'Attribute "' + name$jscomp$0 + '" on tag "' + tagName + '" requires safevalues.SafeUrl, goog.string.Const, or string, value "' + value$jscomp$0 + '" given.' : "");
               }
             }
           }
-          goog.asserts.assert(value$jscomp$0 instanceof goog.html.SafeUrl || value$jscomp$0 instanceof goog.html.TrustedResourceUrl || value$jscomp$0 instanceof module$contents$goog$html$SafeStyle_SafeStyle || value$jscomp$0 instanceof module$contents$goog$html$SafeHtml_SafeHtml || "string" === typeof value$jscomp$0 || "number" === typeof value$jscomp$0, "String or number value expected, got " + typeof value$jscomp$0 + " with value: " + value$jscomp$0);
+          goog.asserts.assert(value$jscomp$0 instanceof module$exports$google3$third_party$javascript$safevalues$internals$url_impl.SafeUrl || value$jscomp$0 instanceof goog.html.TrustedResourceUrl || value$jscomp$0 instanceof module$contents$goog$html$SafeStyle_SafeStyle || value$jscomp$0 instanceof module$contents$goog$html$SafeHtml_SafeHtml || "string" === typeof value$jscomp$0 || "number" === typeof value$jscomp$0, "String or number value expected, got " + typeof value$jscomp$0 + " with value: " + 
+          value$jscomp$0);
           var JSCompiler_inline_result = name$jscomp$0 + '="' + goog.string.internal.htmlEscape(String(value$jscomp$0)) + '"';
           result = JSCompiler_temp_const + (" " + JSCompiler_inline_result);
         }
@@ -4604,231 +4693,9 @@ goog.dom.TagName.SCRIPT, goog.dom.TagName.STYLE, goog.dom.TagName.SVG, goog.dom.
 module$contents$goog$html$SafeHtml_SafeHtml.EMPTY = new module$contents$goog$html$SafeHtml_SafeHtml(goog.global.trustedTypes && goog.global.trustedTypes.emptyHTML || "", module$contents$goog$html$SafeHtml_CONSTRUCTOR_TOKEN_PRIVATE);
 module$contents$goog$html$SafeHtml_SafeHtml.BR = module$contents$goog$html$SafeHtml_SafeHtml.createSafeHtmlSecurityPrivateDoNotAccessOrElse("<br>");
 goog.html.SafeHtml = module$contents$goog$html$SafeHtml_SafeHtml;
-/*
-
- SPDX-License-Identifier: Apache-2.0
-*/
-function module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(valueOf) {
-  return {valueOf:valueOf}.valueOf();
-}
-;function module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(value) {
-  return goog.html.TrustedResourceUrl.unwrapTrustedScriptURL(value);
-}
-;var $jscomp$templatelit$m425881384$5 = $jscomp.createTemplateTagFirstArg([""]), $jscomp$templatelit$m425881384$6 = $jscomp.createTemplateTagFirstArgWithRaw(["\x00"], ["\\0"]), $jscomp$templatelit$m425881384$7 = $jscomp.createTemplateTagFirstArgWithRaw(["\n"], ["\\n"]), $jscomp$templatelit$m425881384$8 = $jscomp.createTemplateTagFirstArgWithRaw(["\x00"], ["\\u0000"]), $jscomp$templatelit$m425881384$9 = $jscomp.createTemplateTagFirstArg([""]), $jscomp$templatelit$m425881384$10 = $jscomp.createTemplateTagFirstArgWithRaw(["\x00"], 
-["\\0"]), $jscomp$templatelit$m425881384$11 = $jscomp.createTemplateTagFirstArgWithRaw(["\n"], ["\\n"]), $jscomp$templatelit$m425881384$12 = $jscomp.createTemplateTagFirstArgWithRaw(["\x00"], ["\\u0000"]);
-function module$contents$google3$third_party$javascript$safevalues$internals$string_literal_assertIsTemplateObject(templateObj, numExprs) {
-  if (!Array.isArray(templateObj) || !Array.isArray(templateObj.raw) || templateObj.length !== templateObj.raw.length || !module$contents$google3$third_party$javascript$safevalues$internals$string_literal_isTranspiled && templateObj === templateObj.raw || !(module$contents$google3$third_party$javascript$safevalues$internals$string_literal_isTranspiled && !module$contents$google3$third_party$javascript$safevalues$internals$string_literal_frozenTSA || module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen(templateObj)) || 
-  numExprs + 1 !== templateObj.length) {
-    throw new TypeError("\n    ############################## ERROR ##############################\n\n    It looks like you are trying to call a template tag function (fn`...`)\n    using the normal function syntax (fn(...)), which is not supported.\n\n    The functions in the safevalues library are not designed to be called\n    like normal functions, and doing so invalidates the security guarantees\n    that safevalues provides.\n\n    If you are stuck and not sure how to proceed, please reach out to us\n    instead through:\n     - go/ise-hardening-yaqs (preferred) // LINE-INTERNAL\n     - g/ise-hardening // LINE-INTERNAL\n     - https://github.com/google/safevalues/issues\n\n    ############################## ERROR ##############################");
-  }
-}
-function module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen(templateObj) {
-  return Object.isFrozen(templateObj) && Object.isFrozen(templateObj.raw);
-}
-function module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkTranspiled(fn) {
-  return -1 === fn.toString().indexOf("`");
-}
-var module$contents$google3$third_party$javascript$safevalues$internals$string_literal_isTranspiled = module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkTranspiled(function(tag) {
-  return tag($jscomp$templatelit$m425881384$5);
-}) || module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkTranspiled(function(tag) {
-  return tag($jscomp$templatelit$m425881384$6);
-}) || module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkTranspiled(function(tag) {
-  return tag($jscomp$templatelit$m425881384$7);
-}) || module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkTranspiled(function(tag) {
-  return tag($jscomp$templatelit$m425881384$8);
-}), module$contents$google3$third_party$javascript$safevalues$internals$string_literal_frozenTSA = module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen($jscomp$templatelit$m425881384$9) && module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen($jscomp$templatelit$m425881384$10) && module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen($jscomp$templatelit$m425881384$11) && module$contents$google3$third_party$javascript$safevalues$internals$string_literal_checkFrozen($jscomp$templatelit$m425881384$12);
-var module$exports$google3$third_party$javascript$safevalues$internals$url_impl = {};
-module$exports$google3$third_party$javascript$safevalues$internals$url_impl.SafeUrl = goog.html.SafeUrl;
-function module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(url) {
-  return (0,goog.html.SafeUrl.createSafeUrlSecurityPrivateDoNotAccessOrElse)(url);
-}
-module$exports$google3$third_party$javascript$safevalues$internals$url_impl.createUrlInternal = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal;
-module$exports$google3$third_party$javascript$safevalues$internals$url_impl.ABOUT_BLANK = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal("about:blank");
-module$exports$google3$third_party$javascript$safevalues$internals$url_impl.INNOCUOUS_URL = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal("about:invalid#zClosurez");
-function module$contents$google3$third_party$javascript$safevalues$internals$url_impl_isUrl(value) {
-  return value instanceof goog.html.SafeUrl;
-}
-module$exports$google3$third_party$javascript$safevalues$internals$url_impl.isUrl = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_isUrl;
-function module$contents$google3$third_party$javascript$safevalues$internals$url_impl_unwrapUrl(value) {
-  return goog.html.SafeUrl.unwrap(value);
-}
-module$exports$google3$third_party$javascript$safevalues$internals$url_impl.unwrapUrl = module$contents$google3$third_party$javascript$safevalues$internals$url_impl_unwrapUrl;
-var module$exports$google3$third_party$javascript$safevalues$builders$url_builders = {};
-function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_Scheme() {
-}
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.Scheme = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_Scheme;
-var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl = function(isValid) {
-  this.isValid = isValid;
-};
-function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme(scheme) {
-  return new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
-    return url.substr(0, scheme.length + 1).toLowerCase() === scheme + ":";
-  });
-}
-var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_RELATIVE_SCHEME = new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
-  return /^[^:]*([/?#]|$)/.test(url);
-}), module$contents$google3$third_party$javascript$safevalues$builders$url_builders_CALLTO_SCHEME = new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
-  return /^callto:\+?\d*$/i.test(url);
-}), module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SSH_SCHEME = new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
-  return 0 === url.indexOf("ssh://");
-}), module$contents$google3$third_party$javascript$safevalues$builders$url_builders_EXTENSION_SCHEME = new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
-  return 0 === url.indexOf("chrome-extension://") || 0 === url.indexOf("moz-extension://") || 0 === url.indexOf("ms-browser-extension://");
-}), module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SIP_SCHEME = new module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl(function(url) {
-  return 0 === url.indexOf("sip:") || 0 === url.indexOf("sips:");
-});
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme = {TEL:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("tel"), CALLTO:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_CALLTO_SCHEME, SSH:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SSH_SCHEME, RTSP:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("rtsp"), 
-DATA:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("data"), HTTP:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("http"), HTTPS:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("https"), EXTENSION:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_EXTENSION_SCHEME, FTP:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("ftp"), 
-RELATIVE:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_RELATIVE_SCHEME, MAILTO:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("mailto"), INTENT:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("intent"), MARKET:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("market"), ITMS:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("itms"), 
-ITMS_APPSS:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("itms-appss"), ITMS_SERVICES:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("itms-services"), FACEBOOK_MESSENGER:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("fb-messenger"), WHATSAPP:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("whatsapp"), SIP:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SIP_SCHEME, 
-SMS:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("sms"), VND_YOUTUBE:module$contents$google3$third_party$javascript$safevalues$builders$url_builders_simpleScheme("vnd.youtube")};
-var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_DEFAULT_SCHEMES = [module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.DATA, module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.HTTP, module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.HTTPS, module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.MAILTO, 
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.FTP, module$exports$google3$third_party$javascript$safevalues$builders$url_builders.SanitizableUrlScheme.RELATIVE];
-function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_trySanitizeUrl(url, allowedSchemes) {
-  allowedSchemes = void 0 === allowedSchemes ? module$contents$google3$third_party$javascript$safevalues$builders$url_builders_DEFAULT_SCHEMES : allowedSchemes;
-  if (module$contents$google3$third_party$javascript$safevalues$internals$url_impl_isUrl(url)) {
-    return url;
-  }
-  for (var i = 0; i < allowedSchemes.length; ++i) {
-    var scheme = allowedSchemes[i];
-    if (scheme instanceof module$contents$google3$third_party$javascript$safevalues$builders$url_builders_SchemeImpl && scheme.isValid(url)) {
-      return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(url);
-    }
-  }
-}
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.trySanitizeUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_trySanitizeUrl;
-function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeUrl(url, allowedSchemes) {
-  allowedSchemes = void 0 === allowedSchemes ? module$contents$google3$third_party$javascript$safevalues$builders$url_builders_DEFAULT_SCHEMES : allowedSchemes;
-  var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_trySanitizeUrl(url, allowedSchemes);
-  void 0 === sanitizedUrl && module$contents$google3$third_party$javascript$safevalues$builders$url_builders_triggerCallbacks(url.toString());
-  return sanitizedUrl || module$exports$google3$third_party$javascript$safevalues$internals$url_impl.INNOCUOUS_URL;
-}
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.sanitizeUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeUrl;
-function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_objectUrlFromSafeSource(source) {
-  if ("undefined" !== typeof MediaSource && source instanceof MediaSource) {
-    return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(URL.createObjectURL(source));
-  }
-  var blob = source, match = blob.type.match(/^([^;]+)(?:;\w+=(?:\w+|"[\w;,= ]+"))*$/i), $jscomp$inline_72;
-  var JSCompiler_inline_result = 2 === (null == ($jscomp$inline_72 = match) ? void 0 : $jscomp$inline_72.length) && (/^image\/(?:bmp|gif|jpeg|jpg|png|tiff|webp|x-icon|heic|heif|avif|x-ms-bmp)$/i.test(match[1]) || /^video\/(?:mpeg|mp4|ogg|webm|x-matroska|quicktime|x-ms-wmv)$/i.test(match[1]) || /^audio\/(?:3gpp2|3gpp|aac|amr|L16|midi|mp3|mp4|mpeg|oga|ogg|opus|x-m4a|x-matroska|x-wav|wav|webm)$/i.test(match[1]) || /^font\/\w+/i.test(match[1]));
-  if (!JSCompiler_inline_result) {
-    var message = "";
-    goog.DEBUG && (message = "unsafe blob MIME type: " + blob.type);
-    throw Error(message);
-  }
-  return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(URL.createObjectURL(blob));
-}
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.objectUrlFromSafeSource = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_objectUrlFromSafeSource;
-function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_fromMediaSource(media) {
-  if ("undefined" !== typeof MediaSource && media instanceof MediaSource) {
-    return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(URL.createObjectURL(media));
-  }
-  var message = "";
-  goog.DEBUG && (message = "fromMediaSource only accepts MediaSource instances, but was called with " + media + ".");
-  throw Error(message);
-}
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.fromMediaSource = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_fromMediaSource;
-function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_fromTrustedResourceUrl(url) {
-  return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(url).toString());
-}
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.fromTrustedResourceUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_fromTrustedResourceUrl;
-function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_safeUrl(templateObj) {
-  var rest = $jscomp.getRestArguments.apply(1, arguments);
-  goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$internals$string_literal_assertIsTemplateObject(templateObj, rest.length);
-  var prefix = templateObj[0];
-  if (goog.DEBUG) {
-    var prefix$jscomp$0 = prefix, isWholeUrl = 0 === rest.length, markerIdx = prefix$jscomp$0.search(/[:/?#]/);
-    if (0 > markerIdx) {
-      var JSCompiler_inline_result = isWholeUrl;
-    } else {
-      if (":" !== prefix$jscomp$0.charAt(markerIdx)) {
-        JSCompiler_inline_result = !0;
-      } else {
-        var scheme = prefix$jscomp$0.substring(0, markerIdx).toLowerCase();
-        JSCompiler_inline_result = /^[a-z][a-z\d+.-]*$/.test(scheme) && "javascript" !== scheme;
-      }
-    }
-    if (!JSCompiler_inline_result) {
-      throw Error("Trying to interpolate with unsupported prefix: " + prefix);
-    }
-  }
-  for (var urlParts = [prefix], i = 0; i < rest.length; i++) {
-    urlParts.push(String(rest[i])), urlParts.push(templateObj[i + 1]);
-  }
-  return module$contents$google3$third_party$javascript$safevalues$internals$url_impl_createUrlInternal(urlParts.join(""));
-}
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.safeUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_safeUrl;
-var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_ASSUME_IMPLEMENTS_URL_API = 2020 <= goog.FEATURESET_YEAR, module$contents$google3$third_party$javascript$safevalues$builders$url_builders_supportsURLAPI = module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
-  return module$contents$google3$third_party$javascript$safevalues$builders$url_builders_ASSUME_IMPLEMENTS_URL_API ? !0 : "function" === typeof URL;
-});
-function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_extractScheme(url) {
-  if (!module$contents$google3$third_party$javascript$safevalues$builders$url_builders_supportsURLAPI) {
-    a: {
-      var aTag = document.createElement("a");
-      try {
-        aTag.href = url;
-      } catch (e) {
-        var JSCompiler_inline_result = void 0;
-        break a;
-      }
-      var protocol = aTag.protocol;
-      JSCompiler_inline_result = ":" === protocol || "" === protocol ? "https:" : protocol;
-    }
-    return JSCompiler_inline_result;
-  }
-  try {
-    var parsedUrl = new URL(url);
-  } catch (e) {
-    return "https:";
-  }
-  return parsedUrl.protocol;
-}
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.extractScheme = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_extractScheme;
-var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_ALLOWED_SCHEMES = ["data:", "http:", "https:", "mailto:", "ftp:"];
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.IS_NOT_JAVASCRIPT_URL_PATTERN = /^\s*(?!javascript:)(?:[a-z0-9+.-]+:|[^:\/?#]*(?:[\/?#]|$))/i;
-function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeJavaScriptUrl(url) {
-  if (module$exports$google3$third_party$javascript$safevalues$builders$url_builders.IS_NOT_JAVASCRIPT_URL_PATTERN.test(url)) {
-    return url;
-  }
-  module$contents$google3$third_party$javascript$safevalues$builders$url_builders_triggerCallbacks(url);
-}
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.sanitizeJavaScriptUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeJavaScriptUrl;
-function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(url) {
-  return url instanceof goog.html.SafeUrl ? module$contents$google3$third_party$javascript$safevalues$internals$url_impl_unwrapUrl(url) : module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizeJavaScriptUrl(url);
-}
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.unwrapUrlOrSanitize = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize;
-function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_restrictivelySanitizeUrl(url) {
-  var parsedScheme = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_extractScheme(url);
-  return void 0 !== parsedScheme && -1 !== module$contents$google3$third_party$javascript$safevalues$builders$url_builders_ALLOWED_SCHEMES.indexOf(parsedScheme.toLowerCase()) ? url : "about:invalid#zClosurez";
-}
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.restrictivelySanitizeUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_restrictivelySanitizeUrl;
-var module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks = [], module$contents$google3$third_party$javascript$safevalues$builders$url_builders_triggerCallbacks = function() {
-};
-goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$builders$url_builders_addJavaScriptUrlSanitizationCallback(function(url) {
-  console.warn("A URL with content '" + url + "' was sanitized away.");
-});
-function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_addJavaScriptUrlSanitizationCallback(callback) {
-  -1 === module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks.indexOf(callback) && module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks.push(callback);
-  module$contents$google3$third_party$javascript$safevalues$builders$url_builders_triggerCallbacks = function(url) {
-    module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks.forEach(function(callback) {
-      callback(url);
-    });
-  };
-}
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.addJavaScriptUrlSanitizationCallback = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_addJavaScriptUrlSanitizationCallback;
-function module$contents$google3$third_party$javascript$safevalues$builders$url_builders_removeJavaScriptUrlSanitizationCallback(callback) {
-  var callbackIndex = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks.indexOf(callback);
-  -1 !== callbackIndex && module$contents$google3$third_party$javascript$safevalues$builders$url_builders_sanitizationCallbacks.splice(callbackIndex, 1);
-}
-module$exports$google3$third_party$javascript$safevalues$builders$url_builders.removeJavaScriptUrlSanitizationCallback = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_removeJavaScriptUrlSanitizationCallback;
 var safevalues = {for_friends:{}};
 safevalues.for_friends.IS_NOT_JAVASCRIPT_URL_PATTERN = module$exports$google3$third_party$javascript$safevalues$builders$url_builders.IS_NOT_JAVASCRIPT_URL_PATTERN;
 safevalues.for_friends.unwrapUrlOrSanitize = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize;
-var module$exports$google3$third_party$javascript$safevalues$internals$secrets = {secretToken:{}};
-function module$contents$google3$third_party$javascript$safevalues$internals$secrets_ensureTokenIsValid(token) {
-  if (goog.DEBUG && token !== module$exports$google3$third_party$javascript$safevalues$internals$secrets.secretToken) {
-    throw Error("Bad secret");
-  }
-}
-module$exports$google3$third_party$javascript$safevalues$internals$secrets.ensureTokenIsValid = module$contents$google3$third_party$javascript$safevalues$internals$secrets_ensureTokenIsValid;
 var module$exports$goog$html$safehtml_internals_for_safevalues = {};
 module$exports$goog$html$safehtml_internals_for_safevalues.createSafeHtml = module$contents$goog$html$SafeHtml_SafeHtml.createSafeHtmlSecurityPrivateDoNotAccessOrElse;
 var module$exports$google3$third_party$javascript$safevalues$internals$html_impl = {};
@@ -4851,47 +4718,7 @@ module$exports$goog$html$safestylesheet_internals_for_safevalues.createSafeStyle
 function module$contents$google3$third_party$javascript$safevalues$internals$style_sheet_impl_unwrapStyleSheet(value) {
   return module$contents$goog$html$SafeStyleSheet_SafeStyleSheet.unwrap(value);
 }
-;var module$exports$google3$third_party$javascript$safevalues$builders$style_sheet_builders = {};
-function module$contents$google3$third_party$javascript$safevalues$builders$style_sheet_builders_safeStyleRule(templateObj) {
-  var rest = $jscomp.getRestArguments.apply(1, arguments);
-  goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$internals$string_literal_assertIsTemplateObject(templateObj, rest.length);
-  for (var stringifiedRule = templateObj[0], i = 0; i < templateObj.length - 1; i++) {
-    stringifiedRule += String(rest[i]), stringifiedRule += templateObj[i + 1];
-  }
-  var doc = document.implementation.createHTMLDocument(""), styleEl = doc.createElement("style");
-  doc.head.appendChild(styleEl);
-  var styleSheet = styleEl.sheet;
-  styleSheet.insertRule(stringifiedRule, 0);
-  if (1 !== styleSheet.cssRules.length) {
-    if (goog.DEBUG) {
-      throw Error("safeStyleRule can be used to construct only 1 CSSStyleRule at a time. Use the concatStyle function to create sheet with several rules. Tried to parse: " + stringifiedRule + ("which has " + styleSheet.cssRules.length + " rules: " + styleSheet.cssRules[0].cssText + " #$% " + styleSheet.cssRules[1].cssText + "."));
-    }
-  } else {
-    var styleSheetRule = styleSheet.cssRules[0];
-    if (styleSheetRule instanceof CSSStyleRule) {
-      var styleSheetValue = styleSheetRule.cssText;
-      return (0,module$exports$goog$html$safestylesheet_internals_for_safevalues.createSafeStyleSheet)(styleSheetValue.replace(/</g, "\\3C "));
-    }
-    if (goog.DEBUG) {
-      throw Error("safeStyleRule can be used to construct a CSSStyleRule. @-rules should be constructed with the safeStyleSheet builder. Tried to parse: " + stringifiedRule);
-    }
-  }
-}
-module$exports$google3$third_party$javascript$safevalues$builders$style_sheet_builders.safeStyleRule = module$contents$google3$third_party$javascript$safevalues$builders$style_sheet_builders_safeStyleRule;
-function module$contents$google3$third_party$javascript$safevalues$builders$style_sheet_builders_safeStyleSheet(templateObj) {
-  goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$internals$string_literal_assertIsTemplateObject(templateObj, 0);
-  var styleSheet = templateObj[0];
-  if (goog.DEBUG && /</.test(styleSheet)) {
-    throw Error("'<' character is forbidden in styleSheet string: " + styleSheet);
-  }
-  return (0,module$exports$goog$html$safestylesheet_internals_for_safevalues.createSafeStyleSheet)(styleSheet);
-}
-module$exports$google3$third_party$javascript$safevalues$builders$style_sheet_builders.safeStyleSheet = module$contents$google3$third_party$javascript$safevalues$builders$style_sheet_builders_safeStyleSheet;
-function module$contents$google3$third_party$javascript$safevalues$builders$style_sheet_builders_concatStyleSheets(sheets) {
-  return (0,module$exports$goog$html$safestylesheet_internals_for_safevalues.createSafeStyleSheet)(sheets.map(module$contents$google3$third_party$javascript$safevalues$internals$style_sheet_impl_unwrapStyleSheet).join(""));
-}
-module$exports$google3$third_party$javascript$safevalues$builders$style_sheet_builders.concatStyleSheets = module$contents$google3$third_party$javascript$safevalues$builders$style_sheet_builders_concatStyleSheets;
-var module$exports$google3$third_party$javascript$safevalues$internals$script_impl = {}, module$contents$google3$third_party$javascript$safevalues$internals$script_impl_trustedTypes = goog.global.trustedTypes;
+;var module$exports$google3$third_party$javascript$safevalues$internals$script_impl = {}, module$contents$google3$third_party$javascript$safevalues$internals$script_impl_trustedTypes = goog.global.trustedTypes;
 module$exports$google3$third_party$javascript$safevalues$internals$script_impl.SafeScript = function(token) {
   goog.DEBUG && module$contents$google3$third_party$javascript$safevalues$internals$secrets_ensureTokenIsValid(token);
 };
@@ -4909,9 +4736,7 @@ function module$contents$google3$third_party$javascript$safevalues$internals$scr
   return module$contents$google3$third_party$javascript$safevalues$internals$script_impl_constructScript(policy ? policy.createScript(noinlineScript) : noinlineScript);
 }
 module$exports$google3$third_party$javascript$safevalues$internals$script_impl.createScriptInternal = module$contents$google3$third_party$javascript$safevalues$internals$script_impl_createScriptInternal;
-module$exports$google3$third_party$javascript$safevalues$internals$script_impl.EMPTY_SCRIPT = module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
-  return module$contents$google3$third_party$javascript$safevalues$internals$script_impl_constructScript(module$contents$google3$third_party$javascript$safevalues$internals$script_impl_trustedTypes ? module$contents$google3$third_party$javascript$safevalues$internals$script_impl_trustedTypes.emptyScript : "");
-});
+module$exports$google3$third_party$javascript$safevalues$internals$script_impl.EMPTY_SCRIPT = module$contents$google3$third_party$javascript$safevalues$internals$script_impl_constructScript(module$contents$google3$third_party$javascript$safevalues$internals$script_impl_trustedTypes ? module$contents$google3$third_party$javascript$safevalues$internals$script_impl_trustedTypes.emptyScript : "");
 function module$contents$google3$third_party$javascript$safevalues$internals$script_impl_isScript(value) {
   return value instanceof module$exports$google3$third_party$javascript$safevalues$internals$script_impl.SafeScript;
 }
@@ -5044,7 +4869,7 @@ function module$contents$google3$third_party$javascript$safevalues$builders$html
   }
   combinedAttributes.type = "text/css";
   var stringifiedAttributes = module$contents$google3$third_party$javascript$safevalues$builders$html_builders_stringifyAttributes("style", combinedAttributes);
-  Array.isArray(styleSheet) && (styleSheet = (0,module$exports$google3$third_party$javascript$safevalues$builders$style_sheet_builders.concatStyleSheets)(styleSheet));
+  Array.isArray(styleSheet) && (styleSheet = (0,module$exports$goog$html$safestylesheet_internals_for_safevalues.createSafeStyleSheet)(styleSheet.map(module$contents$google3$third_party$javascript$safevalues$internals$style_sheet_impl_unwrapStyleSheet).join("")));
   var styleContent = module$contents$google3$third_party$javascript$safevalues$internals$style_sheet_impl_unwrapStyleSheet(styleSheet);
   return (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)("<style " + stringifiedAttributes + ">" + styleContent + "</style>");
 }
@@ -5131,47 +4956,8 @@ function module$contents$google3$third_party$javascript$safevalues$dom$globals$r
   return range.createContextualFragment((0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.unwrapHtml)(html));
 }
 module$exports$google3$third_party$javascript$safevalues$dom$globals$range.createContextualFragment = module$contents$google3$third_party$javascript$safevalues$dom$globals$range_createContextualFragment;
-function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$inert_fragment_createInertFragment(dirtyHtml, inertDocument) {
-  if (goog.DEBUG && inertDocument.defaultView) {
-    throw Error("createInertFragment called with non-inert document");
-  }
-  var range = inertDocument.createRange();
-  range.selectNode(inertDocument.body);
-  var temporarySafeHtml = (0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(dirtyHtml);
-  return (0,module$exports$google3$third_party$javascript$safevalues$dom$globals$range.createContextualFragment)(range, temporarySafeHtml);
-}
-;function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$no_clobber_getNodeName(node) {
-  var nodeName = node.nodeName;
-  return "string" === typeof nodeName ? nodeName : "FORM";
-}
-function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$no_clobber_isElement(node) {
-  var nodeType = node.nodeType;
-  return 1 === nodeType || "number" !== typeof nodeType;
-}
-;var module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table = {SanitizerTable:function(allowedElements, elementPolicies, allowedGlobalAttributes, globalAttributePolicies, globallyAllowedAttributePrefixes) {
-  this.allowedElements = allowedElements;
-  this.elementPolicies = elementPolicies;
-  this.allowedGlobalAttributes = allowedGlobalAttributes;
-  this.globalAttributePolicies = globalAttributePolicies;
-  this.globallyAllowedAttributePrefixes = globallyAllowedAttributePrefixes;
-}};
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.SanitizerTable.prototype.isAllowedElement = function(elementName) {
-  return "FORM" !== elementName && (this.allowedElements.has(elementName) || this.elementPolicies.has(elementName));
-};
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.SanitizerTable.prototype.getAttributePolicy = function(attributeName, elementName) {
-  var elementPolicy = this.elementPolicies.get(elementName), $jscomp$optchain$tmp2000943940$0;
-  if (null == ($jscomp$optchain$tmp2000943940$0 = elementPolicy) ? 0 : $jscomp$optchain$tmp2000943940$0.has(attributeName)) {
-    return elementPolicy.get(attributeName);
-  }
-  if (this.allowedGlobalAttributes.has(attributeName)) {
-    return {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP};
-  }
-  var globalPolicy = this.globalAttributePolicies.get(attributeName);
-  return globalPolicy ? globalPolicy : this.globallyAllowedAttributePrefixes && [].concat($jscomp.arrayFromIterable(this.globallyAllowedAttributePrefixes)).some(function(prefix) {
-    return 0 === attributeName.indexOf(prefix);
-  }) ? {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP} : {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.DROP};
-};
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction = {DROP:0, KEEP:1, KEEP_AND_SANITIZE_URL:2, KEEP_AND_NORMALIZE:3, KEEP_AND_SANITIZE_STYLE:4};
+var module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table = {SanitizerTable:function() {
+}, AttributePolicyAction:{DROP:0, KEEP:1, KEEP_AND_SANITIZE_URL:2, KEEP_AND_NORMALIZE:3, KEEP_AND_SANITIZE_STYLE:4}};
 module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction[module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.DROP] = "DROP";
 module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction[module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP] = "KEEP";
 module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction[module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_URL] = "KEEP_AND_SANITIZE_URL";
@@ -5185,196 +4971,8 @@ function module$contents$google3$third_party$javascript$safevalues$builders$html
   return !module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table_FORBIDDEN_CUSTOM_ELEMENT_NAMES.has(tag.toUpperCase()) && /^[a-z][-_.a-z0-9]*-[-_.a-z0-9]*$/i.test(tag);
 }
 module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.isCustomElement = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table_isCustomElement;
-var module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table = {}, module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_ELEMENTS = "ARTICLE SECTION NAV ASIDE H1 H2 H3 H4 H5 H6 HEADER FOOTER ADDRESS P HR PRE BLOCKQUOTE OL UL LH LI DL DT DD FIGURE FIGCAPTION MAIN DIV EM STRONG SMALL S CITE Q DFN ABBR RUBY RB RT RTC RP DATA TIME CODE VAR SAMP KBD SUB SUP I B U MARK BDI BDO SPAN BR WBR INS DEL PICTURE PARAM TRACK MAP TABLE CAPTION COLGROUP COL TBODY THEAD TFOOT TR TD TH SELECT DATALIST OPTGROUP OPTION OUTPUT PROGRESS METER FIELDSET LEGEND DETAILS SUMMARY MENU DIALOG SLOT CANVAS FONT CENTER ACRONYM BASEFONT BIG DIR HGROUP STRIKE TT".split(" "), 
-module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ELEMENT_POLICIES = [["A", new Map([["href", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_URL}]])], ["AREA", new Map([["href", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_URL}]])], 
-["LINK", new Map([["href", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_URL, conditions:new Map([["rel", new Set("alternate author bookmark canonical cite help icon license next prefetch dns-prefetch prerender preconnect preload prev search subresource".split(" "))]])}]])], ["SOURCE", new Map([["src", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP}]])], 
-["IMG", new Map([["src", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP}]])], ["VIDEO", new Map([["src", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP}]])], ["AUDIO", new Map([["src", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP}]])]], 
-module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_GLOBAL_ATTRIBUTES = "title aria-atomic aria-autocomplete aria-busy aria-checked aria-current aria-disabled aria-dropeffect aria-expanded aria-haspopup aria-hidden aria-invalid aria-label aria-level aria-live aria-multiline aria-multiselectable aria-orientation aria-posinset aria-pressed aria-readonly aria-relevant aria-required aria-selected aria-setsize aria-sort aria-valuemax aria-valuemin aria-valuenow aria-valuetext alt align autocapitalize autocomplete autocorrect autofocus autoplay bgcolor border cellpadding cellspacing checked color cols colspan controls datetime disabled download draggable enctype face formenctype frameborder height hreflang hidden ismap label lang loop max maxlength media minlength min multiple muted nonce open placeholder preload rel required reversed role rows rowspan selected shape size sizes slot span spellcheck start step summary translate type valign value width wrap itemscope itemtype itemid itemprop itemref".split(" "), 
-module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_GLOBAL_ATTRIBUTE_POLICIES = [["dir", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_NORMALIZE, conditions:module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
-  return new Map([["dir", new Set(["auto", "ltr", "rtl"])]]);
-})}], ["async", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_NORMALIZE, conditions:module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
-  return new Map([["async", new Set(["async"])]]);
-})}], ["cite", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_URL}], ["loading", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_NORMALIZE, conditions:module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
-  return new Map([["loading", new Set(["eager", "lazy"])]]);
-})}], ["poster", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_URL}], ["target", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_NORMALIZE, conditions:module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
-  return new Map([["target", new Set(["_self", "_blank"])]]);
-})}]];
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table.defaultSanitizerTable = new module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.SanitizerTable(new Set(module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_ELEMENTS), new Map(module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ELEMENT_POLICIES), 
-new Set(module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_GLOBAL_ATTRIBUTES), new Map(module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_GLOBAL_ATTRIBUTE_POLICIES));
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table.lenientSanitizerTable = new module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.SanitizerTable(new Set(module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_ELEMENTS.concat(["BUTTON", "INPUT"])), new Map(module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ELEMENT_POLICIES), 
-new Set(module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
-  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_GLOBAL_ATTRIBUTES.concat(["class", "id", "name"]);
-})), new Map(module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
-  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_GLOBAL_ATTRIBUTE_POLICIES.concat([["style", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP}]]);
-})));
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table.superLenientSanitizerTable = new module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.SanitizerTable(new Set(module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
-  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_ELEMENTS.concat("STYLE TITLE INPUT TEXTAREA BUTTON LABEL".split(" "));
-})), new Map(module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ELEMENT_POLICIES), new Set(module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
-  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_GLOBAL_ATTRIBUTES.concat(["class", "id", "tabindex", "contenteditable", "name"]);
-})), new Map(module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
-  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_GLOBAL_ATTRIBUTE_POLICIES.concat([["style", {policyAction:module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP}]]);
-})), new Set(["data-", "aria-"]));
-var module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer = {};
-function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_HtmlSanitizer() {
-}
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizer = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_HtmlSanitizer;
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl = function(sanitizerTable, token) {
-  this.sanitizerTable = sanitizerTable;
-  this.changes = [];
-  module$contents$google3$third_party$javascript$safevalues$internals$secrets_ensureTokenIsValid(token);
-};
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.sanitizeAssertUnchanged = function(html) {
-  goog.DEBUG && (this.changes = []);
-  var sanitizedHtml = this.sanitize(html);
-  if (goog.DEBUG && 0 !== this.changes.length) {
-    throw Error('Unexpected change to HTML value as a result of sanitization. Input: "' + (html + '", sanitized output: "' + sanitizedHtml + '"\nList of changes:') + this.changes.join("\n"));
-  }
-  return sanitizedHtml;
-};
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.sanitize = function(html) {
-  var inertDocument = document.implementation.createHTMLDocument("");
-  return (0,module$exports$google3$third_party$javascript$safevalues$builders$html_builders.nodeToHtmlInternal)(this.sanitizeToFragmentInternal(html, inertDocument), inertDocument.body);
-};
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.sanitizeToFragment = function(html) {
-  var inertDocument = document.implementation.createHTMLDocument("");
-  return this.sanitizeToFragmentInternal(html, inertDocument);
-};
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.sanitizeToFragmentInternal = function(html, inertDocument) {
-  for (var $jscomp$this$m1085474118$10 = this, dirtyFragment = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$inert_fragment_createInertFragment(html, inertDocument), treeWalker = document.createTreeWalker(dirtyFragment, 5, function(n) {
-    return $jscomp$this$m1085474118$10.nodeFilter(n);
-  }, !1), currentNode = treeWalker.nextNode(), sanitizedFragment = inertDocument.createDocumentFragment(), sanitizedParent = sanitizedFragment; null !== currentNode;) {
-    var sanitizedNode = void 0;
-    if (3 === currentNode.nodeType) {
-      sanitizedNode = this.sanitizeTextNode(currentNode);
-    } else if (module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$no_clobber_isElement(currentNode)) {
-      sanitizedNode = this.sanitizeElementNode(currentNode, inertDocument);
-    } else {
-      var message = "";
-      goog.DEBUG && (message = "Node is not of type text or element");
-      throw Error(message);
-    }
-    sanitizedParent.appendChild(sanitizedNode);
-    if (currentNode = treeWalker.firstChild()) {
-      sanitizedParent = sanitizedNode;
-    } else {
-      for (; !(currentNode = treeWalker.nextSibling()) && (currentNode = treeWalker.parentNode());) {
-        sanitizedParent = sanitizedParent.parentNode;
-      }
-    }
-  }
-  return sanitizedFragment;
-};
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.sanitizeTextNode = function(textNode) {
-  return document.createTextNode(textNode.data);
-};
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.sanitizeElementNode = function(elementNode, inertDocument) {
-  for (var elementName = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$no_clobber_getNodeName(elementNode), newNode = inertDocument.createElement(elementName), dirtyAttributes = elementNode.attributes, $jscomp$iter$4 = $jscomp.makeIterator(dirtyAttributes), $jscomp$key$m1085474118$25$ = $jscomp$iter$4.next(); !$jscomp$key$m1085474118$25$.done; $jscomp$key$m1085474118$25$ = $jscomp$iter$4.next()) {
-    var $jscomp$destructuring$var12 = $jscomp$key$m1085474118$25$.value, $jscomp$destructuring$var13 = $jscomp$destructuring$var12, name = $jscomp$destructuring$var13.name, value = $jscomp$destructuring$var13.value, policy = this.sanitizerTable.getAttributePolicy(name, elementName);
-    if (this.satisfiesAllConditions(policy.conditions, dirtyAttributes)) {
-      switch(policy.policyAction) {
-        case module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP:
-          module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_setAttribute(newNode, name, value);
-          break;
-        case module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_URL:
-          var sanitizedAttrUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_restrictivelySanitizeUrl(value);
-          sanitizedAttrUrl !== value && this.recordChange("Url in attribute " + name + ' was modified during sanitization. Original url:"' + value + '" was sanitized to: "' + sanitizedAttrUrl + '"');
-          module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_setAttribute(newNode, name, sanitizedAttrUrl);
-          break;
-        case module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_NORMALIZE:
-          module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_setAttribute(newNode, name, value.toLowerCase());
-          break;
-        case module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.KEEP_AND_SANITIZE_STYLE:
-          module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_setAttribute(newNode, name, value);
-          break;
-        case module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$sanitizer_table.AttributePolicyAction.DROP:
-          this.recordChange("Attribute: " + name + " was dropped");
-          break;
-        default:
-          if (goog.DEBUG) {
-            var value$jscomp$0 = policy.policyAction, msg = "Unhandled AttributePolicyAction case";
-            msg = void 0 === msg ? "unexpected value " + value$jscomp$0 + "!" : msg;
-            throw Error(msg);
-          }
-      }
-    } else {
-      this.recordChange("Not all conditions satisfied for attribute: " + name + ".");
-    }
-  }
-  return newNode;
-};
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.nodeFilter = function(node) {
-  if (3 === node.nodeType) {
-    return 1;
-  }
-  if (!module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$no_clobber_isElement(node)) {
-    return 2;
-  }
-  var nodeName = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$no_clobber_getNodeName(node);
-  if (null === nodeName) {
-    return this.recordChange("Node name was null for node: " + node), 2;
-  }
-  if (this.sanitizerTable.isAllowedElement(nodeName)) {
-    return 1;
-  }
-  this.recordChange("Element: " + nodeName + " was dropped");
-  return 2;
-};
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.recordChange = function(errorMessage) {
-  goog.DEBUG && this.changes.push(errorMessage);
-};
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl.prototype.satisfiesAllConditions = function(conditions, attrs) {
-  if (!conditions) {
-    return !0;
-  }
-  for (var $jscomp$iter$5 = $jscomp.makeIterator(conditions), $jscomp$key$m1085474118$26$ = $jscomp$iter$5.next(); !$jscomp$key$m1085474118$26$.done; $jscomp$key$m1085474118$26$ = $jscomp$iter$5.next()) {
-    var $jscomp$destructuring$var14 = $jscomp$key$m1085474118$26$.value, $jscomp$destructuring$var15 = $jscomp.makeIterator($jscomp$destructuring$var14), attrName__tsickle_destructured_1 = $jscomp$destructuring$var15.next().value, expectedValues__tsickle_destructured_2 = $jscomp$destructuring$var15.next().value, attrName = attrName__tsickle_destructured_1, expectedValues = expectedValues__tsickle_destructured_2, $jscomp$optchain$tmpm1085474118$0 = void 0, value = null == ($jscomp$optchain$tmpm1085474118$0 = 
-    attrs.getNamedItem(attrName)) ? void 0 : $jscomp$optchain$tmpm1085474118$0.value;
-    if (value && !expectedValues.has(value)) {
-      return !1;
-    }
-  }
-  return !0;
-};
-function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_setAttribute(el, name, value) {
-  el.setAttribute(name, value);
-}
-var module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_defaultHtmlSanitizer = module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
-  return new module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl(module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table.defaultSanitizerTable, module$exports$google3$third_party$javascript$safevalues$internals$secrets.secretToken);
-});
-function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_sanitizeHtml(html) {
-  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_defaultHtmlSanitizer.sanitize(html);
-}
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.sanitizeHtml = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_sanitizeHtml;
-function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_sanitizeHtmlAssertUnchanged(html) {
-  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_defaultHtmlSanitizer.sanitizeAssertUnchanged(html);
-}
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.sanitizeHtmlAssertUnchanged = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_sanitizeHtmlAssertUnchanged;
-function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_sanitizeHtmlToFragment(html) {
-  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_defaultHtmlSanitizer.sanitizeToFragment(html);
-}
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.sanitizeHtmlToFragment = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_sanitizeHtmlToFragment;
-var module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_lenientHtmlSanitizer = module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
-  return new module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl(module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table.lenientSanitizerTable, module$exports$google3$third_party$javascript$safevalues$internals$secrets.secretToken);
-});
-function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_lenientlySanitizeHtml(html) {
-  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_lenientHtmlSanitizer.sanitize(html);
-}
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.lenientlySanitizeHtml = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_lenientlySanitizeHtml;
-function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_lenientlySanitizeHtmlAssertUnchanged(html) {
-  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_lenientHtmlSanitizer.sanitizeAssertUnchanged(html);
-}
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.lenientlySanitizeHtmlAssertUnchanged = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_lenientlySanitizeHtmlAssertUnchanged;
-var module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_superLenientHtmlSanitizer = module$contents$google3$third_party$javascript$safevalues$internals$pure_pure(function() {
-  return new module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.HtmlSanitizerImpl(module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table.superLenientSanitizerTable, module$exports$google3$third_party$javascript$safevalues$internals$secrets.secretToken);
-});
-function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_superLenientlySanitizeHtml(html) {
-  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_superLenientHtmlSanitizer.sanitize(html);
-}
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.superLenientlySanitizeHtml = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_superLenientlySanitizeHtml;
-function module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_superLenientlySanitizeHtmlAssertUnchanged(html) {
-  return module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_superLenientHtmlSanitizer.sanitizeAssertUnchanged(html);
-}
-module$exports$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer.superLenientlySanitizeHtmlAssertUnchanged = module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$html_sanitizer_superLenientlySanitizeHtmlAssertUnchanged;
+var module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_ELEMENTS = "ARTICLE SECTION NAV ASIDE H1 H2 H3 H4 H5 H6 HEADER FOOTER ADDRESS P HR PRE BLOCKQUOTE OL UL LH LI DL DT DD FIGURE FIGCAPTION MAIN DIV EM STRONG SMALL S CITE Q DFN ABBR RUBY RB RT RTC RP DATA TIME CODE VAR SAMP KBD SUB SUP I B U MARK BDI BDO SPAN BR WBR INS DEL PICTURE PARAM TRACK MAP TABLE CAPTION COLGROUP COL TBODY THEAD TFOOT TR TD TH SELECT DATALIST OPTGROUP OPTION OUTPUT PROGRESS METER FIELDSET LEGEND DETAILS SUMMARY MENU DIALOG SLOT CANVAS FONT CENTER ACRONYM BASEFONT BIG DIR HGROUP STRIKE TT".split(" ");
+module$contents$google3$third_party$javascript$safevalues$builders$html_sanitizer$sanitizer_table$default_sanitizer_table_ALLOWED_ELEMENTS.concat(["BUTTON", "INPUT"]);
 function module$contents$google3$third_party$javascript$safevalues$restricted$reviewed_assertValidJustification(justification) {
   if ("string" !== typeof justification || "" === justification.trim()) {
     var errMsg = "Calls to uncheckedconversion functions must go through security review.";
@@ -5796,6 +5394,10 @@ function module$contents$google3$third_party$javascript$safevalues$dom$elements$
   void 0 !== sanitizedUrl && (anchor.href = sanitizedUrl);
 }
 module$exports$google3$third_party$javascript$safevalues$dom$elements$anchor.setHref = module$contents$google3$third_party$javascript$safevalues$dom$elements$anchor_setHref;
+function module$contents$google3$third_party$javascript$safevalues$dom$elements$anchor_setHrefLite(anchor, url) {
+  module$contents$google3$third_party$javascript$safevalues$builders$url_builders_reportJavaScriptUrl(url) || (anchor.href = url);
+}
+module$exports$google3$third_party$javascript$safevalues$dom$elements$anchor.setHrefLite = module$contents$google3$third_party$javascript$safevalues$dom$elements$anchor_setHrefLite;
 var module$exports$google3$third_party$javascript$safevalues$dom$elements$area = {};
 function module$contents$google3$third_party$javascript$safevalues$dom$elements$area_setHref(area, url) {
   var sanitizedUrl = module$contents$google3$third_party$javascript$safevalues$builders$url_builders_unwrapUrlOrSanitize(url);
@@ -5906,9 +5508,9 @@ function module$contents$google3$third_party$javascript$safevalues$dom$elements$
   }
 }
 module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.TypeCannotBeUsedWithIntentError = function(type, intent) {
-  var $jscomp$tmp$error = Error.call(this, type + " cannot be used with intent " + module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent[intent]);
-  this.message = $jscomp$tmp$error.message;
-  "stack" in $jscomp$tmp$error && (this.stack = $jscomp$tmp$error.stack);
+  var $jscomp$tmp$error$494508883$1 = Error.call(this, type + " cannot be used with intent " + module$exports$google3$third_party$javascript$safevalues$dom$elements$iframe.Intent[intent]);
+  this.message = $jscomp$tmp$error$494508883$1.message;
+  "stack" in $jscomp$tmp$error$494508883$1 && (this.stack = $jscomp$tmp$error$494508883$1.stack);
   this.type = type;
   this.name = "TypeCannotBeUsedWithIntentError";
 };
@@ -6365,9 +5967,9 @@ function module$contents$google3$third_party$javascript$safevalues$dom$globals$d
 }
 module$exports$google3$third_party$javascript$safevalues$dom$globals$dom_parser.parseFromString = module$contents$google3$third_party$javascript$safevalues$dom$globals$dom_parser_parseFromString;
 var module$exports$google3$third_party$javascript$safevalues$dom$globals$fetch = {IncorrectContentTypeError:function(url, typeName, contentType) {
-  var $jscomp$tmp$error = Error.call(this, url + " was requested as a " + typeName + ', but the response Content-Type, "' + contentType + " is not appropriate for this type of content.");
-  this.message = $jscomp$tmp$error.message;
-  "stack" in $jscomp$tmp$error && (this.stack = $jscomp$tmp$error.stack);
+  var $jscomp$tmp$error$1153895636$4 = Error.call(this, url + " was requested as a " + typeName + ', but the response Content-Type, "' + contentType + " is not appropriate for this type of content.");
+  this.message = $jscomp$tmp$error$1153895636$4.message;
+  "stack" in $jscomp$tmp$error$1153895636$4 && (this.stack = $jscomp$tmp$error$1153895636$4.stack);
   this.url = url;
   this.contentType = contentType;
 }};
@@ -6377,47 +5979,47 @@ function module$contents$google3$third_party$javascript$safevalues$dom$globals$f
 module$exports$google3$third_party$javascript$safevalues$dom$globals$fetch.SafeResponse = module$contents$google3$third_party$javascript$safevalues$dom$globals$fetch_SafeResponse;
 function module$contents$google3$third_party$javascript$safevalues$dom$globals$fetch_fetchResourceUrl(u, init) {
   var response, $jscomp$optchain$tmp1153895636$0, $jscomp$optchain$tmp1153895636$1, $jscomp$optchain$tmp1153895636$2, mimeType;
-  return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context$1153895636$6) {
-    if (1 == $jscomp$generator$context$1153895636$6.nextAddress) {
-      return $jscomp$generator$context$1153895636$6.yield(fetch(module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(u).toString(), init), 2);
+  return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context$1153895636$8) {
+    if (1 == $jscomp$generator$context$1153895636$8.nextAddress) {
+      return $jscomp$generator$context$1153895636$8.yield(fetch(module$contents$google3$third_party$javascript$safevalues$internals$resource_url_impl_unwrapResourceUrl(u).toString(), init), 2);
     }
-    response = $jscomp$generator$context$1153895636$6.yieldResult;
+    response = $jscomp$generator$context$1153895636$8.yieldResult;
     mimeType = null == ($jscomp$optchain$tmp1153895636$0 = response.headers.get("Content-Type")) ? void 0 : null == ($jscomp$optchain$tmp1153895636$1 = $jscomp$optchain$tmp1153895636$0.split(";", 2)) ? void 0 : null == ($jscomp$optchain$tmp1153895636$2 = $jscomp$optchain$tmp1153895636$1[0]) ? void 0 : $jscomp$optchain$tmp1153895636$2.toLowerCase();
-    return $jscomp$generator$context$1153895636$6.return({html:function() {
-      var text;
-      return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context$1153895636$3) {
-        if (1 == $jscomp$generator$context$1153895636$3.nextAddress) {
-          if ("text/html" !== mimeType) {
-            throw new module$exports$google3$third_party$javascript$safevalues$dom$globals$fetch.IncorrectContentTypeError(response.url, "SafeHtml", "text/html");
-          }
-          return $jscomp$generator$context$1153895636$3.yield(response.text(), 2);
-        }
-        text = $jscomp$generator$context$1153895636$3.yieldResult;
-        return $jscomp$generator$context$1153895636$3.return((0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(text));
-      });
-    }, script:function() {
-      var text;
-      return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context$1153895636$4) {
-        if (1 == $jscomp$generator$context$1153895636$4.nextAddress) {
-          if ("text/javascript" !== mimeType && "application/javascript" !== mimeType) {
-            throw new module$exports$google3$third_party$javascript$safevalues$dom$globals$fetch.IncorrectContentTypeError(response.url, "SafeScript", "text/javascript");
-          }
-          return $jscomp$generator$context$1153895636$4.yield(response.text(), 2);
-        }
-        text = $jscomp$generator$context$1153895636$4.yieldResult;
-        return $jscomp$generator$context$1153895636$4.return(module$contents$google3$third_party$javascript$safevalues$internals$script_impl_createScriptInternal(text));
-      });
-    }, styleSheet:function() {
+    return $jscomp$generator$context$1153895636$8.return({html:function() {
       var text;
       return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context$1153895636$5) {
         if (1 == $jscomp$generator$context$1153895636$5.nextAddress) {
-          if ("text/css" !== mimeType) {
-            throw new module$exports$google3$third_party$javascript$safevalues$dom$globals$fetch.IncorrectContentTypeError(response.url, "SafeStyleSheet", "text/css");
+          if ("text/html" !== mimeType) {
+            throw new module$exports$google3$third_party$javascript$safevalues$dom$globals$fetch.IncorrectContentTypeError(response.url, "SafeHtml", "text/html");
           }
           return $jscomp$generator$context$1153895636$5.yield(response.text(), 2);
         }
         text = $jscomp$generator$context$1153895636$5.yieldResult;
-        return $jscomp$generator$context$1153895636$5.return((0,module$exports$goog$html$safestylesheet_internals_for_safevalues.createSafeStyleSheet)(text));
+        return $jscomp$generator$context$1153895636$5.return((0,module$exports$google3$third_party$javascript$safevalues$internals$html_impl.createHtmlInternal)(text));
+      });
+    }, script:function() {
+      var text;
+      return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context$1153895636$6) {
+        if (1 == $jscomp$generator$context$1153895636$6.nextAddress) {
+          if ("text/javascript" !== mimeType && "application/javascript" !== mimeType) {
+            throw new module$exports$google3$third_party$javascript$safevalues$dom$globals$fetch.IncorrectContentTypeError(response.url, "SafeScript", "text/javascript");
+          }
+          return $jscomp$generator$context$1153895636$6.yield(response.text(), 2);
+        }
+        text = $jscomp$generator$context$1153895636$6.yieldResult;
+        return $jscomp$generator$context$1153895636$6.return(module$contents$google3$third_party$javascript$safevalues$internals$script_impl_createScriptInternal(text));
+      });
+    }, styleSheet:function() {
+      var text;
+      return $jscomp.asyncExecutePromiseGeneratorProgram(function($jscomp$generator$context$1153895636$7) {
+        if (1 == $jscomp$generator$context$1153895636$7.nextAddress) {
+          if ("text/css" !== mimeType) {
+            throw new module$exports$google3$third_party$javascript$safevalues$dom$globals$fetch.IncorrectContentTypeError(response.url, "SafeStyleSheet", "text/css");
+          }
+          return $jscomp$generator$context$1153895636$7.yield(response.text(), 2);
+        }
+        text = $jscomp$generator$context$1153895636$7.yieldResult;
+        return $jscomp$generator$context$1153895636$7.return((0,module$exports$goog$html$safestylesheet_internals_for_safevalues.createSafeStyleSheet)(text));
       });
     }});
   });
@@ -8968,9 +8570,9 @@ goog.net.WrapperXmlHttpFactory.prototype.getOptions = function() {
 goog.net.XmlHttp = function() {
   return goog.net.XmlHttp.factory_.createInstance();
 };
-goog.net.XmlHttp.ASSUME_NATIVE_XHR = !1;
+goog.net.XmlHttp.ASSUME_NATIVE_XHR = !0;
 goog.net.XmlHttpDefines = {};
-goog.net.XmlHttpDefines.ASSUME_NATIVE_XHR = !1;
+goog.net.XmlHttpDefines.ASSUME_NATIVE_XHR = !0;
 goog.net.XmlHttp.getOptions = function() {
   return goog.net.XmlHttp.factory_.getOptions();
 };

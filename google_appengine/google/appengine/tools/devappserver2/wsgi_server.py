@@ -22,6 +22,7 @@ from __future__ import print_function
 
 import collections
 import errno
+import http.client as http_client
 import logging
 import os
 import re
@@ -32,6 +33,7 @@ import threading
 import time
 
 import google
+
 import ipaddr
 from google.appengine._internal import six
 
@@ -40,11 +42,7 @@ from google.appengine.tools.devappserver2 import http_runtime_constants
 from google.appengine.tools.devappserver2 import shutdown
 from google.appengine.tools.devappserver2 import thread_executor
 
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  import httplib as http_client
-else:
-  import http.client as http_client
+
 
 
 
@@ -544,9 +542,7 @@ class WsgiServer(object):
           port = server.port
       except BindError as bind_error:
         err = None
-        if six.PY2:
-          err = bind_error[1][0]
-        elif (
+        if (
             bind_error.args
             and len(bind_error.args) > 1
             and isinstance(bind_error.args[1], OSError)

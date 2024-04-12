@@ -34,9 +34,6 @@ import six.moves.BaseHTTPServer
 from google.appengine.tools import sdk_update_checker
 
 
-
-
-
 # The SDK version returned when there is no available VERSION file.
 _DEFAULT_SDK_VERSION = '(Internal)'
 

@@ -24,18 +24,11 @@ from unittest import mock
 
 import google
 
+from google.appengine.api import appinfo
+from google.appengine.api import dispatchinfo
+from google.appengine.api import request_info
 import mox
 from google.appengine._internal import six
-
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import appinfo
-  from google.appengine.api import dispatchinfo
-  from google.appengine.api import request_info
-else:
-  from google.appengine.api import appinfo
-  from google.appengine.api import dispatchinfo
-  from google.appengine.api import request_info
 
 from google.appengine.tools.devappserver2 import dispatcher
 from google.appengine.tools.devappserver2 import module

@@ -17,13 +17,9 @@
 """A datastore stats generator button UI."""
 
 import google
-from google.appengine._internal import six
 
 # pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.datastore import datastore_stats_generator
-else:
-  from google.appengine.datastore import datastore_stats_generator
+from google.appengine.datastore import datastore_stats_generator
 
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 

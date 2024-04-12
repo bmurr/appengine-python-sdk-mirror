@@ -16,8 +16,6 @@
 #
 """Tests for google.apphosting.tools.devappserver2.module."""
 
-
-
 import functools
 import logging
 import os
@@ -34,12 +32,8 @@ import mox
 from google.appengine._internal import six
 
 # pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import appinfo
-  from google.appengine.api import request_info
-else:
-  from google.appengine.api import appinfo
-  from google.appengine.api import request_info
+from google.appengine.api import appinfo
+from google.appengine.api import request_info
 
 from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import constants

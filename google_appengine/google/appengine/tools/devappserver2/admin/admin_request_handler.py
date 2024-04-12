@@ -16,8 +16,6 @@
 #
 """A base class for all Admin UI request handlers and related utilities."""
 
-
-
 import os.path
 import random
 import string

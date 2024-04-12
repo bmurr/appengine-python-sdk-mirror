@@ -21,19 +21,12 @@ import os
 import shutil
 
 import google
-from google.appengine._internal import six
 
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_file_stub
-  from google.appengine.datastore import datastore_sqlite_stub
-else:
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_file_stub
-  from google.appengine.datastore import datastore_sqlite_stub
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import datastore
+from google.appengine.api import datastore_file_stub
+from google.appengine.datastore import datastore_sqlite_stub
+from google.appengine._internal import six
 
 from google.appengine.tools.devappserver2 import datastore_grpc_stub
 

@@ -16,8 +16,6 @@
 #
 """Utilities for testing WSGI apps."""
 
-
-
 import unittest
 import wsgiref.headers
 

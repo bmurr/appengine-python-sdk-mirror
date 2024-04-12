@@ -19,21 +19,17 @@
 import unittest
 
 import google
+
+from google.appengine.ext import blobstore
+from google.appengine.ext import db
 import mox
 from google.appengine._internal import six
 import webapp2
 from webob import multidict
 
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.ext import blobstore
-  from google.appengine.ext import db
-else:
-  from google.appengine.ext import blobstore
-  from google.appengine.ext import db
-
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 from google.appengine.tools.devappserver2.admin import blobstore_viewer
+
 
 BLOBS_PER_PAGE = blobstore_viewer.BlobstoreRequestHandler.BLOBS_PER_PAGE
 

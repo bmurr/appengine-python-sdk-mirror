@@ -16,8 +16,6 @@
 #
 """Runs the unit test suite for devappserver2."""
 
-
-
 import argparse
 import os.path
 import sys

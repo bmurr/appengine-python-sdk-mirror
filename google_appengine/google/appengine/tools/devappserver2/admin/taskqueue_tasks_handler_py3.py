@@ -16,8 +16,6 @@
 #
 """A handler that displays task information for a single queue."""
 
-
-
 import datetime
 import urllib
 

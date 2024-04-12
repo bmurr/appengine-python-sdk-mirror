@@ -22,70 +22,25 @@ from __future__ import print_function
 
 import logging
 import os
+
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import mail_stub
+from google.appengine.api import urlfetch_stub
+from google.appengine.api import user_service_stub
+from google.appengine.api.app_identity import app_identity_stub
+from google.appengine.api.blobstore import blobstore_stub
+from google.appengine.api.blobstore import file_blob_storage
+from google.appengine.api.capabilities import capability_stub
+from google.appengine.api.logservice import logservice_stub
+from google.appengine.api.memcache import memcache_stub
+from google.appengine.api.modules import modules_stub
+from google.appengine.api.search import simple_search_stub
+from google.appengine.api.system import system_stub
+from google.appengine.api.taskqueue import taskqueue_stub
+from google.appengine.datastore import datastore_sqlite_stub
+from google.appengine.datastore import datastore_stub_util
+from google.appengine.datastore import datastore_v4_stub
 from google.appengine._internal import six
-
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import mail_stub
-  from google.appengine.api import urlfetch_stub
-  from google.appengine.api import user_service_stub
-  from google.appengine.api.app_identity import app_identity_stub
-  from google.appengine.api.blobstore import blobstore_stub
-  from google.appengine.api.blobstore import file_blob_storage
-  from google.appengine.api.capabilities import capability_stub
-  from google.appengine.api.logservice import logservice_stub
-  from google.appengine.api.memcache import memcache_stub
-  from google.appengine.api.modules import modules_stub
-  from google.appengine.api.search import simple_search_stub
-  from google.appengine.api.system import system_stub
-  from google.appengine.api.taskqueue import taskqueue_stub
-  from google.appengine.datastore import datastore_stub_util
-  from google.appengine.datastore import datastore_v4_stub
-else:
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import mail_stub
-  from google.appengine.api import urlfetch_stub
-  from google.appengine.api import user_service_stub
-  from google.appengine.api.app_identity import app_identity_stub
-  from google.appengine.api.blobstore import blobstore_stub
-  from google.appengine.api.blobstore import file_blob_storage
-  from google.appengine.api.capabilities import capability_stub
-  from google.appengine.api.logservice import logservice_stub
-  from google.appengine.api.memcache import memcache_stub
-  from google.appengine.api.modules import modules_stub
-  from google.appengine.api.search import simple_search_stub
-  from google.appengine.api.system import system_stub
-  from google.appengine.api.taskqueue import taskqueue_stub
-  from google.appengine.datastore import datastore_stub_util
-  from google.appengine.datastore import datastore_v4_stub
-
-if six.PY2:
-  from google.appengine.datastore import datastore_v4_pb
-
-  # We don't want to support datastore_v4 everywhere, because users are supposed
-  # to use the Cloud Datastore API going forward, so we don't want to put these
-  # entries in remote_api_servers.SERVICE_PB_MAP. But for our own implementation
-  # of the Cloud Datastore API we need those methods to work when an instance
-  # issues them, specifically the DatastoreApiServlet running as a module inside
-  # the app we are running. The consequence is that other app code can also
-  # issue datastore_v4 API requests, but since we don't document these requests
-  # or export them through any language bindings this is unlikely in practice.
-  DATASTORE_V4_METHODS = {
-      'AllocateIds': (datastore_v4_pb.AllocateIdsRequest,
-                      datastore_v4_pb.AllocateIdsResponse),
-      'BeginTransaction': (datastore_v4_pb.BeginTransactionRequest,
-                           datastore_v4_pb.BeginTransactionResponse),
-      'Commit': (datastore_v4_pb.CommitRequest, datastore_v4_pb.CommitResponse),
-      'ContinueQuery': (datastore_v4_pb.ContinueQueryRequest,
-                        datastore_v4_pb.ContinueQueryResponse),
-      'Lookup': (datastore_v4_pb.LookupRequest, datastore_v4_pb.LookupResponse),
-      'Rollback':
-          (datastore_v4_pb.RollbackRequest, datastore_v4_pb.RollbackResponse),
-      'RunQuery':
-          (datastore_v4_pb.RunQueryRequest, datastore_v4_pb.RunQueryResponse),
-  }
-# pylint: enable=import-not-at-top
 
 
 def setup_stubs(request_data,
@@ -211,10 +166,7 @@ def setup_stubs(request_data,
         datastore_grpc_stub_class(os.environ['DATASTORE_EMULATOR_HOST']))
   else:
     if datastore_local_stub_class is None:
-      if six.PY2:
-        from google.appengine.datastore import datastore_sqlite_stub
-      else:
-        from google.appengine.datastore import datastore_sqlite_stub
+
       datastore_local_stub_class = datastore_sqlite_stub.DatastoreSqliteStub
     apiproxy_stub_map.apiproxy.ReplaceStub(
         'datastore_v3',
@@ -230,22 +182,17 @@ def setup_stubs(request_data,
   apiproxy_stub_map.apiproxy.RegisterStub(
       'datastore_v4', datastore_v4_stub.DatastoreV4Stub(app_id))
 
-  # pylint: disable=import-not-at-top
+  # pylint: disable=g-import-not-at-top, unused-import
   try:
-    if six.PY2:
-      from google.appengine.api.images import images_stub
-    else:
-      from google.appengine.api.images import images_stub
+    from google.appengine.api.images import images_stub
   except ImportError:
 
 
 
 
     # We register a stub which throws a NotImplementedError for most RPCs.
-    if six.PY2:
-      from google.appengine.api.images import images_not_implemented_stub
-    else:
-      from google.appengine.api.images import images_not_implemented_stub
+    from google.appengine.api.images import images_not_implemented_stub
+
     apiproxy_stub_map.apiproxy.RegisterStub(
         'images',
         images_not_implemented_stub.ImagesNotImplementedServiceStub(

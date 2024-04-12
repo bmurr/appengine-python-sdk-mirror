@@ -16,8 +16,6 @@
 #
 """WSGI app for the administrative UI."""
 
-
-
 import google
 import six.moves.urllib
 import webapp2

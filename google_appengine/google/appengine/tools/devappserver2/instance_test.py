@@ -16,8 +16,6 @@
 #
 """Tests for google.apphosting.tools.devappserver2.instance."""
 
-
-
 import os
 import time
 import unittest

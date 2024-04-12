@@ -32,14 +32,9 @@ import time
 import wsgiref.handlers
 import zlib
 
+from google.appengine.api import appinfo
 from google.appengine._internal import six
 import six.moves.http_client
-
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import appinfo
-else:
-  from google.appengine.api import appinfo
 
 from google.appengine.tools import augment_mimetypes
 from google.appengine.tools.devappserver2 import errors

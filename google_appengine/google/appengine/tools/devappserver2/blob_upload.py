@@ -45,23 +45,14 @@ import six.moves.urllib.parse
 import webob.exc
 
 # pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_errors
-  from google.appengine.api.blobstore import blobstore
-  from google.appengine.ext.cloudstorage import cloudstorage_stub
-else:
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_errors
-  from google.appengine.api.blobstore import blobstore
-  from cloudstorage import cloudstorage_stub
+# pylint: disable=g-bad-import-order
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import datastore
+from google.appengine.api import datastore_errors
+from google.appengine.api.blobstore import blobstore
+from cloudstorage import cloudstorage_stub
 
 from google.appengine.tools.devappserver2 import constants
-
-EMAIL_MESSSAGE_CLASS = (
-    email.Message.Message if six.PY2 else email.message.EmailMessage)
 
 # Upload URL path.
 UPLOAD_URL_PATH = '_ah/upload/'
@@ -377,7 +368,7 @@ class Application(object):
     for form_item in form_items:
       disposition_parameters = {'name': form_item.name}
 
-      variable = EMAIL_MESSSAGE_CLASS()
+      variable = email.message.EmailMessage()
 
       if form_item.filename is None:
         # Copy as is

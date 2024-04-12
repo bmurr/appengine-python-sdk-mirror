@@ -25,8 +25,6 @@ ThreadExecutor is only efficient when the cost of creating a thread is small
 compared to the work being done.
 """
 
-
-
 import threading
 
 import google

@@ -20,32 +20,21 @@ import os
 import unittest
 
 import google
+
+from google.appengine.api import datastore
+from google.appengine.api import datastore_errors
+from google.appengine.api.images import images_service_pb2
+from google.appengine.api.images import images_stub
+from google.appengine.ext import blobstore
+from google.appengine.runtime import apiproxy_errors
 import mox
 from google.appengine._internal import six
-
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_errors
-  from google.appengine.api.images import images_service_pb
-  from google.appengine.api.images import images_stub
-  from google.appengine.ext import blobstore
-  from google.appengine.runtime import apiproxy_errors
-
-  _IMAGES_SERVICE_PB_MOD = images_service_pb
-else:
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_errors
-  from google.appengine.api.images import images_service_pb2
-  from google.appengine.api.images import images_stub
-  from google.appengine.ext import blobstore
-  from google.appengine.runtime import apiproxy_errors
-
-  _IMAGES_SERVICE_PB_MOD = images_service_pb2
 
 from google.appengine.tools.devappserver2 import blob_download
 from google.appengine.tools.devappserver2 import blob_image
 from google.appengine.tools.devappserver2 import wsgi_test_utils
+
+_IMAGES_SERVICE_PB_MOD = images_service_pb2
 
 
 class MockImage(object):
@@ -83,116 +72,60 @@ class BlobImageTest(wsgi_test_utils.WSGITestCase):
     blob_download.blobstore_download_rewriter = self._blobstore_rewriter
     self.mox.UnsetStubs()
 
-  if six.PY2:
+  def expect_open_image(
+      self, blob_key, dimensions=None, throw_exception=None, mime_type='JPEG'
+  ):
+    """Setup a mox expectation to images_stub._OpenImageData."""
+    image_data = images_service_pb2.ImageData()
+    image_data.blob_key = blob_key
+    self._image.format = mime_type
+    if throw_exception:
+      self._images_stub._OpenImageData(image_data).AndRaise(throw_exception)
+    else:
+      self._images_stub._OpenImageData(image_data).AndReturn(self._image)
+      self._image.size = dimensions
 
-    def expect_open_image(self,
-                          blob_key,
-                          dimensions=None,
-                          throw_exception=None,
-                          mime_type='JPEG'):
-      """Setup a mox expectation to images_stub._OpenImageData."""
-      image_data = images_service_pb.ImageData()
-      image_data.set_blob_key(blob_key)
-      self._image.format = mime_type
-      if throw_exception:
-        self._images_stub._OpenImageData(image_data).AndRaise(throw_exception)
-      else:
-        self._images_stub._OpenImageData(image_data).AndReturn(self._image)
-        self._image.size = dimensions
+  def expect_crop(self, left_x=None, right_x=None, top_y=None, bottom_y=None):
+    """Setup a mox expectation to images_stub._Crop."""
+    crop_xform = images_service_pb2.Transform()
+    if left_x is not None:
+      if not isinstance(left_x, float):
+        raise self.failureException('Crop argument must be a float.')
+      crop_xform.crop_left_x = left_x
+    if right_x is not None:
+      if not isinstance(right_x, float):
+        raise self.failureException('Crop argument must be a float.')
+      crop_xform.crop_right_x = right_x
+    if top_y is not None:
+      if not isinstance(top_y, float):
+        raise self.failureException('Crop argument must be a float.')
+      crop_xform.crop_top_y = top_y
+    if bottom_y is not None:
+      if not isinstance(bottom_y, float):
+        raise self.failureException('Crop argument must be a float.')
+      crop_xform.crop_bottom_y = bottom_y
+    self._images_stub._Crop(mox.IsA(MockImage), crop_xform).AndReturn(
+        self._image
+    )
 
-    def expect_crop(self, left_x=None, right_x=None, top_y=None, bottom_y=None):
-      """Setup a mox expectation to images_stub._Crop."""
-      crop_xform = images_service_pb.Transform()
-      if left_x is not None:
-        if not isinstance(left_x, float):
-          raise self.failureException('Crop argument must be a float.')
-        crop_xform.set_crop_left_x(left_x)
-      if right_x is not None:
-        if not isinstance(right_x, float):
-          raise self.failureException('Crop argument must be a float.')
-        crop_xform.set_crop_right_x(right_x)
-      if top_y is not None:
-        if not isinstance(top_y, float):
-          raise self.failureException('Crop argument must be a float.')
-        crop_xform.set_crop_top_y(top_y)
-      if bottom_y is not None:
-        if not isinstance(bottom_y, float):
-          raise self.failureException('Crop argument must be a float.')
-        crop_xform.set_crop_bottom_y(bottom_y)
-      self._images_stub._Crop(mox.IsA(MockImage),
-                              crop_xform).AndReturn(self._image)
+  def expect_resize(self, resize):
+    """Setup a mox expectation to images_stub._Resize."""
+    resize_xform = images_service_pb2.Transform()
+    resize_xform.width = resize
+    resize_xform.height = resize
+    self._images_stub._Resize(mox.IsA(MockImage), resize_xform).AndReturn(
+        self._image
+    )
 
-    def expect_resize(self, resize):
-      """Setup a mox expectation to images_stub._Resize."""
-      resize_xform = images_service_pb.Transform()
-      resize_xform.set_width(resize)
-      resize_xform.set_height(resize)
-      self._images_stub._Resize(mox.IsA(MockImage),
-                                resize_xform).AndReturn(self._image)
-
-    def expect_encode_image(self,
-                            data,
-                            mime_type=images_service_pb.OutputSettings.JPEG):
-      """Setup a mox expectation to images_stub._EncodeImage."""
-      output_settings = images_service_pb.OutputSettings()
-      output_settings.set_mime_type(mime_type)
-      self._images_stub._EncodeImage(mox.IsA(MockImage),
-                                     output_settings).AndReturn(data)
-  else:
-
-    def expect_open_image(self,
-                          blob_key,
-                          dimensions=None,
-                          throw_exception=None,
-                          mime_type='JPEG'):
-      """Setup a mox expectation to images_stub._OpenImageData."""
-      image_data = images_service_pb2.ImageData()
-      image_data.blob_key = blob_key
-      self._image.format = mime_type
-      if throw_exception:
-        self._images_stub._OpenImageData(image_data).AndRaise(throw_exception)
-      else:
-        self._images_stub._OpenImageData(image_data).AndReturn(self._image)
-        self._image.size = dimensions
-
-    def expect_crop(self, left_x=None, right_x=None, top_y=None, bottom_y=None):
-      """Setup a mox expectation to images_stub._Crop."""
-      crop_xform = images_service_pb2.Transform()
-      if left_x is not None:
-        if not isinstance(left_x, float):
-          raise self.failureException('Crop argument must be a float.')
-        crop_xform.crop_left_x = left_x
-      if right_x is not None:
-        if not isinstance(right_x, float):
-          raise self.failureException('Crop argument must be a float.')
-        crop_xform.crop_right_x = right_x
-      if top_y is not None:
-        if not isinstance(top_y, float):
-          raise self.failureException('Crop argument must be a float.')
-        crop_xform.crop_top_y = top_y
-      if bottom_y is not None:
-        if not isinstance(bottom_y, float):
-          raise self.failureException('Crop argument must be a float.')
-        crop_xform.crop_bottom_y = bottom_y
-      self._images_stub._Crop(mox.IsA(MockImage),
-                              crop_xform).AndReturn(self._image)
-
-    def expect_resize(self, resize):
-      """Setup a mox expectation to images_stub._Resize."""
-      resize_xform = images_service_pb2.Transform()
-      resize_xform.width = resize
-      resize_xform.height = resize
-      self._images_stub._Resize(mox.IsA(MockImage),
-                                resize_xform).AndReturn(self._image)
-
-    def expect_encode_image(self,
-                            data,
-                            mime_type=images_service_pb2.OutputSettings.JPEG):
-      """Setup a mox expectation to images_stub._EncodeImage."""
-      output_settings = images_service_pb2.OutputSettings()
-      output_settings.mime_type = mime_type
-      self._images_stub._EncodeImage(mox.IsA(MockImage),
-                                     output_settings).AndReturn(data)
+  def expect_encode_image(
+      self, data, mime_type=images_service_pb2.OutputSettings.JPEG
+  ):
+    """Setup a mox expectation to images_stub.EncodeImage."""
+    output_settings = images_service_pb2.OutputSettings()
+    output_settings.mime_type = mime_type
+    self._images_stub.EncodeImage(
+        mox.IsA(MockImage), output_settings
+    ).AndReturn(data)
 
   def expect_datatore_lookup(self, blob_key, expected_result):
     """Setup a mox expectation to datastore.Get."""

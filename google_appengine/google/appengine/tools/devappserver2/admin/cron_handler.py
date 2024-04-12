@@ -21,18 +21,13 @@ import os.path
 import traceback
 
 import google
-from google.appengine._internal import six
 
+from google.appengine.api import croninfo
+
+from google.appengine.tools.devappserver2.admin import admin_request_handler
 from google.appengine.cron import groctimespecification
 
 # pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import croninfo
-else:
-  from google.appengine.api import croninfo
-
-from google.appengine.tools.devappserver2.admin import admin_request_handler
-
 try:
   import pytz
 except ImportError:

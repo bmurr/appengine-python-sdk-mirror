@@ -16,8 +16,6 @@
 #
 """Tests for devappserver2.blob_upload."""
 
-
-
 import base64
 import cgi
 import datetime
@@ -32,39 +30,28 @@ import unittest
 import wsgiref.util
 
 import google
+
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import datastore
+from google.appengine.api import datastore_errors
+from google.appengine.api import datastore_file_stub
+from google.appengine.api import namespace_manager
+from google.appengine.api import user_service_stub
+from google.appengine.api.blobstore import blobstore_stub
+from google.appengine.api.blobstore import file_blob_storage
+from google.appengine.ext import blobstore
 import mox
 from google.appengine._internal import six
 import six.moves.urllib.parse
 import webob.exc
+
 from google.appengine.tools.devappserver2 import blob_upload
 from google.appengine.tools.devappserver2 import constants
 
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_errors
-  from google.appengine.api import datastore_file_stub
-  from google.appengine.api import namespace_manager
-  from google.appengine.api import user_service_stub
-  from google.appengine.api.blobstore import blobstore_stub
-  from google.appengine.api.blobstore import file_blob_storage
-  from google.appengine.ext import blobstore
-else:
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_errors
-  from google.appengine.api import datastore_file_stub
-  from google.appengine.api import namespace_manager
-  from google.appengine.api import user_service_stub
-  from google.appengine.api.blobstore import blobstore_stub
-  from google.appengine.api.blobstore import file_blob_storage
-  from google.appengine.ext import blobstore
 
 
 
-
-EXTRA_PADDING = '' if six.PY2 else '\n'
+EXTRA_PADDING = '\n'
 EXPECTED_GENERATED_CONTENT_TYPE = (
     'multipart/form-data; boundary="================1234=="')
 EXPECTED_GENERATED_MIME_MESSAGE = ("""--================1234==
@@ -137,26 +124,7 @@ EXPECTED_GENERATED_UTF8_CONTENT_TYPE = (
 
 # Python 3 handles non ascii characters correctly, resulting in different
 # content dispositions.
-if six.PY2:
-  EXPECTED_GENERATED_UTF8_MIME_MESSAGE = ("""--================1234==
-Content-Type: message/external-body; blob-key="item1"; \
-access-type="X-AppEngine-BlobKey"
-Content-Disposition: form-data; name="field1"; \
-filename="chinese_char_name_\xe6\xb1\x89.txt"
-
-Content-Type: text/plain; a="b"; x="y"
-h2: v2
-Content-MD5: ODI2ZTgxNDJlNmJhYWJlOGFmNzc5ZjVmNDkwY2Y1ZjU=
-Content-Length: 5
-h1: v1
-X-AppEngine-Upload-Creation: 2008-11-12 10:40:00.000000
-Content-Disposition: form-data; name="field1"; \
-filename="chinese_char_name_\xe6\xb1\x89.txt"
-
-
---================1234==--""").replace('\n', '\r\n')
-else:
-  EXPECTED_GENERATED_UTF8_MIME_MESSAGE = ("""--================1234==
+EXPECTED_GENERATED_UTF8_MIME_MESSAGE = ("""--================1234==
 Content-Type: message/external-body; blob-key="item1"; \
 access-type="X-AppEngine-BlobKey"
 Content-Disposition: =?utf-8?b?Zm9ybS1kYXRhOyBuYW1lPSJmaWVsZDEiOyBmaWxlbmFtZT0iY2hpbmVzZV9jaGFyX25hbWVf5rGJLnR4dCI=?=
@@ -244,9 +212,6 @@ Content-Disposition: form-data; name="field1"; filename="stuff.png"
 
 BAD_MIMES = ('/', 'image', 'image/', '/gif', 'app/monkey/banana')
 
-EMAIL_MESSSAGE_CLASS = (
-    email.Message.Message if six.PY2 else email.message.EmailMessage)
-
 
 class FakeForm(dict):
   """Simple assignable object for emulating cgi.FieldStorage."""
@@ -255,7 +220,7 @@ class FakeForm(dict):
     """Construct form from keywords."""
     super(FakeForm, self).__init__()
     self.update(subforms or {})
-    self.headers = headers or EMAIL_MESSSAGE_CLASS()
+    self.headers = headers or email.message.EmailMessage()
     for key, value in kwds.items():
       setattr(self, key, value)
 
@@ -696,8 +661,7 @@ class UploadHandlerUnitTest(UploadTestBase):
 
     self.mox.ReplayAll()
 
-    filename = ('chinese_char_name_\xe6\xb1\x89.txt' if six.PY2 else
-                six.b('chinese_char_name_\xe6\xb1\x89.txt').decode('utf-8'))
+    filename = six.b('chinese_char_name_\xe6\xb1\x89.txt').decode('utf-8')
     form = FakeForm({
         'field1':
             FakeForm(

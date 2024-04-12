@@ -16,20 +16,14 @@
 #
 """Tests for google.appengine.tools.devappserver2.url_handler."""
 
-
-
 import re
 import unittest
 import wsgiref.util
 
 import google
-from google.appengine._internal import six
 
 # pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import appinfo
-else:
-  from google.appengine.api import appinfo
+from google.appengine.api import appinfo
 
 from google.appengine.tools.devappserver2 import constants
 from google.appengine.tools.devappserver2 import url_handler

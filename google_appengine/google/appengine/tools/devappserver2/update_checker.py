@@ -16,8 +16,6 @@
 #
 """Checks for SDK updates."""
 
-
-
 import sys
 
 from google.appengine.tools import appengine_rpc

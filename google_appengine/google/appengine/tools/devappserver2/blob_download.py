@@ -20,24 +20,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
-
 import logging
-from google.appengine._internal import six
 
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_errors
-  from google.appengine.api.blobstore import blobstore_stub
-  from google.appengine.ext import blobstore
-else:
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_errors
-  from google.appengine.api.blobstore import blobstore_stub
-  from google.appengine.ext import blobstore
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import datastore
+from google.appengine.api import datastore_errors
+from google.appengine.api.blobstore import blobstore_stub
+from google.appengine.ext import blobstore
+from google.appengine._internal import six
 
 # The MIME type from apps to tell Blobstore to select the mime type.
 _AUTO_MIME_TYPE = 'application/vnd.google.appengine.auto'

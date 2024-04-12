@@ -16,15 +16,9 @@
 #
 """One place for all runtime instance factories."""
 
-
-
 from google.appengine.tools.devappserver2.go import instance_factory as go_factory
 from google.appengine.tools.devappserver2.php import instance_factory as php_factory
 from google.appengine.tools.devappserver2.python import instance_factory as python_factory
-
-
-# TODO - b/34669624, automatically get Version of python runtime in prod.
-PYTHON27_PROD_VERSION = (2, 7, 12)
 
 
 FACTORIES = {

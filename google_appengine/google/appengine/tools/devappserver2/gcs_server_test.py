@@ -21,13 +21,9 @@ import unittest
 from unittest import mock
 
 import google
-from google.appengine._internal import six
 
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.ext.cloudstorage import stub_dispatcher
-else:
-  from cloudstorage import stub_dispatcher
+from cloudstorage import stub_dispatcher
+from google.appengine._internal import six
 
 from google.appengine.tools.devappserver2 import gcs_server
 from google.appengine.tools.devappserver2 import wsgi_test_utils

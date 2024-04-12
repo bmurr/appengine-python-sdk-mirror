@@ -19,13 +19,9 @@
 import collections
 
 import google
-from google.appengine._internal import six
 
 # pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import datastore
-else:
-  from google.appengine.api import datastore
+from google.appengine.api import datastore
 
 from google.appengine.tools.devappserver2.admin import admin_request_handler
 

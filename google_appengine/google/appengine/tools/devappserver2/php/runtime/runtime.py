@@ -18,8 +18,6 @@
 
 from __future__ import print_function
 
-
-
 import base64
 import logging
 import os
@@ -28,13 +26,9 @@ import sys
 import time
 
 import google
-from google.appengine._internal import six
 
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import appinfo
-else:
-  from google.appengine.api import appinfo
+from google.appengine.api import appinfo
+from google.appengine._internal import six
 
 from google.appengine.tools.devappserver2 import environ_utils
 from google.appengine.tools.devappserver2 import http_runtime_constants
@@ -77,10 +71,7 @@ SETUP_PHP_PATH = os.path.join(
 
 def _parse_message_headers(buf):
   """Parse the headers of a http message encoded in a byte buffer."""
-  if six.PY2:
-    return six.moves.http_client.HTTPMessage(buf)
-  else:
-    return six.moves.http_client.parse_headers(buf)
+  return six.moves.http_client.parse_headers(buf)
 
 
 class PHPRuntime(object):
@@ -302,10 +293,7 @@ class PHPRuntime(object):
     # allowing use of multiple Set-Cookie headers.
     headers = []
     for name in message:
-      if six.PY2:
-        unfiltered_headers = message.getheaders(name)
-      else:
-        unfiltered_headers = message.get_all(name)
+      unfiltered_headers = message.get_all(name)
       for value in unfiltered_headers:
         t = (name, value)
         if t not in headers:

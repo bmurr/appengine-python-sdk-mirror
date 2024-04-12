@@ -16,9 +16,6 @@
 #
 """Wrapper of the Cloud Datastore emulator for Google Appengine local dev."""
 
-
-
-
 import logging
 import os
 import socket

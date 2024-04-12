@@ -16,8 +16,6 @@
 #
 """A simple line-oriented "tee"."""
 
-
-
 import collections
 import threading
 from google.appengine._internal import six

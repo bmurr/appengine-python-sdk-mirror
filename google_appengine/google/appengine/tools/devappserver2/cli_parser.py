@@ -34,15 +34,9 @@ import re
 import subprocess
 
 import google
-from google.appengine._internal import six
 
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import appinfo
-  from google.appengine.datastore import datastore_stub_util
-else:
-  from google.appengine.api import appinfo
-  from google.appengine.datastore import datastore_stub_util
+from google.appengine.api import appinfo
+from google.appengine.datastore import datastore_stub_util
 
 from google.appengine.tools import boolean_action
 from google.appengine.tools.devappserver2 import application_configuration

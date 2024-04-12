@@ -18,8 +18,6 @@
 
 """Tests for google.apphosting.tools.devappserver2.win32_file_watcher."""
 
-
-
 import ctypes
 import unittest
 

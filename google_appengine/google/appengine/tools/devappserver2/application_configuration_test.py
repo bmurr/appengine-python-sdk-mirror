@@ -20,8 +20,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
-
 import collections
 from contextlib import contextmanager
 import datetime
@@ -33,19 +31,12 @@ import unittest
 from unittest import mock
 
 import google
-from google.appengine._internal import six
 
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import appinfo
-  from google.appengine.api import appinfo_includes
-  from google.appengine.api import backendinfo
-  from google.appengine.api import dispatchinfo
-else:
-  from google.appengine.api import appinfo
-  from google.appengine.api import appinfo_includes
-  from google.appengine.api import backendinfo
-  from google.appengine.api import dispatchinfo
+from google.appengine.api import appinfo
+from google.appengine.api import appinfo_includes
+from google.appengine.api import backendinfo
+from google.appengine.api import dispatchinfo
+from google.appengine._internal import six
 
 from google.appengine.tools.devappserver2 import application_configuration
 from google.appengine.tools.devappserver2 import constants

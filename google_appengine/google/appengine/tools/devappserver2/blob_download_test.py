@@ -23,27 +23,16 @@ import tempfile
 import unittest
 
 import google
-from google.appengine._internal import six
 
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import blobstore
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_file_stub
-  from google.appengine.api import namespace_manager
-  from google.appengine.api.blobstore import blobstore_stub
-  from google.appengine.api.blobstore import file_blob_storage
-  from google.appengine.ext.cloudstorage import cloudstorage_stub
-else:
-  from google.appengine.api import apiproxy_stub_map
-  from google.appengine.api import blobstore
-  from google.appengine.api import datastore
-  from google.appengine.api import datastore_file_stub
-  from google.appengine.api import namespace_manager
-  from google.appengine.api.blobstore import blobstore_stub
-  from google.appengine.api.blobstore import file_blob_storage
-  from cloudstorage import cloudstorage_stub
+from cloudstorage import cloudstorage_stub
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import blobstore
+from google.appengine.api import datastore
+from google.appengine.api import datastore_file_stub
+from google.appengine.api import namespace_manager
+from google.appengine.api.blobstore import blobstore_stub
+from google.appengine.api.blobstore import file_blob_storage
+from google.appengine._internal import six
 
 from google.appengine.tools.devappserver2 import blob_download
 from google.appengine.tools.devappserver2 import request_rewriter

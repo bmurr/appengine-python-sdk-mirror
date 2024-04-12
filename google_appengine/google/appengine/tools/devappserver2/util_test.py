@@ -16,8 +16,6 @@
 #
 """Unit tests for the util module."""
 
-
-
 import os
 import shutil
 import socket

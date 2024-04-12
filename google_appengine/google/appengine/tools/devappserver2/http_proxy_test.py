@@ -26,15 +26,10 @@ import unittest
 
 import google
 
+from google.appengine.api import appinfo
 import mox
 from google.appengine._internal import six
 import six.moves.http_client
-
-# pylint: disable=g-import-not-at-top
-if six.PY2:
-  from google.appengine.api import appinfo
-else:
-  from google.appengine.api import appinfo
 
 from google.appengine.tools.devappserver2 import http_proxy
 from google.appengine.tools.devappserver2 import http_runtime_constants
@@ -51,18 +46,8 @@ class MockMessage(object):
   def __iter__(self):
     return iter(set(name for name, _ in self.headers))
 
-  if six.PY2:
-
-    def getheaders(self, name):
-      return [
-          value for header_name, value in self.headers if header_name == name
-      ]
-  else:
-
-    def get_all(self, name):
-      return [
-          value for header_name, value in self.headers if header_name == name
-      ]
+  def get_all(self, name):
+    return [value for header_name, value in self.headers if header_name == name]
 
 
 class FakeHttpResponse(object):

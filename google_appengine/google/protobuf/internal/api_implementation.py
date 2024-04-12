@@ -13,7 +13,7 @@ import os
 import sys
 import warnings
 
-_GOOGLE_PYTHON_UPB_DEFAULT = False
+_GOOGLE_PYTHON_UPB_DEFAULT = True
 
 
 def _ApiVersionToImplementationType(api_version):
